@@ -8,6 +8,7 @@
     "jsx": "react-jsx",
     "allowJs": true,
 
+    // Path alias for absolute imports
     "paths": {
       "#/*": ["./src/*"]
     },
