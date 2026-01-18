@@ -1,0 +1,22 @@
+{
+  "name": "@hebo-ai/gateway",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "clean": "git clean -fdx -e '.env*' .",
+    "format": "oxfmt .",
+    "format:staged": "oxfmt --write",
+    "lint": "oxlint",
+    "lint:staged": "oxlint --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "lefthook": "^2.0.15",
+    "oxfmt": "^0.24.0",
+    "oxlint": "^1.39.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
