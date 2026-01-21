@@ -10,6 +10,7 @@
 
     // Path alias for absolute imports
     "paths": {
+      "#/": ["./src/"],
       "#/*": ["./src/*"]
     },
 

@@ -3,7 +3,7 @@ import type { GatewayConfig, HeboGateway } from "./types";
 import { models } from "./endpoints/models/handler";
 
 export function gateway(config: GatewayConfig): HeboGateway {
-  const basePath = config.basePath || "";
+  const basePath = config.basePath?.replace(/\/+$/, "") || "";
 
   const routes: Record<string, { handler: typeof fetch }> = {
     [`${basePath}/models`]: models(config.models || {}),
