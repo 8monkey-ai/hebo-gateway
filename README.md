@@ -1,6 +1,6 @@
 # Hebo Gateway
 
-Roll your own AI gateway for full control over models, providers, routing logic, and observability. 
+Roll your own AI gateway for full control over models, providers, routing logic, and observability.
 
 ## Summary & highlights
 
