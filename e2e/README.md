@@ -17,7 +17,7 @@ These examples use the root dev dependencies, so run `bun install` at the repo r
 
 ```sh
 cd e2e/elysia
-bun elysia/index.ts
+bun index.ts
 ```
 
 Route: `/v1/gateway/models`
@@ -26,7 +26,7 @@ Route: `/v1/gateway/models`
 
 ```sh
 cd e2e/hono
-bun hono/index.ts
+bun index.ts
 ```
 
 Route: `/v1/gateway/models`
