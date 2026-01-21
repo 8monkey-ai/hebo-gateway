@@ -18,9 +18,6 @@ const gw = gateway({
   }),
 });
 
-const hono = new Hono();
-hono.mount("/v1/gateway/", gw.handler);
-
-export default hono;
+export default new Hono().mount("/v1/gateway/", gw.handler);
 
 console.log(`🐒 Hebo Gateway is running with Hono framework`);
