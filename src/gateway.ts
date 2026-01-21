@@ -1,23 +1,18 @@
-import type { HeboGatewayConfig, HeboGateway, Endpoint, APIContext } from "./types";
+import type { Endpoint } from "./endpoints/types";
+import type { GatewayConfig, HeboGateway } from "./types";
 
-import { listModelsEndpoint } from "./endpoints/list-models";
+import { models } from "./endpoints/models";
 
-const defaultEndpoints: Endpoint[] = [listModelsEndpoint];
+export function gateway(config: GatewayConfig): HeboGateway {
+  const basePath = config.basePath || "";
+  const routes = new Map<string, Endpoint>([[`${basePath}/models`, models(config.models || {})]]);
 
-export function gateway(config: HeboGatewayConfig): HeboGateway {
   const handler = (req: Request): Promise<Response> => {
     const url = new URL(req.url);
+    const endpoint = routes.get(url.pathname);
 
-    for (const endpoint of defaultEndpoints) {
-      if (req.method === endpoint.method && url.pathname.endsWith(endpoint.path)) {
-        const ctx: APIContext = {
-          request: req,
-          config,
-          url,
-        };
-
-        return endpoint.handler(ctx);
-      }
+    if (endpoint) {
+      return endpoint.handler(req);
     }
 
     return Promise.resolve(new Response("Not Found", { status: 404 }));

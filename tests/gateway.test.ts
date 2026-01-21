@@ -12,7 +12,7 @@ const parseResponse = async (res: Response) => {
   }
 };
 
-describe("Unit: Hebo Gateway Core", () => {
+describe("Hebo Gateway", () => {
   const testModels = createModelCatalog({
     "anthropic/claude-opus-4.5": {
       name: "Claude Opus 4.5",
@@ -52,12 +52,26 @@ describe("Unit: Hebo Gateway Core", () => {
             object: "model",
             created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
             owned_by: "anthropic",
+            name: "Claude Opus 4.5",
+            knowledge: "2025-07",
+            context: 200000,
+            capabilities: ["reasoning", "tool_call"],
+            architecture: {
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+            },
           },
           {
             id: "google/gemini-3-flash",
             object: "model",
             created: Math.floor(Date.parse("2025-10-01T08:30:00.000Z") / 1000),
             owned_by: "google",
+            name: "Gemini 3 Flash",
+            context: 128000,
+            architecture: {
+              input_modalities: ["text", "video"],
+              output_modalities: ["text"],
+            },
           },
         ],
       },
@@ -68,9 +82,9 @@ describe("Unit: Hebo Gateway Core", () => {
       expected: "Not Found",
     },
     {
-      name: "should return 'Not Found' for POST /models",
+      name: "should return 'Method Not Allowed' for POST /models",
       request: new Request("http://localhost/models", { method: "POST" }),
-      expected: "Not Found",
+      expected: "Method Not Allowed",
     },
   ];
 
@@ -81,4 +95,21 @@ describe("Unit: Hebo Gateway Core", () => {
       expect(data).toEqual(expected);
     });
   }
+});
+
+describe("Hebo Gateway with Base Path", () => {
+  const testModels = createModelCatalog({});
+  const gw = gateway({ models: testModels, basePath: "/api/v1" });
+
+  it("should route correctly with base path", async () => {
+    const req = new Request("http://localhost/api/v1/models", { method: "GET" });
+    const res = await gw.handler(req);
+    expect(res.status).toBe(200);
+  });
+
+  it("should return 404 for path without base path", async () => {
+    const req = new Request("http://localhost/models", { method: "GET" });
+    const res = await gw.handler(req);
+    expect(res.status).toBe(404);
+  });
 });

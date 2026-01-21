@@ -1,4 +1,4 @@
-export interface ModelDefinition {
+export type CatalogModel = {
   name: string;
   created?: string;
   knowledge?: string;
@@ -10,36 +10,46 @@ export interface ModelDefinition {
   capabilities?: string[];
   providers?: string[];
   [key: string]: any;
-}
+};
 
-export interface ModelCatalog {
-  [modelId: string]: ModelDefinition;
-}
+export type ModelCatalog = {
+  [modelId: string]: CatalogModel;
+};
 
-export interface HeboGatewayConfig {
-  providers?: any;
+export type GatewayHooks = {
+  before?: (request: Request) => Promise<void | Response>;
+  resolveModelId?: (modelId: string) => Promise<string>;
+  resolveProvider?: (originalModelId: string, resolvedModelId: string) => Promise<string>;
+  after?: (response: Response) => Promise<Response | void>;
+};
+
+export type SupportedProvider =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "google-vertex"
+  | "azure"
+  | "amazon-bedrock"
+  | "cohere"
+  | "mistral"
+  | "groq"
+  | "cerebras"
+  | "deepinfra"
+  | "deepseek"
+  | "fireworks"
+  | "perplexity"
+  | "replicate"
+  | "togetherai"
+  | "xai";
+
+export type ProviderRegistry = Partial<Record<SupportedProvider, any>>;
+
+export type GatewayConfig = {
+  basePath?: string;
+  providers?: ProviderRegistry;
   models?: ModelCatalog;
-  hooks?: {
-    before?: (request: Request) => Promise<void | Response>;
-    resolveModelId?: (modelId: string) => Promise<string>;
-    resolveProvider?: (originalModelId: string, resolvedModelId: string) => Promise<string>;
-    after?: (response: Response) => Promise<Response | void>;
-  };
-}
-
-export interface APIContext {
-  request: Request;
-  config: HeboGatewayConfig;
-  url: URL;
-}
-
-export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
-
-export interface Endpoint {
-  path: string;
-  method: HTTPMethod;
-  handler: (ctx: APIContext) => Promise<Response>;
-}
+  hooks?: GatewayHooks;
+};
 
 export interface HeboGateway {
   handler: (request: Request) => Promise<Response>;
