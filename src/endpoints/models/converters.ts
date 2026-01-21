@@ -34,14 +34,6 @@ export function toOpenAICompatibleModel(
     ...rest,
   };
 
-  if (modalities) {
-    model.architecture = {
-      input_modalities: modalities.input || [],
-      modality: `${modalities.input?.[0]}->${modalities.output?.[0]}`,
-      output_modalities: modalities.output || [],
-    };
-  }
-
   return model;
 }
 
