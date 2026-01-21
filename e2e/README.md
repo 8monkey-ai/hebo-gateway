@@ -20,12 +20,16 @@ cd e2e/elysia
 bun elysia/index.ts
 ```
 
+Route: `/v1/gateway/models`
+
 ### Hono
 
 ```sh
 cd e2e/hono
 bun hono/index.ts
 ```
+
+Route: `/v1/gateway/models`
 
 ### Next.js
 
@@ -34,12 +38,19 @@ cd e2e/next
 bun next dev
 ```
 
+Routes:
+
+- App Router: `/api/app/gateway/models`
+- Pages Router: `/api/pages/gateway/models`
+
 ### TanStack
 
 ```sh
 cd e2e/tanstack
 bun vite dev
 ```
+
+Route: `/api/gateway/models`
 
 ## Notes
 
