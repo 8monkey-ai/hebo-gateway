@@ -5,11 +5,14 @@ import { models } from "./endpoints/models";
 
 export function gateway(config: GatewayConfig): HeboGateway {
   const basePath = config.basePath || "";
-  const routes = new Map<string, Endpoint>([[`${basePath}/models`, models(config.models || {})]]);
+
+  const routes: Record<string, Endpoint> = {
+    [`${basePath}/models`]: models(config.models || {}),
+  };
 
   const handler = (req: Request): Promise<Response> => {
     const url = new URL(req.url);
-    const endpoint = routes.get(url.pathname);
+    const endpoint = routes[url.pathname];
 
     if (endpoint) {
       return endpoint.handler(req);

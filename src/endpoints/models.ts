@@ -8,10 +8,7 @@ export const models = (models: ModelCatalog): Endpoint => ({
     if (req.method !== "GET") {
       return Promise.resolve(new Response("Method Not Allowed", { status: 405 }));
     }
-
-    const allModels = models || {};
-
-    const openAICompatibleList = toOpenAICompatibleModelList(allModels);
+    const openAICompatibleList = toOpenAICompatibleModelList(models);
 
     return Promise.resolve(
       new Response(JSON.stringify(openAICompatibleList), {
