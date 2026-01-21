@@ -1,12 +1,11 @@
-import type { Endpoint } from "./endpoints/types";
 import type { GatewayConfig, HeboGateway } from "./types";
 
-import { models } from "./endpoints/models";
+import { models } from "./endpoints/models/handler";
 
 export function gateway(config: GatewayConfig): HeboGateway {
   const basePath = config.basePath || "";
 
-  const routes: Record<string, Endpoint> = {
+  const routes: Record<string, { handler: typeof fetch }> = {
     [`${basePath}/models`]: models(config.models || {}),
   };
 
@@ -21,5 +20,5 @@ export function gateway(config: GatewayConfig): HeboGateway {
     return Promise.resolve(new Response("Not Found", { status: 404 }));
   };
 
-  return { handler };
+  return { handler: handler as typeof fetch };
 }

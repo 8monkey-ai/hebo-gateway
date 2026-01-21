@@ -5,9 +5,13 @@ export interface OpenAICompatibleModel {
   owned_by: string;
   description?: string;
   architecture?: {
+    modality?: string;
     input_modalities: string[];
     output_modalities: string[];
   };
+  endpoints: {
+    tag: string;
+  }[];
   [key: string]: any;
 }
 

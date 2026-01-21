@@ -1,4 +1,4 @@
-import type { ModelCatalog, CatalogModel } from "../types";
+import type { ModelCatalog, CatalogModel } from "../../model-catalog";
 import type { OpenAICompatibleList, OpenAICompatibleModel } from "./schema";
 
 export function toOpenAICompatibleModel(
@@ -19,12 +19,17 @@ export function toOpenAICompatibleModel(
     object: "model",
     created: createdTimestamp,
     owned_by: providers?.[0] || "system",
+    endpoints:
+      providers?.map((provider) => ({
+        tag: provider,
+      })) || [],
     ...rest,
   };
 
   if (modalities) {
     model.architecture = {
       input_modalities: modalities.input || [],
+      modality: `${modalities.input?.[0]}->${modalities.output?.[0]}`,
       output_modalities: modalities.output || [],
     };
   }

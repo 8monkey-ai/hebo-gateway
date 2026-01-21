@@ -1,10 +1,10 @@
-import type { ModelCatalog } from "../types";
+import type { ModelCatalog } from "../../model-catalog";
 import type { Endpoint } from "./types";
 
-import { toOpenAICompatibleModelList } from "../oai-compat/converters";
+import { toOpenAICompatibleModelList } from "./converters";
 
 export const models = (models: ModelCatalog): Endpoint => ({
-  handler: (req: Request) => {
+  handler: ((req: Request) => {
     if (req.method !== "GET") {
       return Promise.resolve(new Response("Method Not Allowed", { status: 405 }));
     }
@@ -15,5 +15,5 @@ export const models = (models: ModelCatalog): Endpoint => ({
         headers: { "Content-Type": "application/json" },
       }),
     );
-  },
+  }) as typeof fetch,
 });

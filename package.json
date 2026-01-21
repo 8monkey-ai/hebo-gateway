@@ -10,6 +10,9 @@
     "lint:staged": "oxlint --fix",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "ai": "^6.0.42"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "lefthook": "^2.0.15",

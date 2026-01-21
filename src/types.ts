@@ -1,20 +1,6 @@
-export type CatalogModel = {
-  name: string;
-  created?: string;
-  knowledge?: string;
-  modalities?: {
-    input?: string[];
-    output?: string[];
-  };
-  context?: number;
-  capabilities?: string[];
-  providers?: string[];
-  [key: string]: any;
-};
+import type { ProviderRegistryProvider } from "ai";
 
-export type ModelCatalog = {
-  [modelId: string]: CatalogModel;
-};
+import type { ModelCatalog } from "./model-catalog";
 
 export type GatewayHooks = {
   before?: (request: Request) => Promise<void | Response>;
@@ -23,34 +9,13 @@ export type GatewayHooks = {
   after?: (response: Response) => Promise<Response | void>;
 };
 
-export type SupportedProvider =
-  | "openai"
-  | "anthropic"
-  | "google"
-  | "google-vertex"
-  | "azure"
-  | "amazon-bedrock"
-  | "cohere"
-  | "mistral"
-  | "groq"
-  | "cerebras"
-  | "deepinfra"
-  | "deepseek"
-  | "fireworks"
-  | "perplexity"
-  | "replicate"
-  | "togetherai"
-  | "xai";
-
-export type ProviderRegistry = Partial<Record<SupportedProvider, any>>;
-
 export type GatewayConfig = {
   basePath?: string;
-  providers?: ProviderRegistry;
+  providers?: ProviderRegistryProvider;
   models?: ModelCatalog;
   hooks?: GatewayHooks;
 };
 
 export interface HeboGateway {
-  handler: (request: Request) => Promise<Response>;
+  handler: typeof fetch;
 }

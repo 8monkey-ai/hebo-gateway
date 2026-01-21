@@ -57,9 +57,11 @@ describe("Hebo Gateway", () => {
             context: 200000,
             capabilities: ["reasoning", "tool_call"],
             architecture: {
+              modality: "text->text",
               input_modalities: ["text", "image"],
               output_modalities: ["text"],
             },
+            endpoints: [{ tag: "anthropic" }],
           },
           {
             id: "google/gemini-3-flash",
@@ -69,9 +71,11 @@ describe("Hebo Gateway", () => {
             name: "Gemini 3 Flash",
             context: 128000,
             architecture: {
+              modality: "text->text",
               input_modalities: ["text", "video"],
               output_modalities: ["text"],
             },
+            endpoints: [{ tag: "google" }],
           },
         ],
       },
