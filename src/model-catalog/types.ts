@@ -12,8 +12,8 @@ export type CatalogModel = {
   created?: string;
   knowledge?: string;
   modalities: {
-    input: readonly ("text" | "image" | "audio" | "video" | "pdf")[];
-    output: readonly ("text" | "image")[];
+    input: readonly ("text" | "image" | "file" | "audio" | "video" | "pdf")[];
+    output: readonly ("text" | "image" | "audio" | "video" | "embeddings")[];
   };
   context?: number;
   capabilities?: readonly (

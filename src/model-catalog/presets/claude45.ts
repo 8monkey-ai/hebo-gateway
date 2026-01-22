@@ -1,6 +1,6 @@
-import type { CanonicalModelId, CatalogModel } from "../types";
+import { presetFor, type DeepPartial } from "#/utils/preset";
 
-import { presetFor, type DeepPartial } from "../../utils/preset";
+import type { CanonicalModelId, CatalogModel } from "../types";
 
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-haiku-4.5",
@@ -9,7 +9,7 @@ export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
     created: "2025-10-15",
     knowledge: "2025-02",
     modalities: {
-      input: ["text", "image", "pdf"] as const,
+      input: ["text", "image", "pdf", "file"] as const,
       output: ["text"] as const,
     },
     context: 200000,
@@ -30,7 +30,7 @@ export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
     created: "2025-09-29",
     knowledge: "2025-07",
     modalities: {
-      input: ["text", "image", "pdf"] as const,
+      input: ["text", "image", "pdf", "file"] as const,
       output: ["text"] as const,
     },
     context: 200000,
@@ -51,7 +51,7 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
     created: "2025-11-24",
     knowledge: "2025-05",
     modalities: {
-      input: ["text", "image", "pdf"] as const,
+      input: ["text", "image", "pdf", "file"] as const,
       output: ["text"] as const,
     },
     context: 200000,
