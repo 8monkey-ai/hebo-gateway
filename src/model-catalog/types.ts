@@ -1,3 +1,10 @@
+export const CANONICAL_MODEL_IDS = [
+  "anthropic/claude-sonnet-4.5",
+  "anthropic/claude-opus-4.5",
+] as const;
+
+export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
+
 export type CatalogModel = {
   name: string;
   created?: string;
@@ -18,6 +25,5 @@ export type CatalogModel = {
   [key: string]: any;
 };
 
-export type ModelCatalog = {
-  [modelId: string]: CatalogModel;
-};
+export type ModelCatalog = Partial<Record<CanonicalModelId, CatalogModel>> &
+  Record<string, CatalogModel>;
