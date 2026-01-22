@@ -1,5 +1,7 @@
-import { gateway, createModelCatalog } from "#/";
 import { describe, expect, it } from "bun:test";
+
+import { createModelCatalog } from "../../models/catalog";
+import { models } from "./handler";
 
 const parseResponse = async (res: Response) => {
   const text = await res.text();
@@ -10,7 +12,7 @@ const parseResponse = async (res: Response) => {
   }
 };
 
-describe("Hebo Gateway", () => {
+describe("Models Handler", () => {
   const testModels = createModelCatalog({
     "anthropic/claude-opus-4.5": {
       name: "Claude Opus 4.5",
@@ -36,11 +38,11 @@ describe("Hebo Gateway", () => {
     },
   });
 
-  const gw = gateway({ models: testModels });
+  const endpoint = models(testModels);
 
   const testCases = [
     {
-      name: "should list models via GET /models with realistic data (exact match)",
+      name: "should list models via GET request with realistic data (exact match)",
       request: new Request("http://localhost/models", { method: "GET" }),
       expected: {
         object: "list",
@@ -79,12 +81,7 @@ describe("Hebo Gateway", () => {
       },
     },
     {
-      name: "should return 'Not Found' for unknown GET routes",
-      request: new Request("http://localhost/unknown", { method: "GET" }),
-      expected: "Not Found",
-    },
-    {
-      name: "should return 'Method Not Allowed' for POST /models",
+      name: "should return 'Method Not Allowed' for POST request",
       request: new Request("http://localhost/models", { method: "POST" }),
       expected: "Method Not Allowed",
     },
@@ -92,26 +89,9 @@ describe("Hebo Gateway", () => {
 
   for (const { name, request, expected } of testCases) {
     it(name, async () => {
-      const res = await gw.handler(request);
+      const res = await endpoint.handler(request);
       const data = await parseResponse(res);
       expect(data).toEqual(expected);
     });
   }
-});
-
-describe("Hebo Gateway with Base Path", () => {
-  const testModels = createModelCatalog({});
-  const gw = gateway({ models: testModels, basePath: "/api/v1" });
-
-  it("should route correctly with base path", async () => {
-    const req = new Request("http://localhost/api/v1/models", { method: "GET" });
-    const res = await gw.handler(req);
-    expect(res.status).toBe(200);
-  });
-
-  it("should return 404 for path without base path", async () => {
-    const req = new Request("http://localhost/models", { method: "GET" });
-    const res = await gw.handler(req);
-    expect(res.status).toBe(404);
-  });
 });

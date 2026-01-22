@@ -1,8 +1,8 @@
 import { describe, expect, it, mock } from "bun:test";
 
-import { gateway } from "../src/gateway";
+import { embeddings } from "./handler";
 
-const mockEmbedMany = mock(async (options: any) => {
+const mockEmbedMany = mock((options: any) => {
   return {
     embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
     usage: { tokens: 10 },
@@ -13,25 +13,23 @@ mock.module("ai", () => ({
   embedMany: mockEmbedMany,
 }));
 
-describe("Embeddings Endpoint", () => {
+const parseResponse = async (res: Response) => {
+  try {
+    return await res.json();
+  } catch {
+    return await res.text();
+  }
+};
+
+describe("Embeddings Handler", () => {
   const mockProviders = {
     embeddingModel: (modelId: string) => ({
       modelId,
-      provider: "test-provider",
+      provider: modelId.split(":")[0],
     }),
   } as any;
 
-  const gw = gateway({
-    providers: mockProviders,
-  });
-
-  const parseResponse = async (res: Response) => {
-    try {
-      return await res.json();
-    } catch {
-      return await res.text();
-    }
-  };
+  const endpoint = embeddings(mockProviders);
 
   const testCases = [
     {
@@ -40,7 +38,7 @@ describe("Embeddings Endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "test-provider:test-model",
+          model: "openai:text-embedding-3-small",
           input: "hello world",
         }),
       }),
@@ -53,7 +51,7 @@ describe("Embeddings Endpoint", () => {
             index: 0,
           },
         ],
-        model: "test-provider:test-model",
+        model: "openai:text-embedding-3-small",
         usage: {
           prompt_tokens: 10,
           total_tokens: 10,
@@ -66,7 +64,7 @@ describe("Embeddings Endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "test-provider:test-model",
+          model: "openai:text-embedding-3-small",
           input: ["hello", "world"],
         }),
       }),
@@ -84,7 +82,7 @@ describe("Embeddings Endpoint", () => {
             index: 1,
           },
         ],
-        model: "test-provider:test-model",
+        model: "openai:text-embedding-3-small",
         usage: {
           prompt_tokens: 10,
           total_tokens: 10,
@@ -97,21 +95,32 @@ describe("Embeddings Endpoint", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "test-provider:test-model",
+          model: "openai:text-embedding-3-small",
         }),
       }),
       expected: "Bad Request: Missing 'input' or 'model'",
+    },
+    {
+      name: "should return 'Method Not Allowed' for GET request",
+      request: new Request("http://localhost/embeddings", { method: "GET" }),
+      expected: "Method Not Allowed",
     },
   ];
 
   for (const { name, request, expected } of testCases) {
     it(name, async () => {
       mockEmbedMany.mockClear();
-      const res = await gw.handler(request);
+      const res = await endpoint.handler(request);
 
       if (res.status === 400 && typeof expected === "string") {
         const text = await res.text();
         expect(text).toContain(expected);
+        return;
+      }
+
+      if (res.status === 405) {
+        const text = await res.text();
+        expect(text).toBe(expected as string);
         return;
       }
 

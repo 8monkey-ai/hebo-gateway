@@ -16,7 +16,7 @@ export const embeddings = (providers?: ProviderRegistryProvider): Endpoint => ({
     let requestBody: OpenAICompatibleEmbeddingRequest;
     try {
       requestBody = (await req.json()) as OpenAICompatibleEmbeddingRequest;
-    } catch (error) {
+    } catch {
       return new Response("Bad Request: Invalid JSON", { status: 400 });
     }
 
