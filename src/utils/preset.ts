@@ -16,7 +16,6 @@ export type DeepPartial<T> = T extends (...args: any[]) => any
  * Deep merge where overrides win.
  * Arrays are replaced.
  */
-
 export function deepMerge<A extends object, B extends object>(base: A, override?: B): A & B {
   if (override === null) return base as A & B;
 
@@ -52,28 +51,21 @@ export function presetFor<Ids extends string, T extends Record<string, unknown>>
     id: Id,
     base: Base,
   ) {
-    return function apply<const O extends DeepPartial<T> & Record<string, unknown>>(
-      override?: DeepPartial<T> & O,
-    ): { [K in Id]: Base & O } {
+    return function apply<O extends DeepPartial<T>>(override: O): { [K in Id]: Base & O } {
       const merged = deepMerge(base, override);
       return { [id]: merged } as { [K in Id]: Base & O };
     };
   };
 }
 
-export function presetGroup<Ids extends PropertyKey, T extends Record<string, unknown>>() {
-  return <
-    const Ps extends readonly (<O extends DeepPartial<T> & Record<string, unknown>>(
-      override?: DeepPartial<T> & O,
-    ) => Partial<Record<Ids, DeepPartial<T> & O>>)[],
-  >(
-    ...presets: Ps
-  ) => {
-    return <O extends DeepPartial<T> & Record<string, unknown>>(
-      override?: DeepPartial<T> & O,
-    ): Partial<Record<Ids, DeepPartial<T> & O>> =>
-      Object.assign({}, ...presets.map((p) => p<O>(override))) as Partial<
-        Record<Ids, DeepPartial<T> & O>
-      >;
+export function presetGroup<T extends Record<string, unknown>>() {
+  return function group<const Fns extends ReadonlyArray<(override: DeepPartial<T>) => object>>(
+    ...fns: Fns
+  ) {
+    return function applyAll<const O extends DeepPartial<T>>(override: O) {
+      return Object.assign({}, ...fns.map((fn) => fn(override))) as {
+        [K in keyof ReturnType<Fns[number]>]: ReturnType<Fns[number]>[K];
+      };
+    };
   };
 }

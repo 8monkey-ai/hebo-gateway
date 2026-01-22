@@ -1,9 +1,9 @@
-import type { CanonicalModelId, CatalogModelCore, ModelId } from "../types";
+import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, presetGroup, type DeepPartial } from "../../utils/preset";
 
-export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModelCore>()(
-  "anthropic/claude-haiku-4.5",
+export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-haiku-4.5" as const,
   {
     name: "Claude Haiku 4.5",
     created: "2025-10-15",
@@ -20,11 +20,11 @@ export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModelCore>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModelCore>,
+  } satisfies DeepPartial<CatalogModel>,
 );
 
-export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModelCore>()(
-  "anthropic/claude-sonnet-4.5",
+export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-sonnet-4.5" as const,
   {
     name: "Claude Sonnet 4.5",
     created: "2025-09-29",
@@ -41,11 +41,11 @@ export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModelCore>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModelCore>,
+  } satisfies DeepPartial<CatalogModel>,
 );
 
-export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModelCore>()(
-  "anthropic/claude-opus-4.5",
+export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-opus-4.5" as const,
   {
     name: "Claude Opus 4.5",
     created: "2025-11-24",
@@ -62,11 +62,7 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModelCore>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModelCore>,
+  } satisfies DeepPartial<CatalogModel>,
 );
 
-export const claude45 = presetGroup<ModelId, CatalogModelCore>()(
-  claudeHaiku45,
-  claudeSonnet45,
-  claudeOpus45,
-);
+export const claude45 = presetGroup<CatalogModel>()(claudeHaiku45, claudeSonnet45, claudeOpus45);
