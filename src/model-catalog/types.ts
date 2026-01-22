@@ -1,4 +1,5 @@
 export const CANONICAL_MODEL_IDS = [
+  "anthropic/claude-haiku-4.5",
   "anthropic/claude-sonnet-4.5",
   "anthropic/claude-opus-4.5",
 ] as const;
