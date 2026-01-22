@@ -4,6 +4,7 @@ export const CANONICAL_MODEL_IDS = [
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
+export type ModelId = CanonicalModelId | (string & {});
 
 export type CatalogModel = {
   name: string;
@@ -25,5 +26,4 @@ export type CatalogModel = {
   [key: string]: any;
 };
 
-export type ModelCatalog = Partial<Record<CanonicalModelId, CatalogModel>> &
-  Record<string, CatalogModel>;
+export type ModelCatalog = Partial<Record<ModelId, CatalogModel>>;
