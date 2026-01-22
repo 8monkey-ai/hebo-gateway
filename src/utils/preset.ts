@@ -17,7 +17,7 @@ export type DeepPartial<T> = T extends (...args: unknown[]) => unknown
  * Arrays are replaced.
  */
 export function deepMerge<A extends object, B extends object>(base: A, override?: B): A & B {
-  if (override === null) return base as A & B;
+  if (override === null || override === undefined) return base as A & B;
 
   if (!isPlainObject(base) || !isPlainObject(override)) {
     return override as unknown as A & B;
