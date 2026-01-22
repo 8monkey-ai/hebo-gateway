@@ -2,43 +2,54 @@ import type { ProviderRegistryProvider } from "ai";
 
 import { embedMany } from "ai";
 
-import type { OpenAICompatibleEmbeddingRequest, OpenAICompatibleEmbeddingResponse } from "./schema";
+import type { ModelCatalog } from "../../models/types";
 import type { Endpoint } from "./types";
 
-import { toOpenAICompatibleEmbeddingResponse } from "./converters";
+import { toOpenAICompatibleEmbeddingResponseBody } from "./converters";
+import {
+  OpenAICompatibleEmbeddingRequestBodySchema,
+  type OpenAICompatibleEmbeddingResponseBody,
+} from "./schema";
 
-export const embeddings = (providers?: ProviderRegistryProvider): Endpoint => ({
+export const embeddings = (
+  providers?: ProviderRegistryProvider,
+  models: ModelCatalog = {},
+): Endpoint => ({
   handler: (async (req: Request): Promise<Response> => {
     if (req.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
     }
 
-    let requestBody: OpenAICompatibleEmbeddingRequest;
+    let json;
     try {
-      requestBody = (await req.json()) as OpenAICompatibleEmbeddingRequest;
+      json = await req.json();
     } catch {
       return new Response("Bad Request: Invalid JSON", { status: 400 });
     }
 
+    const result = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
+
+    if (!result.success) {
+      return new Response(
+        `Bad Request: ${result.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join(", ")}`,
+        { status: 400 },
+      );
+    }
+
+    const requestBody = result.data;
     const { input, model, ...rest } = requestBody;
 
-    if (!input || !model) {
-      return new Response("Bad Request: Missing 'input' or 'model'", {
-        status: 400,
-      });
-    }
+    const catalogModel = models[model];
+    const resolvedProvider = catalogModel.providers[0];
 
-    if (!providers) {
-      return new Response("Internal Server Error: Providers not configured", {
-        status: 500,
-      });
-    }
+    const embeddingModelId = `${resolvedProvider}:${model}`;
 
     let embeddingModel;
     try {
-      embeddingModel = providers.embeddingModel(model as `${string}:${string}`);
-    } catch (error) {
-      console.error("Error getting embedding model from providers:", error);
+      embeddingModel = providers.embeddingModel(embeddingModelId as `${string}:${string}`);
+    } catch {
       return new Response(
         `Bad Request: Model '${model}' not found or not supported for embeddings`,
         {
@@ -47,15 +58,8 @@ export const embeddings = (providers?: ProviderRegistryProvider): Endpoint => ({
       );
     }
 
-    if (!embeddingModel) {
-      return new Response(`Bad Request: Model '${model}' not found in providers`, {
-        status: 400,
-      });
-    }
-
-    const providerKey = (model.includes(":") ? model.split(":")[0] : model) || model;
     const providerOptions = {
-      [providerKey]: rest,
+      [resolvedProvider]: rest,
     };
 
     let embedManyResult;
@@ -67,15 +71,14 @@ export const embeddings = (providers?: ProviderRegistryProvider): Endpoint => ({
         providerOptions,
       });
     } catch (error: any) {
-      console.error("Error generating embeddings:", error);
       const errorMessage = error.message || "Failed to generate embeddings";
       return new Response(`Internal Server Error: ${errorMessage}`, {
         status: 500,
       });
     }
 
-    const openAICompatibleResponse: OpenAICompatibleEmbeddingResponse =
-      toOpenAICompatibleEmbeddingResponse(model, embedManyResult);
+    const openAICompatibleResponse: OpenAICompatibleEmbeddingResponseBody =
+      toOpenAICompatibleEmbeddingResponseBody(embedManyResult, model);
 
     const finalResponse = new Response(JSON.stringify(openAICompatibleResponse), {
       headers: { "Content-Type": "application/json" },

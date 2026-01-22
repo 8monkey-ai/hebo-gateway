@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 
+import { createModelCatalog } from "../../models/catalog";
 import { embeddings } from "./handler";
 
 const mockEmbedMany = mock((options: any) => {
@@ -30,7 +31,15 @@ describe("Embeddings Handler", () => {
     }),
   } as any;
 
-  const endpoint = embeddings(mockProviders);
+  const catalog = createModelCatalog({
+    "text-embedding-3-small": {
+      name: "OpenAI Embedding Model",
+      modalities: { input: ["text"], output: ["embeddings"] },
+      providers: ["openai"],
+    },
+  });
+
+  const endpoint = embeddings(mockProviders, catalog);
 
   const testCases = [
     {
@@ -39,7 +48,7 @@ describe("Embeddings Handler", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "openai:text-embedding-3-small",
+          model: "text-embedding-3-small",
           input: "hello world",
         }),
       }),
@@ -52,7 +61,7 @@ describe("Embeddings Handler", () => {
             index: 0,
           },
         ],
-        model: "openai:text-embedding-3-small",
+        model: "text-embedding-3-small",
         usage: {
           prompt_tokens: 10,
           total_tokens: 10,
@@ -65,7 +74,7 @@ describe("Embeddings Handler", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "openai:text-embedding-3-small",
+          model: "text-embedding-3-small",
           input: ["hello", "world"],
         }),
       }),
@@ -83,7 +92,7 @@ describe("Embeddings Handler", () => {
             index: 1,
           },
         ],
-        model: "openai:text-embedding-3-small",
+        model: "text-embedding-3-small",
         usage: {
           prompt_tokens: 10,
           total_tokens: 10,
@@ -96,10 +105,10 @@ describe("Embeddings Handler", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "openai:text-embedding-3-small",
+          model: "text-embedding-3-small",
         }),
       }),
-      expected: "Bad Request: Missing 'input' or 'model'",
+      expected: "Bad Request: input: Invalid input",
     },
     {
       name: "should return 'Method Not Allowed' for GET request",
@@ -116,4 +125,27 @@ describe("Embeddings Handler", () => {
       expect(data).toEqual(expected);
     });
   }
+
+  it("should pass through provider_metadata", async () => {
+    mockEmbedMany.mockImplementationOnce((options: any) => {
+      return {
+        embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
+        usage: { tokens: 10 },
+        providerMetadata: { custom: "metadata" },
+      };
+    });
+
+    const request = new Request("http://localhost/embeddings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "text-embedding-3-small",
+        input: "hello world",
+      }),
+    });
+
+    const res = await endpoint.handler(request);
+    const data = await parseResponse(res);
+    expect(data.providerMetadata).toEqual({ custom: "metadata" });
+  });
 });

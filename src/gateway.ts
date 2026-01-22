@@ -8,7 +8,7 @@ export function gateway(config: GatewayConfig): HeboGateway {
 
   const routes: Record<string, { handler: typeof fetch }> = {
     [`${basePath}/models`]: models(config.models || {}),
-    [`${basePath}/embeddings`]: embeddings(config.providers),
+    [`${basePath}/embeddings`]: embeddings(config.providers, config.models || {}),
   };
 
   const handler = (req: Request): Promise<Response> => {

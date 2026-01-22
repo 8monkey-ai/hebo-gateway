@@ -11,6 +11,9 @@
     "type-check": "tsc --noEmit",
     "test": "bun test"
   },
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
   "devDependencies": {
     "@mjackson/node-fetch-server": "^0.7.0",
     "@tanstack/react-router": "^1.154.1",

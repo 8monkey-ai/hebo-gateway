@@ -1,20 +1,20 @@
+import type { EmbedManyResult } from "ai";
+
 import type {
-  OpenAICompatibleEmbeddingObject,
-  OpenAICompatibleEmbeddingResponse,
+  OpenAICompatibleEmbedding,
+  OpenAICompatibleEmbeddingResponseBody,
   OpenAICompatibleEmbeddingUsage,
 } from "./schema";
 
-export function toOpenAICompatibleEmbeddingResponse(
+export function toOpenAICompatibleEmbeddingResponseBody(
+  embedManyResult: EmbedManyResult,
   modelId: string,
-  embedManyResult: { embeddings: number[][]; usage?: { tokens?: number } },
-): OpenAICompatibleEmbeddingResponse {
-  const data: OpenAICompatibleEmbeddingObject[] = embedManyResult.embeddings.map(
-    (embedding, index) => ({
-      object: "embedding",
-      embedding,
-      index,
-    }),
-  );
+): OpenAICompatibleEmbeddingResponseBody {
+  const data: OpenAICompatibleEmbedding[] = embedManyResult.embeddings.map((embedding, index) => ({
+    object: "embedding",
+    embedding,
+    index,
+  }));
 
   const usage: OpenAICompatibleEmbeddingUsage = {
     prompt_tokens: embedManyResult.usage?.tokens || 0,
@@ -26,5 +26,6 @@ export function toOpenAICompatibleEmbeddingResponse(
     data,
     model: modelId,
     usage,
+    providerMetadata: embedManyResult.providerMetadata,
   };
 }
