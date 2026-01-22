@@ -41,7 +41,7 @@ export function toOpenAICompatibleModelList(
   models: ModelCatalog,
 ): OpenAICompatibleList<OpenAICompatibleModel> {
   const data = Object.entries(models).map(([id, catalogModel]) =>
-    toOpenAICompatibleModel(id, catalogModel),
+    toOpenAICompatibleModel(id, catalogModel!),
   );
   return {
     object: "list",

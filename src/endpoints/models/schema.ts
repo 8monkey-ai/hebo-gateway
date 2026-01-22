@@ -6,8 +6,8 @@ export interface OpenAICompatibleModel {
   description?: string;
   architecture?: {
     modality?: string;
-    input_modalities: string[];
-    output_modalities: string[];
+    input_modalities: readonly string[];
+    output_modalities: readonly string[];
   };
   endpoints: {
     tag: string;
