@@ -46,7 +46,7 @@ function deepMerge<A extends object, B extends object>(base: A, patch?: B): A & 
   return out as A & B;
 }
 
-export function presetFor<T extends object, Ids extends string = string>() {
+export function presetFor<Ids extends string, T extends object>() {
   return function preset<const Id extends Ids, const Base extends DeepPartial<T>>(
     id: Id,
     base: Base,

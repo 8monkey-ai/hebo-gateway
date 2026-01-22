@@ -1,13 +1,13 @@
-import { gateway, createModelCatalog } from "#/";
+import { gateway } from "#/";
 import { claudeSonnet45 } from "#/model-catalog/presets/claude45";
 import { Elysia } from "elysia";
 
 const gw = gateway({
-  models: createModelCatalog({
+  models: {
     ...claudeSonnet45({
       providers: ["bedrock"],
     }),
-  }),
+  },
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
