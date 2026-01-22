@@ -30,8 +30,11 @@ bun install @hebo-ai/gateway
 import {
   gateway,
   createProviderRegistry,
-  createNormalizedAmazonBedrock
 } from "@hebo-ai/gateway";
+
+import {
+  createNormalizedAmazonBedrock,
+} from "@hebo-ai/gateway/providers/bedrock";
 
 import {
   claudeSonnet45,
@@ -39,7 +42,7 @@ import {
 
 export const gw = gateway({
   // Provider Registry
-  // Compatible with Vercel AI SDK providers using canonical model IDs
+  // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
     bedrock: createNormalizedAmazonBedrock({
       accountId: process.env.AWS_ACCOUNT_ID,
@@ -48,8 +51,8 @@ export const gw = gateway({
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     }),
   }),
-   // The Model Catalog
-   // We provide a set of preset for common SOTA models in `model-catalog/presets`
+   // Model Catalog
+   // Choose from a set of presets for common SOTA models in `model-catalog/presets`
   models: {
     ...claudeSonnet45({
       providers: ["bedrock"],
@@ -137,7 +140,7 @@ export const Route = createFileRoute("/api/$")({
 
 ### Custom Models
 
-While hebo-gateawy provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply defined your own by following the `CatalogModel` type.
+While hebo-gateawy provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
 
 ```ts
 export const gw = gateway({
@@ -150,7 +153,7 @@ export const gw = gateway({
       created: "2025-09-29",
       knowledge: "2025-07",
       modalities: {
-        input: ["text", "image", "pdf", "audio", "video"],
+        input: ["text", "image", "pdf", "file"],
         output: ["text"],
       },
       context: 200000,
@@ -172,6 +175,8 @@ export const gw = gateway({
 ```
 
 ### Hooks 
+
+Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
 
 ```ts
 export const gw = gateway({
