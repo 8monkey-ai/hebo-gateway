@@ -1,5 +1,7 @@
 function isPlainObject(v: unknown): v is Record<string, any> {
-  return !!v && typeof v === "object" && !Array.isArray(v);
+  if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
 }
 
 export type DeepPartial<T> = {
