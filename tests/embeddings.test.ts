@@ -5,7 +5,7 @@ import { gateway } from "../src/gateway";
 const mockEmbedMany = mock(async (options: any) => {
   return {
     embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
-    usage: { promptTokens: 10, totalTokens: 10 },
+    usage: { tokens: 10 },
   };
 });
 
