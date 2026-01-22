@@ -2,7 +2,6 @@
   "name": "@hebo-ai/gateway",
   "devDependencies": {
     "@mjackson/node-fetch-server": "^0.7.0",
-    "@tanstack/devtools-vite": "^0.4.1",
     "@tanstack/react-router": "^1.154.1",
     "@tanstack/react-start": "^1.154.1",
     "@types/bun": "latest",
