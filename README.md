@@ -25,10 +25,12 @@ bun install @hebo-ai/gateway
 ### Configuration
 
 ```ts
-import { gateway } from "@hebo-ai/gateway";
-import { createProviderRegistry } from "ai";
-import { createNormalizedAmazonBedrock } from "@hebo-ai/gateway/providers";
-import { createModelCatalog } from "@hebo-ai/gateway/model-catalog";
+import { 
+  gateway,
+  createModelCatalog,
+  createProviderRegistry,
+  createNormalizedAmazonBedrock
+} from "@hebo-ai/gateway";
 
 export const gw = gateway({
   // Provider Registry
@@ -98,19 +100,6 @@ export const gw = gateway({
 
 ### Mount route handler
 
-### Hono
-
-`src/index.ts`
-
-```ts
-import { Hono } from "hono";
-
-const hono = new Hono();
-hono.on(["POST", "GET"], "/api/gateway/*", (c) => gw.handler(c.req.raw));
-
-export default hono;
-```
-
 ### ElysiaJS
 
 `src/index.ts`
@@ -118,11 +107,21 @@ export default hono;
 ```ts
 import { Elysia } from "elysia";
 
-const elysia = new Elysia().mount("/api/gateway/", gw.handler).listen(3000);
+const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
 
-console.log(
-  `🦊 Elysia is running at ${elysia.server?.hostname}:${elysia.server?.port}`
-);
+console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
+```
+
+### Hono
+
+`src/index.ts`
+
+```ts
+import { Hono } from "hono";
+
+export default new Hono().mount("/v1/gateway/", gw.handler);
+
+console.log(`🐒 Hebo Gateway is running with Hono framework`);
 ```
 
 ### Next.js (App Router)
@@ -130,9 +129,45 @@ console.log(
 `app/api/gateway/[...all]/route.ts`
 
 ```ts
-import { toNextJsHandler } from "@hebo-ai/gateway/adapters";
+export const POST = gw.handler, GET = gw.handler;
+```
 
-export const { POST, GET } = toNextJsHandler(gw);
+### Next.js (Pages Router)
+
+`pages/api/gateway/[...all].ts`
+
+```ts
+// install @mjackson/node-fetch-server npm package
+import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
+
+const gw = gateway({
+  basePath: "/api/gateway",
+  // ...
+});
+
+export default async function handler(req, res) {
+  await sendResponse(res, await gw.handler(createRequest(req, res)));
+}
+```
+
+### TanStack Start
+
+`routes/api/$.ts`
+
+```ts
+const gw = gateway({
+  basePath: "/api/gateway",
+  // ...
+});
+
+export const Route = createFileRoute("/api/$")({
+  server: {
+    handlers: {
+      GET: ({ request }) => gw.handler(request),
+      POST: ({ request }) => gw.handler(request),
+    },
+  },
+});
 ```
 
 ## Low-level functions via deep imports
