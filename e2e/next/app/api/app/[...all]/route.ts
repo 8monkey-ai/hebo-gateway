@@ -9,5 +9,5 @@ const gw = gateway({
   },
 });
 
-export const POST = gw.handler,
-  GET = gw.handler;
+export const GET = gw.handler,
+  POST = gw.handler;
