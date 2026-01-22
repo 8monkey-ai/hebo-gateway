@@ -46,7 +46,7 @@ export function deepMerge<A extends object, B extends object>(base: A, override?
   return out as unknown as A & B;
 }
 
-type RequiredKeys<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T];
+type RequiredKeys<T> = { [K in keyof T]-?: object extends Pick<T, K> ? never : K }[keyof T];
 type MissingRequiredKeys<T, Base> = Exclude<RequiredKeys<T>, keyof Base>;
 type OverrideFor<T, Base> = DeepPartial<T> & Pick<T, MissingRequiredKeys<T, Base>>;
 
