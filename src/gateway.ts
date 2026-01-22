@@ -1,5 +1,6 @@
 import type { GatewayConfig, HeboGateway } from "./types";
 
+import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 
 export function gateway(config: GatewayConfig): HeboGateway {
@@ -7,6 +8,7 @@ export function gateway(config: GatewayConfig): HeboGateway {
 
   const routes: Record<string, { handler: typeof fetch }> = {
     [`${basePath}/models`]: models(config.models || {}),
+    [`${basePath}/embeddings`]: embeddings(config.providers),
   };
 
   const handler = (req: Request): Promise<Response> => {
