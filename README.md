@@ -25,7 +25,7 @@ bun install @hebo-ai/gateway
 ### Configuration
 
 ```ts
-import { 
+import {
   gateway,
   createModelCatalog,
   createProviderRegistry,

@@ -1,0 +1,30 @@
+export const CANONICAL_MODEL_IDS = [
+  "anthropic/claude-haiku-4.5",
+  "anthropic/claude-sonnet-4.5",
+  "anthropic/claude-opus-4.5",
+] as const;
+
+export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
+export type ModelId = CanonicalModelId | (string & {});
+
+export type CatalogModel = {
+  name: string;
+  created?: string;
+  knowledge?: string;
+  modalities: {
+    input: readonly ("text" | "image" | "audio" | "video" | "pdf")[];
+    output: readonly ("text" | "image")[];
+  };
+  context?: number;
+  capabilities?: readonly (
+    | "attachments"
+    | "reasoning"
+    | "tool_call"
+    | "structured_output"
+    | "temperature"
+  )[];
+  providers: readonly string[];
+  [key: string]: any;
+};
+
+export type ModelCatalog = Partial<Record<ModelId, CatalogModel>>;

@@ -1,5 +1,16 @@
 {
   "name": "@hebo-ai/gateway",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "clean": "git clean -fdx -e '.env*' .",
+    "format": "oxfmt .",
+    "format:staged": "oxfmt --write",
+    "lint": "oxlint",
+    "lint:staged": "oxlint --fix",
+    "type-check": "tsc --noEmit",
+    "test": "bun test"
+  },
   "devDependencies": {
     "@mjackson/node-fetch-server": "^0.7.0",
     "@tanstack/react-router": "^1.154.1",
@@ -18,16 +29,5 @@
   "peerDependencies": {
     "ai": "^6.0.42",
     "typescript": "^5"
-  },
-  "scripts": {
-    "dev": "bun --hot src/index.ts",
-    "clean": "git clean -fdx -e '.env*' .",
-    "format": "oxfmt .",
-    "format:staged": "oxfmt --write",
-    "lint": "oxlint",
-    "lint:staged": "oxlint --fix",
-    "type-check": "tsc --noEmit",
-    "test": "bun test"
-  },
-  "type": "module"
+  }
 }

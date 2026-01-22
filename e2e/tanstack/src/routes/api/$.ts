@@ -1,23 +1,15 @@
+import { claudeSonnet45 } from "#/model-catalog/presets/claude45";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { createModelCatalog, gateway } from "../../gateway";
+import { gateway } from "../../gateway";
 
 const gw = gateway({
   basePath: "/api/gateway",
-  models: createModelCatalog({
-    "anthropic/claude-sonnet-4.5": {
-      name: "Claude Sonnet 4.5",
-      created: "2025-09-29",
-      knowledge: "2025-07",
-      modalities: {
-        input: ["text", "image", "pdf", "audio", "video"],
-        output: ["text"],
-      },
-      context: 200000,
-      capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+  models: {
+    ...claudeSonnet45({
       providers: ["bedrock"],
-    },
-  }),
+    }),
+  },
 });
 
 export const Route = createFileRoute("/api/$")({
