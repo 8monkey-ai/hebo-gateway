@@ -1,6 +1,6 @@
 import type { ProviderRegistryProvider } from "ai";
 
-import type { ModelCatalog } from "./model-catalog/types";
+import type { ModelCatalog } from "./models/types";
 
 export type GatewayHooks = {
   before?: (request: Request) => Promise<void | Response>;

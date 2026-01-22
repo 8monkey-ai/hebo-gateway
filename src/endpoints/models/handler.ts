@@ -1,4 +1,4 @@
-import type { ModelCatalog } from "../../model-catalog";
+import type { ModelCatalog } from "../../models/types";
 import type { Endpoint } from "./types";
 
 import { toOpenAICompatibleModelList } from "./converters";

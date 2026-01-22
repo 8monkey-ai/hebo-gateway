@@ -1,5 +1,5 @@
 export * from "./gateway";
 export type * from "./types";
 
-export * from "./model-catalog/catalog";
-export type * from "./model-catalog/types";
+export * from "./models/catalog";
+export type * from "./models/types";

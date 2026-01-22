@@ -1,5 +1,5 @@
 import { gateway } from "#/";
-import { claudeSonnet45 } from "#/model-catalog/presets/claude45";
+import { claudeSonnet45 } from "#/models/presets/claude45";
 
 const gw = gateway({
   models: {
