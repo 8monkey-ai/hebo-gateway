@@ -1,7 +1,5 @@
+import { gateway, createModelCatalog } from "#/";
 import { describe, expect, it } from "bun:test";
-
-import { gateway } from "../src/gateway";
-import { createModelCatalog } from "../src/model-catalog";
 
 const parseResponse = async (res: Response) => {
   const text = await res.text();
