@@ -1,7 +1,14 @@
 export const CANONICAL_MODEL_IDS = [
+  // Anthropic
   "anthropic/claude-haiku-4.5",
   "anthropic/claude-sonnet-4.5",
   "anthropic/claude-opus-4.5",
+  // OpenAI
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b",
+  // Google
+  "google/gemini-3-pro-preview",
+  "google/gemini-3-flash-preview",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];

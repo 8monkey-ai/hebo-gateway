@@ -1,6 +1,6 @@
-import { presetFor, type DeepPartial } from "#/utils/preset";
-
 import type { CanonicalModelId, CatalogModel } from "../types";
+
+import { presetFor, type DeepPartial } from "../../utils/preset";
 
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-haiku-4.5",
