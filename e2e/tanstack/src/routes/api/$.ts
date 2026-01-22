@@ -1,6 +1,7 @@
+import { claudeSonnet45 } from "#/model-catalog/presets/claude45";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { claudeSonnet45, createModelCatalog, gateway } from "../../gateway";
+import { createModelCatalog, gateway } from "../../gateway";
 
 const gw = gateway({
   basePath: "/api/gateway",

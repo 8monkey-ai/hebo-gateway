@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-import { gateway, createModelCatalog, claudeSonnet45 } from "#/";
+import { gateway, createModelCatalog } from "#/";
+import { claudeSonnet45 } from "#/model-catalog/presets/claude45";
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 
 const gw = gateway({

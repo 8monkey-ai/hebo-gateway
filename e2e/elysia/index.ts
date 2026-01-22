@@ -1,4 +1,5 @@
-import { gateway, createModelCatalog, claudeSonnet45 } from "#/";
+import { gateway, createModelCatalog } from "#/";
+import { claudeSonnet45 } from "#/model-catalog/presets/claude45";
 import { Elysia } from "elysia";
 
 const gw = gateway({
