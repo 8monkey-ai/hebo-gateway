@@ -14,10 +14,11 @@ mock.module("ai", () => ({
 }));
 
 const parseResponse = async (res: Response) => {
+  const text = await res.text();
   try {
-    return await res.json();
+    return JSON.parse(text);
   } catch {
-    return await res.text();
+    return text;
   }
 };
 
@@ -111,20 +112,6 @@ describe("Embeddings Handler", () => {
     it(name, async () => {
       mockEmbedMany.mockClear();
       const res = await endpoint.handler(request);
-
-      if (res.status === 400 && typeof expected === "string") {
-        const text = await res.text();
-        expect(text).toContain(expected);
-        return;
-      }
-
-      if (res.status === 405) {
-        const text = await res.text();
-        expect(text).toBe(expected as string);
-        return;
-      }
-
-      expect(res.status).toBe(200);
       const data = await parseResponse(res);
       expect(data).toEqual(expected);
     });
