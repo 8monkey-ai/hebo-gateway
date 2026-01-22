@@ -1,12 +1,11 @@
-import { gptOss } from "#/models/presets/gpt-oss";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { gateway } from "../../gateway";
+import { createModelCatalog, gateway } from "../../gateway/";
+import { gptOss } from "../../gateway/models/presets/gpt-oss";
 
 const gw = gateway({
   basePath: "/api/gateway",
-  models: Object.assign(
-    {},
+  models: createModelCatalog(
     ...gptOss.map((model) =>
       model({
         providers: ["groq"],

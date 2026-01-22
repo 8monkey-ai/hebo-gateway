@@ -1,10 +1,9 @@
-import { gateway } from "#/";
+import { createModelCatalog, gateway } from "#/";
 import { gptOss } from "#/models/presets/gpt-oss";
 import { Elysia } from "elysia";
 
 const gw = gateway({
-  models: Object.assign(
-    {},
+  models: createModelCatalog(
     ...gptOss.map((model) =>
       model({
         providers: ["groq"],
