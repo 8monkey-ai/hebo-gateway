@@ -1,8 +1,8 @@
-import type { CanonicalModelId, CatalogModel } from "../types";
+import type { CanonicalModelId, CatalogModel, CatalogModelCore } from "../types";
 
-import { presetFor, type DeepPartial } from "../../utils/preset";
+import { presetFor, presetGroup, type DeepPartial } from "../../utils/preset";
 
-export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
+export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModelCore>()(
   "google/gemini-3-pro-preview",
   {
     name: "Gemini 3 Pro (Preview)",
@@ -23,7 +23,7 @@ export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
-export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
+export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModelCore>()(
   "google/gemini-3-flash-preview",
   {
     name: "Gemini 3 Flash",
@@ -41,5 +41,10 @@ export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModel>,
+  } satisfies DeepPartial<CatalogModelCore>,
+);
+
+export const gemini3Preview = presetGroup<CanonicalModelId, CatalogModelCore>()(
+  gemini3FlashPreview,
+  gemini3ProPreview,
 );

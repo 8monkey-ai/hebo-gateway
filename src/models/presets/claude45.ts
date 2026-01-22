@@ -1,8 +1,8 @@
-import type { CanonicalModelId, CatalogModel } from "../types";
+import type { CanonicalModelId, CatalogModelCore, ModelId } from "../types";
 
-import { presetFor, type DeepPartial } from "../../utils/preset";
+import { presetFor, presetGroup, type DeepPartial } from "../../utils/preset";
 
-export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
+export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModelCore>()(
   "anthropic/claude-haiku-4.5",
   {
     name: "Claude Haiku 4.5",
@@ -20,10 +20,10 @@ export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModel>,
+  } satisfies DeepPartial<CatalogModelCore>,
 );
 
-export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
+export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModelCore>()(
   "anthropic/claude-sonnet-4.5",
   {
     name: "Claude Sonnet 4.5",
@@ -41,10 +41,10 @@ export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModel>,
+  } satisfies DeepPartial<CatalogModelCore>,
 );
 
-export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
+export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModelCore>()(
   "anthropic/claude-opus-4.5",
   {
     name: "Claude Opus 4.5",
@@ -62,5 +62,11 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModel>,
+  } satisfies DeepPartial<CatalogModelCore>,
+);
+
+export const claude45 = presetGroup<ModelId, CatalogModelCore>()(
+  claudeHaiku45,
+  claudeSonnet45,
+  claudeOpus45,
 );

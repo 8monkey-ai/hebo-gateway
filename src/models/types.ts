@@ -14,7 +14,7 @@ export const CANONICAL_MODEL_IDS = [
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
 export type ModelId = CanonicalModelId | (string & {});
 
-export type CatalogModel = {
+export type CatalogModelCore = {
   name: string;
   created?: string;
   knowledge?: string;
@@ -31,7 +31,9 @@ export type CatalogModel = {
     | "temperature"
   )[];
   providers: readonly string[];
-  [key: string]: any;
 };
+
+type AdditionalProperties = Record<string, unknown>;
+export type CatalogModel = CatalogModelCore & AdditionalProperties;
 
 export type ModelCatalog = Partial<Record<ModelId, CatalogModel>>;

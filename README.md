@@ -137,7 +137,6 @@ export const Route = createFileRoute("/api/$")({
 
 ## Advanced Configuration
 
-
 ### Custom Models
 
 While hebo-gateawy provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
@@ -174,7 +173,7 @@ export const gw = gateway({
 });
 ```
 
-### Hooks 
+### Hooks
 
 Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
 
@@ -208,7 +207,7 @@ export const gw = gateway({
     },
     after: async (response: Response) => {
       // Example Use Cases:
-      // - Transform response 
+      // - Transform response
       // - Response logging
     },
   },
