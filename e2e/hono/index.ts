@@ -1,13 +1,16 @@
 import { gateway } from "#/";
-import { claudeSonnet45 } from "#/models/presets/claude45";
+import { gptOss } from "#/models/presets/gpt-oss";
 import { Hono } from "hono";
 
 const gw = gateway({
-  models: {
-    ...claudeSonnet45({
-      providers: ["bedrock"],
-    }),
-  },
+  models: Object.assign(
+    {},
+    ...gptOss.map((model) =>
+      model({
+        providers: ["groq"],
+      }),
+    ),
+  ),
 });
 
 export default new Hono().mount("/v1/gateway/", gw.handler);

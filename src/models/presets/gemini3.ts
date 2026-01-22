@@ -1,6 +1,6 @@
 import type { CanonicalModelId, CatalogModel } from "../types";
 
-import { presetFor, presetGroup, type DeepPartial } from "../../utils/preset";
+import { presetFor, type DeepPartial } from "../../utils/preset";
 
 export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3-pro-preview" as const,
@@ -44,4 +44,4 @@ export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
-export const gemini3Preview = presetGroup<CatalogModel>()(gemini3FlashPreview, gemini3ProPreview);
+export const gemini3 = [gemini3FlashPreview, gemini3ProPreview];

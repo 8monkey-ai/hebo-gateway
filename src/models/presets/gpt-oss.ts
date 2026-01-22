@@ -1,6 +1,6 @@
 import type { CanonicalModelId, CatalogModel } from "../types";
 
-import { presetFor, presetGroup, type DeepPartial } from "../../utils/preset";
+import { presetFor, type DeepPartial } from "../../utils/preset";
 
 export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/gpt-oss-20b" as const,
@@ -44,4 +44,4 @@ export const gptOss120b = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
-export const gptOss = presetGroup<CatalogModel>()(gptOss20b, gptOss120b);
+export const gptOss = [gptOss20b, gptOss120b];

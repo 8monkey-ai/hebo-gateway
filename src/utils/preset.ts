@@ -4,10 +4,10 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-export type DeepPartial<T> = T extends (...args: any[]) => any
+export type DeepPartial<T> = T extends (...args: unknown[]) => unknown
   ? T
   : T extends readonly (infer U)[]
-    ? ReadonlyArray<DeepPartial<U>>
+    ? readonly DeepPartial<U>[]
     : T extends object
       ? { [K in keyof T]?: DeepPartial<T[K]> }
       : T;
@@ -46,26 +46,18 @@ export function deepMerge<A extends object, B extends object>(base: A, override?
   return out as unknown as A & B;
 }
 
+type RequiredKeys<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T];
+type MissingRequiredKeys<T, Base> = Exclude<RequiredKeys<T>, keyof Base>;
+type OverrideFor<T, Base> = DeepPartial<T> & Pick<T, MissingRequiredKeys<T, Base>>;
+
 export function presetFor<Ids extends string, T extends Record<string, unknown>>() {
   return function preset<const Id extends Ids, const Base extends DeepPartial<T>>(
     id: Id,
     base: Base,
   ) {
-    return function apply<O extends DeepPartial<T>>(override: O): { [K in Id]: Base & O } {
+    return <const O extends OverrideFor<T, Base>>(override: O) => {
       const merged = deepMerge(base, override);
-      return { [id]: merged } as { [K in Id]: Base & O };
-    };
-  };
-}
-
-export function presetGroup<T extends Record<string, unknown>>() {
-  return function group<const Fns extends ReadonlyArray<(override: DeepPartial<T>) => object>>(
-    ...fns: Fns
-  ) {
-    return function applyAll<const O extends DeepPartial<T>>(override: O) {
-      return Object.assign({}, ...fns.map((fn) => fn(override))) as {
-        [K in keyof ReturnType<Fns[number]>]: ReturnType<Fns[number]>[K];
-      };
+      return { [id]: merged } as Record<Id, Base & O>;
     };
   };
 }
