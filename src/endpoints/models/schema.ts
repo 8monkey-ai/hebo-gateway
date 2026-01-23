@@ -1,26 +1,27 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
-export const OpenAICompatibleModelSchema = z
-  .object({
+export const OpenAICompatibleModelSchema = z.catchall(
+  z.object({
     id: z.string(),
     object: z.literal("model"),
     created: z.number(),
     owned_by: z.string(),
-    description: z.string().optional(),
-    architecture: z
-      .object({
-        modality: z.string().optional(),
-        input_modalities: z.array(z.string()).readonly(),
-        output_modalities: z.array(z.string()).readonly(),
-      })
-      .optional(),
+    description: z.optional(z.string()),
+    architecture: z.optional(
+      z.object({
+        modality: z.optional(z.string()),
+        input_modalities: z.readonly(z.array(z.string())),
+        output_modalities: z.readonly(z.array(z.string())),
+      }),
+    ),
     endpoints: z.array(
       z.object({
         tag: z.string(),
       }),
     ),
-  })
-  .passthrough();
+  }),
+  z.unknown(),
+);
 
 export type OpenAICompatibleModel = z.infer<typeof OpenAICompatibleModelSchema>;
 

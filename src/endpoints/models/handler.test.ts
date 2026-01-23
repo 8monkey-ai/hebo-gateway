@@ -83,7 +83,10 @@ describe("Models Handler", () => {
     {
       name: "should return 'Method Not Allowed' for POST request",
       request: new Request("http://localhost/models", { method: "POST" }),
-      expected: "Method Not Allowed",
+      expected: {
+        code: "METHOD_NOT_ALLOWED",
+        message: "Method Not Allowed",
+      },
     },
   ];
 

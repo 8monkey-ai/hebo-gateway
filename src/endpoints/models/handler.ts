@@ -1,12 +1,13 @@
 import type { ModelCatalog } from "../../models/types";
 import type { Endpoint } from "./types";
 
+import { createErrorResponse } from "../errors";
 import { toOpenAICompatibleModelList } from "./converters";
 
 export const models = (models: ModelCatalog): Endpoint => ({
   handler: ((req: Request) => {
     if (req.method !== "GET") {
-      return Promise.resolve(new Response("Method Not Allowed", { status: 405 }));
+      return Promise.resolve(createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405));
     }
     const openAICompatibleList = toOpenAICompatibleModelList(models);
 

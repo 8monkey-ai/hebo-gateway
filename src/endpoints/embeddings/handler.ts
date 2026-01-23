@@ -1,10 +1,13 @@
 import type { ProviderRegistryProvider } from "ai";
 
 import { embedMany } from "ai";
+import * as z from "zod/mini";
 
 import type { ModelCatalog } from "../../models/types";
 import type { Endpoint } from "./types";
 
+import { resolveModelId } from "../../models/catalog";
+import { createErrorResponse } from "../errors";
 import { toOpenAICompatibleEmbeddingResponseBody } from "./converters";
 import {
   OpenAICompatibleEmbeddingRequestBodySchema,
@@ -17,44 +20,47 @@ export const embeddings = (
 ): Endpoint => ({
   handler: (async (req: Request): Promise<Response> => {
     if (req.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
+      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
     let json;
     try {
       json = await req.json();
     } catch {
-      return new Response("Bad Request: Invalid JSON", { status: 400 });
+      return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const result = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
+    const parsed = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
 
-    if (!result.success) {
-      return new Response(
-        `Bad Request: ${result.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join(", ")}`,
-        { status: 400 },
+    if (!parsed.success) {
+      return createErrorResponse(
+        "UNPROCESSABLE_ENTITY",
+        "Validation error",
+        422,
+        z.prettifyError(parsed.error),
       );
     }
 
-    const requestBody = result.data;
+    const requestBody = parsed.data;
     const { input, model, ...rest } = requestBody;
 
-    const catalogModel = models[model];
-    const resolvedProvider = catalogModel.providers[0];
+    let resolvedProvider;
+    let resolvedModelId;
 
-    const embeddingModelId = `${resolvedProvider}:${model}`;
+    try {
+      ({ resolvedProvider, resolvedModelId } = resolveModelId(models, model, "embeddings"));
+    } catch (e: any) {
+      return createErrorResponse("BAD_REQUEST", e.message, 400);
+    }
 
     let embeddingModel;
     try {
-      embeddingModel = providers.embeddingModel(embeddingModelId as `${string}:${string}`);
+      embeddingModel = providers.embeddingModel(resolvedModelId as `${string}:${string}`);
     } catch {
-      return new Response(
-        `Bad Request: Model '${model}' not found or not supported for embeddings`,
-        {
-          status: 400,
-        },
+      return createErrorResponse(
+        "BAD_REQUEST",
+        `Model '${model}' not supported by ${resolvedProvider}`,
+        400,
       );
     }
 
@@ -72,9 +78,7 @@ export const embeddings = (
       });
     } catch (error: any) {
       const errorMessage = error.message || "Failed to generate embeddings";
-      return new Response(`Internal Server Error: ${errorMessage}`, {
-        status: 500,
-      });
+      return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
     }
 
     const openAICompatibleResponse: OpenAICompatibleEmbeddingResponseBody =

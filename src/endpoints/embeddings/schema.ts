@@ -1,11 +1,11 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
 export const OpenAICompatibleEmbeddingRequestBodySchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
   model: z.string(),
-  encoding_format: z.enum(["float", "base64"]).optional(),
-  dimensions: z.number().optional(),
-  user: z.string().optional(),
+  encoding_format: z.optional(z.enum(["float", "base64"])),
+  dimensions: z.optional(z.number()),
+  user: z.optional(z.string()),
 });
 
 export type OpenAICompatibleEmbeddingRequestBody = z.infer<
@@ -32,7 +32,7 @@ export const OpenAICompatibleEmbeddingResponseBodySchema = z.object({
   data: z.array(OpenAICompatibleEmbeddingSchema),
   model: z.string(),
   usage: OpenAICompatibleEmbeddingUsageSchema,
-  providerMetadata: z.any().optional(),
+  providerMetadata: z.optional(z.any()),
 });
 
 export type OpenAICompatibleEmbeddingResponseBody = z.infer<
