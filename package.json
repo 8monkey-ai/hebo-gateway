@@ -5,7 +5,7 @@
     "dev": "bun --hot src/index.ts",
     "clean": "git clean -fdx -e '.env*' .",
     "format": "oxfmt .",
-    "format:staged": "oxfmt --write",
+    "format:staged": "oxfmt --no-error-on-unmatched-pattern",
     "lint": "oxlint",
     "lint:staged": "oxlint --fix",
     "type-check": "tsc --noEmit",

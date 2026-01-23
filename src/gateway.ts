@@ -3,17 +3,23 @@ import type { GatewayConfig, HeboGateway } from "./types";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 
-export function gateway(config: GatewayConfig): HeboGateway {
-  const basePath = config.basePath?.replace(/\/+$/, "") || "";
+export function gateway(config: GatewayConfig) {
+  const basePath = (config.basePath ?? "").replace(/\/+$/, "");
 
-  const routes: Record<string, { handler: typeof fetch }> = {
-    [`${basePath}/models`]: models(config.models || {}),
-    [`${basePath}/embeddings`]: embeddings(config.providers, config.models || {}),
-  };
+  const routes = {
+    ["/models"]: models(config),
+    ["/embeddings"]: embeddings(config),
+  } as const;
 
   const handler = (req: Request): Promise<Response> => {
     const url = new URL(req.url);
-    const endpoint = routes[url.pathname];
+
+    const path =
+      basePath && url.pathname.startsWith(basePath)
+        ? url.pathname.slice(basePath.length)
+        : url.pathname;
+
+    const endpoint = routes[path as keyof typeof routes];
 
     if (endpoint) {
       return endpoint.handler(req);
@@ -22,5 +28,8 @@ export function gateway(config: GatewayConfig): HeboGateway {
     return Promise.resolve(new Response("Not Found", { status: 404 }));
   };
 
-  return { handler: handler as typeof fetch };
+  return {
+    handler: handler as typeof fetch,
+    routes,
+  } satisfies HeboGateway<typeof routes>;
 }

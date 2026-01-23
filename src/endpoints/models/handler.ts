@@ -1,11 +1,12 @@
-import type { ModelCatalog } from "../../models/types";
-import type { Endpoint } from "./types";
+import type { GatewayConfig, Endpoint } from "#/types";
 
 import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleModelList } from "./converters";
 
-export const models = (models: ModelCatalog): Endpoint => ({
-  handler: ((req: Request) => {
+export const models = (config: GatewayConfig): Endpoint => {
+  const models = config.models ?? {};
+
+  const handler = (req: Request) => {
     if (req.method !== "GET") {
       return Promise.resolve(createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405));
     }
@@ -16,5 +17,7 @@ export const models = (models: ModelCatalog): Endpoint => ({
         headers: { "Content-Type": "application/json" },
       }),
     );
-  }) as typeof fetch,
-});
+  };
+
+  return { handler: handler as typeof fetch };
+};

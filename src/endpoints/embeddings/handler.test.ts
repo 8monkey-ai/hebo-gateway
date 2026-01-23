@@ -44,7 +44,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  const endpoint = embeddings(mockProviders, catalog);
+  const endpoint = embeddings({ providers: mockProviders, models: catalog });
 
   const testCases = [
     {

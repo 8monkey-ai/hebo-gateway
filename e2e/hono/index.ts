@@ -3,13 +3,7 @@ import { gptOss } from "#/models/presets/gpt-oss";
 import { Hono } from "hono";
 
 const gw = gateway({
-  models: createModelCatalog(
-    ...gptOss.map((model) =>
-      model({
-        providers: ["groq"],
-      }),
-    ),
-  ),
+  models: createModelCatalog(...gptOss.map((model) => model({}))),
 });
 
 export default new Hono().mount("/v1/gateway/", gw.handler);

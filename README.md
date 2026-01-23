@@ -4,7 +4,9 @@ Roll your own AI gateway for full control over models, providers, routing logic,
 
 ## Overview
 
-Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as stand-alone. It's built on the shoulder of giants, the Vercel AI SDK.
+Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as stand-alone service.
+
+In contrast to other projects like LiteLLM or Portkey, it's built from the ground-up to be highly-extensible to your own needs. This would not have been possible without standing on the shoulders of giants, in this case the Vercel AI SDK.
 
 ## Features
 
@@ -12,14 +14,14 @@ Hebo Gateway is a configurable AI gateway that standardizes providers, models, a
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Normalized model IDs and snakeCase/camelCase parameters across providers.
-- 🗂️ Model catalog with extensible metadata for capabilities.
+- 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and response shaping.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
 ## Installation
 
 ```bash
-bun install @hebo-ai/gateway
+bun add @hebo-ai/gateway
 ```
 
 ## Quickstart
@@ -37,28 +39,75 @@ import {
 } from "@hebo-ai/gateway/providers/groq";
 
 import {
-  gptOss120b,
+  gptOss20b,
 } from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
-  // Provider Registry
+  // PROVIDER REGISTRY
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
     groq: normalizedGroq({
       apiKey: process.env.GROQ_API_KEY,
     }),
   }),
-   // Model Catalog
-   // Choose from a set of presets for common SOTA models in `model-catalog/presets`
+
+  // MODEL CATALOG
+  // Choose a preset for common SOTA models in `model-catalog/presets`
   models: {
-    ...gptOss120b({
+    ...gptOss20b({
       providers: ["groq"],
     }),
   },
 });
 ```
 
-### Mount route handler
+### Mount Route Handlers
+
+Hebo Gateway plugs into any existing framework. Simply mount the gateway’s `handler` under a prefix, and keep using your framework’s existing lifecycle for authentication, logging, observability, and more.
+
+Here is an example using ElysiaJS (our favorite):
+
+`src/index.ts`
+
+```ts
+import { Elysia } from "elysia";
+
+// Previously created gateway instance
+const gw = gateway({
+  /// ...
+});
+
+const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
+
+console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
+```
+
+### Use the Gateway
+
+Since Hebo Gateway exposes OpenAI-Compatible endpoints, it can be used with a broad set of common AI SDKs like Vercel AI SDK, TanStack AI, Langchain, the official OpenAI SDK and others.
+
+Here is a quick example using the Vercel AI SDK:
+
+```ts
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { generateText } from "ai";
+
+const hebo = createOpenAICompatible({
+  name: "hebo",
+  baseURL: "http://localhost:3000/v1/gateway",
+});
+
+const { text } = await generateText({
+  model: hebo("openai/gpt-oss-20b"),
+  prompt: "Tell me a joke about monkeys",
+});
+
+console.log(text);
+```
+
+## Framework Support
+
+Hebo Gateway exposes WinterCG-compatible handlers that integrate into any existing framework.
 
 ### ElysiaJS
 
@@ -97,7 +146,7 @@ export const POST = gw.handler, GET = gw.handler;
 `pages/api/gateway/[...all].ts`
 
 ```ts
-// install @mjackson/node-fetch-server npm package
+// Requires `@mjackson/node-fetch-server` npm package
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 
 const gw = gateway({
@@ -136,10 +185,10 @@ export const Route = createFileRoute("/api/$")({
 
 ### Custom Models
 
-While hebo-gateawy provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
+While Hebo Gateway provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
 
 ```ts
-export const gw = gateway({
+const gw = gateway({
   providers: createProviderRegistry({
     // ...
   }),
@@ -170,18 +219,34 @@ export const gw = gateway({
 });
 ```
 
+### Selective Route Mounting
+
+If you want to have more flexibility, for example for custom rate limit checks, you can also choose to only mount individual routes from the gateway's `routes` property.
+
+```ts
+const gw = gateway({
+  /// ...
+});
+
+const app = new Elysia()
+  .mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler)
+  .listen(3000);
+
+console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
+```
+
 ### Hooks
 
 Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
 
 ```ts
-export const gw = gateway({
+const gw = gateway({
   providers: createProviderRegistry({
     // ...
   }),
   models: {
     // ...
-  }),
+  },
   hooks: {
     before: async (request: Request) => {
       // Example Use Cases:

@@ -38,7 +38,7 @@ describe("Models Handler", () => {
     },
   });
 
-  const endpoint = models(testModels);
+  const endpoint = models({ models: testModels });
 
   const testCases = [
     {
