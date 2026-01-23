@@ -4,7 +4,7 @@ Roll your own AI gateway for full control over models, providers, routing logic,
 
 ## Overview
 
-Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as stand-alone service. 
+Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as stand-alone service.
 
 In contrast to other projects like LiteLLM or Portkey, it's built from the ground-up to be highly-extensible to your own needs. This would not have been possible without standing on the shoulders of giants, in this case the Vercel AI SDK.
 
@@ -62,7 +62,7 @@ export const gw = gateway({
 
 ### Mount Route Handlers
 
-Instead of aiming to reinvent yet another web framework, Hebo Gateway seamlessly integrates into any existing framework. The easiest way to get started is to just mount all endpoints via the `handler` property of the gateway you just created to a prefix. You can then use your framework's existing lifecycle for authentication, logging, observability and other purposes. 
+Hebo Gateway plugs into any existing framework. Simply mount the gateway’s `handler` under a prefix, and keep using your framework’s existing lifecycle for authentication, logging, observability, and more.
 
 Here is an example using ElysiaJS (our favorite):
 
@@ -104,10 +104,9 @@ const { text } = await generateText({
 console.log(text);
 ```
 
-
 ## Framework Support
 
-Hebo Gateway exposes WinterCG compatible handlers that can be integrated with any framework.
+Hebo Gateway exposes WinterCG-compatible handlers that integrate into any existing framework.
 
 ### ElysiaJS
 
@@ -228,9 +227,11 @@ export const gw = gateway({
   /// ...
 });
 
-const app = new Elysia().mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler).listen(3000);
+const app = new Elysia()
+  .mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler)
+  .listen(3000);
 
-console.log(`🐒 Hebo Gateway running with /chat/completions mounted to ${app.server?.url}/chat`);
+console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
 ### Hooks
