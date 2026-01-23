@@ -43,7 +43,6 @@ import {
 } from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
-
   // PROVIDER REGISTRY
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
@@ -51,7 +50,7 @@ export const gw = gateway({
       apiKey: process.env.GROQ_API_KEY,
     }),
   }),
-  
+
   // MODEL CATALOG
   // Choose a preset for common SOTA models in `model-catalog/presets`
   models: {
