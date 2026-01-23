@@ -1,61 +1,63 @@
-function isPlainObject(v: unknown): v is Record<string, any> {
+function isPlainObject(v: unknown): v is Record<string, unknown> {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
   const proto = Object.getPrototypeOf(v);
   return proto === Object.prototype || proto === null;
 }
 
-export type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends readonly (infer U)[]
-    ? readonly U[]
-    : T[K] extends object
-      ? DeepPartial<T[K]>
-      : T[K];
-};
+export type DeepPartial<T> = T extends (...args: unknown[]) => unknown
+  ? T
+  : T extends readonly (infer U)[]
+    ? readonly DeepPartial<U>[]
+    : T extends object
+      ? { [K in keyof T]?: DeepPartial<T[K]> }
+      : T;
 
 /**
  * Deep merge where overrides win.
  * Arrays are replaced.
  */
-function deepMerge<A extends object, B extends object>(base: A, patch?: B): A & B {
-  if (patch == null) {
-    return base as A & B;
+export function deepMerge<A extends object, B extends object>(base: A, override?: B): A & B {
+  if (override === null || override === undefined) return base as A & B;
+
+  if (!isPlainObject(base) || !isPlainObject(override)) {
+    return override as unknown as A & B;
   }
 
-  // Start from a shallow clone of base (preserves base keys)
-  const out: any = Array.isArray(base) ? [...(base as any)] : { ...(base as any) };
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
 
-  // Merge keys from patch
-  for (const key of Object.keys(patch as any)) {
-    const pv = (patch as any)[key];
-    if (pv === undefined) continue;
+  for (const [key, ov] of Object.entries(override as Record<string, unknown>)) {
+    if (ov === undefined) continue;
 
-    const bv = (base as any)[key];
+    const bv = out[key];
 
-    if (Array.isArray(pv)) {
-      // replace arrays
-      out[key] = pv;
-    } else if (isPlainObject(bv) && isPlainObject(pv)) {
-      // deep merge plain objects
-      out[key] = deepMerge(bv, pv);
-    } else {
-      // replace primitives / functions / dates / non-plain objects / mismatched types
-      out[key] = pv;
+    if (Array.isArray(ov)) {
+      out[key] = ov;
+      continue;
     }
+
+    if (isPlainObject(bv) && isPlainObject(ov)) {
+      out[key] = deepMerge(bv as object, ov as object);
+      continue;
+    }
+
+    out[key] = ov;
   }
 
-  return out as A & B;
+  return out as unknown as A & B;
 }
 
-export function presetFor<Ids extends string, T extends object>() {
+type RequiredKeys<T> = { [K in keyof T]-?: object extends Pick<T, K> ? never : K }[keyof T];
+type MissingRequiredKeys<T, Base> = Exclude<RequiredKeys<T>, keyof Base>;
+type OverrideFor<T, Base> = DeepPartial<T> & Pick<T, MissingRequiredKeys<T, Base>>;
+
+export function presetFor<Ids extends string, T extends Record<string, unknown>>() {
   return function preset<const Id extends Ids, const Base extends DeepPartial<T>>(
     id: Id,
     base: Base,
   ) {
-    return function apply<const Override extends DeepPartial<T> = {}>(
-      override?: Override,
-    ): { [K in Id]: Base & Override } {
-      const merged = deepMerge(base, override) as unknown as Base & Override;
-      return { [id]: merged } as { [K in Id]: Base & Override };
+    return <const O extends OverrideFor<T, Base>>(override: O) => {
+      const merged = deepMerge(base, override);
+      return { [id]: merged } as Record<Id, Base & O>;
     };
   };
 }

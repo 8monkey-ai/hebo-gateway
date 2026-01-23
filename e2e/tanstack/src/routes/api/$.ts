@@ -1,15 +1,17 @@
-import { claudeSonnet45 } from "#/models/presets/claude45";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { gateway } from "../../gateway";
+import { createModelCatalog, gateway } from "../../gateway/";
+import { gptOss } from "../../gateway/models/presets/gpt-oss";
 
 const gw = gateway({
   basePath: "/api/gateway",
-  models: {
-    ...claudeSonnet45({
-      providers: ["bedrock"],
-    }),
-  },
+  models: createModelCatalog(
+    ...gptOss.map((model) =>
+      model({
+        providers: ["groq"],
+      }),
+    ),
+  ),
 });
 
 export const Route = createFileRoute("/api/$")({

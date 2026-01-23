@@ -33,29 +33,26 @@ import {
 } from "@hebo-ai/gateway";
 
 import {
-  createNormalizedAmazonBedrock,
-} from "@hebo-ai/gateway/providers/bedrock";
+  normalizedGroq,
+} from "@hebo-ai/gateway/providers/groq";
 
 import {
-  claudeSonnet45,
-} from "@hebo-ai/gateway/model-catalog/presets/claude45";
+  gptOss120b,
+} from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
   // Provider Registry
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
-    bedrock: createNormalizedAmazonBedrock({
-      accountId: process.env.AWS_ACCOUNT_ID,
-      region: process.env.AWS_REGION,
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    groq: normalizedGroq({
+      apiKey: process.env.GROQ_API_KEY,
     }),
   }),
    // Model Catalog
    // Choose from a set of presets for common SOTA models in `model-catalog/presets`
   models: {
-    ...claudeSonnet45({
-      providers: ["bedrock"],
+    ...gptOss120b({
+      providers: ["groq"],
     }),
   },
 });
@@ -137,7 +134,6 @@ export const Route = createFileRoute("/api/$")({
 
 ## Advanced Configuration
 
-
 ### Custom Models
 
 While hebo-gateawy provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
@@ -174,7 +170,7 @@ export const gw = gateway({
 });
 ```
 
-### Hooks 
+### Hooks
 
 Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
 
@@ -208,7 +204,7 @@ export const gw = gateway({
     },
     after: async (response: Response) => {
       // Example Use Cases:
-      // - Transform response 
+      // - Transform response
       // - Response logging
     },
   },

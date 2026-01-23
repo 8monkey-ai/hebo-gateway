@@ -1,13 +1,15 @@
-import { gateway } from "#/";
-import { claudeSonnet45 } from "#/models/presets/claude45";
+import { createModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/presets/gpt-oss";
 import { Elysia } from "elysia";
 
 const gw = gateway({
-  models: {
-    ...claudeSonnet45({
-      providers: ["bedrock"],
-    }),
-  },
+  models: createModelCatalog(
+    ...gptOss.map((model) =>
+      model({
+        providers: ["groq"],
+      }),
+    ),
+  ),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);

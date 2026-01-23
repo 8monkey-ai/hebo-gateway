@@ -5,7 +5,7 @@ export function toOpenAICompatibleModel(
   id: string,
   catalogModel: CatalogModel,
 ): OpenAICompatibleModel {
-  const { created, providers, modalities, ...rest } = catalogModel;
+  const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);
   if (created) {
     const parsed = Date.parse(created);
@@ -32,6 +32,7 @@ export function toOpenAICompatibleModel(
         tag: provider,
       })) || [],
     ...rest,
+    ...additionalProperties,
   };
 
   return model;
