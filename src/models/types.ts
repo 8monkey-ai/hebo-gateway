@@ -9,6 +9,7 @@ export const CANONICAL_MODEL_IDS = [
   // Google
   "google/gemini-3-pro-preview",
   "google/gemini-3-flash-preview",
+  "voyage/voyage-3.5-lite",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];

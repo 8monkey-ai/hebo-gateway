@@ -1,7 +1,7 @@
 import type { ModelCatalog } from "../../models/types";
 import type { Endpoint } from "./types";
 
-import { createErrorResponse } from "../errors";
+import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleModelList } from "./converters";
 
 export const models = (models: ModelCatalog): Endpoint => ({

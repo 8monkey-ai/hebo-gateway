@@ -6,8 +6,8 @@ import * as z from "zod/mini";
 import type { ModelCatalog } from "../../models/types";
 import type { Endpoint } from "./types";
 
-import { resolveModelId } from "../../models/catalog";
-import { createErrorResponse } from "../errors";
+import { resolveProvider } from "../../providers/utils";
+import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleEmbeddingResponseBody } from "./converters";
 import {
   OpenAICompatibleEmbeddingRequestBodySchema,
@@ -42,30 +42,19 @@ export const embeddings = (
     }
 
     const requestBody = parsed.data;
-    const { input, model, ...rest } = requestBody;
+    const { input, model: modelId, ...rest } = requestBody;
 
-    let resolvedProvider;
-    let resolvedModelId;
-
+    let provider;
     try {
-      ({ resolvedProvider, resolvedModelId } = resolveModelId(models, model, "embeddings"));
-    } catch (e: any) {
-      return createErrorResponse("BAD_REQUEST", e.message, 400);
+      provider = resolveProvider(providers!, models, modelId, "embeddings");
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error.message, 400);
     }
 
-    let embeddingModel;
-    try {
-      embeddingModel = providers.embeddingModel(resolvedModelId as `${string}:${string}`);
-    } catch {
-      return createErrorResponse(
-        "BAD_REQUEST",
-        `Model '${model}' not supported by ${resolvedProvider}`,
-        400,
-      );
-    }
+    const embeddingModel = provider.embeddingModel(modelId);
 
     const providerOptions = {
-      [resolvedProvider]: rest,
+      [embeddingModel.provider]: rest,
     };
 
     let embedManyResult;
@@ -76,13 +65,13 @@ export const embeddings = (
         values: inputs,
         providerOptions,
       });
-    } catch (error: any) {
+    } catch (error) {
       const errorMessage = error.message || "Failed to generate embeddings";
       return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
     }
 
     const openAICompatibleResponse: OpenAICompatibleEmbeddingResponseBody =
-      toOpenAICompatibleEmbeddingResponseBody(embedManyResult, model);
+      toOpenAICompatibleEmbeddingResponseBody(embedManyResult, modelId);
 
     const finalResponse = new Response(JSON.stringify(openAICompatibleResponse), {
       headers: { "Content-Type": "application/json" },
