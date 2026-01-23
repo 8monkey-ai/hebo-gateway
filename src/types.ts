@@ -16,6 +16,10 @@ export type GatewayConfig = {
   hooks?: GatewayHooks;
 };
 
-export interface HeboGateway {
+export interface Endpoint {
   handler: typeof fetch;
+}
+
+export interface HeboGateway<Routes extends Record<string, Endpoint>> extends Endpoint {
+  routes: Routes;
 }
