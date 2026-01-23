@@ -72,7 +72,7 @@ Here is an example using ElysiaJS (our favorite):
 ```ts
 import { Elysia } from "elysia";
 
-// previously generated gateway instance
+// Previously created gateway instance
 const gw = gateway({
   /// ...
 });
@@ -146,7 +146,7 @@ export const POST = gw.handler, GET = gw.handler;
 `pages/api/gateway/[...all].ts`
 
 ```ts
-// install @mjackson/node-fetch-server npm package
+// Requires `@mjackson/node-fetch-server` npm package
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 
 const gw = gateway({
