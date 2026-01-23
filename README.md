@@ -37,7 +37,7 @@ import {
 } from "@hebo-ai/gateway/providers/groq";
 
 import {
-  gptOss120b,
+  gptOss20b,
 } from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
@@ -51,16 +51,18 @@ export const gw = gateway({
    // Model Catalog
    // Choose from a set of presets for common SOTA models in `model-catalog/presets`
   models: {
-    ...gptOss120b({
+    ...gptOss20b({
       providers: ["groq"],
     }),
   },
 });
 ```
 
-### Mount route handler
+## Mount route handler
 
-### ElysiaJS
+Instead of aiming to reinvent yet another web framework, Hebo Gateway seamlessly integrates into any existing framework. The easiest way to get started is to just mount all endpoints via the `handler` property to a common prefix in your framework. You can then use your framework's existing lifecycle for authentication, logging, observability and other purposes. 
+
+Here is an example using ElysiaJS (our favorite):
 
 `src/index.ts`
 
@@ -72,7 +74,57 @@ const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
 console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 ```
 
-### Hono
+If you want to have more flexibility, for example for custom rate limit checks, you can also mount individual routes from the `routes` property.
+
+```ts
+import { Elysia } from "elysia";
+
+const app = new Elysia().mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler).listen(3000);
+
+console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
+```
+
+### Use the gateway
+
+Since Hebo Gateway exposes OpenAI-Compatible endpoints, it can be used with a broad set of common AI SDKs like Vercel AI SDK, TanStack AI, Langchain, the official OpenAI SDK and others.
+
+Here is a quite example using the Vercel AI SDK:
+
+```
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { generateText } from "ai";
+
+const hebo = createOpenAICompatible({
+  name: "hebo",
+  baseURL: "https://localhost:3000/v1/gateway",
+});
+
+const { text } = await generateText({
+  model: hebo("openai/gpt-oss-20b"),
+  prompt: "Tell me a joke about monkeys",
+});
+
+console.log(text);
+```
+
+
+## Framework Support
+
+Hebo Gateway exposes WinterCG compatible handlers that can be integrated into any existing framework.
+
+#### ElysiaJS
+
+`src/index.ts`
+
+```ts
+import { Elysia } from "elysia";
+
+const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
+
+console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
+```
+
+#### Hono
 
 `src/index.ts`
 
@@ -84,7 +136,7 @@ export default new Hono().mount("/v1/gateway/", gw.handler);
 console.log(`🐒 Hebo Gateway is running with Hono framework`);
 ```
 
-### Next.js (App Router)
+#### Next.js (App Router)
 
 `app/api/gateway/[...all]/route.ts`
 
@@ -92,7 +144,7 @@ console.log(`🐒 Hebo Gateway is running with Hono framework`);
 export const POST = gw.handler, GET = gw.handler;
 ```
 
-### Next.js (Pages Router)
+#### Next.js (Pages Router)
 
 `pages/api/gateway/[...all].ts`
 
@@ -111,7 +163,7 @@ export default async function handler(req, res) {
 }
 ```
 
-### TanStack Start
+#### TanStack Start
 
 `routes/api/$.ts`
 
