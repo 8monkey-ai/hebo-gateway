@@ -3,7 +3,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 import { presetFor, type DeepPartial } from "../../utils/preset";
 
 export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemini-3-pro-preview",
+  "google/gemini-3-pro-preview" as const,
   {
     name: "Gemini 3 Pro (Preview)",
     created: "2025-11-18",
@@ -24,7 +24,7 @@ export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemini-3-flash-preview",
+  "google/gemini-3-flash-preview" as const,
   {
     name: "Gemini 3 Flash",
     created: "2025-12-17",
@@ -43,3 +43,5 @@ export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
     ] as const,
   } satisfies DeepPartial<CatalogModel>,
 );
+
+export const gemini3 = [gemini3FlashPreview, gemini3ProPreview];

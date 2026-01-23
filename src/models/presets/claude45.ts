@@ -3,7 +3,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 import { presetFor, type DeepPartial } from "../../utils/preset";
 
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-haiku-4.5",
+  "anthropic/claude-haiku-4.5" as const,
   {
     name: "Claude Haiku 4.5",
     created: "2025-10-15",
@@ -24,7 +24,7 @@ export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-sonnet-4.5",
+  "anthropic/claude-sonnet-4.5" as const,
   {
     name: "Claude Sonnet 4.5",
     created: "2025-09-29",
@@ -45,7 +45,7 @@ export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-opus-4.5",
+  "anthropic/claude-opus-4.5" as const,
   {
     name: "Claude Opus 4.5",
     created: "2025-11-24",
@@ -64,3 +64,5 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
     ] as const,
   } satisfies DeepPartial<CatalogModel>,
 );
+
+export const claude45 = [claudeHaiku45, claudeOpus45];

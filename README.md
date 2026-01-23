@@ -33,29 +33,26 @@ import {
 } from "@hebo-ai/gateway";
 
 import {
-  createNormalizedAmazonBedrock,
-} from "@hebo-ai/gateway/providers/bedrock";
+  normalizedGroq,
+} from "@hebo-ai/gateway/providers/groq";
 
 import {
-  claudeSonnet45,
-} from "@hebo-ai/gateway/model-catalog/presets/claude45";
+  gptOss120b,
+} from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
   // Provider Registry
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
-    bedrock: createNormalizedAmazonBedrock({
-      accountId: process.env.AWS_ACCOUNT_ID,
-      region: process.env.AWS_REGION,
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    groq: normalizedGroq({
+      apiKey: process.env.GROQ_API_KEY,
     }),
   }),
    // Model Catalog
    // Choose from a set of presets for common SOTA models in `model-catalog/presets`
   models: {
-    ...claudeSonnet45({
-      providers: ["bedrock"],
+    ...gptOss120b({
+      providers: ["groq"],
     }),
   },
 });
