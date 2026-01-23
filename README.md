@@ -43,6 +43,7 @@ import {
 } from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
+
   // PROVIDER REGISTRY
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
@@ -50,6 +51,7 @@ export const gw = gateway({
       apiKey: process.env.GROQ_API_KEY,
     }),
   }),
+  
   // MODEL CATALOG
   // Choose a preset for common SOTA models in `model-catalog/presets`
   models: {
@@ -72,7 +74,7 @@ Here is an example using ElysiaJS (our favorite):
 import { Elysia } from "elysia";
 
 // previously generated gateway instance
-export const gw = gateway({
+const gw = gateway({
   /// ...
 });
 
@@ -187,7 +189,7 @@ export const Route = createFileRoute("/api/$")({
 While hebo-gateawy provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
 
 ```ts
-export const gw = gateway({
+const gw = gateway({
   providers: createProviderRegistry({
     // ...
   }),
@@ -223,7 +225,7 @@ export const gw = gateway({
 If you want to have more flexibility, for example for custom rate limit checks, you can also choose to only mount individual routes from the gateway's `routes` property.
 
 ```ts
-export const gw = gateway({
+const gw = gateway({
   /// ...
 });
 
@@ -239,7 +241,7 @@ console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
 
 ```ts
-export const gw = gateway({
+const gw = gateway({
   providers: createProviderRegistry({
     // ...
   }),
