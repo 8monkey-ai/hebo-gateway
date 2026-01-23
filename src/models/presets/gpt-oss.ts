@@ -41,6 +41,7 @@ export const gptOss120b = presetFor<CanonicalModelId, CatalogModel>()(
       "structured_output",
       "temperature",
     ] as const,
+    providers: ["groq"] as const,
   } satisfies DeepPartial<CatalogModel>,
 );
 
