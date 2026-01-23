@@ -60,7 +60,7 @@ export const gw = gateway({
 });
 ```
 
-## Mount Route Handlers
+### Mount Route Handlers
 
 Instead of aiming to reinvent yet another web framework, Hebo Gateway seamlessly integrates into any existing framework. The easiest way to get started is to just mount all endpoints via the `handler` property of the gateway you just created to a prefix. You can then use your framework's existing lifecycle for authentication, logging, observability and other purposes. 
 
@@ -109,7 +109,7 @@ console.log(text);
 
 Hebo Gateway exposes WinterCG compatible handlers that can be integrated with any framework.
 
-#### ElysiaJS
+### ElysiaJS
 
 `src/index.ts`
 
@@ -121,7 +121,7 @@ const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
 console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 ```
 
-#### Hono
+### Hono
 
 `src/index.ts`
 
@@ -133,7 +133,7 @@ export default new Hono().mount("/v1/gateway/", gw.handler);
 console.log(`🐒 Hebo Gateway is running with Hono framework`);
 ```
 
-#### Next.js (App Router)
+### Next.js (App Router)
 
 `app/api/gateway/[...all]/route.ts`
 
@@ -141,7 +141,7 @@ console.log(`🐒 Hebo Gateway is running with Hono framework`);
 export const POST = gw.handler, GET = gw.handler;
 ```
 
-#### Next.js (Pages Router)
+### Next.js (Pages Router)
 
 `pages/api/gateway/[...all].ts`
 
@@ -160,7 +160,7 @@ export default async function handler(req, res) {
 }
 ```
 
-#### TanStack Start
+### TanStack Start
 
 `routes/api/$.ts`
 
