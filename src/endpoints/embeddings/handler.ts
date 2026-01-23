@@ -1,12 +1,14 @@
 import { embedMany } from "ai";
 import * as z from "zod/mini";
 
-import type { GatewayConfig } from "../../types";
-import type { Endpoint } from "./types";
+import type { GatewayConfig, Endpoint } from "../../types";
 
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
-import { toOpenAICompatibleEmbeddingResponseBody } from "./converters";
+import {
+  convertToEmbeddingsModelParams,
+  toOpenAICompatibleEmbeddingResponseBody,
+} from "./converters";
 import {
   OpenAICompatibleEmbeddingRequestBodySchema,
   type OpenAICompatibleEmbeddingResponseBody,
@@ -40,7 +42,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       }
 
       const requestBody = parsed.data;
-      const { input, model: modelId, ...rest } = requestBody;
+      const { model: modelId, ...params } = requestBody;
 
       let provider;
       try {
@@ -51,16 +53,17 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
       const embeddingModel = provider.embeddingModel(modelId);
 
+      const { values, providerOptions: rawOptions } = convertToEmbeddingsModelParams(params);
+
       const providerOptions = {
-        [embeddingModel.provider]: rest,
+        [embeddingModel.provider]: rawOptions,
       };
 
       let embedManyResult;
       try {
-        const inputs = Array.isArray(input) ? input : [input];
         embedManyResult = await embedMany({
           model: embeddingModel,
-          values: inputs,
+          values,
           providerOptions,
         });
       } catch (error) {

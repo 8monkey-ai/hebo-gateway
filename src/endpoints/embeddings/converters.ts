@@ -2,9 +2,31 @@ import type { EmbedManyResult } from "ai";
 
 import type {
   OpenAICompatibleEmbedding,
+  OpenAICompatibleEmbeddingParams,
   OpenAICompatibleEmbeddingResponseBody,
   OpenAICompatibleEmbeddingUsage,
 } from "./schema";
+
+export type VercelAIEmbeddingsModelParams = {
+  values: string[];
+  providerOptions: Record<string, any>;
+};
+
+function toEmbedManyValues(input: string | string[]): string[] {
+  return Array.isArray(input) ? input : [input];
+}
+
+export function convertToEmbeddingsModelParams(
+  params: OpenAICompatibleEmbeddingParams,
+): VercelAIEmbeddingsModelParams {
+  const { input, ...rest } = params;
+  const values = toEmbedManyValues(input);
+
+  return {
+    values,
+    providerOptions: rest,
+  };
+}
 
 export function toOpenAICompatibleEmbeddingResponseBody(
   embedManyResult: EmbedManyResult,
