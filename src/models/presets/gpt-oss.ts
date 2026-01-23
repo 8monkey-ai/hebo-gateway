@@ -1,6 +1,6 @@
 import type { CanonicalModelId, CatalogModel } from "../types";
 
-import { presetFor, type DeepPartial } from "../../utils/preset";
+import { presetFor } from "../../utils/preset";
 
 export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/gpt-oss-20b" as const,
@@ -20,7 +20,8 @@ export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
       "structured_output",
       "temperature",
     ] as const,
-  } satisfies DeepPartial<CatalogModel>,
+    providers: ["groq"] as const,
+  } satisfies CatalogModel,
 );
 
 export const gptOss120b = presetFor<CanonicalModelId, CatalogModel>()(
@@ -42,7 +43,7 @@ export const gptOss120b = presetFor<CanonicalModelId, CatalogModel>()(
       "temperature",
     ] as const,
     providers: ["groq"] as const,
-  } satisfies DeepPartial<CatalogModel>,
+  } satisfies CatalogModel,
 );
 
 export const gptOss = [gptOss20b, gptOss120b];
