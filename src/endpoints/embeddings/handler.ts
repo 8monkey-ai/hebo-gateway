@@ -4,7 +4,7 @@ import * as z from "zod/mini";
 import type { GatewayConfig } from "../../types";
 import type { Endpoint } from "./types";
 
-import { resolveProvider } from "../../providers/utils";
+import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleEmbeddingResponseBody } from "./converters";
 import {

@@ -16,15 +16,15 @@ export const resolveProvider = (
     throw new Error(`Model '${modelId}' not found in catalog`);
   }
 
-  if (catalogModel.providers.length === 0) {
-    throw new Error(`No providers configured for model '${modelId}'`);
-  }
-
   if (modality && !catalogModel.modalities.output.includes(modality)) {
     throw new Error(`Model '${modelId}' does not support '${modality}' output`);
   }
 
   const resolvedProvider = catalogModel.providers[0];
+
+  if (!resolvedProvider) {
+    throw new Error(`No providers configured for model '${modelId}'`);
+  }
 
   switch (modality) {
     case "text":
