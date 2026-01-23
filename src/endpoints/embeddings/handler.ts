@@ -6,7 +6,7 @@ import type { GatewayConfig, Endpoint } from "../../types";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import {
-  convertToEmbeddingsModelParams,
+  fromOpenAICompatibleEmbeddingParams,
   toOpenAICompatibleEmbeddingResponseBody,
 } from "./converters";
 import {
@@ -21,6 +21,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     handler: (async (req: Request): Promise<Response> => {
       if (req.method !== "POST") {
         return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
+      }
+
+      if (!providers || !models) {
+        return createErrorResponse(
+          "INTERNAL_SERVER_ERROR",
+          "Gateway misconfigured: missing providers or models",
+          500,
+        );
       }
 
       let json;
@@ -53,7 +61,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
       const embeddingModel = provider.embeddingModel(modelId);
 
-      const { values, providerOptions: rawOptions } = convertToEmbeddingsModelParams(params);
+      const { values, providerOptions: rawOptions } = fromOpenAICompatibleEmbeddingParams(params);
 
       const providerOptions = {
         [embeddingModel.provider]: rawOptions,

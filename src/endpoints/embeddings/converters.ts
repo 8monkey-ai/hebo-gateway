@@ -12,15 +12,15 @@ export type VercelAIEmbeddingsModelParams = {
   providerOptions: Record<string, any>;
 };
 
-function toEmbedManyValues(input: string | string[]): string[] {
+function fromOpenAICompatibleInput(input: string | string[]): string[] {
   return Array.isArray(input) ? input : [input];
 }
 
-export function convertToEmbeddingsModelParams(
+export function fromOpenAICompatibleEmbeddingParams(
   params: OpenAICompatibleEmbeddingParams,
 ): VercelAIEmbeddingsModelParams {
   const { input, ...rest } = params;
-  const values = toEmbedManyValues(input);
+  const values = fromOpenAICompatibleInput(input);
 
   return {
     values,
