@@ -2,7 +2,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, type DeepPartial } from "../../utils/preset";
 
-export const gptBase = {
+const GPT_OSS_BASE = {
   modalities: {
     input: ["text", "file"] as const,
     output: ["text"] as const,
@@ -15,7 +15,7 @@ export const gptBase = {
     "temperature",
   ] as const,
   context: 131072,
-  providers: ["groq"] as const,
+  providers: ["groq", "bedrock", "vertex"] as const,
 } satisfies DeepPartial<CatalogModel>;
 
 export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
@@ -24,7 +24,7 @@ export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "GPT-OSS 20B",
     created: "2025-08-05",
     knowledge: "2024-06",
-    ...gptBase,
+    ...GPT_OSS_BASE,
   } satisfies CatalogModel,
 );
 
@@ -34,8 +34,21 @@ export const gptOss120b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "GPT-OSS 120B",
     created: "2025-08-05",
     knowledge: "2024-06",
-    ...gptBase,
+    ...GPT_OSS_BASE,
   } satisfies CatalogModel,
 );
 
-export const gptOss = [gptOss20b, gptOss120b];
+const gptOssAtomic = {
+  v1: [gptOss20b, gptOss120b],
+} as const;
+
+const gptOssGroups = {
+  v1_x: [...gptOssAtomic.v1],
+} as const;
+
+export const gptOss = {
+  ...gptOssAtomic,
+  ...gptOssGroups,
+  latest: [...gptOssAtomic.v1],
+  all: Object.values(gptOssAtomic).flat(),
+} as const;

@@ -2,7 +2,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, type DeepPartial } from "../../utils/preset";
 
-export const geminiBase = {
+const GEMINI_BASE = {
   modalities: {
     input: ["text", "image", "pdf", "file", "audio", "video"] as const,
     output: ["text"] as const,
@@ -15,6 +15,7 @@ export const geminiBase = {
     "temperature",
   ] as const,
   context: 1048576,
+  providers: ["vertex"],
 } satisfies DeepPartial<CatalogModel>;
 
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
@@ -23,7 +24,7 @@ export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemini 3 Flash",
     created: "2025-12-17",
     knowledge: "2025-01",
-    ...geminiBase,
+    ...GEMINI_BASE,
   } satisfies DeepPartial<CatalogModel>,
 );
 
@@ -33,8 +34,54 @@ export const gemini3ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemini 3 Pro (Preview)",
     created: "2025-11-18",
     knowledge: "2025-01",
-    ...geminiBase,
+    ...GEMINI_BASE,
   } satisfies DeepPartial<CatalogModel>,
 );
 
-export const gemini3 = [gemini3FlashPreview, gemini3ProPreview];
+export const gemini25FlashLite = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-2.5-flash-lite" as const,
+  {
+    name: "Gemini 2.5 Flash Lite",
+    created: "2025-06-17",
+    knowledge: "2025-01",
+    ...GEMINI_BASE,
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemini25Flash = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-2.5-flash" as const,
+  {
+    name: "Gemini 2.5 Flash",
+    created: "2025-03-20",
+    knowledge: "2025-01",
+    ...GEMINI_BASE,
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemini25Pro = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-2.5-pro" as const,
+  {
+    name: "Gemini 2.5 Pro",
+    created: "2025-03-20",
+    knowledge: "2025-01",
+    ...GEMINI_BASE,
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+const geminiAtomic = {
+  v2_5: [gemini25FlashLite, gemini25Flash, gemini25Pro],
+  v3_preview: [gemini3FlashPreview, gemini3ProPreview],
+} as const;
+
+const geminiGroups = {
+  v2_x: [...geminiAtomic.v2_5],
+  v3_x: [...geminiAtomic.v3_preview],
+} as const;
+
+export const gemini = {
+  ...geminiAtomic,
+  ...geminiGroups,
+  latest: [...geminiAtomic.v2_5],
+  preview: [...geminiAtomic.v3_preview],
+  all: Object.values(geminiAtomic).flat(),
+} as const;
