@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-import { createModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
 import { groq } from "@ai-sdk/groq";
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 import { createProviderRegistry } from "ai";
+
+import { createModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/presets/gpt-oss";
 
 const gw = gateway({
   basePath: "/api/pages/gateway",

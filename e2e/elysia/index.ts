@@ -1,8 +1,9 @@
-import { createModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
 import { groq } from "@ai-sdk/groq";
 import { createProviderRegistry } from "ai";
 import { Elysia } from "elysia";
+
+import { createModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/presets/gpt-oss";
 
 const gw = gateway({
   providers: createProviderRegistry({
