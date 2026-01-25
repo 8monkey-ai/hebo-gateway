@@ -5,7 +5,7 @@ import { withCanonicalIds } from "./registry";
 export const vertexWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(vertex, extraMapping, {
     stripNamespace: true,
-    replaceDots: ["anthropic"],
+    normalizeDelimiters: ["anthropic"],
   });
 
 export const createVertexWithCanonicalIds = (
@@ -14,5 +14,5 @@ export const createVertexWithCanonicalIds = (
 ) =>
   withCanonicalIds(createVertex(settings), extraMapping, {
     stripNamespace: true,
-    replaceDots: ["anthropic"],
+    normalizeDelimiters: ["anthropic"],
   });

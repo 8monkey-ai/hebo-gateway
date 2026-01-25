@@ -5,7 +5,7 @@ import { withCanonicalIds } from "./registry";
 export const anthropicWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(anthropic, extraMapping, {
     stripNamespace: true,
-    replaceDots: true,
+    normalizeDelimiters: true,
   });
 
 export const createAnthropicWithCanonicalIds = (
@@ -14,5 +14,5 @@ export const createAnthropicWithCanonicalIds = (
 ) =>
   withCanonicalIds(createAnthropic(settings), extraMapping, {
     stripNamespace: true,
-    replaceDots: true,
+    normalizeDelimiters: true,
   });

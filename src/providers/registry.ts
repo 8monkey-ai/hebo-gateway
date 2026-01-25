@@ -50,7 +50,7 @@ export const withCanonicalIds = (
     /** @default true */
     stripNamespace?: boolean;
     /** @default false */
-    replaceDots?: boolean | readonly string[];
+    normalizeDelimiters?: boolean | readonly string[];
     prefix?: string;
     postfix?: string;
     /** @default "/" */
@@ -59,29 +59,27 @@ export const withCanonicalIds = (
 ) => {
   const {
     stripNamespace = true,
-    replaceDots = false,
+    normalizeDelimiters = false,
     prefix,
     postfix,
     namespaceSeparator = "/",
   } = options ?? {};
 
-  const shouldReplaceDots = (canonicalId: string) => {
-    if (replaceDots === true) return true;
-    if (replaceDots === false) return false;
-    return replaceDots.some((x) => canonicalId === x || canonicalId.startsWith(`${x}.`));
+  const shouldNormalizeDelimiters = (canonicalId: string) => {
+    if (typeof normalizeDelimiters === "boolean") return normalizeDelimiters;
+    return normalizeDelimiters.some((x) => canonicalId.startsWith(x));
   };
 
   const normalizeId = (canonicalId: string) => {
     let out = canonicalId;
 
-    if (namespaceSeparator === ".") {
-      out = out.replace("/", ".");
-    } else if (stripNamespace) {
-      out = out.replace(/^[^/]+\//, "");
-    }
-
-    if (shouldReplaceDots(canonicalId)) {
+    if (shouldNormalizeDelimiters(canonicalId)) {
       out = out.replaceAll(".", "-");
+    }
+    if (stripNamespace) {
+      out = out.replace(/^[^/]+\//, "");
+    } else if (namespaceSeparator !== "/") {
+      out = out.replace("/", namespaceSeparator);
     }
 
     return out;
@@ -96,7 +94,7 @@ export const withCanonicalIds = (
   };
 
   const needsFallbackWrap =
-    stripNamespace || replaceDots || namespaceSeparator === "." || !!prefix || !!postfix;
+    stripNamespace || normalizeDelimiters || namespaceSeparator === "." || !!prefix || !!postfix;
 
   const fallbackProvider: ProviderV3 = needsFallbackWrap
     ? {
@@ -108,13 +106,18 @@ export const withCanonicalIds = (
       }
     : provider;
 
-  const mapModels = <T>(fn: (id: string) => T) =>
-    Object.fromEntries(
-      Object.entries(mapping ?? {}).map(([canonicalId, provider]) => [
-        canonicalId,
-        fn(applyPrefix(provider)),
-      ]),
-    );
+  const mapModels = <T>(fn: (id: string) => T) => {
+    const out = {} as Record<string, T>;
+
+    for (const [k, v] of Object.entries(mapping ?? {})) {
+      // This is lazy so that provider is only create once called
+      Object.defineProperty(out, k, {
+        get: () => fn(applyPrefix(v)),
+      });
+    }
+
+    return out;
+  };
 
   return customProvider({
     languageModels: mapModels(provider.languageModel) satisfies Partial<

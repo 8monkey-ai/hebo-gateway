@@ -55,7 +55,7 @@ export const bedrockWithCanonicalIds = (
   withCanonicalIds(bedrock, mergeMapping(extraMapping), {
     stripNamespace: false,
     namespaceSeparator: ".",
-    replaceDots: true,
+    normalizeDelimiters: true,
     prefix: resolvePrefix(opts),
     postfix: "-v1:0",
   });
@@ -67,7 +67,7 @@ export const createAmazonBedrockWithCanonicalIds = (
   withCanonicalIds(createAmazonBedrock(bedrockSettings), mergeMapping(extraMapping), {
     stripNamespace: false,
     namespaceSeparator: ".",
-    replaceDots: true,
+    normalizeDelimiters: true,
     prefix: resolvePrefix({ geo, arn }),
     postfix: "-v1:0",
   });
