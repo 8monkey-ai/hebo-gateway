@@ -1,8 +1,7 @@
 import { createProviderRegistry } from "ai";
 import { Hono } from "hono";
 
-import { createModelCatalog, gateway, groqWithCanonicalIds } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
+import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "#/";
 
 const gw = gateway({
   providers: createProviderRegistry({

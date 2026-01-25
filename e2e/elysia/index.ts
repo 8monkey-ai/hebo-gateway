@@ -1,8 +1,7 @@
 import { createProviderRegistry } from "ai";
 import { Elysia } from "elysia";
 
-import { createModelCatalog, gateway, groqWithCanonicalIds } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
+import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "#/";
 
 const gw = gateway({
   providers: createProviderRegistry({

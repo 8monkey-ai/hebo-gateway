@@ -3,8 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 import { createProviderRegistry } from "ai";
 
-import { createModelCatalog, gateway, groqWithCanonicalIds } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
+import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "#/";
 
 const gw = gateway({
   basePath: "/api/pages/gateway",
