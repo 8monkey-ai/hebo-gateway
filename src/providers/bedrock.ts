@@ -15,7 +15,7 @@ const MAPPING = {
   "meta/llama-3.1-8b": "meta.llama3-1-8b-instruct-v1:0",
   "meta/llama-3.3-70b": "meta.llama3-3-70b-instruct-v1:0",
   "meta/llama-4-scout": "meta.llama4-scout-17b-instruct-v1:0",
-  "meta/llama-4-maverick": "meta.llama4-scout-17b-instruct-v1:0",
+  "meta/llama-4-maverick": "meta.llama4-maverick-17b-instruct-v1:0",
   "cohere/embed-v4.0": "cohere.embed-v4:0",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 

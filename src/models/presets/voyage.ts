@@ -97,7 +97,7 @@ export const voyage4 = presetFor<CanonicalModelId, CatalogModel>()("voyage/voyag
 export const voyage4Large = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-4-large" as const,
   {
-    name: "Voyage 4 large",
+    name: "Voyage 4 Large",
     created: "2026-01-15",
     context: 32000,
     ...VOYAGE_BASE,

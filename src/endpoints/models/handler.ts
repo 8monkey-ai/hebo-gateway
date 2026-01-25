@@ -7,11 +7,11 @@ export const models = (config: GatewayConfig): Endpoint => {
   const { providers, models } = config;
 
   if (!models) {
-    throw new Error("Gateway config error: no providers configured (config.providers is empty).");
+    throw new Error("Gateway config error: no models configured (config.models is empty).");
   }
 
   if (!providers) {
-    throw new Error("Gateway config error: no models configured (config.models is empty).");
+    throw new Error("Gateway config error: no provideres configured (config.providers is empty).");
   }
 
   const configuredModels = Object.fromEntries(
@@ -20,9 +20,7 @@ export const models = (config: GatewayConfig): Endpoint => {
       model
         ? {
             ...model,
-            providers: model.providers.filter((p) =>
-              Object.keys(Object.keys(providers)).includes(p),
-            ),
+            providers: model.providers.filter((p) => Object.keys(providers).includes(p)),
           }
         : model,
     ]),

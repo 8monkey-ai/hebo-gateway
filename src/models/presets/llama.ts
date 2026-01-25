@@ -69,7 +69,7 @@ const llamaAtomic = {
 } as const;
 
 const llamaGroups = {
-  "v3.x": [...llamaAtomic["v3.1"], ...llamaAtomic["v3.1"]],
+  "v3.x": [...llamaAtomic["v3.1"], ...llamaAtomic["v3.3"]],
   "v4.x": [...llamaAtomic["v4"]],
 } as const;
 

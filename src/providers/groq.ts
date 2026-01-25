@@ -1,4 +1,4 @@
-import { createVoyage, voyage, VoyageProviderSettings } from "voyage-ai-provider";
+import { createGroq, groq, GroqProviderSettings } from "@ai-sdk/groq";
 
 import type { CanonicalModelId } from "../models/types";
 
@@ -12,14 +12,14 @@ const MAPPING = {
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const normalizedGroq = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(voyage, { ...MAPPING, ...extraMapping }, { stripNamespace: false });
+  withCanonicalIds(groq, { ...MAPPING, ...extraMapping }, { stripNamespace: false });
 
 export const createNormalizedGroq = (
-  settings: VoyageProviderSettings,
+  settings: GroqProviderSettings,
   extraMapping?: Record<string, string>,
 ) =>
   withCanonicalIds(
-    createVoyage(settings),
+    createGroq(settings),
     { ...MAPPING, ...extraMapping },
     { stripNamespace: false },
   );
