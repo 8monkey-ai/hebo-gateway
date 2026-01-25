@@ -32,7 +32,7 @@ export const llama33_70b = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
-export const LLAMA_4_BASE = {
+const LLAMA_4_BASE = {
   modalities: {
     input: ["text", "image", "file"] as const,
     output: ["text"] as const,

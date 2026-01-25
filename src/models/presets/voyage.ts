@@ -14,7 +14,7 @@ export const voyage2Code = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-2-code" as const,
   {
     name: "Voyage 2 Code",
-    created: "2024-01",
+    created: "2024-01-23",
     context: 16000,
     ...VOYAGE_BASE,
   } satisfies CatalogModel,
@@ -24,7 +24,7 @@ export const voyage2Finance = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-2-finance" as const,
   {
     name: "Voyage 2 Finance",
-    created: "2024-03",
+    created: "2024-06-03",
     context: 32000,
     ...VOYAGE_BASE,
   } satisfies CatalogModel,
@@ -34,7 +34,7 @@ export const voyage2Law = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-2-law" as const,
   {
     name: "Voyage 2 Law",
-    created: "2024-03",
+    created: "2024-04-15",
     context: 16000,
     ...VOYAGE_BASE,
   } satisfies CatalogModel,
@@ -44,7 +44,7 @@ export const voyage3Code = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-3-code" as const,
   {
     name: "Voyage 3 Code",
-    created: "2024-09",
+    created: "2024-12-04",
     context: 32000,
     ...VOYAGE_BASE,
   } satisfies CatalogModel,
@@ -54,7 +54,7 @@ export const voyage3Large = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-3-large" as const,
   {
     name: "Voyage 3 Large",
-    created: "2024-09",
+    created: "2025-01-07",
     context: 32000,
     ...VOYAGE_BASE,
   } satisfies CatalogModel,

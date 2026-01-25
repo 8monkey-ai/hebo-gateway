@@ -38,7 +38,7 @@ export const CANONICAL_MODEL_IDS = [
   "cohere/command-a-reasoning",
   "cohere/command-a-vision",
   "cohere/command-r",
-  "cohere-command-r-plus",
+  "cohere/command-r-plus",
   // Mistral
   "mistral/pixtral-large",
   // Voyage

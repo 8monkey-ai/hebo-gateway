@@ -109,7 +109,12 @@ export const withCanonicalIds = (
     : provider;
 
   const mapModels = <T>(fn: (id: string) => T) =>
-    Object.fromEntries(Object.entries(mapping ?? {}).map(([k, v]) => [k, fn(applyPrefix(v))]));
+    Object.fromEntries(
+      Object.entries(mapping ?? {}).map(([canonicalId, provider]) => [
+        canonicalId,
+        fn(applyPrefix(provider)),
+      ]),
+    );
 
   return customProvider({
     languageModels: mapModels(provider.languageModel) satisfies Partial<

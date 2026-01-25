@@ -22,7 +22,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
   }
 
   if (!providers) {
-    throw new Error("Gateway config error: no provideres configured (config.providers is empty).");
+    throw new Error("Gateway config error: no providers configured (config.providers is empty).");
   }
 
   return {
