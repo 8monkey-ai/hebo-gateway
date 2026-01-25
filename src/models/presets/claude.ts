@@ -9,7 +9,7 @@ const CLAUDE_BASE = {
   },
   capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
   context: 200000,
-  providers: ["anthrophic", "bedrock", "vertex"],
+  providers: ["anthropic", "bedrock", "vertex"],
 } satisfies DeepPartial<CatalogModel>;
 
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
