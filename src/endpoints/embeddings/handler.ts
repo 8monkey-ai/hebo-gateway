@@ -1,10 +1,11 @@
+import type { GatewayConfig, Endpoint } from "#/types";
+
+import { parseConfig } from "#/config";
+import { resolveProvider } from "#/providers/registry";
+import { createErrorResponse } from "#/utils/errors";
 import { embedMany } from "ai";
 import * as z from "zod/mini";
 
-import type { GatewayConfig, Endpoint } from "../../types";
-
-import { resolveProvider } from "../../providers/registry";
-import { createErrorResponse } from "../../utils/errors";
 import {
   fromOpenAICompatibleEmbeddingParams,
   toOpenAICompatibleEmbeddingResponseBody,
@@ -14,16 +15,8 @@ import {
   type OpenAICompatibleEmbeddingResponseBody,
 } from "./schema";
 
-export const embeddings = (config: GatewayConfig): Endpoint => {
-  const { providers, models } = config;
-
-  if (!models) {
-    throw new Error("Gateway config error: no models configured (config.models is empty).");
-  }
-
-  if (!providers) {
-    throw new Error("Gateway config error: no providers configured (config.providers is empty).");
-  }
+export const embeddings = (config: GatewayConfig, parsed = false): Endpoint => {
+  const { providers, models } = parsed ? config : parseConfig(config);
 
   return {
     handler: (async (req: Request): Promise<Response> => {

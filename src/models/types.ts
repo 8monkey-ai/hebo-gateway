@@ -78,4 +78,6 @@ export type CatalogModel = {
   additionalProperties?: Record<string, unknown>;
 };
 
-export type ModelCatalog = Partial<Record<ModelId, CatalogModel>>;
+export type ModelCatalog = {
+  [K in ModelId]?: CatalogModel;
+};

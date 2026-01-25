@@ -11,8 +11,8 @@ export type GatewayHooks = {
 
 export type GatewayConfig = {
   basePath?: string;
-  providers?: ProviderRegistryProvider;
-  models?: ModelCatalog;
+  providers: ProviderRegistryProvider;
+  models: ModelCatalog;
   hooks?: GatewayHooks;
 };
 
