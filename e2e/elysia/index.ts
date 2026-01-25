@@ -3,7 +3,7 @@ import { gptOss } from "#/models/presets/gpt-oss";
 import { Elysia } from "elysia";
 
 const gw = gateway({
-  models: createModelCatalog(...gptOss.map((model) => model({}))),
+  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);

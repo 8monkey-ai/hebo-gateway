@@ -5,7 +5,7 @@ import { gptOss } from "../../gateway/models/presets/gpt-oss";
 
 const gw = gateway({
   basePath: "/api/gateway",
-  models: createModelCatalog(...gptOss.map((model) => model({}))),
+  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
 });
 
 export const Route = createFileRoute("/api/$")({
