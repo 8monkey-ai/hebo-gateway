@@ -4,19 +4,39 @@ import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleModelList } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
-  const models = config.models ?? {};
+  const { providers, models } = config;
 
-  const handler = (req: Request) => {
+  if (!models) {
+    throw new Error("Gateway config error: no providers configured (config.providers is empty).");
+  }
+
+  if (!providers) {
+    throw new Error("Gateway config error: no models configured (config.models is empty).");
+  }
+
+  const configuredModels = Object.fromEntries(
+    Object.entries(models).map(([id, model]) => [
+      id,
+      model
+        ? {
+            ...model,
+            providers: model.providers.filter((p) =>
+              Object.keys(Object.keys(providers)).includes(p),
+            ),
+          }
+        : model,
+    ]),
+  );
+
+  const handler = async (req: Request): Promise<Response> => {
     if (req.method !== "GET") {
-      return Promise.resolve(createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405));
+      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
-    const openAICompatibleList = toOpenAICompatibleModelList(models);
+    const openAICompatibleList = toOpenAICompatibleModelList(configuredModels);
 
-    return Promise.resolve(
-      new Response(JSON.stringify(openAICompatibleList), {
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    return new Response(JSON.stringify(openAICompatibleList), {
+      headers: { "Content-Type": "application/json" },
+    });
   };
 
   return { handler: handler as typeof fetch };

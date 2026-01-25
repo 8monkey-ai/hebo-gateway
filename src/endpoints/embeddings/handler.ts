@@ -17,18 +17,18 @@ import {
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const { providers, models } = config;
 
+  if (!models) {
+    throw new Error("Gateway config error: no providers configured (config.providers is empty).");
+  }
+
+  if (!providers) {
+    throw new Error("Gateway config error: no models configured (config.models is empty).");
+  }
+
   return {
     handler: (async (req: Request): Promise<Response> => {
       if (req.method !== "POST") {
         return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
-      }
-
-      if (!providers || !models) {
-        return createErrorResponse(
-          "INTERNAL_SERVER_ERROR",
-          "Gateway misconfigured: missing providers or models",
-          500,
-        );
       }
 
       let json;
