@@ -94,7 +94,7 @@ export const withCanonicalIds = (
   };
 
   const needsFallbackWrap =
-    stripNamespace || normalizeDelimiters || namespaceSeparator === "." || !!prefix || !!postfix;
+    stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
 
   const fallbackProvider: ProviderV3 = needsFallbackWrap
     ? {
