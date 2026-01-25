@@ -32,21 +32,15 @@ bun add @hebo-ai/gateway
 import {
   gateway,
   createProviderRegistry,
+  createGroqWithCanonicalIds,
+  gptOss20b
 } from "@hebo-ai/gateway";
-
-import {
-  normalizedGroq,
-} from "@hebo-ai/gateway/providers/groq";
-
-import {
-  gptOss20b,
-} from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
-    groq: normalizedGroq({
+    groq: createGroqWithCanonicalIds({
       apiKey: process.env.GROQ_API_KEY,
     }),
   }),
