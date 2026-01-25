@@ -5,10 +5,10 @@ import { createProviderRegistry } from "ai";
 import { Elysia } from "elysia";
 
 const gw = gateway({
-  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
   providers: createProviderRegistry({
     groq,
   }),
+  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
