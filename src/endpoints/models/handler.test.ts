@@ -1,3 +1,5 @@
+import { createProviderRegistry } from "ai";
+import { MockProviderV3 } from "ai/test";
 import { describe, expect, it } from "bun:test";
 
 import { createModelCatalog } from "../../models/catalog";
@@ -13,7 +15,12 @@ const parseResponse = async (res: Response) => {
 };
 
 describe("Models Handler", () => {
-  const testModels = createModelCatalog({
+  const registry = createProviderRegistry({
+    anthropic: new MockProviderV3(),
+    google: new MockProviderV3(),
+  });
+
+  const catalog = createModelCatalog({
     "anthropic/claude-opus-4.5": {
       name: "Claude Opus 4.5",
       created: "2025-09-29T10:00:00.000Z",
@@ -38,7 +45,7 @@ describe("Models Handler", () => {
     },
   });
 
-  const endpoint = models({ models: testModels });
+  const endpoint = models({ providers: registry, models: catalog });
 
   const testCases = [
     {

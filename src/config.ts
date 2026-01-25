@@ -1,7 +1,8 @@
 import { type GatewayConfig } from "./types";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfig => {
-  const { providers, models } = config;
+  const providers = config.providers ?? {};
+  const models = config.models ?? {};
 
   if (Object.keys(providers).length === 0) {
     throw new Error("Gateway config error: no providers configured (config.providers is empty).");
