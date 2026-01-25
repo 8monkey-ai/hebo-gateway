@@ -4,7 +4,7 @@ import {
   type AmazonBedrockProviderSettings,
 } from "@ai-sdk/amazon-bedrock";
 
-import type { CanonicalModelId } from "#/models/types";
+import type { CanonicalModelId } from "../models/types";
 
 import { withCanonicalIds } from "./registry";
 

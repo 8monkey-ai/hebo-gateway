@@ -3,10 +3,9 @@ import * as z from "zod/mini";
 
 import type { GatewayConfig, Endpoint } from "#/types";
 
-import { parseConfig } from "#/config";
-import { resolveProvider } from "#/providers/registry";
-import { createErrorResponse } from "#/utils/errors";
-
+import { parseConfig } from "../../config";
+import { resolveProvider } from "../../providers/registry";
+import { createErrorResponse } from "../../utils/errors";
 import {
   fromOpenAICompatibleEmbeddingParams,
   toOpenAICompatibleEmbeddingResponseBody,

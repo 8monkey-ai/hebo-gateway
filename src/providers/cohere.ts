@@ -1,6 +1,6 @@
 import { createCohere, cohere, type CohereProviderSettings } from "@ai-sdk/cohere";
 
-import type { CanonicalModelId } from "#/models/types";
+import type { CanonicalModelId } from "../models/types";
 
 import { withCanonicalIds } from "./registry";
 

@@ -1,8 +1,7 @@
 import type { GatewayConfig, Endpoint } from "#/types";
 
-import { parseConfig } from "#/config";
-import { createErrorResponse } from "#/utils/errors";
-
+import { parseConfig } from "../../config";
+import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleModelList } from "./converters";
 
 export const models = (config: GatewayConfig, skipParse = false): Endpoint => {

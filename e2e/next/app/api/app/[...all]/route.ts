@@ -1,12 +1,11 @@
-import { groq } from "@ai-sdk/groq";
 import { createProviderRegistry } from "ai";
 
-import { createModelCatalog, gateway } from "#/";
+import { createModelCatalog, gateway, groqWithCanonicalIds } from "#/";
 import { gptOss } from "#/models/presets/gpt-oss";
 
 const gw = gateway({
   providers: createProviderRegistry({
-    groq,
+    groq: groqWithCanonicalIds(),
   }),
   models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
 });
