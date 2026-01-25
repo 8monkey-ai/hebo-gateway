@@ -43,7 +43,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  const endpoint = embeddings({ providers: registry, models: catalog });
+  const endpoint = embeddings({ providers: registry, models: catalog }, true);
 
   const testCases = [
     {

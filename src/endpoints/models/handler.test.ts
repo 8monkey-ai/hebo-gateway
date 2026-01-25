@@ -45,7 +45,7 @@ describe("Models Handler", () => {
     },
   });
 
-  const endpoint = models({ providers: registry, models: catalog });
+  const endpoint = models({ providers: registry, models: catalog }, true);
 
   const testCases = [
     {
