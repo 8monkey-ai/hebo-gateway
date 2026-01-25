@@ -56,7 +56,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       try {
         provider = resolveProvider(providers, models, modelId, "embeddings");
       } catch (error) {
-        return createErrorResponse("BAD_REQUEST", error.message, 400);
+        return createErrorResponse("BAD_REQUEST", (error as Error).message, 400);
       }
 
       const embeddingModel = provider.embeddingModel(modelId);
@@ -75,7 +75,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
           providerOptions,
         });
       } catch (error) {
-        const errorMessage = error.message || "Failed to generate embeddings";
+        const errorMessage = (error as Error).message || "Failed to generate embeddings";
         return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
       }
 

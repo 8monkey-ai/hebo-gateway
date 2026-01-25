@@ -2,7 +2,7 @@ import type { ProviderRegistryProvider } from "ai";
 
 import { customProvider } from "ai";
 
-import type { ModelCatalog } from "../models/types";
+import type { ModelCatalog, ModelId } from "../models/types";
 
 export const resolveProvider = (
   providers: ProviderRegistryProvider,
@@ -10,7 +10,7 @@ export const resolveProvider = (
   modelId: string,
   modality: "text" | "image" | "audio" | "video" | "embeddings",
 ) => {
-  const catalogModel = models[modelId];
+  const catalogModel = models[modelId as ModelId];
 
   if (!catalogModel) {
     throw new Error(`Model '${modelId}' not found in catalog`);

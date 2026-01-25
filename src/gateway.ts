@@ -1,5 +1,6 @@
 import type { GatewayConfig, HeboGateway } from "./types";
 
+import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 
@@ -9,6 +10,7 @@ export function gateway(config: GatewayConfig) {
   const routes = {
     ["/models"]: models(config),
     ["/embeddings"]: embeddings(config),
+    ["/chat/completions"]: chatCompletions(config),
   } as const;
 
   const handler = (req: Request): Promise<Response> => {
