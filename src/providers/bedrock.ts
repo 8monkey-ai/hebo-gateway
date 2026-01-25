@@ -30,19 +30,18 @@ const MAPPING = {
   "meta/llama-4-scout": "meta.llama4-scout-17b-instruct-v1:0",
   "meta/llama-4-maverick": "meta.llama4-maverick-17b-instruct-v1:0",
   "cohere/embed-v4.0": "cohere.embed-v4:0",
-  "mistral/pixtral-large": "mistral.pixtral-large-2502-v1:0",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export type BedrockCanonicalOptions = {
-  /** @default "global" */
+  /** @default "us" */
   // eslint-disable-next-line ban-types
-  geo?: "global" | "apac" | "us" | "eu" | "au" | "ca" | "jp" | "us-gov" | (string & {});
+  geo?: "global" | "us" | "eu" | "apac" | "au" | "ca" | "jp" | "us-gov" | (string & {});
   arn?: { region: string; accountId: string };
 };
 
 export type BedrockCanonicalSettings = AmazonBedrockProviderSettings & BedrockCanonicalOptions;
 
-const resolvePrefix = ({ geo = "global", arn }: BedrockCanonicalSettings = {}) =>
+const resolvePrefix = ({ geo = "us", arn }: BedrockCanonicalSettings = {}) =>
   `${arn ? `arn:aws:bedrock:${arn.region}:${arn.accountId}:inference-profile/` : ""}${geo}.`;
 
 const mergeMapping = (extra?: Record<string, string>) =>
