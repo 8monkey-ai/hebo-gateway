@@ -69,19 +69,19 @@ export const gemini25Pro = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const geminiAtomic = {
-  v2_5: [gemini25FlashLite, gemini25Flash, gemini25Pro],
-  v3_preview: [gemini3FlashPreview, gemini3ProPreview],
+  "v2.5": [gemini25FlashLite, gemini25Flash, gemini25Pro],
+  "v3-preview": [gemini3FlashPreview, gemini3ProPreview],
 } as const;
 
 const geminiGroups = {
-  v2_x: [...geminiAtomic.v2_5],
-  v3_x: [...geminiAtomic.v3_preview],
+  "v2.x": [...geminiAtomic["v2.5"]],
+  "v3.x": [...geminiAtomic["v3-preview"]],
 } as const;
 
 export const gemini = {
   ...geminiAtomic,
   ...geminiGroups,
-  latest: [...geminiAtomic.v2_5],
-  preview: [...geminiAtomic.v3_preview],
+  latest: [...geminiAtomic["v2.5"]],
+  preview: [...geminiAtomic["v3-preview"]],
   all: Object.values(geminiAtomic).flat(),
 } as const;

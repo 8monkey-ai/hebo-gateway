@@ -43,12 +43,12 @@ const gptOssAtomic = {
 } as const;
 
 const gptOssGroups = {
-  v1_x: [...gptOssAtomic.v1],
+  "v1.x": [...gptOssAtomic["v1"]],
 } as const;
 
 export const gptOss = {
   ...gptOssAtomic,
   ...gptOssGroups,
-  latest: [...gptOssAtomic.v1],
+  latest: [...gptOssAtomic["v1"]],
   all: Object.values(gptOssAtomic).flat(),
 } as const;

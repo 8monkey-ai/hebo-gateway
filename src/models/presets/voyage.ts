@@ -107,14 +107,14 @@ export const voyage4Large = presetFor<CanonicalModelId, CatalogModel>()(
 const voyageAtomic = {
   v2: [voyage2Code, voyage2Finance, voyage2Law],
   v3: [voyage3Code, voyage3Large],
-  v3_5: [voyage35, voyage35Lite],
+  "v3.5": [voyage35, voyage35Lite],
   v4: [voyage4Lite, voyage4, voyage4Large],
 } as const;
 
 const voyageGroups = {
-  v2_x: [...voyageAtomic.v2],
-  v3_x: [...voyageAtomic.v3, ...voyageAtomic.v3_5],
-  v4_x: [...voyageAtomic.v4],
+  "v2.x": [...voyageAtomic["v2"]],
+  "v3.x": [...voyageAtomic["v3"], ...voyageAtomic["v3.5"]],
+  "v4.x": [...voyageAtomic["v4"]],
 } as const;
 
 export const voyage = {

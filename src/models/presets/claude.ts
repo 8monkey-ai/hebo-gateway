@@ -43,16 +43,16 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const claudeAtomic = {
-  v4_5: [claudeHaiku45, claudeSonnet45, claudeOpus45],
+  "v4.5": [claudeHaiku45, claudeSonnet45, claudeOpus45],
 } as const;
 
 const claudeGroups = {
-  v4_x: [...claudeAtomic.v4_5],
+  "v4.x": [...claudeAtomic["v4.5"]],
 } as const;
 
 export const claude = {
   ...claudeAtomic,
   ...claudeGroups,
-  latest: [...claudeAtomic.v4_5],
+  latest: [...claudeAtomic["v4.5"]],
   all: Object.values(claudeAtomic).flat(),
 } as const;

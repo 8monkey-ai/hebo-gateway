@@ -63,19 +63,19 @@ export const llama4Maverick = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const llamaAtomic = {
-  v3_1: [llama31_8b],
-  v3_3: [llama33_70b],
+  "v3.1": [llama31_8b],
+  "v3.3": [llama33_70b],
   v4: [llama4Scout, llama4Maverick],
 } as const;
 
 const llamaGroups = {
-  v3_x: [llama31_8b, llama33_70b],
-  v4_x: [llama4Scout, llama4Maverick],
+  "v3.x": [...llamaAtomic["v3.1"], ...llamaAtomic["v3.1"]],
+  "v4.x": [...llamaAtomic["v4"]],
 } as const;
 
 export const llama = {
   ...llamaAtomic,
   ...llamaGroups,
-  latest: [...llamaAtomic.v4],
+  latest: [...llamaAtomic["v4"]],
   all: Object.values(llamaAtomic).flat(),
 } as const;

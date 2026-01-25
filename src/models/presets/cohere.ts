@@ -25,12 +25,12 @@ const cohereAtomic = {
 } as const;
 
 const cohereGroups = {
-  v4_x: [...cohereAtomic.v4],
+  "v4.x": [...cohereAtomic["v4"]],
 } as const;
 
 export const cohere = {
   ...cohereAtomic,
   ...cohereGroups,
-  latest: [...cohereAtomic.v4],
+  latest: [...cohereAtomic["v4"]],
   all: Object.values(cohereAtomic).flat(),
 } as const;
