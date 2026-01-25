@@ -3,12 +3,8 @@ import { type GatewayConfig } from "./types";
 export const parseConfig = (config: GatewayConfig): GatewayConfig => {
   const { providers, models } = config;
 
-  if (!providers || Object.keys(providers).length === 0) {
+  if (Object.keys(providers).length === 0) {
     throw new Error("Gateway config error: no providers configured (config.providers is empty).");
-  }
-
-  if (!models || Object.keys(models).length === 0) {
-    throw new Error("Gateway config error: no models configured (config.models is empty).");
   }
 
   // Strip out providers from models that are not configured
@@ -28,6 +24,10 @@ export const parseConfig = (config: GatewayConfig): GatewayConfig => {
     }
 
     if (kept.length > 0) parsedModels[id] = { ...model!, providers: kept };
+  }
+
+  if (Object.keys(parsedModels).length === 0) {
+    throw new Error("Gateway config error: no models configured (config.models is empty).");
   }
 
   return { ...config, models: parsedModels };
