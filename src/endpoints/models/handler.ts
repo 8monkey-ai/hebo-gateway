@@ -1,4 +1,4 @@
-import type { GatewayConfig, Endpoint } from "#/types";
+import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
 import { createErrorResponse } from "../../utils/errors";

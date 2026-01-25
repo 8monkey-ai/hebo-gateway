@@ -1,7 +1,7 @@
 import { embedMany } from "ai";
 import * as z from "zod/mini";
 
-import type { GatewayConfig, Endpoint } from "#/types";
+import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";

@@ -1,5 +1,4 @@
-import type { ModelCatalog, CatalogModel } from "#/models/types";
-
+import type { ModelCatalog, CatalogModel } from "../../models/types";
 import type { OpenAICompatibleList, OpenAICompatibleModel } from "./schema";
 
 export function toOpenAICompatibleModel(
