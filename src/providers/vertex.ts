@@ -1,4 +1,4 @@
-import { createVertex, vertex, GoogleVertexProviderSettings } from "@ai-sdk/google-vertex";
+import { createVertex, vertex, type GoogleVertexProviderSettings } from "@ai-sdk/google-vertex";
 
 import { withCanonicalIds } from "./registry";
 

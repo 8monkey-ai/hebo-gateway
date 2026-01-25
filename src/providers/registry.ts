@@ -1,8 +1,7 @@
+import type { CanonicalModelId, ModelCatalog, ModelId } from "#/models/types";
 import type { EmbeddingModelV3, LanguageModelV3, ProviderV3 } from "@ai-sdk/provider";
 
 import { customProvider, type ProviderRegistryProvider } from "ai";
-
-import type { CanonicalModelId, ModelCatalog, ModelId } from "../models/types";
 
 export const resolveProvider = (
   providers: ProviderRegistryProvider,

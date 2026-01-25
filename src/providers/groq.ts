@@ -1,6 +1,6 @@
-import { createGroq, groq, GroqProviderSettings } from "@ai-sdk/groq";
+import type { CanonicalModelId } from "#/models/types";
 
-import type { CanonicalModelId } from "../models/types";
+import { createGroq, groq, type GroqProviderSettings } from "@ai-sdk/groq";
 
 import { withCanonicalIds } from "./registry";
 

@@ -1,4 +1,4 @@
-import { createVoyage, voyage, VoyageProviderSettings } from "voyage-ai-provider";
+import { createVoyage, voyage, type VoyageProviderSettings } from "voyage-ai-provider";
 
 import { withCanonicalIds } from "./registry";
 

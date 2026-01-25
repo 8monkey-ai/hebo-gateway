@@ -1,4 +1,4 @@
-import { createAnthropic, anthropic, AnthropicProviderSettings } from "@ai-sdk/anthropic";
+import { createAnthropic, anthropic, type AnthropicProviderSettings } from "@ai-sdk/anthropic";
 
 import { withCanonicalIds } from "./registry";
 

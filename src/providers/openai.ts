@@ -1,4 +1,4 @@
-import { createOpenAI, openai, OpenAIProviderSettings } from "@ai-sdk/openai";
+import { createOpenAI, openai, type OpenAIProviderSettings } from "@ai-sdk/openai";
 
 import { withCanonicalIds } from "./registry";
 
