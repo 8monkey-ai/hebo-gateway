@@ -1,6 +1,6 @@
 # Hebo Gateway
 
-Roll your own AI gateway for full control over models, providers, routing logic, observability and more ...
+Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
 ## Overview
 
@@ -15,7 +15,7 @@ In contrast to other projects like LiteLLM or Portkey, it's built from the groun
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Normalized model IDs and snakeCase/camelCase parameters across providers.
 - 🗂️ Model catalog with extensible metadata capabilities.
-- 🪝 Hook system to customize routing, auth, rate limits, and response shaping.
+- 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
 ## Installation
@@ -307,7 +307,7 @@ import {
   OpenAICompatTransformStream,
 } from "@hebo-aikit/gateway/oai-compat/helpers";
 ```
-
+ 
 ### Middlewares
 
 ```ts
