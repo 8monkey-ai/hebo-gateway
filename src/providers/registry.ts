@@ -67,7 +67,7 @@ export const withCanonicalIds = (
 
   const shouldNormalizeDelimiters = (canonicalId: string) => {
     if (typeof normalizeDelimiters === "boolean") return normalizeDelimiters;
-    return normalizeDelimiters.some((x) => canonicalId.startsWith(x));
+    return normalizeDelimiters.some((x) => canonicalId.startsWith(`${x}/`));
   };
 
   const normalizeId = (canonicalId: string) => {
