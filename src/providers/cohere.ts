@@ -2,12 +2,12 @@ import { createCohere, cohere, CohereProviderSettings } from "@ai-sdk/cohere";
 
 import { withCanonicalIds } from "./registry";
 
-export const normalizedCohere = (extraMapping?: Record<string, string>) =>
+export const cohereWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(cohere, extraMapping, {
     stripNamespace: true,
   });
 
-export const createNormalizedCohere = (
+export const createCohereWithCanonicalIds = (
   settings: CohereProviderSettings,
   extraMapping?: Record<string, string>,
 ) =>

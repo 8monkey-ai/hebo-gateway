@@ -2,12 +2,12 @@ import { createVoyage, voyage, VoyageProviderSettings } from "voyage-ai-provider
 
 import { withCanonicalIds } from "./registry";
 
-export const normalizedVoyage = (extraMapping?: Record<string, string>) =>
+export const voyageWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(voyage, extraMapping, {
     stripNamespace: true,
   });
 
-export const createNormalizedVoyage = (
+export const createVoyageWithCanonicalIds = (
   settings: VoyageProviderSettings,
   extraMapping?: Record<string, string>,
 ) =>

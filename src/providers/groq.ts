@@ -11,10 +11,10 @@ const MAPPING = {
   "meta/llama-4-maverick": "meta-llama/llama-4-maverick-17b-128e-instruct",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
-export const normalizedGroq = (extraMapping?: Record<string, string>) =>
+export const groqWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(groq, { ...MAPPING, ...extraMapping }, { stripNamespace: false });
 
-export const createNormalizedGroq = (
+export const createGroqWithCanonicalIds = (
   settings: GroqProviderSettings,
   extraMapping?: Record<string, string>,
 ) =>

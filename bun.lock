@@ -30,7 +30,11 @@
         "voyage-ai-provider": "^3.0.0",
       },
       "peerDependencies": {
+        "@ai-sdk/amazon-bedrock": "^4.0.30",
+        "@ai-sdk/cohere": "^3.0.11",
+        "@ai-sdk/google-vertex": "^4.0.28",
         "@ai-sdk/groq": "^3.0.15",
+        "@ai-sdk/openai": "^3.0.18",
         "ai": "^6.0.42",
         "typescript": "^5",
         "voyage-ai-provider": "^3.0.0",
@@ -51,6 +55,8 @@
     "@ai-sdk/google-vertex": ["@ai-sdk/google-vertex@4.0.28", "", { "dependencies": { "@ai-sdk/anthropic": "3.0.23", "@ai-sdk/google": "3.0.13", "@ai-sdk/provider": "3.0.5", "@ai-sdk/provider-utils": "4.0.9", "google-auth-library": "^10.5.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-QHf16QlxlQJQBto8r4u4hkCKwlNGnGSTyihp2SPJ98Xj4mLtQZw26Gp2tIHqZZHWbKF5K2AFSILSmgLfFapwEw=="],
 
     "@ai-sdk/groq": ["@ai-sdk/groq@3.0.15", "", { "dependencies": { "@ai-sdk/provider": "3.0.5", "@ai-sdk/provider-utils": "4.0.9" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-tvxaM3RNmbDxoI9fktngyd8bdn35RF09FxQT5y7P4Pfcgu0LlyGQ6EtmfWGb2ke1ZLKLXFyr7jN3uX5Y3L3kbA=="],
+
+    "@ai-sdk/openai": ["@ai-sdk/openai@3.0.18", "", { "dependencies": { "@ai-sdk/provider": "3.0.5", "@ai-sdk/provider-utils": "4.0.9" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-uYscTyoaWij9FoPpKRNK8YgtDEuPpQlqREYylJCA8o5YQVQXghV0Dwgk1ehPVpg6USIO4L0C8GqQJ4AMm/Xb1g=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.5", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-2Xmoq6DBJqmSl80U6V9z5jJSJP7ehaJJQMy2iFUqTay06wdCqTnPVBBQbtEL8RCChenL+q5DC5H5WzU3vV3v8w=="],
 

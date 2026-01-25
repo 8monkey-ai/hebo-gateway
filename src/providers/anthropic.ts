@@ -2,13 +2,13 @@ import { createAnthropic, anthropic, AnthropicProviderSettings } from "@ai-sdk/a
 
 import { withCanonicalIds } from "./registry";
 
-export const normalizedAnthropic = (extraMapping?: Record<string, string>) =>
+export const anthropicWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(anthropic, extraMapping, {
     stripNamespace: true,
     replaceDots: true,
   });
 
-export const createNormalizedAnthropic = (
+export const createAnthropicWithCanonicalIds = (
   settings: AnthropicProviderSettings,
   extraMapping?: Record<string, string>,
 ) =>

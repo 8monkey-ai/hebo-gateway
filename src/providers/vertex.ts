@@ -2,13 +2,13 @@ import { createVertex, vertex, GoogleVertexProviderSettings } from "@ai-sdk/goog
 
 import { withCanonicalIds } from "./registry";
 
-export const normalizedVertex = (extraMapping?: Record<string, string>) =>
+export const vertexWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(vertex, extraMapping, {
     stripNamespace: true,
     replaceDots: ["anthropic"],
   });
 
-export const createNormalizedVertex = (
+export const createVertexWithCanonicalIds = (
   settings: GoogleVertexProviderSettings,
   extraMapping?: Record<string, string>,
 ) =>

@@ -19,23 +19,22 @@ const MAPPING = {
   "cohere/embed-v4.0": "cohere.embed-v4:0",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
-export type NormalizedBedrockOptions = {
+export type BedrockCanonicalOptions = {
   // eslint-disable-next-line ban-types
   geo?: "global" | "apac" | "us" | "eu" | "au" | "ca" | "jp" | "us-gov" | (string & {});
   arn?: { region: string; accountId: string };
 };
 
-export type NormalizedAmazonBedrockProviderSettings = AmazonBedrockProviderSettings &
-  NormalizedBedrockOptions;
+export type BedrockCanonicalSettings = AmazonBedrockProviderSettings & BedrockCanonicalOptions;
 
-const resolvePrefix = ({ geo = "global", arn }: NormalizedBedrockOptions = {}) =>
+const resolvePrefix = ({ geo = "global", arn }: BedrockCanonicalSettings = {}) =>
   `${arn ? `arn:aws:bedrock:${arn.region}:${arn.accountId}:inference-profile/` : ""}${geo}.`;
 
 const mergeMapping = (extra?: Record<string, string>) =>
   ({ ...MAPPING, ...extra }) as Record<string, string>;
 
-export const normalizedBedrock = (
-  opts?: NormalizedBedrockOptions,
+export const bedrockWithCanonicalIds = (
+  opts?: BedrockCanonicalOptions,
   extraMapping?: Record<string, string>,
 ) =>
   withCanonicalIds(bedrock, mergeMapping(extraMapping), {
@@ -46,8 +45,8 @@ export const normalizedBedrock = (
     postfix: "-v1:0",
   });
 
-export const createNormalizedAmazonBedrock = (
-  { geo, arn, ...bedrockSettings }: NormalizedAmazonBedrockProviderSettings,
+export const createAmazonBedrockWithCanonicalIds = (
+  { geo, arn, ...bedrockSettings }: BedrockCanonicalSettings,
   extraMapping?: Record<string, string>,
 ) =>
   withCanonicalIds(createAmazonBedrock(bedrockSettings), mergeMapping(extraMapping), {
