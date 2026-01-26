@@ -1,13 +1,13 @@
-import type { ProviderRegistryProvider } from "ai";
+import type { EmbeddingModelV3, LanguageModelV3, ProviderV3 } from "@ai-sdk/provider";
 
-import { customProvider } from "ai";
+import { customProvider, type ProviderRegistryProvider } from "ai";
 
-import type { ModelCatalog } from "../models/types";
+import type { CanonicalModelId, ModelCatalog, ModelId } from "../models/types";
 
 export const resolveProvider = (
   providers: ProviderRegistryProvider,
   models: ModelCatalog,
-  modelId: string,
+  modelId: ModelId,
   modality: "text" | "image" | "audio" | "video" | "embeddings",
 ) => {
   const catalogModel = models[modelId];
@@ -42,4 +42,91 @@ export const resolveProvider = (
     default:
       throw new Error(`Modality '${modality}' is not yet supported`);
   }
+};
+
+export const withCanonicalIds = (
+  provider: ProviderV3,
+  mapping?: Record<string, string>,
+  options?: {
+    /** @default true */
+    stripNamespace?: boolean;
+    /** @default false */
+    normalizeDelimiters?: boolean | readonly string[];
+    prefix?: string;
+    postfix?: string;
+    /** @default "/" */
+    namespaceSeparator?: "/" | "." | ":";
+  },
+) => {
+  const {
+    stripNamespace = true,
+    normalizeDelimiters = false,
+    prefix,
+    postfix,
+    namespaceSeparator = "/",
+  } = options ?? {};
+
+  const shouldNormalizeDelimiters = (canonicalId: string) => {
+    if (typeof normalizeDelimiters === "boolean") return normalizeDelimiters;
+    return normalizeDelimiters.some((x) => canonicalId.startsWith(`${x}/`));
+  };
+
+  const normalizeId = (canonicalId: string) => {
+    let out = canonicalId;
+
+    if (shouldNormalizeDelimiters(canonicalId)) {
+      out = out.replaceAll(".", "-");
+    }
+    if (stripNamespace) {
+      out = out.replace(/^[^/]+\//, "");
+    } else if (namespaceSeparator !== "/") {
+      out = out.replace("/", namespaceSeparator);
+    }
+
+    return out;
+  };
+
+  const applyPrefix = (v: string) => (prefix && !v.startsWith(prefix) ? `${prefix}${v}` : v);
+
+  const applyFallbackAffixes = (v: string) => {
+    let out = applyPrefix(v);
+    if (postfix && !out.endsWith(postfix)) out = `${out}${postfix}`;
+    return out;
+  };
+
+  const needsFallbackWrap =
+    stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
+
+  const fallbackProvider: ProviderV3 = needsFallbackWrap
+    ? {
+        ...provider,
+        languageModel: (id: string) =>
+          provider.languageModel(applyFallbackAffixes(normalizeId(id))),
+        embeddingModel: (id: string) =>
+          provider.embeddingModel(applyFallbackAffixes(normalizeId(id))),
+      }
+    : provider;
+
+  const mapModels = <T>(fn: (id: string) => T) => {
+    const out = {} as Record<string, T>;
+
+    for (const [k, v] of Object.entries(mapping ?? {})) {
+      // This is lazy so that provider is only create once called
+      Object.defineProperty(out, k, {
+        get: () => fn(applyPrefix(v)),
+      });
+    }
+
+    return out;
+  };
+
+  return customProvider({
+    languageModels: mapModels(provider.languageModel) satisfies Partial<
+      Record<CanonicalModelId, LanguageModelV3>
+    >,
+    embeddingModels: mapModels(provider.embeddingModel) satisfies Partial<
+      Record<CanonicalModelId, EmbeddingModelV3>
+    >,
+    fallbackProvider,
+  });
 };

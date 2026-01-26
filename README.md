@@ -1,6 +1,6 @@
 # Hebo Gateway
 
-Roll your own AI gateway for full control over models, providers, routing logic, observability and more ...
+Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
 ## Overview
 
@@ -15,7 +15,7 @@ In contrast to other projects like LiteLLM or Portkey, it's built from the groun
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Normalized model IDs and snakeCase/camelCase parameters across providers.
 - 🗂️ Model catalog with extensible metadata capabilities.
-- 🪝 Hook system to customize routing, auth, rate limits, and response shaping.
+- 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
 ## Installation
@@ -32,21 +32,15 @@ bun add @hebo-ai/gateway
 import {
   gateway,
   createProviderRegistry,
+  createGroqWithCanonicalIds,
+  gptOss20b
 } from "@hebo-ai/gateway";
-
-import {
-  normalizedGroq,
-} from "@hebo-ai/gateway/providers/groq";
-
-import {
-  gptOss20b,
-} from "@hebo-ai/gateway/model/presets/gpt-oss";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
   // Any Vercel AI SDK provider, canonical ones via `providers` module
   providers: createProviderRegistry({
-    groq: normalizedGroq({
+    groq: createGroqWithCanonicalIds({
       apiKey: process.env.GROQ_API_KEY,
     }),
   }),
@@ -313,7 +307,7 @@ import {
   OpenAICompatTransformStream,
 } from "@hebo-aikit/gateway/oai-compat/helpers";
 ```
-
+ 
 ### Middlewares
 
 ```ts
