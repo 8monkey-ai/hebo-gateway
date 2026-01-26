@@ -35,7 +35,7 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
 
     const route = "/" + path.split("/", 2)[1];
 
-    const endpoint = routes[route as keyof typeof routes];
+    const endpoint = routes[route as keyof GatewayRoutes];
 
     if (endpoint) {
       return endpoint.handler(req);
@@ -44,8 +44,5 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
     return Promise.resolve(new Response("Not Found", { status: 404 }));
   };
 
-  return {
-    handler: handler as typeof fetch,
-    routes,
-  };
+  return { handler: handler as typeof fetch, routes };
 }
