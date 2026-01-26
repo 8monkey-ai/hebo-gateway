@@ -4,8 +4,8 @@ import { parseConfig } from "../../config";
 import { createErrorResponse } from "../../utils/errors";
 import { toOpenAICompatibleModel, toOpenAICompatibleModelList } from "./converters";
 
-export const models = (config: GatewayConfig, skipParse = false): Endpoint => {
-  const { models } = skipParse ? config : parseConfig(config);
+export const models = (config: GatewayConfig): Endpoint => {
+  const { models } = parseConfig(config);
 
   // eslint-disable-next-line require-await
   const handler = async (req: Request): Promise<Response> => {

@@ -1,18 +1,29 @@
-import type { GatewayConfig, HeboGateway } from "./types";
+import type {
+  Endpoint,
+  GatewayConfig,
+  GatewayConfigBase,
+  GatewayConfigRegistry,
+  HeboGateway,
+} from "./types";
 
 import { parseConfig } from "./config";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 
-export function gateway(config: GatewayConfig) {
-  const basePath = (config.basePath ?? "").replace(/\/+$/, "");
+const buildRoutes = (config: GatewayConfig) =>
+  ({
+    ["/models"]: models(config),
+    ["/embeddings"]: embeddings(config),
+  }) as const satisfies Record<string, Endpoint>;
 
+type GatewayRoutes = ReturnType<typeof buildRoutes>;
+
+export function gateway(config: GatewayConfigBase): HeboGateway<GatewayRoutes>;
+export function gateway(config: GatewayConfigRegistry): HeboGateway<GatewayRoutes>;
+export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
   const parsedConfig = parseConfig(config);
-
-  const routes = {
-    ["/models"]: models(parsedConfig, true),
-    ["/embeddings"]: embeddings(parsedConfig, true),
-  } as const;
+  const basePath = (config.basePath ?? "").replace(/\/+$/, "");
+  const routes = buildRoutes(parsedConfig);
 
   const handler = (req: Request): Promise<Response> => {
     const url = new URL(req.url);
@@ -36,5 +47,5 @@ export function gateway(config: GatewayConfig) {
   return {
     handler: handler as typeof fetch,
     routes,
-  } satisfies HeboGateway<typeof routes>;
+  };
 }
