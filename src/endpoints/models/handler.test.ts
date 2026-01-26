@@ -84,6 +84,30 @@ describe("Models Handler", () => {
     });
   });
 
+  test("should return a single model by ID", async () => {
+    const request = new Request(`${baseUrl}/anthropic/claude-opus-4.5`, { method: "GET" });
+
+    const res = await endpoint.handler(request);
+    const data = await parseResponse(res);
+
+    expect(data).toEqual({
+      id: "anthropic/claude-opus-4.5",
+      object: "model",
+      created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
+      owned_by: "anthropic",
+      name: "Claude Opus 4.5",
+      knowledge: "2025-07",
+      context: 200000,
+      capabilities: ["reasoning", "tool_call"],
+      architecture: {
+        modality: "text->text",
+        input_modalities: ["text", "image"],
+        output_modalities: ["text"],
+      },
+      endpoints: [{ tag: "anthropic" }],
+    });
+  });
+
   test("should return 'Method Not Allowed' for POST request", async () => {
     const request = new Request(baseUrl, { method: "POST" });
 

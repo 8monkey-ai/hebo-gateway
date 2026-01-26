@@ -22,7 +22,9 @@ export function gateway(config: GatewayConfig) {
         ? url.pathname.slice(basePath.length)
         : url.pathname;
 
-    const endpoint = routes[path as keyof typeof routes];
+    const route = "/" + path.split("/")[1];
+
+    const endpoint = routes[route as keyof typeof routes];
 
     if (endpoint) {
       return endpoint.handler(req);
