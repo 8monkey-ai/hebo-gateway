@@ -46,11 +46,11 @@ export const gw = gateway({
   },
 
   // MODEL CATALOG
-  models: createModelCatalog({
+  models: createModelCatalog(
     // Choose a preset for common SOTA models
-    ...gptOss20b({
+    gptOss20b({
       providers: ["groq"],
-    })},
+    }),
     // Or add a whole model family
     ...gptOss["all"].map((model) => 
       model({})
