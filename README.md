@@ -18,6 +18,16 @@ In contrast to other projects like LiteLLM or Portkey, it's built from the groun
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
+## Yet Another AI Gateway?
+
+Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to get started quickly with a managed service and a shared catalog. LiteLLM and Portkey target teams that need enterprise control by providing a self-hosted gateway. But all of them are off-the shelve solutions, none allows for true extensibility. Hebo Gateway is for teams that want the same conveniences, but fully own their gateway, integrate it into their own applications and host on their own infrastructure.
+
+- **Bring your own routing logic.** Hooks let you implement custom auth, rate limits, observability, and traffic shaping without forking a vendor.
+- **Provider-native compatibility.** It speaks OpenAI-compatible APIs and accepts any Vercel AI SDK provider, so you can plug in existing SDKs and credentials quickly.
+- **Canonical model IDs.** Normalize model IDs and parameters across providers, while keeping a rich model catalog that your app can depend on.
+- **Framework-native integration.** Mount the handler inside Hono, Elysia, Next.js, TanStack, or any WinterCG runtime.
+- **Composable building blocks.** Use the gateway end-to-end, or just the converters, schemas, and middleware helpers.
+
 ## Installation
 
 ```bash
