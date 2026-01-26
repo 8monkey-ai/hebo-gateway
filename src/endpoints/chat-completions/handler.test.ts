@@ -3,7 +3,22 @@ import { describe, expect, it, mock } from "bun:test";
 import { createModelCatalog } from "../../models/catalog";
 import { chatCompletions } from "./handler";
 
-const mockGenerateText = mock((_options: any) => {
+const mockGenerateText = mock((options: any) => {
+  if (options.tools) {
+    return {
+      toolCalls: [
+        {
+          toolCallId: "call_123",
+          toolName: "get_current_weather",
+          input: { location: "San Francisco, CA" },
+        },
+      ],
+      content: [],
+      finishReason: "tool-calls",
+      usage: { inputTokens: 15, outputTokens: 25, totalTokens: 40 },
+      providerMetadata: { some: "metadata" },
+    };
+  }
   return {
     content: [{ type: "text", text: "Hello from AI" }],
     finishReason: "stop",
@@ -135,6 +150,70 @@ describe("Chat Completions Handler", () => {
           prompt_tokens: 10,
           completion_tokens: 20,
           total_tokens: 30,
+          completion_tokens_details: {
+            reasoning_tokens: 0,
+          },
+          prompt_tokens_details: {
+            cached_tokens: 0,
+          },
+        },
+        providerMetadata: { some: "metadata" },
+      },
+    },
+    {
+      name: "should generate completion with tool calls successfully",
+      request: new Request("http://localhost/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-20b",
+          messages: [{ role: "user", content: "What is the weather in SF?" }],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "get_current_weather",
+                description: "Get the current weather",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    location: { type: "string" },
+                  },
+                },
+              },
+            },
+          ],
+        }),
+      }),
+      expected: {
+        id: expect.stringMatching(/^chatcmpl-/),
+        object: "chat.completion",
+        created: expect.any(Number),
+        model: "openai/gpt-oss-20b",
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                {
+                  id: "call_123",
+                  type: "function",
+                  function: {
+                    name: "get_current_weather",
+                    arguments: '{"location":"San Francisco, CA"}',
+                  },
+                },
+              ],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+        usage: {
+          prompt_tokens: 15,
+          completion_tokens: 25,
+          total_tokens: 40,
           completion_tokens_details: {
             reasoning_tokens: 0,
           },
