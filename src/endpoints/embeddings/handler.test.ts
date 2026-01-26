@@ -2,26 +2,11 @@ import { createProviderRegistry } from "ai";
 import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
+import { parseResponse, postJson } from "../../../test/helpers/http";
 import { createModelCatalog } from "../../models/catalog";
 import { embeddings } from "./handler";
 
-const parseResponse = async (res: Response) => {
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-};
-
 const baseUrl = "http://localhost/embeddings";
-
-const postJson = (body: unknown) =>
-  new Request(baseUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
 
 const expectedEmbeddingResponse = (count: number) => ({
   object: "list",
@@ -74,7 +59,7 @@ describe("Embeddings Handler", () => {
   const endpoint = embeddings({ providers: registry, models: catalog }, true);
 
   test("should return 400 if model does not support embeddings", async () => {
-    const request = postJson({
+    const request = postJson(baseUrl, {
       model: "gpt-oss-20b",
       input: "hello world",
     });
@@ -89,7 +74,7 @@ describe("Embeddings Handler", () => {
   });
 
   test("should generate embeddings for a single string", async () => {
-    const request = postJson({
+    const request = postJson(baseUrl, {
       model: "text-embedding-3-small",
       input: "hello world",
     });
@@ -101,7 +86,7 @@ describe("Embeddings Handler", () => {
   });
 
   test("should generate embeddings for an array of strings", async () => {
-    const request = postJson({
+    const request = postJson(baseUrl, {
       model: "text-embedding-3-small",
       input: ["hello", "world"],
     });
@@ -113,7 +98,7 @@ describe("Embeddings Handler", () => {
   });
 
   test("should return 422 if input is missing", async () => {
-    const request = postJson({
+    const request = postJson(baseUrl, {
       model: "text-embedding-3-small",
     });
 

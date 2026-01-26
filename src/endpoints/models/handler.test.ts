@@ -2,17 +2,9 @@ import { createProviderRegistry } from "ai";
 import { MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
+import { parseResponse } from "../../../test/helpers/http";
 import { createModelCatalog } from "../../models/catalog";
 import { models } from "./handler";
-
-const parseResponse = async (res: Response) => {
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-};
 
 describe("Models Handler", () => {
   const registry = createProviderRegistry({
