@@ -1,11 +1,13 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 
-import { createProviderRegistry } from "ai";
+import { createProviderRegistry, type ProviderRegistryProvider } from "ai";
 
-import { ProviderRegistryBrand } from "./providers/types";
-import { type GatewayConfig } from "./types";
+import { kParsed, type GatewayConfig, type GatewayConfigParsed } from "./types";
 
-export const parseConfig = (config: GatewayConfig): GatewayConfig => {
+export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
+  // If it has been parsed before, just return
+  if (kParsed in config) return config as GatewayConfigParsed;
+
   const providers = config.providers ?? {};
   const models = config.models ?? {};
 
@@ -15,10 +17,10 @@ export const parseConfig = (config: GatewayConfig): GatewayConfig => {
 
   // Initialize ProviderRegistry (if nessecary)
   let registry;
-  if (ProviderRegistryBrand in providers) {
-    registry = createProviderRegistry(providers as unknown as Record<string, ProviderV3>);
+  if ("languageModel" in providers) {
+    registry = providers as unknown as ProviderRegistryProvider;
   } else {
-    registry = providers;
+    registry = createProviderRegistry(providers as unknown as Record<string, ProviderV3>);
   }
 
   // Strip out providers from models that are not configured
@@ -44,5 +46,5 @@ export const parseConfig = (config: GatewayConfig): GatewayConfig => {
     throw new Error("Gateway config error: no models configured (config.models is empty).");
   }
 
-  return { ...config, providers: registry, models: parsedModels };
+  return { ...config, providers: registry, models: parsedModels, [kParsed]: true };
 };

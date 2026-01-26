@@ -10,11 +10,22 @@ export type GatewayHooks = {
   after?: (response: Response) => Promise<Response | void>;
 };
 
-export type GatewayConfig = {
+export type GatewayConfigBase = {
   basePath?: string;
-  providers: ProviderRegistry | ProviderRegistryProvider;
+  providers: ProviderRegistry;
   models: ModelCatalog;
   hooks?: GatewayHooks;
+};
+
+export type GatewayConfigRegistry = Omit<GatewayConfigBase, "providers"> & {
+  providers: ProviderRegistryProvider;
+};
+
+export type GatewayConfig = GatewayConfigBase | GatewayConfigRegistry;
+
+export const kParsed = Symbol("hebo.gateway.parsed");
+export type GatewayConfigParsed = GatewayConfigRegistry & {
+  [kParsed]: true;
 };
 
 export interface Endpoint {
