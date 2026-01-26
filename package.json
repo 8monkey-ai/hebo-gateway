@@ -1,7 +1,60 @@
 {
   "name": "@hebo-ai/gateway",
+  "version": "0.1",
+  "description": "Hebo Gateway - Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more.",
+  "keywords": [
+    "ai",
+    "anthropic",
+    "bedrock",
+    "elysiajs",
+    "gateway",
+    "groq",
+    "hono",
+    "llm",
+    "nextjs",
+    "openai",
+    "tanstack-start",
+    "vercel-ai-sdk",
+    "voyage"
+  ],
+  "homepage": "https://hebo.ai/gateway",
+  "bugs": {
+    "url": "https://github.com/8monkey-ai/hebo-gateway/issues"
+  },
+  "license": "FSL-1.1-ALv2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/8monkey-ai/hebo-gateway.git"
+  },
   "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+    "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./endpoints/models": {
+      "import": "./dist/endpoints/models/index.js",
+      "types": "./dist/endpoints/models/index.d.ts"
+    },
+    "./endpoints/embeddings": {
+      "import": "./dist/endpoints/embeddings/index.js",
+      "types": "./dist/endpoints/embeddings/index.d.ts"
+    },
+    "./models": {
+      "import": "./dist/models/index.js",
+      "types": "./dist/models/index.d.ts"
+    },
+    "./providers": {
+      "import": "./dist/providers/index.js",
+      "types": "./dist/providers/index.d.ts"
+    }
+  },
   "scripts": {
+    "build": "tsc",
     "dev": "bun --hot src/index.ts",
     "clean": "git clean -fdx -e '.env*' .",
     "format": "oxfmt .",
@@ -40,12 +93,24 @@
     "typescript": "^5",
     "voyage-ai-provider": "^3.0.0"
   },
-  "optionalDependencies": {
-    "@ai-sdk/amazon-bedrock": "^4.0.30",
-    "@ai-sdk/cohere": "^3.0.11",
-    "@ai-sdk/google-vertex": "^4.0.28",
-    "@ai-sdk/groq": "^3.0.15",
-    "@ai-sdk/openai": "^3.0.18",
-    "voyage-ai-provider": "^3.0.0"
+  "peerDependenciesMeta": {
+    "@ai-sdk/amazon-bedrock": {
+      "optional": true
+    },
+    "@ai-sdk/cohere": {
+      "optional": true
+    },
+    "@ai-sdk/google-vertex": {
+      "optional": true
+    },
+    "@ai-sdk/groq": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "voyage-ai-provider": {
+      "optional": true
+    }
   }
 }

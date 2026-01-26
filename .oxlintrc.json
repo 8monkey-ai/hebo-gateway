@@ -13,9 +13,5 @@
     "anchor-has-content": "off",
     "max-dependencies": "off"
   },
-  "ignorePatterns": [
-    "dist/**",
-    "node_modules/**",
-    "e2e/**",
-  ],
+  "ignorePatterns": ["dist/**", "node_modules/**", "e2e/**"]
 }
