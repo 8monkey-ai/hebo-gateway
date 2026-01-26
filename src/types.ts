@@ -1,6 +1,7 @@
 import type { ProviderRegistryProvider } from "ai";
 
 import type { ModelCatalog } from "./models/types";
+import type { ProviderRegistry } from "./providers/types";
 
 export type GatewayHooks = {
   before?: (request: Request) => Promise<void | Response>;
@@ -11,7 +12,7 @@ export type GatewayHooks = {
 
 export type GatewayConfig = {
   basePath?: string;
-  providers: ProviderRegistryProvider;
+  providers: ProviderRegistry | ProviderRegistryProvider;
   models: ModelCatalog;
   hooks?: GatewayHooks;
 };

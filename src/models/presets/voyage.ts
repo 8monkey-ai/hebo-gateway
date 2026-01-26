@@ -1,3 +1,4 @@
+import type { CanonicalProviderId } from "../../providers/types";
 import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, type DeepPartial } from "../../utils/preset";
@@ -7,7 +8,7 @@ const VOYAGE_BASE = {
     input: ["text"] as const,
     output: ["embeddings"] as const,
   },
-  providers: ["voyage"] as const,
+  providers: ["voyage"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const voyage2Code = presetFor<CanonicalModelId, CatalogModel>()(

@@ -1,3 +1,5 @@
+import type { ProviderId } from "../providers/types";
+
 export const CANONICAL_MODEL_IDS = [
   // Anthropic
   "anthropic/claude-haiku-4.5",
@@ -72,7 +74,7 @@ export type CatalogModel = {
     | "structured_output"
     | "temperature"
   )[];
-  providers: readonly string[];
+  providers: readonly ProviderId[];
   additionalProperties?: Record<string, unknown>;
 };
 

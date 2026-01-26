@@ -1,3 +1,8 @@
+import type { ProviderV3 } from "@ai-sdk/provider";
+
+import { createProviderRegistry } from "ai";
+
+import { ProviderRegistryBrand } from "./providers/types";
 import { type GatewayConfig } from "./types";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfig => {
@@ -8,9 +13,17 @@ export const parseConfig = (config: GatewayConfig): GatewayConfig => {
     throw new Error("Gateway config error: no providers configured (config.providers is empty).");
   }
 
+  // Initialize ProviderRegistry (if nessecary)
+  let registry;
+  if (ProviderRegistryBrand in providers) {
+    registry = createProviderRegistry(providers as unknown as Record<string, ProviderV3>);
+  } else {
+    registry = providers;
+  }
+
   // Strip out providers from models that are not configured
   const providerKeys = Object.keys(
-    (providers as unknown as { providers: Record<string, unknown> }).providers,
+    (registry as unknown as { providers: Record<string, unknown> }).providers,
   );
 
   const parsedModels = {} as typeof models;
@@ -31,5 +44,5 @@ export const parseConfig = (config: GatewayConfig): GatewayConfig => {
     throw new Error("Gateway config error: no models configured (config.models is empty).");
   }
 
-  return { ...config, models: parsedModels };
+  return { ...config, providers: registry, models: parsedModels };
 };

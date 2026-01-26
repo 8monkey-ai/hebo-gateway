@@ -1,3 +1,4 @@
+import type { CanonicalProviderId } from "../../providers/types";
 import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, type DeepPartial } from "../../utils/preset";
@@ -15,7 +16,7 @@ const GPT_OSS_BASE = {
     "temperature",
   ] as const,
   context: 131072,
-  providers: ["groq", "bedrock", "vertex"] as const,
+  providers: ["groq", "bedrock", "vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(

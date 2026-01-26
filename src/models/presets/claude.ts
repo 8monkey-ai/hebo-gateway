@@ -1,3 +1,4 @@
+import type { CanonicalProviderId } from "../../providers/types";
 import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, type DeepPartial } from "../../utils/preset";
@@ -9,7 +10,7 @@ const CLAUDE_BASE = {
   },
   capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
   context: 200000,
-  providers: ["anthropic", "bedrock", "vertex"],
+  providers: ["anthropic", "bedrock", "vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(

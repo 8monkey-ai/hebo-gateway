@@ -1,6 +1,6 @@
 import { createAnthropic, anthropic, type AnthropicProviderSettings } from "@ai-sdk/anthropic";
 
-import { withCanonicalIds } from "./registry";
+import { withCanonicalIds } from "../registry";
 
 export const anthropicWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(anthropic, extraMapping, {

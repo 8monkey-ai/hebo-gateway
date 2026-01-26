@@ -1,6 +1,6 @@
 import { createOpenAI, openai, type OpenAIProviderSettings } from "@ai-sdk/openai";
 
-import { withCanonicalIds } from "./registry";
+import { withCanonicalIds } from "../registry";
 
 export const openaiWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(openai, extraMapping, {

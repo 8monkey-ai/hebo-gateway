@@ -1,3 +1,4 @@
+import type { CanonicalProviderId } from "../../providers/types";
 import type { CanonicalModelId, CatalogModel } from "../types";
 
 import { presetFor, type DeepPartial } from "../../utils/preset";
@@ -8,7 +9,7 @@ const COHERE_BASE = {
     output: ["embeddings"] as const,
   },
   context: 128000,
-  providers: ["cohere", "bedrock"] as const,
+  providers: ["cohere", "bedrock"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const cohereEmbed4 = presetFor<CanonicalModelId, CatalogModel>()(

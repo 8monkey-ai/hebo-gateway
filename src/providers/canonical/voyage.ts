@@ -1,6 +1,6 @@
 import { createVoyage, voyage, type VoyageProviderSettings } from "voyage-ai-provider";
 
-import { withCanonicalIds } from "./registry";
+import { withCanonicalIds } from "../registry";
 
 export const voyageWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(voyage, extraMapping, {

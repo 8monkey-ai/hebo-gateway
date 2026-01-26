@@ -1,5 +1,3 @@
-export { withCanonicalIds } from "./registry";
-
 export * from "./anthropic";
 export * from "./bedrock";
 export * from "./cohere";

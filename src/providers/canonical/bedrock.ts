@@ -4,9 +4,9 @@ import {
   type AmazonBedrockProviderSettings,
 } from "@ai-sdk/amazon-bedrock";
 
-import type { CanonicalModelId } from "../models/types";
+import type { CanonicalModelId } from "../../models/types";
 
-import { withCanonicalIds } from "./registry";
+import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
   "anthropic/claude-haiku-4.5": "anthropic.claude-haiku-4-5-20251001-v1:0",

@@ -1,6 +1,6 @@
 import { createVertex, vertex, type GoogleVertexProviderSettings } from "@ai-sdk/google-vertex";
 
-import { withCanonicalIds } from "./registry";
+import { withCanonicalIds } from "../registry";
 
 export const vertexWithCanonicalIds = (extraMapping?: Record<string, string>) =>
   withCanonicalIds(vertex, extraMapping, {
