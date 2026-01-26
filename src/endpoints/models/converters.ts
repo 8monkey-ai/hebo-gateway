@@ -52,3 +52,9 @@ export function toOpenAICompatibleModelListResponse(models: ModelCatalog): Respo
     headers: { "Content-Type": "application/json" },
   });
 }
+
+export function toOpenAICompatibleModelResponse(id: string, catalogModel: CatalogModel): Response {
+  return new Response(JSON.stringify(toOpenAICompatibleModel(id, catalogModel)), {
+    headers: { "Content-Type": "application/json" },
+  });
+}

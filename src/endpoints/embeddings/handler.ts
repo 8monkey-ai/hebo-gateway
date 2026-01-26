@@ -12,8 +12,8 @@ import {
 } from "./converters";
 import { OpenAICompatibleEmbeddingRequestBodySchema } from "./schema";
 
-export const embeddings = (config: GatewayConfig, skipParse = false): Endpoint => {
-  const { providers, models } = skipParse ? config : parseConfig(config);
+export const embeddings = (config: GatewayConfig): Endpoint => {
+  const { providers, models } = parseConfig(config);
 
   return {
     handler: (async (req: Request): Promise<Response> => {
