@@ -13,7 +13,7 @@ In contrast to other projects like LiteLLM or Portkey, it's built from the groun
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
-- 🧭 Normalized model IDs and snakeCase/camelCase parameters across providers.
+- 🧭 Canonical model IDs and snakeCase/camelCase parameters across providers.
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
@@ -31,22 +31,21 @@ bun add @hebo-ai/gateway
 ```ts
 import {
   gateway,
-  createProviderRegistry,
   createGroqWithCanonicalIds,
   gptOss20b
 } from "@hebo-ai/gateway";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
-  // Any Vercel AI SDK provider, canonical ones via `providers` module
-  providers: createProviderRegistry({
+  // Any Vercel AI SDK provider, canonical ones in `providers/canonical`
+  providers: {
     groq: createGroqWithCanonicalIds({
       apiKey: process.env.GROQ_API_KEY,
-    }),
+    },
   }),
 
   // MODEL CATALOG
-  // Choose a preset for common SOTA models in `model-catalog/presets`
+  // Choose a preset for common SOTA models in `models/presets`
   models: {
     ...gptOss20b({
       providers: ["groq"],
