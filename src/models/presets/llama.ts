@@ -26,7 +26,7 @@ export const llama31_8b = presetFor<CanonicalModelId, CatalogModel>()(
 export const llama33_70b = presetFor<CanonicalModelId, CatalogModel>()(
   "meta/llama-3.3-70b" as const,
   {
-    name: "Llama 3.3 70b",
+    name: "Llama 3.3 70B",
     created: "2024-12-06",
     knowledge: "2023-12",
     ...LLAMA_3_BASE,

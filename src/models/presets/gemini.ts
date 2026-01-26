@@ -22,7 +22,7 @@ const GEMINI_BASE = {
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3-flash-preview" as const,
   {
-    name: "Gemini 3 Flash",
+    name: "Gemini 3 Flash (Preview)",
     created: "2025-12-17",
     knowledge: "2025-01",
     ...GEMINI_BASE,
