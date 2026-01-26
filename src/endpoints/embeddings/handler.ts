@@ -42,11 +42,20 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const requestBody = parsed.data;
     const { model: modelId, ...params } = requestBody;
 
+    let resolvedModelId;
+    try {
+      resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
+    } catch (error) {
+      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+    }
+
     let provider;
     try {
-      provider = resolveProvider({ providers, models, modelId, operation: "embeddings" });
+      const args = { providers, models, modelId: resolvedModelId, operation: "embeddings" };
+      const override = await hooks?.resolveProvider?.(args);
+      provider = override ?? resolveProvider(args);
     } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
+      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
     const embeddingModel = provider.embeddingModel(modelId);
