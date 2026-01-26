@@ -13,12 +13,13 @@
       "#/": ["./src/"],
       "#/*": ["./src/*"]
     },
+    "outDir": "./dist",
 
     // Bundler mode
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "verbatimModuleSyntax": true,
-    "noEmit": true,
+    "noEmit": false,
 
     // Best practices
     "strict": true,
