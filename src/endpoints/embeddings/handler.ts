@@ -6,6 +6,7 @@ import type { GatewayConfig, Endpoint } from "../../types";
 import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
+import { withHooks } from "../../utils/hooks";
 import {
   fromOpenAICompatibleEmbeddingParams,
   toOpenAICompatibleEmbeddingResponse,
@@ -13,67 +14,69 @@ import {
 import { OpenAICompatibleEmbeddingRequestBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
-  const { providers, models } = parseConfig(config);
+  const { providers, models, hooks } = parseConfig(config);
+
+  const handler = async (req: Request): Promise<Response> => {
+    if (req.method !== "POST") {
+      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
+    }
+
+    let json;
+    try {
+      json = await req.json();
+    } catch {
+      return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
+    }
+
+    const parsed = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
+
+    if (!parsed.success) {
+      return createErrorResponse(
+        "UNPROCESSABLE_ENTITY",
+        "Validation error",
+        422,
+        z.prettifyError(parsed.error),
+      );
+    }
+
+    const requestBody = parsed.data;
+    const { model: modelId, ...params } = requestBody;
+
+    let provider;
+    try {
+      provider = resolveProvider({ providers, models, modelId, operation: "embeddings" });
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
+    const embeddingModel = provider.embeddingModel(modelId);
+
+    let rawOptions, values;
+    try {
+      ({ providerOptions: rawOptions, values } = fromOpenAICompatibleEmbeddingParams(params));
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
+    const providerOptions = {
+      [embeddingModel.provider]: rawOptions.openAICompat ?? {},
+    };
+
+    let embedManyResult;
+    try {
+      embedManyResult = await embedMany({
+        model: embeddingModel,
+        values,
+        providerOptions,
+      });
+    } catch (error) {
+      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+    }
+
+    return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);
+  };
 
   return {
-    handler: (async (req: Request): Promise<Response> => {
-      if (req.method !== "POST") {
-        return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
-      }
-
-      let json;
-      try {
-        json = await req.json();
-      } catch {
-        return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
-      }
-
-      const parsed = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
-
-      if (!parsed.success) {
-        return createErrorResponse(
-          "UNPROCESSABLE_ENTITY",
-          "Validation error",
-          422,
-          z.prettifyError(parsed.error),
-        );
-      }
-
-      const requestBody = parsed.data;
-      const { model: modelId, ...params } = requestBody;
-
-      let provider;
-      try {
-        provider = resolveProvider({ providers, models, modelId, operation: "embeddings" });
-      } catch (error) {
-        return createErrorResponse("BAD_REQUEST", error, 400);
-      }
-
-      const embeddingModel = provider.embeddingModel(modelId);
-
-      let rawOptions, values;
-      try {
-        ({ providerOptions: rawOptions, values } = fromOpenAICompatibleEmbeddingParams(params));
-      } catch (error) {
-        return createErrorResponse("BAD_REQUEST", error, 400);
-      }
-
-      const providerOptions = {
-        [embeddingModel.provider]: rawOptions.openAICompat ?? {},
-      };
-
-      let embedManyResult;
-      try {
-        embedManyResult = await embedMany({
-          model: embeddingModel,
-          values,
-          providerOptions,
-        });
-      } catch (error) {
-        return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
-      }
-
-      return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);
-    }) as typeof fetch,
+    handler: withHooks(hooks, handler)
   };
 };
