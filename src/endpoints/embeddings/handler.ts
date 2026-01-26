@@ -46,7 +46,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     try {
       resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
     } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+      return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
     let provider;
@@ -60,7 +60,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       const override = await hooks?.resolveProvider?.(args);
       provider = override ?? resolveProvider(args);
     } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+      return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
