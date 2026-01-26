@@ -42,7 +42,7 @@ export const gw = gateway({
     groq: createGroqWithCanonicalIds({
       apiKey: process.env.GROQ_API_KEY,
     },
-  }),
+  },
 
   // MODEL CATALOG
   // Choose a preset for common SOTA models in `models/presets`
