@@ -47,61 +47,58 @@ describe("Models Handler", () => {
 
   const endpoint = models({ providers: registry, models: catalog }, true);
 
-  const testCases = [
-    {
-      name: "should list models via GET request with realistic data (exact match)",
-      request: new Request("http://localhost/models", { method: "GET" }),
-      expected: {
-        object: "list",
-        data: [
-          {
-            id: "anthropic/claude-opus-4.5",
-            object: "model",
-            created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
-            owned_by: "anthropic",
-            name: "Claude Opus 4.5",
-            knowledge: "2025-07",
-            context: 200000,
-            capabilities: ["reasoning", "tool_call"],
-            architecture: {
-              modality: "text->text",
-              input_modalities: ["text", "image"],
-              output_modalities: ["text"],
-            },
-            endpoints: [{ tag: "anthropic" }],
-          },
-          {
-            id: "google/gemini-3-flash",
-            object: "model",
-            created: Math.floor(Date.parse("2025-10-01T08:30:00.000Z") / 1000),
-            owned_by: "google",
-            name: "Gemini 3 Flash",
-            context: 128000,
-            architecture: {
-              modality: "text->text",
-              input_modalities: ["text", "video"],
-              output_modalities: ["text"],
-            },
-            endpoints: [{ tag: "google" }],
-          },
-        ],
-      },
-    },
-    {
-      name: "should return 'Method Not Allowed' for POST request",
-      request: new Request("http://localhost/models", { method: "POST" }),
-      expected: {
-        code: "METHOD_NOT_ALLOWED",
-        message: "Method Not Allowed",
-      },
-    },
-  ];
+  it("should list models via GET request with realistic data (exact match)", async () => {
+    const request = new Request("http://localhost/models", { method: "GET" });
 
-  for (const { name, request, expected } of testCases) {
-    it(name, async () => {
-      const res = await endpoint.handler(request);
-      const data = await parseResponse(res);
-      expect(data).toEqual(expected);
+    const res = await endpoint.handler(request);
+    const data = await parseResponse(res);
+
+    expect(data).toEqual({
+      object: "list",
+      data: [
+        {
+          id: "anthropic/claude-opus-4.5",
+          object: "model",
+          created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
+          owned_by: "anthropic",
+          name: "Claude Opus 4.5",
+          knowledge: "2025-07",
+          context: 200000,
+          capabilities: ["reasoning", "tool_call"],
+          architecture: {
+            modality: "text->text",
+            input_modalities: ["text", "image"],
+            output_modalities: ["text"],
+          },
+          endpoints: [{ tag: "anthropic" }],
+        },
+        {
+          id: "google/gemini-3-flash",
+          object: "model",
+          created: Math.floor(Date.parse("2025-10-01T08:30:00.000Z") / 1000),
+          owned_by: "google",
+          name: "Gemini 3 Flash",
+          context: 128000,
+          architecture: {
+            modality: "text->text",
+            input_modalities: ["text", "video"],
+            output_modalities: ["text"],
+          },
+          endpoints: [{ tag: "google" }],
+        },
+      ],
     });
-  }
+  });
+
+  it("should return 'Method Not Allowed' for POST request", async () => {
+    const request = new Request("http://localhost/models", { method: "POST" });
+
+    const res = await endpoint.handler(request);
+    const data = await parseResponse(res);
+
+    expect(data).toEqual({
+      code: "METHOD_NOT_ALLOWED",
+      message: "Method Not Allowed",
+    });
+  });
 });
