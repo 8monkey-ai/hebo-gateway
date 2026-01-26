@@ -93,7 +93,7 @@ export type GatewayConfigParsed = GatewayConfigRegistry & {
 };
 
 export interface Endpoint {
-  handler: typeof fetch;
+  handler: (request: Request) => Promise<Response>;
 }
 
 export interface HeboGateway<Routes extends Record<string, Endpoint>> extends Endpoint {

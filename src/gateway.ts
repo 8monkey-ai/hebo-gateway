@@ -47,5 +47,5 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
     return Promise.resolve(new Response("Not Found", { status: 404 }));
   };
 
-  return { handler: handler as typeof fetch, routes };
+  return { handler, routes };
 }

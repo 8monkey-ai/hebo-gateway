@@ -146,6 +146,12 @@ console.log(`🐒 Hebo Gateway is running with Hono framework`);
 `app/api/gateway/[...all]/route.ts`
 
 ```ts
+const gw = gateway({
+  // Required: add `basePath` to your gateway config
+  basePath: "/api/gateway",
+  // ...
+});
+
 export const POST = gw.handler, GET = gw.handler;
 ```
 

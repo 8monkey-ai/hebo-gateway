@@ -90,7 +90,5 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);
   };
 
-  return {
-    handler: withHooks(hooks, handler)
-  };
+  return { handler: withHooks(hooks, handler) };
 };

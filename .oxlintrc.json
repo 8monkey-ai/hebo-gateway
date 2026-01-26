@@ -12,5 +12,10 @@
     "max-lines-per-function": "off",
     "anchor-has-content": "off",
     "max-dependencies": "off"
-  }
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "e2e/**",
+  ],
 }

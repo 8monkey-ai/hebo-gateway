@@ -35,7 +35,5 @@ export const models = (config: GatewayConfig): Endpoint => {
     return toOpenAICompatibleModelResponse(modelId, model);
   };
 
-  return {
-    handler: withHooks(hooks, handler) as typeof fetch,
-  };
+  return { handler: withHooks(hooks, handler) };
 };
