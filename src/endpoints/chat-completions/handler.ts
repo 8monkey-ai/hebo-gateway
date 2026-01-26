@@ -7,13 +7,10 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import {
   fromOpenAICompatibleChatCompletionsParams,
-  toOpenAICompatibleChatCompletionsResponseBody,
-  toOpenAICompatibleStream,
+  toOpenAICompatibleChatCompletionsResponse,
+  toOpenAICompatibleStreamResponse,
 } from "./converters";
-import {
-  OpenAICompatibleChatCompletionsRequestBodySchema,
-  type OpenAICompatibleChatCompletionsResponseBody,
-} from "./schema";
+import { OpenAICompatibleChatCompletionsRequestBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models } = config;
@@ -51,7 +48,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       try {
         provider = resolveProvider(providers, models, modelId, "text");
       } catch (error) {
-        return createErrorResponse("BAD_REQUEST", (error as Error).message, 400);
+        return createErrorResponse("BAD_REQUEST", error, 400);
       }
 
       const languageModel = provider.languageModel(modelId);
@@ -60,6 +57,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         messages,
         tools: toolSet,
         toolChoice,
+        temperature,
         providerOptions: rawOptions,
       } = fromOpenAICompatibleChatCompletionsParams(params);
 
@@ -74,18 +72,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             messages,
             tools: toolSet,
             toolChoice,
+            temperature,
             providerOptions,
           });
 
-          return new Response(toOpenAICompatibleStream(result, modelId), {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
-              Connection: "keep-alive",
-            },
-          });
+          return toOpenAICompatibleStreamResponse(result, modelId);
         } catch (error) {
-          const errorMessage = (error as Error).message || "Failed to stream text";
+          const errorMessage = error || "Failed to stream text";
           return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
         }
       }
@@ -97,21 +90,15 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           messages,
           tools: toolSet,
           toolChoice,
+          temperature,
           providerOptions,
         });
       } catch (error) {
-        const errorMessage = (error as Error).message || "Failed to generate text";
+        const errorMessage = error || "Failed to generate text";
         return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
       }
 
-      const openAICompatibleResponse: OpenAICompatibleChatCompletionsResponseBody =
-        toOpenAICompatibleChatCompletionsResponseBody(generateTextResult, modelId);
-
-      const finalResponse = new Response(JSON.stringify(openAICompatibleResponse), {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      return finalResponse;
+      return toOpenAICompatibleChatCompletionsResponse(generateTextResult, modelId);
     }) as typeof fetch,
   };
 };

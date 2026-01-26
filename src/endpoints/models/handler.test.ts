@@ -91,8 +91,11 @@ describe("Models Handler", () => {
     const data = await parseResponse(res);
 
     expect(data).toEqual({
-      code: "METHOD_NOT_ALLOWED",
-      message: "Method Not Allowed",
+      error: {
+        code: "METHOD_NOT_ALLOWED",
+        message: "Method Not Allowed",
+        type: "invalid_request_error",
+      },
     });
   });
 });

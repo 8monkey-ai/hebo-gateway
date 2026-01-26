@@ -2,7 +2,7 @@ import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
 import { createErrorResponse } from "../../utils/errors";
-import { toOpenAICompatibleModelList } from "./converters";
+import { toOpenAICompatibleModelListResponse } from "./converters";
 
 export const models = (config: GatewayConfig, skipParse = false): Endpoint => {
   const { models } = skipParse ? config : parseConfig(config);
@@ -12,11 +12,7 @@ export const models = (config: GatewayConfig, skipParse = false): Endpoint => {
     if (req.method !== "GET") {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
-    const openAICompatibleList = toOpenAICompatibleModelList(models);
-
-    return new Response(JSON.stringify(openAICompatibleList), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return toOpenAICompatibleModelListResponse(models);
   };
 
   return { handler: handler as typeof fetch };

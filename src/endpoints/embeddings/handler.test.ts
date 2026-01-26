@@ -68,8 +68,11 @@ describe("Embeddings Handler", () => {
     const data = await parseResponse(res);
 
     expect(data).toEqual({
-      code: "BAD_REQUEST",
-      message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
+      error: {
+        code: "BAD_REQUEST",
+        message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
+        type: "invalid_request_error",
+      },
     });
   });
 
@@ -106,9 +109,12 @@ describe("Embeddings Handler", () => {
     const data = await parseResponse(res);
 
     expect(data).toEqual({
-      code: "UNPROCESSABLE_ENTITY",
-      message: "Validation error",
-      detail: "✖ Invalid input\n  → at input",
+      error: {
+        code: "UNPROCESSABLE_ENTITY",
+        message: "Validation error",
+        param: "✖ Invalid input\n  → at input",
+        type: "invalid_request_error",
+      },
     });
   });
 
@@ -119,8 +125,11 @@ describe("Embeddings Handler", () => {
     const data = await parseResponse(res);
 
     expect(data).toEqual({
-      code: "METHOD_NOT_ALLOWED",
-      message: "Method Not Allowed",
+      error: {
+        code: "METHOD_NOT_ALLOWED",
+        message: "Method Not Allowed",
+        type: "invalid_request_error",
+      },
     });
   });
 });

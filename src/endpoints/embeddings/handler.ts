@@ -8,12 +8,9 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import {
   fromOpenAICompatibleEmbeddingParams,
-  toOpenAICompatibleEmbeddingResponseBody,
+  toOpenAICompatibleEmbeddingResponse,
 } from "./converters";
-import {
-  OpenAICompatibleEmbeddingRequestBodySchema,
-  type OpenAICompatibleEmbeddingResponseBody,
-} from "./schema";
+import { OpenAICompatibleEmbeddingRequestBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig, skipParse = false): Endpoint => {
   const { providers, models } = skipParse ? config : parseConfig(config);
@@ -49,7 +46,7 @@ export const embeddings = (config: GatewayConfig, skipParse = false): Endpoint =
       try {
         provider = resolveProvider(providers, models, modelId, "embeddings");
       } catch (error) {
-        return createErrorResponse("BAD_REQUEST", (error as Error).message, 400);
+        return createErrorResponse("BAD_REQUEST", error, 400);
       }
 
       const embeddingModel = provider.embeddingModel(modelId);
@@ -68,18 +65,11 @@ export const embeddings = (config: GatewayConfig, skipParse = false): Endpoint =
           providerOptions,
         });
       } catch (error) {
-        const errorMessage = (error as Error).message || "Failed to generate embeddings";
+        const errorMessage = error || "Failed to generate embeddings";
         return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
       }
 
-      const openAICompatibleResponse: OpenAICompatibleEmbeddingResponseBody =
-        toOpenAICompatibleEmbeddingResponseBody(embedManyResult, modelId);
-
-      const finalResponse = new Response(JSON.stringify(openAICompatibleResponse), {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      return finalResponse;
+      return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);
     }) as typeof fetch,
   };
 };

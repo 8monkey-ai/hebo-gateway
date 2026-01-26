@@ -103,6 +103,7 @@ export const OpenAICompatibleChatCompletionsParamsSchema = z.object({
   messages: z.array(OpenAICompatibleMessageSchema),
   tools: z.optional(z.array(OpenAICompatibleToolSchema)),
   tool_choice: z.optional(OpenAICompatibleToolChoiceSchema),
+  temperature: z.optional(z.number()),
 });
 
 export type OpenAICompatibleChatCompletionsParams = z.infer<

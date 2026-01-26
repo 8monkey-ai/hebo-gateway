@@ -9,7 +9,7 @@ import type {
 
 export type VercelAIEmbeddingsModelParams = {
   values: string[];
-  providerOptions: Record<string, any>;
+  providerOptions: Record<string, unknown>;
 };
 
 function fromOpenAICompatibleInput(input: string | string[]): string[] {
@@ -28,10 +28,10 @@ export function fromOpenAICompatibleEmbeddingParams(
   };
 }
 
-export function toOpenAICompatibleEmbeddingResponseBody(
+export function toOpenAICompatibleEmbeddingResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
-): OpenAICompatibleEmbeddingResponseBody {
+): Response {
   const data: OpenAICompatibleEmbedding[] = embedManyResult.embeddings.map((embedding, index) => ({
     object: "embedding",
     embedding,
@@ -43,11 +43,15 @@ export function toOpenAICompatibleEmbeddingResponseBody(
     total_tokens: embedManyResult.usage?.tokens || 0,
   };
 
-  return {
+  const body: OpenAICompatibleEmbeddingResponseBody = {
     object: "list",
     data,
     model: modelId,
     usage,
     providerMetadata: embedManyResult.providerMetadata,
   };
+
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json" },
+  });
 }

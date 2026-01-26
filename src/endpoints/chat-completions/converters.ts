@@ -22,30 +22,128 @@ import type {
   OpenAICompatibleToolChoice,
   OpenAICompatibleUserMessage,
   OpenAICompatibleToolMessage,
-  OpenAICompatibleToolCallDelta,
 } from "./schema";
+
+import { toOpenAICompatibleError } from "../../utils/errors";
 
 export type VercelAIChatCompletionsModelParams = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<any>;
-  providerOptions: Record<string, any>;
+  temperature?: number;
+  providerOptions: Record<string, unknown>;
 };
+
+// --- Request Conversion Flow ---
 
 export function fromOpenAICompatibleChatCompletionsParams(
   params: OpenAICompatibleChatCompletionsParams,
 ): VercelAIChatCompletionsModelParams {
-  const { messages, tools, tool_choice, ...rest } = params;
+  const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
   return {
     messages: fromOpenAICompatibleMessages(messages),
     tools: fromOpenAICompatibleTools(tools),
     toolChoice: fromOpenAICompatibleToolChoice(tool_choice),
+    temperature,
     providerOptions: rest,
   };
 }
 
-function convertToModelContent(content: OpenAICompatibleContentPart[]) {
+export function fromOpenAICompatibleMessages(messages: OpenAICompatibleMessage[]): ModelMessage[] {
+  const modelMessages: ModelMessage[] = [];
+  const toolById = indexToolMessages(messages);
+
+  for (const message of messages) {
+    if (message.role === "tool") continue;
+
+    if (message.role === "system") {
+      modelMessages.push(message as ModelMessage);
+      continue;
+    }
+
+    if (message.role === "user") {
+      modelMessages.push(fromOpenAICompatibleUserMessage(message));
+      continue;
+    }
+
+    modelMessages.push(fromOpenAICompatibleAssistantMessage(message));
+    const toolResult = fromOpenAICompatibleToolResultMessage(message, toolById);
+    if (toolResult) modelMessages.push(toolResult);
+  }
+
+  return modelMessages;
+}
+
+function indexToolMessages(messages: OpenAICompatibleMessage[]) {
+  const map = new Map<string, OpenAICompatibleToolMessage>();
+  for (const m of messages) {
+    if (m.role === "tool") map.set(m.tool_call_id, m);
+  }
+  return map;
+}
+
+export function fromOpenAICompatibleUserMessage(
+  message: OpenAICompatibleUserMessage,
+): ModelMessage {
+  if (Array.isArray(message.content)) {
+    return { role: "user", content: fromOpenAICompatibleContent(message.content) as any };
+  }
+  return message as ModelMessage;
+}
+
+export function fromOpenAICompatibleAssistantMessage(
+  message: OpenAICompatibleAssistantMessage,
+): ModelMessage {
+  const { tool_calls, role, content } = message;
+
+  if (!tool_calls || tool_calls.length === 0) {
+    return {
+      role: role,
+      content: content as string | null,
+    } as ModelMessage;
+  }
+
+  return {
+    role: role,
+    content: tool_calls.map((tc: OpenAICompatibleMessageToolCall) => {
+      const { id, function: fn } = tc;
+      return {
+        type: "tool-call",
+        toolCallId: id,
+        toolName: fn.name,
+        input: parseToolOutput(fn.arguments).value,
+      };
+    }),
+  } as ModelMessage;
+}
+
+export function fromOpenAICompatibleToolResultMessage(
+  message: OpenAICompatibleAssistantMessage,
+  toolById: Map<string, OpenAICompatibleToolMessage>,
+): ModelMessage | undefined {
+  const toolCalls = message.tool_calls ?? [];
+  if (toolCalls.length === 0) return undefined;
+
+  const toolResultParts: ToolResultPart[] = [];
+  for (const tc of toolCalls) {
+    const toolMsg = toolById.get(tc.id);
+    if (!toolMsg) continue;
+
+    toolResultParts.push({
+      type: "tool-result",
+      toolCallId: tc.id,
+      toolName: tc.function.name,
+      output: parseToolOutput(toolMsg.content as string),
+    });
+  }
+
+  return toolResultParts.length > 0
+    ? ({ role: "tool", content: toolResultParts } as ModelMessage)
+    : undefined;
+}
+
+export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]) {
   return content.map((part) => {
     if (part.type === "image_url") {
       const url = part.image_url.url;
@@ -98,147 +196,6 @@ function convertToModelContent(content: OpenAICompatibleContentPart[]) {
   });
 }
 
-function parseToolOutput(content: string) {
-  try {
-    return { type: "json" as const, value: JSON.parse(content) };
-  } catch {
-    return { type: "text" as const, value: content };
-  }
-}
-
-export function fromOpenAICompatibleMessages(messages: OpenAICompatibleMessage[]): ModelMessage[] {
-  const modelMessages: ModelMessage[] = [];
-  const toolById = indexToolMessages(messages);
-
-  for (const message of messages) {
-    if (message.role === "tool") continue;
-
-    if (message.role === "system") {
-      modelMessages.push(message as ModelMessage);
-      continue;
-    }
-
-    if (message.role === "user") {
-      modelMessages.push(fromOpenAICompatibleUserMessage(message));
-      continue;
-    }
-
-    modelMessages.push(fromOpenAICompatibleAssistantMessage(message));
-    const toolResult = fromOpenAICompatibleToolResultMessage(message, toolById);
-    if (toolResult) modelMessages.push(toolResult);
-  }
-
-  return modelMessages;
-}
-
-function indexToolMessages(messages: OpenAICompatibleMessage[]) {
-  const map = new Map<string, OpenAICompatibleToolMessage>();
-  for (const m of messages) {
-    if (m.role === "tool") map.set(m.tool_call_id, m);
-  }
-  return map;
-}
-
-function fromOpenAICompatibleUserMessage(message: OpenAICompatibleUserMessage): ModelMessage {
-  if (Array.isArray(message.content)) {
-    return { role: "user", content: convertToModelContent(message.content) as any };
-  }
-  return message as ModelMessage;
-}
-
-function fromOpenAICompatibleAssistantMessage(
-  message: OpenAICompatibleAssistantMessage,
-): ModelMessage {
-  const { tool_calls, role, content } = message;
-
-  if (!tool_calls || tool_calls.length === 0) {
-    return {
-      role: role,
-      content: content as string | null,
-    } as ModelMessage;
-  }
-
-  return {
-    role: role,
-    content: tool_calls.map((tc: OpenAICompatibleMessageToolCall) => {
-      const { id, function: fn } = tc;
-      return {
-        type: "tool-call",
-        toolCallId: id,
-        toolName: fn.name,
-        input: parseToolOutput(fn.arguments).value,
-      };
-    }),
-  } as ModelMessage;
-}
-
-function fromOpenAICompatibleToolResultMessage(
-  message: OpenAICompatibleAssistantMessage,
-  toolById: Map<string, OpenAICompatibleToolMessage>,
-): ModelMessage | undefined {
-  const toolCalls = message.tool_calls ?? [];
-  if (toolCalls.length === 0) return undefined;
-
-  const toolResultParts: ToolResultPart[] = [];
-  for (const tc of toolCalls) {
-    const toolMsg = toolById.get(tc.id);
-    if (!toolMsg) continue;
-
-    toolResultParts.push({
-      type: "tool-result",
-      toolCallId: tc.id,
-      toolName: tc.function.name,
-      output: parseToolOutput(toolMsg.content as string),
-    });
-  }
-
-  return toolResultParts.length > 0
-    ? ({ role: "tool", content: toolResultParts } as ModelMessage)
-    : undefined;
-}
-
-export const toOpenAICompatibleFinishReason = (
-  finishReason: FinishReason,
-): OpenAICompatibleFinishReason => {
-  if (finishReason === "error" || finishReason === "other") {
-    return "stop";
-  }
-  return (finishReason as string).replaceAll("-", "_") as OpenAICompatibleFinishReason;
-};
-
-export const toOpenAICompatibleMessage = (
-  result: GenerateTextResult<any, any>,
-): OpenAICompatibleAssistantMessage => {
-  const message: OpenAICompatibleAssistantMessage = {
-    role: "assistant",
-    content: null,
-  };
-
-  if (result.toolCalls && result.toolCalls.length > 0) {
-    message.tool_calls = result.toolCalls.map((toolCall) => ({
-      id: toolCall.toolCallId,
-      type: "function" as const,
-      function: {
-        name: toolCall.toolName,
-        arguments: JSON.stringify(toolCall.input),
-      },
-    }));
-  }
-
-  for (const part of result.content) {
-    if (part.type === "text") {
-      message.content = part.text;
-      break;
-    }
-  }
-
-  if (result.reasoningText) {
-    message.reasoning_content = result.reasoningText;
-  }
-
-  return message;
-};
-
 export const fromOpenAICompatibleTools = (
   tools: OpenAICompatibleTool[] | undefined,
 ): ToolSet | undefined => {
@@ -273,19 +230,23 @@ export const fromOpenAICompatibleToolChoice = (
   };
 };
 
-export const toOpenAiCompatibleError = (
-  message: string,
-  type: "invalid_request_error" | "server_error" = "server_error",
-  code?: string,
-) => ({ error: { message, type, param: undefined, code } });
+function parseToolOutput(content: string) {
+  try {
+    return { type: "json" as const, value: JSON.parse(content) };
+  } catch {
+    return { type: "text" as const, value: content };
+  }
+}
 
-export function toOpenAICompatibleChatCompletionsResponseBody(
+// --- Response Conversion Flow ---
+
+export function toOpenAICompatibleChatCompletionsResponse(
   result: GenerateTextResult<any, any>,
   model: string,
-): OpenAICompatibleChatCompletionsResponseBody {
+): Response {
   const finish_reason = toOpenAICompatibleFinishReason(result.finishReason);
 
-  return {
+  const body: OpenAICompatibleChatCompletionsResponseBody = {
     id: "chatcmpl-" + crypto.randomUUID(),
     object: "chat.completion",
     created: Math.floor(Date.now() / 1000),
@@ -297,159 +258,187 @@ export function toOpenAICompatibleChatCompletionsResponseBody(
         finish_reason,
       },
     ],
-    usage: result.usage && {
-      prompt_tokens: result.usage.inputTokens ?? 0,
-      completion_tokens: result.usage.outputTokens ?? 0,
-      total_tokens:
-        result.usage.totalTokens ??
-        (result.usage.inputTokens ?? 0) + (result.usage.outputTokens ?? 0),
-      completion_tokens_details: {
-        reasoning_tokens: result.usage.reasoningTokens ?? 0,
-      },
-      prompt_tokens_details: {
-        cached_tokens: result.usage.cachedInputTokens ?? 0,
-      },
-    },
+    usage: result.usage && toOpenAICompatibleUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
+
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
-export function toOpenAICompatibleStream(
+export function toOpenAICompatibleStreamResponse(
   result: StreamTextResult<any, any>,
   model: string,
-): ReadableStream<Uint8Array> {
-  const streamId = `chatcmpl-${crypto.randomUUID()}`;
-  const creationTime = Math.floor(Date.now() / 1000);
-  const encoder = new TextEncoder();
+): Response {
+  const stream = result.fullStream
+    .pipeThrough(toOpenAICompatibleTransform(model))
+    .pipeThrough(toSSETransform())
+    .pipeThrough(new TextEncoderStream());
 
-  return new ReadableStream({
-    async start(controller) {
-      const enqueue = (data: object) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(data)}
-
-`),
-        );
-      };
-
-      const enqueueError = (error: unknown) => {
-        const msg = error instanceof Error ? error.message : "An error occurred during streaming";
-        const e = error as { code?: string; status?: number };
-        enqueue(
-          toOpenAiCompatibleError(
-            msg,
-            e.status && e.status < 500 ? "invalid_request_error" : "server_error",
-            e.code,
-          ),
-        );
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        controller.close();
-      };
-
-      let toolCallIndexCounter = 0;
-
-      try {
-        for await (const part of result.fullStream) {
-          switch (part.type) {
-            case "text-delta": {
-              const delta = {
-                role: "assistant",
-                content: part.text,
-              };
-              enqueue({
-                id: streamId,
-                object: "chat.completion.chunk",
-                created: creationTime,
-                model,
-                choices: [{ index: 0, delta, finish_reason: null }],
-              });
-              break;
-            }
-
-            case "reasoning-delta": {
-              const delta = {
-                reasoning_content: part.text,
-              };
-              enqueue({
-                id: streamId,
-                object: "chat.completion.chunk",
-                created: creationTime,
-                model,
-                choices: [{ index: 0, delta, finish_reason: null }],
-              });
-              break;
-            }
-
-            case "tool-call": {
-              const { toolCallId, toolName, input } = part;
-
-              const toolCall: OpenAICompatibleToolCallDelta = {
-                id: toolCallId,
-                index: toolCallIndexCounter++,
-                type: "function",
-                function: { name: toolName, arguments: JSON.stringify(input) },
-              };
-
-              enqueue({
-                id: streamId,
-                object: "chat.completion.chunk",
-                created: creationTime,
-                model,
-                choices: [
-                  {
-                    index: 0,
-                    delta: { tool_calls: [toolCall] },
-                    finish_reason: null,
-                  },
-                ],
-              });
-              break;
-            }
-
-            case "finish": {
-              const { finishReason, totalUsage } = part;
-              enqueue({
-                id: streamId,
-                object: "chat.completion.chunk",
-                created: creationTime,
-                model,
-                choices: [
-                  {
-                    index: 0,
-                    delta: {},
-                    finish_reason: toOpenAICompatibleFinishReason(finishReason),
-                  },
-                ],
-                usage: totalUsage && {
-                  prompt_tokens: totalUsage.inputTokens ?? 0,
-                  completion_tokens: totalUsage.outputTokens ?? 0,
-                  total_tokens:
-                    totalUsage.totalTokens ??
-                    (totalUsage.inputTokens ?? 0) + (totalUsage.outputTokens ?? 0),
-                  completion_tokens_details: {
-                    reasoning_tokens: totalUsage.reasoningTokens ?? 0,
-                  },
-                  prompt_tokens_details: {
-                    cached_tokens: totalUsage.cachedInputTokens ?? 0,
-                  },
-                },
-              });
-              break;
-            }
-
-            case "error": {
-              enqueueError(part.error);
-              return;
-            }
-          }
-        }
-      } catch (error) {
-        enqueueError(error);
-        return;
-      }
-
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-      controller.close();
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
     },
   });
 }
+
+export function toOpenAICompatibleTransform(model: string): TransformStream<any, any> {
+  const streamId = `chatcmpl-${crypto.randomUUID()}`;
+  const creationTime = Math.floor(Date.now() / 1000);
+  let toolCallIndexCounter = 0;
+
+  const createChunk = (delta: any, finish_reason: any = null, usage?: any) => ({
+    id: streamId,
+    object: "chat.completion.chunk",
+    created: creationTime,
+    model,
+    choices: [{ index: 0, delta, finish_reason }],
+    ...(usage ? { usage } : {}),
+  });
+
+  return new TransformStream({
+    transform(part, controller) {
+      switch (part.type) {
+        case "text-delta": {
+          controller.enqueue(createChunk({ role: "assistant", content: part.text }));
+          break;
+        }
+
+        case "reasoning-delta": {
+          controller.enqueue(createChunk({ reasoning_content: part.text }));
+          break;
+        }
+
+        case "tool-call": {
+          controller.enqueue(
+            createChunk({
+              tool_calls: [
+                {
+                  ...toOpenAICompatibleToolCall(part.toolCallId, part.toolName, part.input),
+                  index: toolCallIndexCounter++,
+                },
+              ],
+            }),
+          );
+          break;
+        }
+
+        case "finish": {
+          controller.enqueue(
+            createChunk(
+              {},
+              toOpenAICompatibleFinishReason(part.finishReason),
+              toOpenAICompatibleUsage(part.totalUsage),
+            ),
+          );
+          break;
+        }
+
+        case "error": {
+          const error = part.error;
+          const msg = error instanceof Error ? error.message : String(error);
+          const e = error as { code?: string; status?: number };
+          controller.enqueue(
+            toOpenAICompatibleError(
+              msg,
+              e.status && e.status < 500 ? "invalid_request_error" : "server_error",
+              e.code,
+            ),
+          );
+          break;
+        }
+      }
+    },
+  });
+}
+
+export function toSSETransform(): TransformStream<any, string> {
+  return new TransformStream({
+    transform(chunk, controller) {
+      controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
+    },
+    flush(controller) {
+      controller.enqueue("data: [DONE]\n\n");
+    },
+  });
+}
+
+export const toOpenAICompatibleMessage = (
+  result: GenerateTextResult<any, any>,
+): OpenAICompatibleAssistantMessage => {
+  const message: OpenAICompatibleAssistantMessage = {
+    role: "assistant",
+    content: null,
+  };
+
+  if (result.toolCalls && result.toolCalls.length > 0) {
+    message.tool_calls = result.toolCalls.map((toolCall) =>
+      toOpenAICompatibleToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
+    );
+  }
+
+  for (const part of result.content) {
+    if (part.type === "text") {
+      message.content = part.text;
+      break;
+    }
+  }
+
+  if (result.reasoningText) {
+    message.reasoning_content = result.reasoningText;
+  }
+
+  return message;
+};
+
+export function toOpenAICompatibleUsage(
+  usage:
+    | {
+        inputTokens: number;
+        outputTokens: number;
+        totalTokens?: number;
+        reasoningTokens?: number;
+        cachedInputTokens?: number;
+      }
+    | undefined,
+): OpenAICompatibleChatCompletionsUsage | undefined {
+  if (!usage) return undefined;
+  return {
+    prompt_tokens: usage.inputTokens ?? 0,
+    completion_tokens: usage.outputTokens ?? 0,
+    total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
+    completion_tokens_details: {
+      reasoning_tokens: usage.reasoningTokens ?? 0,
+    },
+    prompt_tokens_details: {
+      cached_tokens: usage.cachedInputTokens ?? 0,
+    },
+  };
+}
+
+export function toOpenAICompatibleToolCall(
+  id: string,
+  name: string,
+  args: any,
+): OpenAICompatibleMessageToolCall {
+  return {
+    id,
+    type: "function",
+    function: {
+      name,
+      arguments: typeof args === "string" ? args : JSON.stringify(args),
+    },
+  };
+}
+
+export const toOpenAICompatibleFinishReason = (
+  finishReason: FinishReason,
+): OpenAICompatibleFinishReason => {
+  if (finishReason === "error" || finishReason === "other") {
+    return "stop";
+  }
+  return (finishReason as string).replaceAll("-", "_") as OpenAICompatibleFinishReason;
+};

@@ -29,15 +29,23 @@ const mockGenerateText = mock((options: any) => {
 
 const mockStreamText = mock((_options: any) => {
   return {
-    fullStream: (async function* () {
-      yield { type: "text-delta", text: "Hello" };
-      yield { type: "text-delta", text: " world" };
-      yield {
-        type: "finish",
-        finishReason: "stop",
-        totalUsage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
-      };
-    })(),
+    fullStream: new ReadableStream({
+      async start(controller) {
+        const generator = (async function* () {
+          yield { type: "text-delta", text: "Hello" };
+          yield { type: "text-delta", text: " world" };
+          yield {
+            type: "finish",
+            finishReason: "stop",
+            totalUsage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+          };
+        })();
+        for await (const chunk of generator) {
+          controller.enqueue(chunk);
+        }
+        controller.close();
+      },
+    }),
   };
 });
 
@@ -78,8 +86,11 @@ describe("Chat Completions Handler", () => {
       name: "should return 405 for non-POST requests",
       request: new Request("http://localhost/chat/completions", { method: "GET" }),
       expected: {
-        code: "METHOD_NOT_ALLOWED",
-        message: "Method Not Allowed",
+        error: {
+          code: "METHOD_NOT_ALLOWED",
+          message: "Method Not Allowed",
+          type: "invalid_request_error",
+        },
       },
     },
     {
@@ -89,8 +100,11 @@ describe("Chat Completions Handler", () => {
         body: "invalid-json",
       }),
       expected: {
-        code: "BAD_REQUEST",
-        message: "Invalid JSON",
+        error: {
+          code: "BAD_REQUEST",
+          message: "Invalid JSON",
+          type: "invalid_request_error",
+        },
       },
     },
     {
@@ -101,9 +115,12 @@ describe("Chat Completions Handler", () => {
         body: JSON.stringify({ model: "openai/gpt-oss-20b" }),
       }),
       expected: {
-        code: "UNPROCESSABLE_ENTITY",
-        message: "Validation error",
-        detail: expect.stringContaining("✖ Invalid input"),
+        error: {
+          code: "UNPROCESSABLE_ENTITY",
+          message: "Validation error",
+          param: expect.stringContaining("✖ Invalid input"),
+          type: "invalid_request_error",
+        },
       },
     },
     {
@@ -117,8 +134,11 @@ describe("Chat Completions Handler", () => {
         }),
       }),
       expected: {
-        code: "BAD_REQUEST",
-        message: "Model 'non-existent' not found in catalog",
+        error: {
+          code: "BAD_REQUEST",
+          message: "Model 'non-existent' not found in catalog",
+          type: "invalid_request_error",
+        },
       },
     },
     {
