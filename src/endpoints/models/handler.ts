@@ -13,8 +13,7 @@ export const models = (config: GatewayConfig, skipParse = false): Endpoint => {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
-    const { pathname } = new URL(req.url);
-    const rawId = pathname.startsWith("/models/") ? pathname.slice("/models/".length) : "";
+    const rawId = req.url.split("/models/", 2)[1]?.split("?", 1)[0];
 
     if (!rawId) {
       return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
