@@ -1,6 +1,6 @@
 import { createProviderRegistry } from "ai";
 import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { createModelCatalog } from "../../models/catalog";
 import { embeddings } from "./handler";
@@ -73,7 +73,7 @@ describe("Embeddings Handler", () => {
 
   const endpoint = embeddings({ providers: registry, models: catalog }, true);
 
-  it("should return 400 if model does not support embeddings", async () => {
+  test("should return 400 if model does not support embeddings", async () => {
     const request = postJson({
       model: "gpt-oss-20b",
       input: "hello world",
@@ -88,7 +88,7 @@ describe("Embeddings Handler", () => {
     });
   });
 
-  it("should generate embeddings for a single string", async () => {
+  test("should generate embeddings for a single string", async () => {
     const request = postJson({
       model: "text-embedding-3-small",
       input: "hello world",
@@ -100,7 +100,7 @@ describe("Embeddings Handler", () => {
     expect(data).toEqual(expectedEmbeddingResponse(1));
   });
 
-  it("should generate embeddings for an array of strings", async () => {
+  test("should generate embeddings for an array of strings", async () => {
     const request = postJson({
       model: "text-embedding-3-small",
       input: ["hello", "world"],
@@ -112,7 +112,7 @@ describe("Embeddings Handler", () => {
     expect(data).toEqual(expectedEmbeddingResponse(2));
   });
 
-  it("should return 422 if input is missing", async () => {
+  test("should return 422 if input is missing", async () => {
     const request = postJson({
       model: "text-embedding-3-small",
     });
@@ -127,7 +127,7 @@ describe("Embeddings Handler", () => {
     });
   });
 
-  it("should return 'Method Not Allowed' for GET request", async () => {
+  test("should return 'Method Not Allowed' for GET request", async () => {
     const request = new Request(baseUrl, { method: "GET" });
 
     const res = await endpoint.handler(request);

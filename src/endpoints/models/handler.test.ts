@@ -1,6 +1,6 @@
 import { createProviderRegistry } from "ai";
 import { MockProviderV3 } from "ai/test";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { createModelCatalog } from "../../models/catalog";
 import { models } from "./handler";
@@ -47,7 +47,7 @@ describe("Models Handler", () => {
 
   const endpoint = models({ providers: registry, models: catalog }, true);
 
-  it("should list models via GET request with realistic data (exact match)", async () => {
+  test("should list models via GET request with realistic data (exact match)", async () => {
     const request = new Request("http://localhost/models", { method: "GET" });
 
     const res = await endpoint.handler(request);
@@ -90,7 +90,7 @@ describe("Models Handler", () => {
     });
   });
 
-  it("should return 'Method Not Allowed' for POST request", async () => {
+  test("should return 'Method Not Allowed' for POST request", async () => {
     const request = new Request("http://localhost/models", { method: "POST" });
 
     const res = await endpoint.handler(request);
