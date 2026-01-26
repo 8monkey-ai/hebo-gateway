@@ -37,20 +37,24 @@ import {
 
 export const gw = gateway({
   // PROVIDER REGISTRY
-  // Any Vercel AI SDK provider, canonical ones in `providers/canonical`
   providers: {
+    // Any Vercel AI SDK provider +WithCanonicalIds
     groq: createGroqWithCanonicalIds({
       apiKey: process.env.GROQ_API_KEY,
     },
   },
 
   // MODEL CATALOG
-  // Choose a preset for common SOTA models in `models/presets`
-  models: {
+  models: createModelCatalog({
+    // Choose a preset for common SOTA models
     ...gptOss20b({
       providers: ["groq"],
-    }),
-  },
+    })},
+    // Or add a whole model family
+    ...gptOss["all"].map((model) => 
+      model({})
+    ),
+  ),
 });
 ```
 
@@ -75,7 +79,7 @@ const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
 console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 ```
 
-### Use the Gateway
+### Call the Gateway
 
 Since Hebo Gateway exposes OpenAI-Compatible endpoints, it can be used with a broad set of common AI SDKs like Vercel AI SDK, TanStack AI, Langchain, the official OpenAI SDK and others.
 
@@ -176,9 +180,64 @@ export const Route = createFileRoute("/api/$")({
 
 ## Advanced Configuration
 
-### Custom Models
+### Providers
 
-While Hebo Gateway provides `presets` for many common SOTA models, we might not be able to update the library at the same pace that the ecosystem moves. That's why you can simply your own models by following the `CatalogModel` type.
+The provider registry accepts any Vercel AI SDK `ProviderV3`. Hebo Gateway simply expects canonical model IDs (for example `openai/gpt-4.1-mini`). If a provider uses different IDs or delimiters, wrap it with `withCanonicalIds` to canonicalize the IDs before registering.
+
+```ts
+import { createOpenAI } from "@ai-sdk/openai";
+import {
+  gateway,
+  createModelCatalog,
+  createProviderRegistry,
+  withCanonicalIds,
+} from "@hebo-ai/gateway";
+
+const openai = withCanonicalIds(
+  createOpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+  {
+    "openai/gpt-4.1-mini": "gpt-4.1-mini",
+    "openai/text-embedding-3-small": "text-embedding-3-small",
+  },
+);
+
+const gw = gateway({
+  providers: createProviderRegistry({
+    openai,
+  }),
+  models: createModelCatalog({
+    // ...your models pointing at canonical IDs above
+  }),
+});
+```
+
+### Models
+
+#### Presets
+
+Hebo Gateway ships model presets under `models/presets`, exported from the package. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models. Presets come in two forms:
+
+- Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
+- Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
+
+```ts
+import { createModelCatalog, claude, claudeSonnet45, gptOss20b } from "@hebo-ai/gateway";
+
+// Individual preset
+const models = createModelCatalog(
+  gptOss20b({ providers: ["groq"] }),
+  claudeSonnet45({ providers: ["bedrock"] }),
+);
+
+// Family preset (pick a group and apply the same override to each)
+const modelsFromFamily = createModelCatalog(
+  ...claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
+);
+```
+
+#### Custom Models
+
+If you need a model that isn't covered yet, you can define your own catalog entries by following the `CatalogModel` type.
 
 ```ts
 const gw = gateway({
@@ -203,29 +262,14 @@ const gw = gateway({
         "temperature",
       ],
       providers: ["bedrock"],
-      // You can add any additional properties,
-      // they will be returned as-is by /models endpoint
-      customProperty: "customValue",
+      // Additional properties are merged into the model object
+      additionalProperties: {
+        customProperty: "customValue",
+      }
     },
     // ...
   }),
 });
-```
-
-### Selective Route Mounting
-
-If you want to have more flexibility, for example for custom rate limit checks, you can also choose to only mount individual routes from the gateway's `routes` property.
-
-```ts
-const gw = gateway({
-  /// ...
-});
-
-const app = new Elysia()
-  .mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler)
-  .listen(3000);
-
-console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
 ### Hooks
@@ -268,6 +312,23 @@ const gw = gateway({
   },
 });
 ```
+
+### Selective Route Mounting
+
+If you want to have more flexibility, for example for custom rate limit checks, you can also choose to only mount individual routes from the gateway's `routes` property.
+
+```ts
+const gw = gateway({
+  /// ...
+});
+
+const app = new Elysia()
+  .mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler)
+  .listen(3000);
+
+console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
+```
+
 
 ## Low-level functions via deep imports
 
