@@ -58,7 +58,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    const embeddingModel = provider.embeddingModel(modelId);
+    const embeddingModel = provider.embeddingModel(resolvedModelId);
 
     let rawOptions, values;
     try {

@@ -285,7 +285,7 @@ const gw = gateway({
 
 ### Hooks
 
-Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality. All hooks are available as async and non async.
+Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality. All hooks are available as async and non-async.
 
 ```ts
 const gw = gateway({
@@ -327,7 +327,7 @@ const gw = gateway({
      * @param ctx.operation Operation type ("text" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
-    resolveProvider?: async (ctx: {
+    resolveProvider: async (ctx: {
       providers: ProviderRegistryProvider;
       models: ModelCatalog;
       modelId: ModelId;

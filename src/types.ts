@@ -1,6 +1,5 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 import type { ProviderRegistryProvider } from "ai";
-import type { BodyInit, HeadersInit } from "bun";
 
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderRegistry } from "./providers/types";
