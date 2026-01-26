@@ -3,6 +3,7 @@ import * as z from "zod/mini";
 
 import type { GatewayConfig, Endpoint } from "../../types";
 
+import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import {
@@ -14,21 +15,13 @@ import {
   type OpenAICompatibleEmbeddingResponseBody,
 } from "./schema";
 
-export const embeddings = (config: GatewayConfig): Endpoint => {
-  const { providers, models } = config;
+export const embeddings = (config: GatewayConfig, skipParse = false): Endpoint => {
+  const { providers, models } = skipParse ? config : parseConfig(config);
 
   return {
     handler: (async (req: Request): Promise<Response> => {
       if (req.method !== "POST") {
         return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
-      }
-
-      if (!providers || !models) {
-        return createErrorResponse(
-          "INTERNAL_SERVER_ERROR",
-          "Gateway misconfigured: missing providers or models",
-          500,
-        );
       }
 
       let json;

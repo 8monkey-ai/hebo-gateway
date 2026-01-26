@@ -1,9 +1,13 @@
-import { createModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
+import { createProviderRegistry } from "ai";
 import { Elysia } from "elysia";
 
+import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "#/";
+
 const gw = gateway({
-  models: createModelCatalog(...gptOss.map((model) => model({}))),
+  providers: createProviderRegistry({
+    groq: groqWithCanonicalIds(),
+  }),
+  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);

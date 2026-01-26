@@ -1,18 +1,9 @@
-import { describe, expect, it, mock } from "bun:test";
+import { createProviderRegistry } from "ai";
+import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
+import { describe, expect, it } from "bun:test";
 
 import { createModelCatalog } from "../../models/catalog";
 import { embeddings } from "./handler";
-
-const mockEmbedMany = mock((options: any) => {
-  return {
-    embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
-    usage: { tokens: 10 },
-  };
-});
-
-mock.module("ai", () => ({
-  embedMany: mockEmbedMany,
-}));
 
 const parseResponse = async (res: Response) => {
   const text = await res.text();
@@ -24,12 +15,20 @@ const parseResponse = async (res: Response) => {
 };
 
 describe("Embeddings Handler", () => {
-  const mockProviders = {
-    embeddingModel: (modelId: string) => ({
-      modelId,
-      provider: modelId.split(":")[0],
+  const registry = createProviderRegistry({
+    openai: new MockProviderV3({
+      embeddingModels: {
+        "text-embedding-3-small": new MockEmbeddingModelV3({
+          doEmbed: async (options) => ({
+            embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
+            usage: { tokens: 10 },
+            providerMetadata: { openai: { key: "value" } },
+            warnings: [],
+          }),
+        }),
+      },
     }),
-  } as any;
+  });
 
   const catalog = createModelCatalog({
     "text-embedding-3-small": {
@@ -44,7 +43,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  const endpoint = embeddings({ providers: mockProviders, models: catalog });
+  const endpoint = embeddings({ providers: registry, models: catalog }, true);
 
   const testCases = [
     {
@@ -86,6 +85,11 @@ describe("Embeddings Handler", () => {
           prompt_tokens: 10,
           total_tokens: 10,
         },
+        providerMetadata: {
+          openai: {
+            key: "value",
+          },
+        },
       },
     },
     {
@@ -114,8 +118,13 @@ describe("Embeddings Handler", () => {
         ],
         model: "text-embedding-3-small",
         usage: {
-          prompt_tokens: 10,
-          total_tokens: 10,
+          prompt_tokens: 20,
+          total_tokens: 20,
+        },
+        providerMetadata: {
+          openai: {
+            key: "value",
+          },
         },
       },
     },
@@ -146,33 +155,9 @@ describe("Embeddings Handler", () => {
 
   for (const { name, request, expected } of testCases) {
     it(name, async () => {
-      mockEmbedMany.mockClear();
       const res = await endpoint.handler(request);
       const data = await parseResponse(res);
       expect(data).toEqual(expected);
     });
   }
-
-  it("should pass through provider_metadata", async () => {
-    mockEmbedMany.mockImplementationOnce((options: any) => {
-      return {
-        embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
-        usage: { tokens: 10 },
-        providerMetadata: { custom: "metadata" },
-      };
-    });
-
-    const request = new Request("http://localhost/embeddings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "text-embedding-3-small",
-        input: "hello world",
-      }),
-    });
-
-    const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
-    expect(data.providerMetadata).toEqual({ custom: "metadata" });
-  });
 });
