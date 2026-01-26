@@ -6,6 +6,8 @@ import { parseResponse } from "../../../test/helpers/http";
 import { createModelCatalog } from "../../models/catalog";
 import { models } from "./handler";
 
+const baseUrl = "http://localhost/models";
+
 describe("Models Handler", () => {
   const registry = createProviderRegistry({
     anthropic: new MockProviderV3(),
@@ -40,7 +42,7 @@ describe("Models Handler", () => {
   const endpoint = models({ providers: registry, models: catalog }, true);
 
   test("should list models via GET request with realistic data (exact match)", async () => {
-    const request = new Request("http://localhost/models", { method: "GET" });
+    const request = new Request(baseUrl, { method: "GET" });
 
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
@@ -83,7 +85,7 @@ describe("Models Handler", () => {
   });
 
   test("should return 'Method Not Allowed' for POST request", async () => {
-    const request = new Request("http://localhost/models", { method: "POST" });
+    const request = new Request(baseUrl, { method: "POST" });
 
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
