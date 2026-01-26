@@ -32,7 +32,8 @@ bun add @hebo-ai/gateway
 import {
   gateway,
   createGroqWithCanonicalIds,
-  gptOss20b
+  createModelCatalog,
+  gptOss20b, gptOss
 } from "@hebo-ai/gateway";
 
 export const gw = gateway({
@@ -237,7 +238,7 @@ const modelsFromFamily = createModelCatalog(
 
 #### Custom Models
 
-If you need a model that isn't covered yet, you can define your own catalog entries by following the `CatalogModel` type.
+As the ecosystem is moving faster than anyone can keep-up with, you can always define your own custom catalog entries by following the `CatalogModel` type.
 
 ```ts
 const gw = gateway({
