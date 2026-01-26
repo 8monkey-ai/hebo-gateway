@@ -51,7 +51,12 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     let provider;
     try {
-      const args = { providers, models, modelId: resolvedModelId, operation: "embeddings" };
+      const args = {
+        providers,
+        models,
+        modelId: resolvedModelId,
+        operation: "embeddings" as const,
+      };
       const override = await hooks?.resolveProvider?.(args);
       provider = override ?? resolveProvider(args);
     } catch (error) {
