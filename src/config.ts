@@ -16,9 +16,9 @@ export const parseConfig = (config: GatewayConfig): GatewayConfig => {
   // Initialize ProviderRegistry (if nessecary)
   let registry;
   if (ProviderRegistryBrand in providers) {
-    registry = providers;
-  } else {
     registry = createProviderRegistry(providers as unknown as Record<string, ProviderV3>);
+  } else {
+    registry = providers;
   }
 
   // Strip out providers from models that are not configured
