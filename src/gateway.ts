@@ -15,7 +15,7 @@ const buildRoutes = (config: GatewayConfig) =>
   ({
     ["/models"]: models(config),
     ["/embeddings"]: embeddings(config),
-    ["/chat"]: chatCompletions(config),
+    ["/chat/completions"]: chatCompletions(config),
   }) as const satisfies Record<string, Endpoint>;
 
 type GatewayRoutes = ReturnType<typeof buildRoutes>;
@@ -36,7 +36,7 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
         ? url.pathname.slice(basePath.length)
         : url.pathname;
 
-    const route = "/" + path.split("/", 2)[1];
+    const route = path.startsWith("/models") ? "/" + path.split("/", 2)[1] : path;
 
     const endpoint = routes[route as keyof GatewayRoutes];
 

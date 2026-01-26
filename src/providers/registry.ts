@@ -100,10 +100,11 @@ export const withCanonicalIds = (
   const fallbackProvider: ProviderV3 = needsFallbackWrap
     ? {
         ...provider,
+        specificationVersion: "v3",
         languageModel: (id: string) =>
           provider.languageModel(applyFallbackAffixes(normalizeId(id))),
         embeddingModel: (id: string) =>
-          provider.embeddingModel(applyFallbackAffixes(normalizeId(id))),
+          provider.textEmbeddingModel(applyFallbackAffixes(normalizeId(id))),
       }
     : provider;
 
