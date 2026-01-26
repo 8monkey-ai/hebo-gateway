@@ -26,8 +26,11 @@ export type GatewayHooks = {
    * Runs before any endpoint handler logic.
    * @param ctx.request Incoming request.
    * @returns Optional RequestPatch to merge into headers / override body.
+   * Returning a Response stops execution of the endpoint.
    */
-  before?: (ctx: { request: Request }) => void | RequestPatch | Promise<void | RequestPatch>;
+  before?: (ctx: {
+    request: Request;
+  }) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @param ctx.modelId Incoming model ID.

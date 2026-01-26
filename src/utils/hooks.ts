@@ -21,18 +21,20 @@ export const withHooks = (
   run: (request: Request) => Promise<Response>,
 ) => {
   const handler = async (request: Request): Promise<Response> => {
-    const patch = await hooks?.before?.({ request });
+    const beforeResult = await hooks?.before?.({ request });
+
+    if (beforeResult instanceof Response) {
+      return beforeResult;
+    }
 
     const nextRequest =
-      patch && ("headers" in patch || "body" in patch)
-        ? applyRequestPatch(request, patch)
+      beforeResult && ("headers" in beforeResult || "body" in beforeResult)
+        ? applyRequestPatch(request, beforeResult)
         : request;
 
     const response = await run(nextRequest);
 
-    const afterResponse = await hooks?.after?.({ response });
-
-    return afterResponse ?? response;
+    return (await hooks?.after?.({ response })) ?? response;
   };
   return handler;
 };
