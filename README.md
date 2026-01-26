@@ -62,7 +62,7 @@ export const gw = gateway({
       providers: ["groq"],
     }),
     // Or add a whole model family
-    ...gptOss["all"].map((model) => 
+    ...gptOss["all"].map((model) =>
       model({})
     ),
   ),
@@ -340,7 +340,6 @@ const app = new Elysia()
 console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
-
 ## Low-level functions via deep imports
 
 We also provide low-level helper functions for advanced use cases. They are available via deep-imports and completely tree-shakable.
@@ -378,7 +377,7 @@ import {
   OpenAICompatTransformStream,
 } from "@hebo-aikit/gateway/oai-compat/helpers";
 ```
- 
+
 ### Middlewares
 
 ```ts

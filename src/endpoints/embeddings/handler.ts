@@ -44,7 +44,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
       let provider;
       try {
-        provider = resolveProvider(providers, models, modelId, "embeddings");
+        provider = resolveProvider({ providers, models, modelId, operation: "embeddings" });
       } catch (error) {
         return createErrorResponse("BAD_REQUEST", error, 400);
       }
