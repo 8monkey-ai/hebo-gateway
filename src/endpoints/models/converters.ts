@@ -38,17 +38,18 @@ export function toOpenAICompatibleModel(
   return model;
 }
 
-export function toOpenAICompatibleModelListResponse(models: ModelCatalog): Response {
-  const data = Object.entries(models).map(([id, catalogModel]) =>
-    toOpenAICompatibleModel(id, catalogModel!),
-  );
-
-  const body: OpenAICompatibleList<OpenAICompatibleModel> = {
+export function toOpenAICompatibleModelList(
+  models: ModelCatalog,
+): OpenAICompatibleList<OpenAICompatibleModel> {
+  return {
     object: "list",
-    data,
+    data: Object.entries(models).map(([id, catalogModel]) =>
+      toOpenAICompatibleModel(id, catalogModel!),
+    ),
   };
-
-  return new Response(JSON.stringify(body), {
+}
+export function toOpenAICompatibleModelListResponse(models: ModelCatalog): Response {
+  return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
     headers: { "Content-Type": "application/json" },
   });
 }

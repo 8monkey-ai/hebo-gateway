@@ -3,6 +3,7 @@ import * as z from "zod/mini";
 
 import type { GatewayConfig, Endpoint } from "../../types";
 
+import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import {
@@ -13,9 +14,7 @@ import {
 import { OpenAICompatibleChatCompletionsRequestBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
-  const { providers, models } = config;
-  if (!providers) throw new Error("providers is required");
-  if (!models) throw new Error("models is required");
+  const { providers, models } = parseConfig(config);
 
   return {
     handler: (async (req: Request): Promise<Response> => {
@@ -78,8 +77,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
           return toOpenAICompatibleStreamResponse(result, modelId);
         } catch (error) {
-          const errorMessage = error || "Failed to stream text";
-          return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
+          return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
         }
       }
 
@@ -94,8 +92,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           providerOptions,
         });
       } catch (error) {
-        const errorMessage = error || "Failed to generate text";
-        return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
+        return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
 
       return toOpenAICompatibleChatCompletionsResponse(generateTextResult, modelId);

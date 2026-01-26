@@ -65,8 +65,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
           providerOptions,
         });
       } catch (error) {
-        const errorMessage = error || "Failed to generate embeddings";
-        return createErrorResponse("INTERNAL_SERVER_ERROR", errorMessage, 500);
+        console.error(`[embeddings] Error generating embeddings:`, error);
+        return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
 
       return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);

@@ -15,7 +15,7 @@ const buildRoutes = (config: GatewayConfig) =>
   ({
     ["/models"]: models(config),
     ["/embeddings"]: embeddings(config),
-    ["/chat/completions"]: chatCompletions(config),
+    ["/chat"]: chatCompletions(config),
   }) as const satisfies Record<string, Endpoint>;
 
 type GatewayRoutes = ReturnType<typeof buildRoutes>;

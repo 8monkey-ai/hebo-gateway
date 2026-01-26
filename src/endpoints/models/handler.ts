@@ -12,14 +12,11 @@ export const models = (config: GatewayConfig): Endpoint => {
     if (req.method !== "GET") {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
-    return toOpenAICompatibleModelListResponse(models);
 
     const rawId = req.url.split("/models/", 2)[1]?.split("?", 1)[0];
 
     if (!rawId) {
-      return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return toOpenAICompatibleModelListResponse(models);
     }
 
     let modelId = rawId;

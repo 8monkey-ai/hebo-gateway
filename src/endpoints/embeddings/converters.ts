@@ -28,10 +28,10 @@ export function fromOpenAICompatibleEmbeddingParams(
   };
 }
 
-export function toOpenAICompatibleEmbeddingResponse(
+export function toOpenAICompatibleEmbeddingResponseBody(
   embedManyResult: EmbedManyResult,
   modelId: string,
-): Response {
+): OpenAICompatibleEmbeddingResponseBody {
   const data: OpenAICompatibleEmbedding[] = embedManyResult.embeddings.map((embedding, index) => ({
     object: "embedding",
     embedding,
@@ -43,15 +43,23 @@ export function toOpenAICompatibleEmbeddingResponse(
     total_tokens: embedManyResult.usage?.tokens || 0,
   };
 
-  const body: OpenAICompatibleEmbeddingResponseBody = {
+  return {
     object: "list",
     data,
     model: modelId,
     usage,
     providerMetadata: embedManyResult.providerMetadata,
   };
+}
 
-  return new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json" },
-  });
+export function toOpenAICompatibleEmbeddingResponse(
+  embedManyResult: EmbedManyResult,
+  modelId: string,
+): Response {
+  return new Response(
+    JSON.stringify(toOpenAICompatibleEmbeddingResponseBody(embedManyResult, modelId)),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }

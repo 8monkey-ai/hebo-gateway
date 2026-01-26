@@ -121,12 +121,12 @@ export const withCanonicalIds = (
   };
 
   return customProvider({
-    languageModels: mapModels(provider.languageModel) satisfies Partial<
-      Record<CanonicalModelId, LanguageModelV3>
-    >,
-    embeddingModels: mapModels(provider.embeddingModel) satisfies Partial<
-      Record<CanonicalModelId, EmbeddingModelV3>
-    >,
+    languageModels: (provider.languageModel
+      ? mapModels(provider.languageModel)
+      : {}) satisfies Partial<Record<CanonicalModelId, LanguageModelV3>>,
+    embeddingModels: (provider.embeddingModel
+      ? mapModels(provider.embeddingModel)
+      : {}) satisfies Partial<Record<CanonicalModelId, EmbeddingModelV3>>,
     fallbackProvider,
   });
 };

@@ -6,6 +6,7 @@ import type {
   ToolResultPart,
   ToolSet,
   ModelMessage,
+  LanguageModelUsage,
 } from "ai";
 
 import { jsonSchema, tool } from "ai";
@@ -22,6 +23,7 @@ import type {
   OpenAICompatibleToolChoice,
   OpenAICompatibleUserMessage,
   OpenAICompatibleToolMessage,
+  OpenAICompatibleChatCompletionsUsage,
 } from "./schema";
 
 import { toOpenAICompatibleError } from "../../utils/errors";
@@ -29,12 +31,12 @@ import { toOpenAICompatibleError } from "../../utils/errors";
 export type VercelAIChatCompletionsModelParams = {
   messages: ModelMessage[];
   tools?: ToolSet;
-  toolChoice?: ToolChoice<any>;
+  toolChoice?: ToolChoice<unknown>;
   temperature?: number;
   providerOptions: Record<string, unknown>;
 };
 
-// --- Request Conversion Flow ---
+// --- Request Flow ---
 
 export function fromOpenAICompatibleChatCompletionsParams(
   params: OpenAICompatibleChatCompletionsParams,
@@ -87,7 +89,10 @@ export function fromOpenAICompatibleUserMessage(
   message: OpenAICompatibleUserMessage,
 ): ModelMessage {
   if (Array.isArray(message.content)) {
-    return { role: "user", content: fromOpenAICompatibleContent(message.content) as any };
+    return {
+      role: "user",
+      content: fromOpenAICompatibleContent(message.content) as unknown as ModelMessage["content"],
+    };
   }
   return message as ModelMessage;
 }
@@ -215,7 +220,7 @@ export const fromOpenAICompatibleTools = (
 
 export const fromOpenAICompatibleToolChoice = (
   toolChoice: OpenAICompatibleToolChoice | undefined,
-): ToolChoice<any> | undefined => {
+): ToolChoice<unknown> | undefined => {
   if (!toolChoice) {
     return undefined;
   }
@@ -238,15 +243,15 @@ function parseToolOutput(content: string) {
   }
 }
 
-// --- Response Conversion Flow ---
+// --- Response Flow ---
 
-export function toOpenAICompatibleChatCompletionsResponse(
-  result: GenerateTextResult<any, any>,
+export function toOpenAICompatibleChatCompletionsResponseBody(
+  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
   model: string,
-): Response {
+): OpenAICompatibleChatCompletionsResponseBody {
   const finish_reason = toOpenAICompatibleFinishReason(result.finishReason);
 
-  const body: OpenAICompatibleChatCompletionsResponseBody = {
+  return {
     id: "chatcmpl-" + crypto.randomUUID(),
     object: "chat.completion",
     created: Math.floor(Date.now() / 1000),
@@ -261,22 +266,33 @@ export function toOpenAICompatibleChatCompletionsResponse(
     usage: result.usage && toOpenAICompatibleUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
-
-  return new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json" },
-  });
 }
-
-export function toOpenAICompatibleStreamResponse(
-  result: StreamTextResult<any, any>,
+export function toOpenAICompatibleChatCompletionsResponse(
+  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
   model: string,
 ): Response {
-  const stream = result.fullStream
-    .pipeThrough(toOpenAICompatibleTransform(model))
-    .pipeThrough(toSSETransform())
-    .pipeThrough(new TextEncoderStream());
+  return new Response(
+    JSON.stringify(toOpenAICompatibleChatCompletionsResponseBody(result, model)),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
+}
 
-  return new Response(stream, {
+export function toOpenAICompatibleStream(
+  result: StreamTextResult<Record<string, unknown>, Record<string, unknown>>,
+  model: string,
+): ReadableStream<Uint8Array> {
+  return result.fullStream
+    .pipeThrough(new OpenAICompatibleTransformStream(model))
+    .pipeThrough(new SSETransformStream())
+    .pipeThrough(new TextEncoderStream());
+}
+export function toOpenAICompatibleStreamResponse(
+  result: StreamTextResult<Record<string, unknown>, Record<string, unknown>>,
+  model: string,
+): Response {
+  return new Response(toOpenAICompatibleStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -285,89 +301,93 @@ export function toOpenAICompatibleStreamResponse(
   });
 }
 
-export function toOpenAICompatibleTransform(model: string): TransformStream<any, any> {
-  const streamId = `chatcmpl-${crypto.randomUUID()}`;
-  const creationTime = Math.floor(Date.now() / 1000);
-  let toolCallIndexCounter = 0;
+export class OpenAICompatibleTransformStream extends TransformStream<unknown, unknown> {
+  constructor(model: string) {
+    const streamId = `chatcmpl-${crypto.randomUUID()}`;
+    const creationTime = Math.floor(Date.now() / 1000);
+    let toolCallIndexCounter = 0;
 
-  const createChunk = (delta: any, finish_reason: any = null, usage?: any) => ({
-    id: streamId,
-    object: "chat.completion.chunk",
-    created: creationTime,
-    model,
-    choices: [{ index: 0, delta, finish_reason }],
-    ...(usage ? { usage } : {}),
-  });
+    const createChunk = (delta: unknown, finish_reason: unknown = null, usage?: unknown) => ({
+      id: streamId,
+      object: "chat.completion.chunk",
+      created: creationTime,
+      model,
+      choices: [{ index: 0, delta, finish_reason }],
+      ...(usage ? { usage } : {}),
+    });
 
-  return new TransformStream({
-    transform(part, controller) {
-      switch (part.type) {
-        case "text-delta": {
-          controller.enqueue(createChunk({ role: "assistant", content: part.text }));
-          break;
+    super({
+      transform(part, controller) {
+        switch (part.type) {
+          case "text-delta": {
+            controller.enqueue(createChunk({ role: "assistant", content: part.text }));
+            break;
+          }
+
+          case "reasoning-delta": {
+            controller.enqueue(createChunk({ reasoning_content: part.text }));
+            break;
+          }
+
+          case "tool-call": {
+            controller.enqueue(
+              createChunk({
+                tool_calls: [
+                  {
+                    ...toOpenAICompatibleToolCall(part.toolCallId, part.toolName, part.input),
+                    index: toolCallIndexCounter++,
+                  },
+                ],
+              }),
+            );
+            break;
+          }
+
+          case "finish": {
+            controller.enqueue(
+              createChunk(
+                {},
+                toOpenAICompatibleFinishReason(part.finishReason),
+                toOpenAICompatibleUsage(part.totalUsage),
+              ),
+            );
+            break;
+          }
+
+          case "error": {
+            const error = part.error;
+            const msg = error instanceof Error ? error.message : String(error);
+            const e = error as { code?: string; status?: number };
+            controller.enqueue(
+              toOpenAICompatibleError(
+                msg,
+                e.status && e.status < 500 ? "invalid_request_error" : "server_error",
+                e.code,
+              ),
+            );
+            break;
+          }
         }
-
-        case "reasoning-delta": {
-          controller.enqueue(createChunk({ reasoning_content: part.text }));
-          break;
-        }
-
-        case "tool-call": {
-          controller.enqueue(
-            createChunk({
-              tool_calls: [
-                {
-                  ...toOpenAICompatibleToolCall(part.toolCallId, part.toolName, part.input),
-                  index: toolCallIndexCounter++,
-                },
-              ],
-            }),
-          );
-          break;
-        }
-
-        case "finish": {
-          controller.enqueue(
-            createChunk(
-              {},
-              toOpenAICompatibleFinishReason(part.finishReason),
-              toOpenAICompatibleUsage(part.totalUsage),
-            ),
-          );
-          break;
-        }
-
-        case "error": {
-          const error = part.error;
-          const msg = error instanceof Error ? error.message : String(error);
-          const e = error as { code?: string; status?: number };
-          controller.enqueue(
-            toOpenAICompatibleError(
-              msg,
-              e.status && e.status < 500 ? "invalid_request_error" : "server_error",
-              e.code,
-            ),
-          );
-          break;
-        }
-      }
-    },
-  });
+      },
+    });
+  }
 }
 
-export function toSSETransform(): TransformStream<any, string> {
-  return new TransformStream({
-    transform(chunk, controller) {
-      controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
-    },
-    flush(controller) {
-      controller.enqueue("data: [DONE]\n\n");
-    },
-  });
+export class SSETransformStream extends TransformStream<unknown, string> {
+  constructor() {
+    super({
+      transform(chunk, controller) {
+        controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
+      },
+      flush(controller) {
+        controller.enqueue("data: [DONE]\n\n");
+      },
+    });
+  }
 }
 
 export const toOpenAICompatibleMessage = (
-  result: GenerateTextResult<any, any>,
+  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
 ): OpenAICompatibleAssistantMessage => {
   const message: OpenAICompatibleAssistantMessage = {
     role: "assistant",
@@ -395,15 +415,7 @@ export const toOpenAICompatibleMessage = (
 };
 
 export function toOpenAICompatibleUsage(
-  usage:
-    | {
-        inputTokens: number;
-        outputTokens: number;
-        totalTokens?: number;
-        reasoningTokens?: number;
-        cachedInputTokens?: number;
-      }
-    | undefined,
+  usage: LanguageModelUsage | undefined,
 ): OpenAICompatibleChatCompletionsUsage | undefined {
   if (!usage) return undefined;
   return {
@@ -422,7 +434,7 @@ export function toOpenAICompatibleUsage(
 export function toOpenAICompatibleToolCall(
   id: string,
   name: string,
-  args: any,
+  args: unknown,
 ): OpenAICompatibleMessageToolCall {
   return {
     id,
