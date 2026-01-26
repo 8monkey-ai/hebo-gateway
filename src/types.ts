@@ -26,7 +26,7 @@ export type GatewayHooks = {
   /**
    * Runs before any endpoint handler logic.
    * @param ctx.request Incoming request.
-   * @returns Optional RequestPatch to override headers/body.
+   * @returns Optional RequestPatch to merge into headers / override body.
    */
   before?: (ctx: { request: Request }) => void | RequestPatch | Promise<void | RequestPatch>;
   /**

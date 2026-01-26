@@ -285,7 +285,7 @@ const gw = gateway({
 
 ### Hooks
 
-Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
+Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality. All hooks are available as async and non async.
 
 ```ts
 const gw = gateway({
@@ -296,29 +296,58 @@ const gw = gateway({
     // ...
   },
   hooks: {
-    before: async (request: Request) => {
+    /**
+     * Runs before any endpoint handler logic.
+     * @param ctx.request Incoming request.
+     * @returns Optional RequestPatch to merge into headers / override body.
+     */
+    before: async (ctx: { request: Request }): Promise<RequestPatch | void> =>  {
       // Example Use Cases:
       // - Transform request body
       // - Verify authentication
       // - Enforce rate limits
       // - Observability integration
+      return undefined;
     },
-    resolveModelId: async (modelId: string) => {
+    /**
+     * Maps a user-provided model ID or alias to a canonical ID.
+     * @param ctx.modelId Incoming model ID.
+     * @returns Canonical model ID or undefined to keep original.
+     */
+    resolveModelId: async (ctx: { modelId: ModelId }): Promise<ModelId | void> => {
       // Example Use Cases:
       // - Resolve modelAlias to modelId
+      return undefined;
     },
-    resolveProvider: async (
-      originalModelId: string,
-      resolvedModelId: string
-    ) => {
+    /**
+     * Picks a provider instance for the request.
+     * @param ctx.providers Provider registry.
+     * @param ctx.models ModelCatalog from config.
+     * @param ctx.modelId Resolved model ID.
+     * @param ctx.operation Operation type ("text" | "embeddings").
+     * @returns ProviderV3 to override, or undefined to use default.
+     */
+    resolveProvider?: async (ctx: {
+      providers: ProviderRegistryProvider;
+      models: ModelCatalog;
+      modelId: ModelId;
+      operation: "text" | "embeddings";
+    }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
       // - Bring-your-own-key authentication
+      return undefined;
     },
-    after: async (response: Response) => {
+    /**
+     * Runs after the endpoint handler.
+     * @param ctx.response Response returned by the handler.
+     * @returns Response to replace, or undefined to keep original.
+     */
+    after: async (ctx: { response: Response }): Promise<Response | void> => {
       // Example Use Cases:
       // - Transform response
       // - Response logging
+      return undefined;
     },
   },
 });
