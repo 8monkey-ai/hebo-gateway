@@ -5,5 +5,8 @@ export * from "./endpoints/chat-completions";
 export * from "./endpoints/embeddings";
 export * from "./endpoints/models";
 
-export * from "./models";
-export * from "./providers";
+export * from "./models/catalog";
+export * from "./models/types";
+
+export * from "./providers/registry";
+export * from "./providers/types";

@@ -1,6 +1,6 @@
 {
   "name": "@hebo-ai/gateway",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "Hebo Gateway - Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more.",
   "keywords": [
     "ai",
@@ -40,6 +40,11 @@
       "import": "./dist/index.js",
       "dev-source": "./src/index.ts"
     },
+    "./endpoints": {
+      "types": "./dist/endpoints/index.d.ts",
+      "import": "./dist/endpoints/index.js",
+      "dev-source": "./src/endpoints/index.ts"
+    },
     "./endpoints/chat-completions": {
       "types": "./dist/endpoints/chat-completions/index.d.ts",
       "import": "./dist/endpoints/chat-completions/index.js",
@@ -55,15 +60,70 @@
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
     },
-    "./models": {
-      "types": "./dist/models/index.d.ts",
-      "import": "./dist/models/index.js",
-      "dev-source": "./src/models/index.ts"
+    "./models/claude": {
+      "types": "./dist/models/presets/claude.d.ts",
+      "import": "./dist/models/presets/claude.js",
+      "dev-source": "./src/models/presets/claude.ts"
     },
-    "./providers": {
-      "types": "./dist/providers/index.d.ts",
-      "import": "./dist/providers/index.js",
-      "dev-source": "./src/providers/index.ts"
+    "./models/cohere": {
+      "types": "./dist/models/presets/cohere.d.ts",
+      "import": "./dist/models/presets/cohere.js",
+      "dev-source": "./src/models/presets/cohere.ts"
+    },
+    "./models/gemini": {
+      "types": "./dist/models/presets/gemini.d.ts",
+      "import": "./dist/models/presets/gemini.js",
+      "dev-source": "./src/models/presets/gemini.ts"
+    },
+    "./models/gpt-oss": {
+      "types": "./dist/models/presets/gpt-oss.d.ts",
+      "import": "./dist/models/presets/gpt-oss.js",
+      "dev-source": "./src/models/presets/gpt-oss.ts"
+    },
+    "./models/llama": {
+      "types": "./dist/models/presets/llama.d.ts",
+      "import": "./dist/models/presets/llama.js",
+      "dev-source": "./src/models/presets/llama.ts"
+    },
+    "./models/voyage": {
+      "types": "./dist/models/presets/voyage.d.ts",
+      "import": "./dist/models/presets/voyage.js",
+      "dev-source": "./src/models/presets/voyage.ts"
+    },
+    "./providers/anthropic": {
+      "types": "./dist/providers/canonical/anthropic.d.ts",
+      "import": "./dist/providers/canonical/anthropic.js",
+      "dev-source": "./src/providers/canonical/anthropic.ts"
+    },
+    "./providers/bedrock": {
+      "types": "./dist/providers/canonical/bedrock.d.ts",
+      "import": "./dist/providers/canonical/bedrock.js",
+      "dev-source": "./src/providers/canonical/bedrock.ts"
+    },
+    "./providers/cohere": {
+      "types": "./dist/providers/canonical/cohere.d.ts",
+      "import": "./dist/providers/canonical/cohere.js",
+      "dev-source": "./src/providers/canonical/cohere.ts"
+    },
+    "./providers/groq": {
+      "types": "./dist/providers/canonical/groq.d.ts",
+      "import": "./dist/providers/canonical/groq.js",
+      "dev-source": "./src/providers/canonical/groq.ts"
+    },
+    "./providers/openai": {
+      "types": "./dist/providers/canonical/openai.d.ts",
+      "import": "./dist/providers/canonical/openai.js",
+      "dev-source": "./src/providers/canonical/openai.ts"
+    },
+    "./providers/vertex": {
+      "types": "./dist/providers/canonical/vertex.d.ts",
+      "import": "./dist/providers/canonical/vertex.js",
+      "dev-source": "./src/providers/canonical/vertex.ts"
+    },
+    "./providers/voyage": {
+      "types": "./dist/providers/canonical/voyage.d.ts",
+      "import": "./dist/providers/canonical/voyage.js",
+      "dev-source": "./src/providers/canonical/voyage.ts"
     }
   },
   "scripts": {
