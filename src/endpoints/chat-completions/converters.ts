@@ -9,6 +9,7 @@ import type {
   ModelMessage,
   UserContent,
   LanguageModelUsage,
+  Output,
 } from "ai";
 
 import { jsonSchema, tool } from "ai";
@@ -248,7 +249,7 @@ function parseToolOutput(content: string) {
 // --- Response Flow ---
 
 export function toOpenAICompatibleChatCompletionsResponseBody(
-  result: GenerateTextResult<ToolSet, any>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): OpenAICompatibleChatCompletionsResponseBody {
   const finish_reason = toOpenAICompatibleFinishReason(result.finishReason);
@@ -270,7 +271,7 @@ export function toOpenAICompatibleChatCompletionsResponseBody(
   };
 }
 export function toOpenAICompatibleChatCompletionsResponse(
-  result: GenerateTextResult<ToolSet, any>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
   return new Response(
@@ -389,7 +390,7 @@ export class SSETransformStream extends TransformStream {
 }
 
 export const toOpenAICompatibleMessage = (
-  result: GenerateTextResult<ToolSet, any>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
 ): OpenAICompatibleAssistantMessage => {
   const message: OpenAICompatibleAssistantMessage = {
     role: "assistant",
