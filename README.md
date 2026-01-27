@@ -205,7 +205,6 @@ import { createOpenAI } from "@ai-sdk/openai";
 import {
   gateway,
   createModelCatalog,
-  createProviderRegistry,
   withCanonicalIds,
 } from "@hebo-ai/gateway";
 
@@ -218,9 +217,9 @@ const openai = withCanonicalIds(
 );
 
 const gw = gateway({
-  providers: createProviderRegistry({
+  providers: {
     openai,
-  }),
+  },
   models: createModelCatalog({
     // ...your models pointing at canonical IDs above
   }),
@@ -259,9 +258,9 @@ As the ecosystem is moving faster than anyone can keep-up with, you can always d
 
 ```ts
 const gw = gateway({
-  providers: createProviderRegistry({
+  providers: {
     // ...
-  }),
+  },
   models: createModelCatalog({
     "anthropic/claude-sonnet-4.5": {
       name: "Claude Sonnet 4.5",
@@ -296,9 +295,9 @@ Hooks allow you to plug-into the lifecycle of the gateway and enrich it with add
 
 ```ts
 const gw = gateway({
-  providers: createProviderRegistry({
+  providers: {
     // ...
-  }),
+  },
   models: {
     // ...
   },
@@ -386,8 +385,8 @@ import { streamText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import * as z from "zod";
 import {
-  CompletionsRequestSchema,
-  convertCompletionsInputs,
+  CompletionsBodySchema,
+  transformCompletionsInputs,
   createCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 
@@ -404,16 +403,11 @@ export async function handler(req: Request): Promise<Response> {
 
   const { model, ...inputs } = parsed.data;
 
-  const { messages, tools, toolChoice, temperature, providerOptions } =
-    convertCompletionsInputs(inputs);
+  const textOptions = transformCompletionsInputs(inputs);
 
   const result = await streamText({
     model: groq(model),
-    messages,
-    tools,
-    toolChoice,
-    temperature,
-    providerOptions: { groq: providerOptions },
+    ...textOptions
   });
 
   return createCompletionsStreamResponse(result, model);
