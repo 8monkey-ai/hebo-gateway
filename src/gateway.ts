@@ -13,9 +13,9 @@ import { models } from "./endpoints/models/handler";
 
 const buildRoutes = (config: GatewayConfig) =>
   ({
-    ["/models"]: models(config),
-    ["/embeddings"]: embeddings(config),
     ["/chat/completions"]: chatCompletions(config),
+    ["/embeddings"]: embeddings(config),
+    ["/models"]: models(config),
   }) as const satisfies Record<string, Endpoint>;
 
 type GatewayRoutes = ReturnType<typeof buildRoutes>;
@@ -29,19 +29,15 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
   const routes = buildRoutes(parsedConfig);
 
   const handler = (req: Request): Promise<Response> => {
-    const url = new URL(req.url);
+    let pathname = new URL(req.url).pathname;
+    if (basePath && pathname.startsWith(basePath)) {
+      pathname = pathname.slice(basePath.length);
+    }
 
-    const path =
-      basePath && url.pathname.startsWith(basePath)
-        ? url.pathname.slice(basePath.length)
-        : url.pathname;
-
-    const route = path.startsWith("/models") ? "/" + path.split("/", 2)[1] : path;
-
-    const endpoint = routes[route as keyof GatewayRoutes];
-
-    if (endpoint) {
-      return endpoint.handler(req);
+    for (const [route, endpoint] of Object.entries(routes)) {
+      if (pathname.startsWith(route)) {
+        return endpoint.handler(req);
+      }
     }
 
     return Promise.resolve(new Response("Not Found", { status: 404 }));
