@@ -40,7 +40,7 @@ bun add @hebo-ai/gateway ai @ai-sdk/groq
 
 ```ts
 import { createModelCatalog, gateway } from "@hebo-ai/gateway";
-import { groqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
+import { createGroqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
 export const gw = gateway({

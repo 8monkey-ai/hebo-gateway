@@ -20,17 +20,17 @@ export const EmbeddingsDataSchema = z.object({
 });
 export type EmbeddingsData = z.infer<typeof EmbeddingsDataSchema>;
 
-export const EmbeddingUsageSchema = z.object({
+export const EmbeddingsUsageSchema = z.object({
   prompt_tokens: z.number(),
   total_tokens: z.number(),
 });
-export type EmbeddingsUsage = z.infer<typeof EmbeddingUsageSchema>;
+export type EmbeddingsUsage = z.infer<typeof EmbeddingsUsageSchema>;
 
 export const EmbeddingsSchema = z.object({
   object: z.literal("list"),
   data: z.array(EmbeddingsDataSchema),
   model: z.string(),
-  usage: EmbeddingUsageSchema,
+  usage: EmbeddingsUsageSchema,
   providerMetadata: z.optional(z.any()),
 });
 export type Embeddings = z.infer<typeof EmbeddingsSchema>;
