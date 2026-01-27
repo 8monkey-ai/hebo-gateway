@@ -31,7 +31,7 @@ Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to 
 ## Installation
 
 ```bash
-bun add @hebo-ai/gateway
+bun add @hebo-ai/gateway @ai-sdk/groq
 ```
 
 ## Quickstart
@@ -39,13 +39,9 @@ bun add @hebo-ai/gateway
 ### Configuration
 
 ```ts
-import {
-  gateway,
-  createGroqWithCanonicalIds,
-  createModelCatalog,
-  gptOss20b,
-  gptOss,
-} from "@hebo-ai/gateway";
+import { createModelCatalog, gateway } from "@hebo-ai/gateway";
+import { groqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
+import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
@@ -241,7 +237,9 @@ Hebo Gateway ships model presets under `models/presets`, exported from the packa
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
 
 ```ts
-import { createModelCatalog, claude, claudeSonnet45, gptOss20b } from "@hebo-ai/gateway";
+import { createModelCatalog } from "@hebo-ai/gateway";
+import { gptOss20b } from "@hebo-ai/gateway/models/gpt-oss";
+import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/claude";
 
 // Individual preset
 const models = createModelCatalog(
