@@ -68,7 +68,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
       if (stream) {
         try {
-          const result = await streamText({
+          const result = streamText({
             model: languageModel,
             messages,
             tools: toolSet,
