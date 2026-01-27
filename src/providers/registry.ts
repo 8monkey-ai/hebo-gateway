@@ -1,8 +1,8 @@
-import type { EmbeddingModelV3, LanguageModelV3, ProviderV3 } from "@ai-sdk/provider";
+import type { ProviderV3 } from "@ai-sdk/provider";
 
 import { customProvider, type ProviderRegistryProvider } from "ai";
 
-import type { CanonicalModelId, ModelCatalog, ModelId } from "../models/types";
+import type { ModelCatalog, ModelId } from "../models/types";
 
 export const resolveProvider = (
   providers: ProviderRegistryProvider,
@@ -10,13 +10,13 @@ export const resolveProvider = (
   modelId: ModelId,
   modality: "text" | "image" | "audio" | "video" | "embeddings",
 ) => {
-  const catalogModel = models[modelId as ModelId];
+  const catalogModel = models[modelId];
 
   if (!catalogModel) {
     throw new Error(`Model '${modelId}' not found in catalog`);
   }
 
-  if (modality && !catalogModel.modalities.output.includes(modality)) {
+  if (!catalogModel.modalities.output.includes(modality)) {
     throw new Error(`Model '${modelId}' does not support '${modality}' output`);
   }
 
@@ -103,13 +103,17 @@ export const withCanonicalIds = (
         specificationVersion: "v3",
         languageModel: (id: string) =>
           provider.languageModel(applyFallbackAffixes(normalizeId(id))),
+        // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
         embeddingModel: (id: string) =>
-          provider.textEmbeddingModel(applyFallbackAffixes(normalizeId(id))), // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+          provider.textEmbeddingModel!(applyFallbackAffixes(normalizeId(id))),
       }
     : provider;
 
-  const mapModels = <T>(fn: (id: string) => T) => {
+  const mapModels = <T>(fn?: (id: string) => T) => {
     const out = {} as Record<string, T>;
+
+    // Some providers don't have languageModel / embeddingModel
+    if (fn === undefined) return out;
 
     for (const [k, v] of Object.entries(mapping ?? {})) {
       // This is lazy so that provider is only create once called
@@ -122,12 +126,9 @@ export const withCanonicalIds = (
   };
 
   return customProvider({
-    languageModels: (provider.languageModel
-      ? mapModels(provider.languageModel)
-      : {}) satisfies Partial<Record<CanonicalModelId, LanguageModelV3>>,
-    embeddingModels: (provider.embeddingModel
-      ? mapModels(provider.embeddingModel)
-      : {}) satisfies Partial<Record<CanonicalModelId, EmbeddingModelV3>>,
+    languageModels: mapModels(provider.languageModel),
+    // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+    embeddingModels: mapModels(provider.textEmbeddingModel),
     fallbackProvider,
   });
 };
