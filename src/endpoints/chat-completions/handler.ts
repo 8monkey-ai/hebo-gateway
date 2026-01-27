@@ -8,11 +8,11 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  parseOpenAICompatCompletionsOptions,
-  createOpenAICompatCompletionsResponse,
-  createOpenAICompatCompletionsStreamResponse,
+  parseCompletionsInputs,
+  createCompletionsResponse,
+  createCompletionsStreamResponse,
 } from "./converters";
-import { OpenAICompatCompletionsRequestSchema } from "./schema";
+import { CompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -29,7 +29,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatCompletionsRequestSchema.safeParse(json);
+    const parsed = CompletionsBodySchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -41,11 +41,18 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
 
     const requestBody = parsed.data;
-    const { model: modelId, stream, ...params } = requestBody;
+    const { model: modelId, stream, ...inputs } = requestBody;
 
     let resolvedModelId;
     try {
       resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
+    let textOptions;
+    try {
+      textOptions = parseCompletionsInputs(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -66,13 +73,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = provider.languageModel(resolvedModelId);
 
-    let textOptions;
-    try {
-      textOptions = parseOpenAICompatCompletionsOptions(params);
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
-
     if (stream) {
       try {
         const result = streamText({
@@ -80,7 +80,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           ...textOptions,
         });
 
-        return createOpenAICompatCompletionsStreamResponse(result, modelId);
+        return createCompletionsStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
@@ -96,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createOpenAICompatCompletionsResponse(generateTextResult, modelId);
+    return createCompletionsResponse(generateTextResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-export const OpenAICompatModelSchema = z.catchall(
+export const ModelSchema = z.catchall(
   z.object({
     id: z.string(),
     object: z.literal("model"),
@@ -22,10 +22,10 @@ export const OpenAICompatModelSchema = z.catchall(
   }),
   z.unknown(),
 );
-export type OpenAICompatModel = z.infer<typeof OpenAICompatModelSchema>;
+export type Model = z.infer<typeof ModelSchema>;
 
-export const OpenAICompatModelListSchema = z.object({
+export const ModelListSchema = z.object({
   object: z.literal("list"),
-  data: z.array(OpenAICompatModelSchema),
+  data: z.array(ModelSchema),
 });
-export type OpenAICompatModelList = z.infer<typeof OpenAICompatModelListSchema>;
+export type ModelList = z.infer<typeof ModelListSchema>;

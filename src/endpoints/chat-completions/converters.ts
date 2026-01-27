@@ -15,23 +15,23 @@ import type {
 import { jsonSchema, tool } from "ai";
 
 import type {
-  OpenAICompatCompletionsOptions,
-  OpenAICompatCompletionsMessageToolCall,
-  OpenAICompatCompletionsTool,
-  OpenAICompatCompletionsToolChoice,
-  OpenAICompatCompletionsContentPart,
-  OpenAICompatCompletionsMessage,
-  OpenAICompatCompletionsSystemMessage,
-  OpenAICompatCompletionsUserMessage,
-  OpenAICompatCompletionsAssistantMessage,
-  OpenAICompatCompletionsToolMessage,
-  OpenAICompatCompletions,
-  OpenAICompatCompletionsFinishReason,
-  OpenAICompatCompletionsUsage,
-  OpenAICompatCompletionsChoice,
+  CompletionsInputs,
+  CompletionsMessageToolCall,
+  CompletionsTool,
+  CompletionsToolChoice,
+  CompletionsContentPart,
+  CompletionsMessage,
+  CompletionsSystemMessage,
+  CompletionsUserMessage,
+  CompletionsAssistantMessage,
+  CompletionsToolMessage,
+  Completions,
+  CompletionsFinishReason,
+  CompletionsUsage,
+  CompletionsChoice,
 } from "./schema";
 
-import { OpenAICompatError } from "../../utils/errors";
+import { OpenAIError } from "../../utils/errors";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -43,15 +43,13 @@ export type TextCallOptions = {
 
 // --- Request Flow ---
 
-export function parseOpenAICompatCompletionsOptions(
-  params: OpenAICompatCompletionsOptions,
-): TextCallOptions {
+export function parseCompletionsInputs(params: CompletionsInputs): TextCallOptions {
   const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
   return {
-    messages: fromOpenAICompatCompletionsMessages(messages),
-    tools: fromOpenAICompatCompletionsTools(tools),
-    toolChoice: fromOpenAICompatCompletionsToolChoice(tool_choice),
+    messages: fromCompletionsMessages(messages),
+    tools: fromCompletionsTools(tools),
+    toolChoice: fromCompletionsToolChoice(tool_choice),
     temperature,
     providerOptions: {
       openAICompat: rest,
@@ -59,9 +57,7 @@ export function parseOpenAICompatCompletionsOptions(
   };
 }
 
-export function fromOpenAICompatCompletionsMessages(
-  messages: OpenAICompatCompletionsMessage[],
-): ModelMessage[] {
+export function fromCompletionsMessages(messages: CompletionsMessage[]): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -69,44 +65,42 @@ export function fromOpenAICompatCompletionsMessages(
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
-      modelMessages.push(message satisfies OpenAICompatCompletionsSystemMessage);
+      modelMessages.push(message satisfies CompletionsSystemMessage);
       continue;
     }
 
     if (message.role === "user") {
-      modelMessages.push(fromOpenAICompatCompletionsUserMessage(message));
+      modelMessages.push(fromCompletionsUserMessage(message));
       continue;
     }
 
-    modelMessages.push(fromOpenAICompatCompletionsAssistantMessage(message));
-    const toolResult = fromOpenAICompatCompletionsToolResultMessage(message, toolById);
+    modelMessages.push(fromCompletionsAssistantMessage(message));
+    const toolResult = fromCompletionsToolResultMessage(message, toolById);
     if (toolResult) modelMessages.push(toolResult);
   }
 
   return modelMessages;
 }
 
-function indexToolMessages(messages: OpenAICompatCompletionsMessage[]) {
-  const map = new Map<string, OpenAICompatCompletionsToolMessage>();
+function indexToolMessages(messages: CompletionsMessage[]) {
+  const map = new Map<string, CompletionsToolMessage>();
   for (const m of messages) {
     if (m.role === "tool") map.set(m.tool_call_id, m);
   }
   return map;
 }
 
-export function fromOpenAICompatCompletionsUserMessage(
-  message: OpenAICompatCompletionsUserMessage,
-): ModelMessage {
+export function fromCompletionsUserMessage(message: CompletionsUserMessage): ModelMessage {
   return {
     role: "user",
     content: Array.isArray(message.content)
-      ? fromOpenAICompatCompletionsContent(message.content)
+      ? fromCompletionsContent(message.content)
       : message.content,
   };
 }
 
-export function fromOpenAICompatCompletionsAssistantMessage(
-  message: OpenAICompatCompletionsAssistantMessage,
+export function fromCompletionsAssistantMessage(
+  message: CompletionsAssistantMessage,
 ): ModelMessage {
   const { tool_calls, role, content } = message;
 
@@ -119,7 +113,7 @@ export function fromOpenAICompatCompletionsAssistantMessage(
 
   return {
     role: role,
-    content: tool_calls.map((tc: OpenAICompatCompletionsMessageToolCall) => {
+    content: tool_calls.map((tc: CompletionsMessageToolCall) => {
       const { id, function: fn } = tc;
       return {
         type: "tool-call",
@@ -131,9 +125,9 @@ export function fromOpenAICompatCompletionsAssistantMessage(
   };
 }
 
-export function fromOpenAICompatCompletionsToolResultMessage(
-  message: OpenAICompatCompletionsAssistantMessage,
-  toolById: Map<string, OpenAICompatCompletionsToolMessage>,
+export function fromCompletionsToolResultMessage(
+  message: CompletionsAssistantMessage,
+  toolById: Map<string, CompletionsToolMessage>,
 ): ModelMessage | undefined {
   const toolCalls = message.tool_calls ?? [];
   if (toolCalls.length === 0) return undefined;
@@ -147,16 +141,14 @@ export function fromOpenAICompatCompletionsToolResultMessage(
       type: "tool-result",
       toolCallId: tc.id,
       toolName: tc.function.name,
-      output: parseToolOutput(toolMsg.content as string),
+      output: parseToolOutput(toolMsg.content),
     });
   }
 
   return toolResultParts.length > 0 ? { role: "tool", content: toolResultParts } : undefined;
 }
 
-export function fromOpenAICompatCompletionsContent(
-  content: OpenAICompatCompletionsContentPart[],
-): UserContent {
+export function fromCompletionsContent(content: CompletionsContentPart[]): UserContent {
   return content.map((part) => {
     if (part.type === "image_url") {
       const url = part.image_url.url;
@@ -166,17 +158,17 @@ export function fromOpenAICompatCompletionsContent(
         const base64Data = parts[1];
 
         if (!metadata || !base64Data) {
-          throw new Error("Invalid data URL: missing metadata or data");
+          throw new OpenAIError("Invalid data URL: missing metadata or data");
         }
 
         const mimeTypePart = metadata.split(":")[1];
         if (!mimeTypePart) {
-          throw new Error("Invalid data URL: missing MIME type part");
+          throw new OpenAIError("Invalid data URL: missing MIME type part");
         }
 
         const mimeType = mimeTypePart.split(";")[0];
         if (!mimeType) {
-          throw new Error("Invalid data URL: missing MIME type");
+          throw new OpenAIError("Invalid data URL: missing MIME type");
         }
 
         return mimeType.startsWith("image/")
@@ -215,9 +207,7 @@ export function fromOpenAICompatCompletionsContent(
   });
 }
 
-export const fromOpenAICompatCompletionsTools = (
-  tools: OpenAICompatCompletionsTool[] | undefined,
-): ToolSet | undefined => {
+export const fromCompletionsTools = (tools: CompletionsTool[] | undefined): ToolSet | undefined => {
   if (!tools) {
     return;
   }
@@ -232,8 +222,8 @@ export const fromOpenAICompatCompletionsTools = (
   return toolSet;
 };
 
-export const fromOpenAICompatCompletionsToolChoice = (
-  toolChoice: OpenAICompatCompletionsToolChoice | undefined,
+export const fromCompletionsToolChoice = (
+  toolChoice: CompletionsToolChoice | undefined,
 ): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
     return undefined;
@@ -259,11 +249,11 @@ function parseToolOutput(content: string) {
 
 // --- Response Flow ---
 
-export function toOpenAICompatCompletions(
+export function toCompletions(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-): OpenAICompatCompletions {
-  const finish_reason = toOpenAICompatCompletionsFinishReason(result.finishReason);
+): Completions {
+  const finish_reason = toCompletionsFinishReason(result.finishReason);
 
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
@@ -273,37 +263,37 @@ export function toOpenAICompatCompletions(
     choices: [
       {
         index: 0,
-        message: toOpenAICompatCompletionsMessage(result),
+        message: toCompletionsMessage(result),
         finish_reason,
-      } satisfies OpenAICompatCompletionsChoice,
+      } satisfies CompletionsChoice,
     ],
-    usage: result.usage && toOpenAICompatCompletionUsage(result.usage),
+    usage: result.usage && toCompletionUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
 }
-export function createOpenAICompatCompletionsResponse(
+export function createCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(JSON.stringify(toOpenAICompatCompletions(result, model)), {
+  return new Response(JSON.stringify(toCompletions(result, model)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toOpenAICompatCompletionsStream(
+export function toCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
-    .pipeThrough(new OpenAICompatCompletionsStream(model))
+    .pipeThrough(new CompletionsStream(model))
     .pipeThrough(new SSETransformStream())
     .pipeThrough(new TextEncoderStream());
 }
-export function createOpenAICompatCompletionsStreamResponse(
+export function createCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(toOpenAICompatCompletionsStream(result, model), {
+  return new Response(toCompletionsStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -312,7 +302,7 @@ export function createOpenAICompatCompletionsStreamResponse(
   });
 }
 
-export class OpenAICompatCompletionsStream extends TransformStream {
+export class CompletionsStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -320,8 +310,8 @@ export class OpenAICompatCompletionsStream extends TransformStream {
 
     const createChunk = (
       delta: unknown,
-      finish_reason?: OpenAICompatCompletionsFinishReason,
-      usage?: OpenAICompatCompletionsUsage,
+      finish_reason?: CompletionsFinishReason,
+      usage?: CompletionsUsage,
     ) => ({
       id: streamId,
       object: "chat.completion.chunk",
@@ -349,7 +339,7 @@ export class OpenAICompatCompletionsStream extends TransformStream {
               createChunk({
                 tool_calls: [
                   {
-                    ...toOpenAICompatCompletionToolCall(part.toolCallId, part.toolName, part.input),
+                    ...toCompletionToolCall(part.toolCallId, part.toolName, part.input),
                     index: toolCallIndexCounter++,
                   },
                 ],
@@ -362,8 +352,8 @@ export class OpenAICompatCompletionsStream extends TransformStream {
             controller.enqueue(
               createChunk(
                 {},
-                toOpenAICompatCompletionsFinishReason(part.finishReason),
-                toOpenAICompatCompletionUsage(part.totalUsage),
+                toCompletionsFinishReason(part.finishReason),
+                toCompletionUsage(part.totalUsage),
               ),
             );
             break;
@@ -374,7 +364,7 @@ export class OpenAICompatCompletionsStream extends TransformStream {
             const msg = error instanceof Error ? error.message : String(error);
             const e = error as { code?: string; status?: number };
             controller.enqueue(
-              new OpenAICompatError(
+              new OpenAIError(
                 msg,
                 e.status && e.status < 500 ? "invalid_request_error" : "server_error",
                 e.code,
@@ -401,17 +391,17 @@ export class SSETransformStream extends TransformStream {
   }
 }
 
-export const toOpenAICompatCompletionsMessage = (
+export const toCompletionsMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
-): OpenAICompatCompletionsAssistantMessage => {
-  const message: OpenAICompatCompletionsAssistantMessage = {
+): CompletionsAssistantMessage => {
+  const message: CompletionsAssistantMessage = {
     role: "assistant",
     content: null,
   };
 
   if (result.toolCalls && result.toolCalls.length > 0) {
     message.tool_calls = result.toolCalls.map((toolCall) =>
-      toOpenAICompatCompletionToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
+      toCompletionToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
     );
   }
 
@@ -429,9 +419,9 @@ export const toOpenAICompatCompletionsMessage = (
   return message;
 };
 
-export function toOpenAICompatCompletionUsage(
+export function toCompletionUsage(
   usage: LanguageModelUsage | undefined,
-): OpenAICompatCompletionsUsage | undefined {
+): CompletionsUsage | undefined {
   if (!usage) return undefined;
   return {
     prompt_tokens: usage.inputTokens ?? 0,
@@ -446,11 +436,11 @@ export function toOpenAICompatCompletionUsage(
   };
 }
 
-export function toOpenAICompatCompletionToolCall(
+export function toCompletionToolCall(
   id: string,
   name: string,
   args: unknown,
-): OpenAICompatCompletionsMessageToolCall {
+): CompletionsMessageToolCall {
   return {
     id,
     type: "function",
@@ -461,11 +451,9 @@ export function toOpenAICompatCompletionToolCall(
   };
 }
 
-export const toOpenAICompatCompletionsFinishReason = (
-  finishReason: FinishReason,
-): OpenAICompatCompletionsFinishReason => {
+export const toCompletionsFinishReason = (finishReason: FinishReason): CompletionsFinishReason => {
   if (finishReason === "error" || finishReason === "other") {
     return "stop";
   }
-  return (finishReason as string).replaceAll("-", "_") as OpenAICompatCompletionsFinishReason;
+  return (finishReason as string).replaceAll("-", "_") as CompletionsFinishReason;
 };

@@ -1,36 +1,36 @@
 import * as z from "zod/mini";
 
-export const OpenAICompatEmbeddingsOptionsSchema = z.object({
+export const EmbeddingsInputsSchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
   encoding_format: z.optional(z.enum(["float", "base64"])),
   dimensions: z.optional(z.number()),
   user: z.optional(z.string()),
 });
-export type OpenAICompatEmbeddingsOptions = z.infer<typeof OpenAICompatEmbeddingsOptionsSchema>;
+export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 
-export const OpenAICompatEmbeddingsRequestSchema = z.extend(OpenAICompatEmbeddingsOptionsSchema, {
+export const EmbeddingsBodySchema = z.extend(EmbeddingsInputsSchema, {
   model: z.string(),
 });
-export type OpenAICompatEmbeddingsRequest = z.infer<typeof OpenAICompatEmbeddingsRequestSchema>;
+export type EmbeddingsBody = z.infer<typeof EmbeddingsBodySchema>;
 
-export const OpenAICompatEmbeddingsDataSchema = z.object({
+export const EmbeddingsDataSchema = z.object({
   object: z.literal("embedding"),
   embedding: z.array(z.number()),
   index: z.number(),
 });
-export type OpenAICompatEmbeddingsData = z.infer<typeof OpenAICompatEmbeddingsDataSchema>;
+export type EmbeddingsData = z.infer<typeof EmbeddingsDataSchema>;
 
-export const OpenAICompatEmbeddingUsageSchema = z.object({
+export const EmbeddingUsageSchema = z.object({
   prompt_tokens: z.number(),
   total_tokens: z.number(),
 });
-export type OpenAICompatEmbeddingsUsage = z.infer<typeof OpenAICompatEmbeddingUsageSchema>;
+export type EmbeddingsUsage = z.infer<typeof EmbeddingUsageSchema>;
 
-export const OpenAICompatEmbeddingsSchema = z.object({
+export const EmbeddingsSchema = z.object({
   object: z.literal("list"),
-  data: z.array(OpenAICompatEmbeddingsDataSchema),
+  data: z.array(EmbeddingsDataSchema),
   model: z.string(),
-  usage: OpenAICompatEmbeddingUsageSchema,
+  usage: EmbeddingUsageSchema,
   providerMetadata: z.optional(z.any()),
 });
-export type OpenAICompatEmbeddings = z.infer<typeof OpenAICompatEmbeddingsSchema>;
+export type Embeddings = z.infer<typeof EmbeddingsSchema>;

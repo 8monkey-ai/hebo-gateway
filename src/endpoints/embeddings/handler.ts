@@ -7,11 +7,8 @@ import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
-import {
-  parseOpenAICompatEmbeddingsOptions,
-  createOpenAICompatEmbeddingsResponse,
-} from "./converters";
-import { OpenAICompatEmbeddingsRequestSchema } from "./schema";
+import { parseEmbeddingsInputs, createEmbeddingsResponse } from "./converters";
+import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -28,7 +25,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatEmbeddingsRequestSchema.safeParse(json);
+    const parsed = EmbeddingsBodySchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -40,11 +37,18 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     const requestBody = parsed.data;
-    const { model: modelId, ...params } = requestBody;
+    const { model: modelId, ...inputs } = requestBody;
 
     let resolvedModelId;
     try {
       resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
+    let embedOptions;
+    try {
+      embedOptions = parseEmbeddingsInputs(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -65,13 +69,6 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
-    let embedOptions;
-    try {
-      embedOptions = parseOpenAICompatEmbeddingsOptions(params);
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
-
     let embedManyResult;
     try {
       embedManyResult = await embedMany({
@@ -82,7 +79,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createOpenAICompatEmbeddingsResponse(embedManyResult, modelId);
+    return createEmbeddingsResponse(embedManyResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };
