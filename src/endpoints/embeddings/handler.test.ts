@@ -56,7 +56,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  const endpoint = embeddings({ providers: registry, models: catalog }, true);
+  const endpoint = embeddings({ providers: registry, models: catalog });
 
   test("should return 400 if model does not support embeddings", async () => {
     const request = postJson(baseUrl, {

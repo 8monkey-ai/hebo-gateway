@@ -39,7 +39,7 @@ describe("Models Handler", () => {
     },
   });
 
-  const endpoint = models({ providers: registry, models: catalog }, true);
+  const endpoint = models({ providers: registry, models: catalog });
 
   test("should list models via GET request with realistic data (exact match)", async () => {
     const request = new Request(baseUrl, { method: "GET" });

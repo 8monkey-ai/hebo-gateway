@@ -1,3 +1,4 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -34,7 +35,7 @@ export type VercelAIChatCompletionsModelParams = {
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
   temperature?: number;
-  providerOptions: Record<string, unknown>;
+  providerOptions: ProviderOptions;
 };
 
 // --- Request Flow ---
@@ -92,7 +93,7 @@ export function fromOpenAICompatibleUserMessage(
   if (Array.isArray(message.content)) {
     return {
       role: "user",
-      content: fromOpenAICompatibleContent(message.content) as unknown as UserContent,
+      content: fromOpenAICompatibleContent(message.content) as UserContent,
     };
   }
   return message as ModelMessage;
