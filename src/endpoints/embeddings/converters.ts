@@ -2,10 +2,10 @@ import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type { EmbedManyResult } from "ai";
 
 import type {
-  OpenAICompatEmbedding,
   OpenAICompatEmbeddingsParams,
-  OpenAICompatEmbeddingResponse,
-  OpenAICompatEmbeddingsUsage,
+  OpenAICompatEmbedding,
+  OpenAICompatEmbeddingData,
+  OpenAICompatEmbeddingUsage,
 } from "./schema";
 
 export type EmbeddingCallOptions = {
@@ -34,14 +34,14 @@ export function fromOpenAICompatEmbeddingsParams(
 export function toOpenAICompatEmbedding(
   embedManyResult: EmbedManyResult,
   modelId: string,
-): OpenAICompatEmbeddingResponse {
-  const data: OpenAICompatEmbedding[] = embedManyResult.embeddings.map((embedding, index) => ({
+): OpenAICompatEmbedding {
+  const data: OpenAICompatEmbeddingData[] = embedManyResult.embeddings.map((embedding, index) => ({
     object: "embedding",
     embedding,
     index,
   }));
 
-  const usage: OpenAICompatEmbeddingsUsage = {
+  const usage: OpenAICompatEmbeddingUsage = {
     prompt_tokens: embedManyResult.usage?.tokens || 0,
     total_tokens: embedManyResult.usage?.tokens || 0,
   };

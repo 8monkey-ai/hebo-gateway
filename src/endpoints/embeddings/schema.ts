@@ -15,27 +15,27 @@ export const OpenAICompatEmbeddingsRequestSchema = z.extend(OpenAICompatEmbeddin
 
 export type OpenAICompatEmbeddingsRequest = z.infer<typeof OpenAICompatEmbeddingsRequestSchema>;
 
-export const OpenAICompatEmbeddingSchema = z.object({
+export const OpenAICompatEmbeddingDataSchema = z.object({
   object: z.literal("embedding"),
   embedding: z.array(z.number()),
   index: z.number(),
 });
 
-export type OpenAICompatEmbedding = z.infer<typeof OpenAICompatEmbeddingSchema>;
+export type OpenAICompatEmbeddingData = z.infer<typeof OpenAICompatEmbeddingDataSchema>;
 
-export const OpenAICompatEmbeddingsUsageSchema = z.object({
+export const OpenAICompatEmbeddingUsageSchema = z.object({
   prompt_tokens: z.number(),
   total_tokens: z.number(),
 });
 
-export type OpenAICompatEmbeddingsUsage = z.infer<typeof OpenAICompatEmbeddingsUsageSchema>;
+export type OpenAICompatEmbeddingUsage = z.infer<typeof OpenAICompatEmbeddingUsageSchema>;
 
-export const OpenAICompatEmbeddingResponseSchema = z.object({
+export const OpenAICompatEmbeddingSchema = z.object({
   object: z.literal("list"),
-  data: z.array(OpenAICompatEmbeddingSchema),
+  data: z.array(OpenAICompatEmbeddingDataSchema),
   model: z.string(),
-  usage: OpenAICompatEmbeddingsUsageSchema,
+  usage: OpenAICompatEmbeddingUsageSchema,
   providerMetadata: z.optional(z.any()),
 });
 
-export type OpenAICompatEmbeddingResponse = z.infer<typeof OpenAICompatEmbeddingResponseSchema>;
+export type OpenAICompatEmbedding = z.infer<typeof OpenAICompatEmbeddingSchema>;
