@@ -36,7 +36,7 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
     }
 
     for (const [route, endpoint] of routeEntries) {
-      if (pathname.startsWith(route)) {
+      if (pathname === route || pathname.startsWith(route + "/")) {
         return endpoint.handler(req);
       }
     }
