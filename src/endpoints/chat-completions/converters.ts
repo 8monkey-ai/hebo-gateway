@@ -283,7 +283,7 @@ export function toOpenAICompatibleChatCompletionsResponse(
 }
 
 export function toOpenAICompatibleStream(
-  result: StreamTextResult<ToolSet, any>,
+  result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
@@ -292,7 +292,7 @@ export function toOpenAICompatibleStream(
     .pipeThrough(new TextEncoderStream());
 }
 export function toOpenAICompatibleStreamResponse(
-  result: StreamTextResult<ToolSet, any>,
+  result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
   return new Response(toOpenAICompatibleStream(result, model), {
