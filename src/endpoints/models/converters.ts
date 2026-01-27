@@ -1,10 +1,7 @@
 import type { ModelCatalog, CatalogModel } from "../../models/types";
-import type { OpenAICompatibleList, OpenAICompatibleModel } from "./schema";
+import type { ModelList, Model } from "./schema";
 
-export function toOpenAICompatibleModel(
-  id: string,
-  catalogModel: CatalogModel,
-): OpenAICompatibleModel {
+export function toModel(id: string, catalogModel: CatalogModel): Model {
   const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);
   if (created) {
@@ -14,7 +11,7 @@ export function toOpenAICompatibleModel(
     }
   }
 
-  const model: OpenAICompatibleModel = {
+  const model: Model = {
     id,
     object: "model",
     created: createdTimestamp,
@@ -38,24 +35,20 @@ export function toOpenAICompatibleModel(
   return model;
 }
 
-export function toOpenAICompatibleModelList(
-  models: ModelCatalog,
-): OpenAICompatibleList<OpenAICompatibleModel> {
+export function toModels(models: ModelCatalog): ModelList {
   return {
     object: "list",
-    data: Object.entries(models).map(([id, catalogModel]) =>
-      toOpenAICompatibleModel(id, catalogModel!),
-    ),
+    data: Object.entries(models).map(([id, catalogModel]) => toModel(id, catalogModel!)),
   };
 }
-export function toOpenAICompatibleModelListResponse(models: ModelCatalog): Response {
-  return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
+export function createModelsResponse(models: ModelCatalog): Response {
+  return new Response(JSON.stringify(toModels(models)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toOpenAICompatibleModelResponse(id: string, catalogModel: CatalogModel): Response {
-  return new Response(JSON.stringify(toOpenAICompatibleModel(id, catalogModel)), {
+export function createModelResponse(id: string, catalogModel: CatalogModel): Response {
+  return new Response(JSON.stringify(toModel(id, catalogModel)), {
     headers: { "Content-Type": "application/json" },
   });
 }

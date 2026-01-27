@@ -1,6 +1,11 @@
 import * as z from "zod/mini";
 
-export const OpenAICompatibleContentPartImageSchema = z.object({
+export const CompletionsContentPartTextSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+export const CompletionsContentPartImageSchema = z.object({
   type: z.literal("image_url"),
   image_url: z.object({
     url: z.string(),
@@ -8,12 +13,7 @@ export const OpenAICompatibleContentPartImageSchema = z.object({
   }),
 });
 
-export const OpenAICompatibleContentPartTextSchema = z.object({
-  type: z.literal("text"),
-  text: z.string(),
-});
-
-export const OpenAICompatibleContentPartFileSchema = z.object({
+export const CompletionsContentPartFileSchema = z.object({
   type: z.literal("file"),
   file: z.object({
     data: z.string(),
@@ -22,7 +22,12 @@ export const OpenAICompatibleContentPartFileSchema = z.object({
   }),
 });
 
-export const OpenAICompatibleMessageToolCallSchema = z.object({
+export type CompletionsContentPart =
+  | z.infer<typeof CompletionsContentPartTextSchema>
+  | z.infer<typeof CompletionsContentPartImageSchema>
+  | z.infer<typeof CompletionsContentPartFileSchema>;
+
+export const CompletionsToolCallSchema = z.object({
   type: z.literal("function"),
   id: z.string(),
   function: z.object({
@@ -30,48 +35,54 @@ export const OpenAICompatibleMessageToolCallSchema = z.object({
     name: z.string(),
   }),
 });
+export type CompletionsToolCall = z.infer<typeof CompletionsToolCallSchema>;
 
-export const OpenAICompatibleSystemMessageSchema = z.object({
+export const CompletionsSystemMessageSchema = z.object({
   role: z.literal("system"),
   content: z.string(),
 });
+export type CompletionsSystemMessage = z.infer<typeof CompletionsSystemMessageSchema>;
 
-export const OpenAICompatibleUserMessageSchema = z.object({
+export const CompletionsUserMessageSchema = z.object({
   role: z.literal("user"),
   content: z.union([
     z.string(),
     z.array(
       z.union([
-        OpenAICompatibleContentPartTextSchema,
-        OpenAICompatibleContentPartImageSchema,
-        OpenAICompatibleContentPartFileSchema,
+        CompletionsContentPartTextSchema,
+        CompletionsContentPartImageSchema,
+        CompletionsContentPartFileSchema,
       ]),
     ),
   ]),
 });
+export type CompletionsUserMessage = z.infer<typeof CompletionsUserMessageSchema>;
 
-export const OpenAICompatibleAssistantMessageSchema = z.object({
+export const CompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
   content: z.union([z.string(), z.null()]),
-  tool_calls: z.optional(z.array(OpenAICompatibleMessageToolCallSchema)),
+  tool_calls: z.optional(z.array(CompletionsToolCallSchema)),
   reasoning: z.optional(z.string()),
   reasoning_content: z.optional(z.string()),
 });
+export type CompletionsAssistantMessage = z.infer<typeof CompletionsAssistantMessageSchema>;
 
-export const OpenAICompatibleToolMessageSchema = z.object({
+export const CompletionsToolMessageSchema = z.object({
   role: z.literal("tool"),
   content: z.string(),
   tool_call_id: z.string(),
 });
+export type CompletionsToolMessage = z.infer<typeof CompletionsToolMessageSchema>;
 
-export const OpenAICompatibleMessageSchema = z.union([
-  OpenAICompatibleSystemMessageSchema,
-  OpenAICompatibleUserMessageSchema,
-  OpenAICompatibleAssistantMessageSchema,
-  OpenAICompatibleToolMessageSchema,
+export const CompletionsMessageSchema = z.union([
+  CompletionsSystemMessageSchema,
+  CompletionsUserMessageSchema,
+  CompletionsAssistantMessageSchema,
+  CompletionsToolMessageSchema,
 ]);
+export type CompletionsMessage = z.infer<typeof CompletionsMessageSchema>;
 
-export const OpenAICompatibleToolSchema = z.object({
+export const CompletionsToolSchema = z.object({
   type: z.literal("function"),
   function: z.object({
     name: z.string(),
@@ -79,8 +90,9 @@ export const OpenAICompatibleToolSchema = z.object({
     parameters: z.record(z.string(), z.any()),
   }),
 });
+export type CompletionsTool = z.infer<typeof CompletionsToolSchema>;
 
-export const OpenAICompatibleToolChoiceSchema = z.union([
+export const CompletionsToolChoiceSchema = z.union([
   z.literal("none"),
   z.literal("auto"),
   z.literal("required"),
@@ -91,49 +103,39 @@ export const OpenAICompatibleToolChoiceSchema = z.union([
     }),
   }),
 ]);
+export type CompletionsToolChoice = z.infer<typeof CompletionsToolChoiceSchema>;
 
-export const OpenAICompatibleFinishReasonSchema = z.union([
+export const CompletionsInputsSchema = z.object({
+  messages: z.array(CompletionsMessageSchema),
+  tools: z.optional(z.array(CompletionsToolSchema)),
+  tool_choice: z.optional(CompletionsToolChoiceSchema),
+  temperature: z.optional(z.number()),
+});
+export type CompletionsInputs = z.infer<typeof CompletionsInputsSchema>;
+
+export const CompletionsBodySchema = z.extend(CompletionsInputsSchema, {
+  model: z.string(),
+  stream: z.optional(z.boolean()),
+});
+export type CompletionsBody = z.infer<typeof CompletionsBodySchema>;
+
+export const CompletionsFinishReasonSchema = z.union([
   z.literal("stop"),
   z.literal("length"),
   z.literal("content_filter"),
   z.literal("tool_calls"),
 ]);
+export type CompletionsFinishReason = z.infer<typeof CompletionsFinishReasonSchema>;
 
-export const OpenAICompatibleChatCompletionsParamsSchema = z.object({
-  messages: z.array(OpenAICompatibleMessageSchema),
-  tools: z.optional(z.array(OpenAICompatibleToolSchema)),
-  tool_choice: z.optional(OpenAICompatibleToolChoiceSchema),
-  temperature: z.optional(z.number()),
-});
-
-export type OpenAICompatibleChatCompletionsParams = z.infer<
-  typeof OpenAICompatibleChatCompletionsParamsSchema
->;
-
-export const OpenAICompatibleChatCompletionsRequestBodySchema = z.extend(
-  OpenAICompatibleChatCompletionsParamsSchema,
-  {
-    model: z.string(),
-    stream: z.optional(z.boolean()),
-  },
-);
-
-export type OpenAICompatibleChatCompletionsRequestBody = z.infer<
-  typeof OpenAICompatibleChatCompletionsRequestBodySchema
->;
-
-export const OpenAICompatibleChatCompletionChoiceSchema = z.object({
+export const CompletionsChoiceSchema = z.object({
   index: z.number(),
-  message: OpenAICompatibleAssistantMessageSchema,
-  finish_reason: OpenAICompatibleFinishReasonSchema,
+  message: CompletionsAssistantMessageSchema,
+  finish_reason: CompletionsFinishReasonSchema,
   logprobs: z.optional(z.any()),
 });
+export type CompletionsChoice = z.infer<typeof CompletionsChoiceSchema>;
 
-export type OpenAICompatibleChatCompletionChoice = z.infer<
-  typeof OpenAICompatibleChatCompletionChoiceSchema
->;
-
-export const OpenAICompatibleChatCompletionsUsageSchema = z.object({
+export const CompletionsUsageSchema = z.object({
   prompt_tokens: z.number(),
   completion_tokens: z.number(),
   total_tokens: z.number(),
@@ -148,43 +150,21 @@ export const OpenAICompatibleChatCompletionsUsageSchema = z.object({
     }),
   ),
 });
+export type CompletionsUsage = z.infer<typeof CompletionsUsageSchema>;
 
-export type OpenAICompatibleChatCompletionsUsage = z.infer<
-  typeof OpenAICompatibleChatCompletionsUsageSchema
->;
-
-export const OpenAICompatibleChatCompletionsResponseBodySchema = z.object({
+export const CompletionsSchema = z.object({
   id: z.string(),
   object: z.literal("chat.completion"),
   created: z.number(),
   model: z.string(),
-  choices: z.array(OpenAICompatibleChatCompletionChoiceSchema),
-  usage: z.optional(OpenAICompatibleChatCompletionsUsageSchema),
+  choices: z.array(CompletionsChoiceSchema),
+  usage: z.optional(CompletionsUsageSchema),
   system_fingerprint: z.optional(z.string()),
   providerMetadata: z.optional(z.any()),
 });
+export type Completions = z.infer<typeof CompletionsSchema>;
 
-export type OpenAICompatibleChatCompletionsResponseBody = z.infer<
-  typeof OpenAICompatibleChatCompletionsResponseBodySchema
->;
-
-export type OpenAICompatibleMessage = z.infer<typeof OpenAICompatibleMessageSchema>;
-export type OpenAICompatibleSystemMessage = z.infer<typeof OpenAICompatibleSystemMessageSchema>;
-export type OpenAICompatibleUserMessage = z.infer<typeof OpenAICompatibleUserMessageSchema>;
-export type OpenAICompatibleMessageToolCall = z.infer<typeof OpenAICompatibleMessageToolCallSchema>;
-export type OpenAICompatibleContentPart =
-  | z.infer<typeof OpenAICompatibleContentPartTextSchema>
-  | z.infer<typeof OpenAICompatibleContentPartImageSchema>
-  | z.infer<typeof OpenAICompatibleContentPartFileSchema>;
-export type OpenAICompatibleFinishReason = z.infer<typeof OpenAICompatibleFinishReasonSchema>;
-export type OpenAICompatibleAssistantMessage = z.infer<
-  typeof OpenAICompatibleAssistantMessageSchema
->;
-export type OpenAICompatibleTool = z.infer<typeof OpenAICompatibleToolSchema>;
-export type OpenAICompatibleToolChoice = z.infer<typeof OpenAICompatibleToolChoiceSchema>;
-export type OpenAICompatibleToolMessage = z.infer<typeof OpenAICompatibleToolMessageSchema>;
-
-export type OpenAICompatibleToolCallDelta = {
+export type CompletionsToolCallDelta = {
   id: string;
   index: number;
   type: "function";

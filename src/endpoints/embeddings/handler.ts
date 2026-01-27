@@ -7,11 +7,8 @@ import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
-import {
-  fromOpenAICompatibleEmbeddingParams,
-  toOpenAICompatibleEmbeddingResponse,
-} from "./converters";
-import { OpenAICompatibleEmbeddingRequestBodySchema } from "./schema";
+import { transformEmbeddingsInputs, createEmbeddingsResponse } from "./converters";
+import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -21,14 +18,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
-    let json;
+    let body;
     try {
-      json = await req.json();
+      body = await req.json();
     } catch {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
+    const parsed = EmbeddingsBodySchema.safeParse(body);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -39,12 +36,18 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       );
     }
 
-    const requestBody = parsed.data;
-    const { model: modelId, ...params } = requestBody;
+    const { model: modelId, ...inputs } = parsed.data;
 
     let resolvedModelId;
     try {
       resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
+    let embedOptions;
+    try {
+      embedOptions = transformEmbeddingsInputs(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -65,24 +68,17 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
-    let embedArgs;
+    let result;
     try {
-      embedArgs = fromOpenAICompatibleEmbeddingParams(params);
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
-
-    let embedManyResult;
-    try {
-      embedManyResult = await embedMany({
+      result = await embedMany({
         model: embeddingModel,
-        ...embedArgs,
+        ...embedOptions,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);
+    return createEmbeddingsResponse(result, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

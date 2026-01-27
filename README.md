@@ -40,7 +40,7 @@ bun add @hebo-ai/gateway ai @ai-sdk/groq
 
 ```ts
 import { createModelCatalog, gateway } from "@hebo-ai/gateway";
-import { groqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
+import { createGroqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
 export const gw = gateway({
@@ -386,9 +386,9 @@ import { streamText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import * as z from "zod";
 import {
-  OpenAICompatibleChatCompletionsParamsSchema,
-  fromOpenAICompatibleChatCompletionsParams,
-  toOpenAICompatibleStreamResponse,
+  CompletionsRequestSchema,
+  convertCompletionsInputs,
+  createCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
@@ -397,15 +397,15 @@ export async function handler(req: Request): Promise<Response> {
 
   const body = await req.json();
 
-  const parsed = OpenAICompatibleChatCompletionsParamsSchema.safeParse(body);
+  const parsed = CompletionsBodySchema.safeParse(body);
   if (!parsed.success) {
     return new Response(z.prettifyError(parsed.error), { status: 422 });
   }
 
-  const { model, ...params } = parsed.data;
+  const { model, ...inputs } = parsed.data;
 
   const { messages, tools, toolChoice, temperature, providerOptions } =
-    fromOpenAICompatibleChatCompletionsParams(params);
+    convertCompletionsInputs(inputs);
 
   const result = await streamText({
     model: groq(model),
@@ -416,10 +416,10 @@ export async function handler(req: Request): Promise<Response> {
     providerOptions: { groq: providerOptions },
   });
 
-  return toOpenAICompatibleStreamResponse(result, model);
+  return createCompletionsStreamResponse(result, model);
 }
 ```
 
-Non-streaming versions are available via `toOpenAICompatibleChatCompletionsResponse`. Equivalent interfaces are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `createCompletionsResponse`. Equivalent interfaces are available in the `embeddings` and `models` endpoints.
 
 Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.

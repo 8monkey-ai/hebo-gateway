@@ -8,11 +8,11 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  fromOpenAICompatibleChatCompletionsParams,
-  toOpenAICompatibleChatCompletionsResponse,
-  toOpenAICompatibleStreamResponse,
+  transformCompletionsInputs,
+  createCompletionsResponse,
+  createCompletionsStreamResponse,
 } from "./converters";
-import { OpenAICompatibleChatCompletionsRequestBodySchema } from "./schema";
+import { CompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -22,14 +22,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
-    let json;
+    let body;
     try {
-      json = await req.json();
+      body = await req.json();
     } catch {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatibleChatCompletionsRequestBodySchema.safeParse(json);
+    const parsed = CompletionsBodySchema.safeParse(body);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -40,12 +40,18 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       );
     }
 
-    const requestBody = parsed.data;
-    const { model: modelId, stream, ...params } = requestBody;
+    const { model: modelId, stream, ...inputs } = parsed.data;
 
     let resolvedModelId;
     try {
       resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
+    let textOptions;
+    try {
+      textOptions = transformCompletionsInputs(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -66,37 +72,31 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = provider.languageModel(resolvedModelId);
 
-    let textArgs;
-    try {
-      textArgs = fromOpenAICompatibleChatCompletionsParams(params);
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
-
     if (stream) {
+      let result;
       try {
-        const result = streamText({
+        result = streamText({
           model: languageModel,
-          ...textArgs,
+          ...textOptions,
         });
-
-        return toOpenAICompatibleStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
+
+      return createCompletionsStreamResponse(result, modelId);
     }
 
-    let generateTextResult;
+    let result;
     try {
-      generateTextResult = await generateText({
+      result = await generateText({
         model: languageModel,
-        ...textArgs,
+        ...textOptions,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toOpenAICompatibleChatCompletionsResponse(generateTextResult, modelId);
+    return createCompletionsResponse(result, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

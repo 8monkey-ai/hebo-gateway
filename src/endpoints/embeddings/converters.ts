@@ -1,47 +1,32 @@
 import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type { EmbedManyResult } from "ai";
 
-import type {
-  OpenAICompatibleEmbedding,
-  OpenAICompatibleEmbeddingParams,
-  OpenAICompatibleEmbeddingResponseBody,
-  OpenAICompatibleEmbeddingUsage,
-} from "./schema";
+import type { EmbeddingsInputs, Embeddings, EmbeddingsData, EmbeddingsUsage } from "./schema";
 
-export type VercelAIEmbeddingsModelParams = {
+export type EmbedCallOptions = {
   values: string[];
   providerOptions: ProviderOptions;
 };
 
-function fromOpenAICompatibleInput(input: string | string[]): string[] {
-  return Array.isArray(input) ? input : [input];
-}
-
-export function fromOpenAICompatibleEmbeddingParams(
-  params: OpenAICompatibleEmbeddingParams,
-): VercelAIEmbeddingsModelParams {
+export function transformEmbeddingsInputs(params: EmbeddingsInputs): EmbedCallOptions {
   const { input, ...rest } = params;
-  const values = fromOpenAICompatibleInput(input);
 
   return {
-    values,
+    values: Array.isArray(input) ? input : [input],
     providerOptions: {
       openAICompat: rest,
     },
   };
 }
 
-export function toOpenAICompatibleEmbeddingResponseBody(
-  embedManyResult: EmbedManyResult,
-  modelId: string,
-): OpenAICompatibleEmbeddingResponseBody {
-  const data: OpenAICompatibleEmbedding[] = embedManyResult.embeddings.map((embedding, index) => ({
+export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string): Embeddings {
+  const data: EmbeddingsData[] = embedManyResult.embeddings.map((embedding, index) => ({
     object: "embedding",
     embedding,
     index,
   }));
 
-  const usage: OpenAICompatibleEmbeddingUsage = {
+  const usage: EmbeddingsUsage = {
     prompt_tokens: embedManyResult.usage?.tokens || 0,
     total_tokens: embedManyResult.usage?.tokens || 0,
   };
@@ -55,14 +40,11 @@ export function toOpenAICompatibleEmbeddingResponseBody(
   };
 }
 
-export function toOpenAICompatibleEmbeddingResponse(
+export function createEmbeddingsResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
 ): Response {
-  return new Response(
-    JSON.stringify(toOpenAICompatibleEmbeddingResponseBody(embedManyResult, modelId)),
-    {
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+  return new Response(JSON.stringify(toEmbeddings(embedManyResult, modelId)), {
+    headers: { "Content-Type": "application/json" },
+  });
 }
