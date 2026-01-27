@@ -27,6 +27,7 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
 
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
   const routes = buildRoutes(parsedConfig);
+  const routeEntries = Object.entries(routes);
 
   const handler = (req: Request): Promise<Response> => {
     let pathname = new URL(req.url).pathname;
@@ -34,7 +35,7 @@ export function gateway(config: GatewayConfig): HeboGateway<GatewayRoutes> {
       pathname = pathname.slice(basePath.length);
     }
 
-    for (const [route, endpoint] of Object.entries(routes)) {
+    for (const [route, endpoint] of routeEntries) {
       if (pathname.startsWith(route)) {
         return endpoint.handler(req);
       }
