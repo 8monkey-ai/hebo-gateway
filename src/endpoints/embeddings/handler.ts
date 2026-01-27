@@ -7,8 +7,11 @@ import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
-import { fromOpenAICompatEmbeddingParams, toOpenAICompatEmbeddingResponse } from "./converters";
-import { OpenAICompatEmbeddingRequestBodySchema } from "./schema";
+import {
+  fromOpenAICompatEmbeddingsParams,
+  createOpenAICompatEmbeddingResponse,
+} from "./converters";
+import { OpenAICompatEmbeddingsRequestSchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -25,7 +28,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatEmbeddingRequestBodySchema.safeParse(json);
+    const parsed = OpenAICompatEmbeddingsRequestSchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -64,7 +67,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     let embeddingOptions;
     try {
-      embeddingOptions = fromOpenAICompatEmbeddingParams(params);
+      embeddingOptions = fromOpenAICompatEmbeddingsParams(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -79,7 +82,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toOpenAICompatEmbeddingResponse(embedManyResult, modelId);
+    return createOpenAICompatEmbeddingResponse(embedManyResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

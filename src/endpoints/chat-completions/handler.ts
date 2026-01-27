@@ -9,10 +9,10 @@ import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
   fromOpenAICompatChatCompletionsParams,
-  toOpenAICompatChatCompletionsResponse,
-  toOpenAICompatStreamResponse,
+  createOpenAICompatChatCompletionResponse,
+  createOpenAICompatChatCompletionStreamResponse,
 } from "./converters";
-import { OpenAICompatChatCompletionsRequestBodySchema } from "./schema";
+import { OpenAICompatChatCompletionsRequestSchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -29,7 +29,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatChatCompletionsRequestBodySchema.safeParse(json);
+    const parsed = OpenAICompatChatCompletionsRequestSchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -80,7 +80,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           ...textOptions,
         });
 
-        return toOpenAICompatStreamResponse(result, modelId);
+        return createOpenAICompatChatCompletionStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
@@ -96,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toOpenAICompatChatCompletionsResponse(generateTextResult, modelId);
+    return createOpenAICompatChatCompletionResponse(generateTextResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

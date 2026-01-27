@@ -1,5 +1,5 @@
 import type { ModelCatalog, CatalogModel } from "../../models/types";
-import type { OpenAICompatList, OpenAICompatModel } from "./schema";
+import type { OpenAICompatModelList, OpenAICompatModel } from "./schema";
 
 export function toOpenAICompatModel(id: string, catalogModel: CatalogModel): OpenAICompatModel {
   const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
@@ -35,7 +35,9 @@ export function toOpenAICompatModel(id: string, catalogModel: CatalogModel): Ope
   return model;
 }
 
-export function toOpenAICompatModelList(models: ModelCatalog): OpenAICompatList<OpenAICompatModel> {
+export function toOpenAICompatModelList(
+  models: ModelCatalog,
+): OpenAICompatModelList<OpenAICompatModel> {
   return {
     object: "list",
     data: Object.entries(models).map(([id, catalogModel]) =>
@@ -43,13 +45,13 @@ export function toOpenAICompatModelList(models: ModelCatalog): OpenAICompatList<
     ),
   };
 }
-export function toOpenAICompatModelListResponse(models: ModelCatalog): Response {
+export function createOpenAICompatModelListResponse(models: ModelCatalog): Response {
   return new Response(JSON.stringify(toOpenAICompatModelList(models)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toOpenAICompatModelResponse(id: string, catalogModel: CatalogModel): Response {
+export function createOpenAICompatModelResponse(id: string, catalogModel: CatalogModel): Response {
   return new Response(JSON.stringify(toOpenAICompatModel(id, catalogModel)), {
     headers: { "Content-Type": "application/json" },
   });

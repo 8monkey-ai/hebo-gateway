@@ -110,7 +110,7 @@ export type OpenAICompatChatCompletionsParams = z.infer<
   typeof OpenAICompatChatCompletionsParamsSchema
 >;
 
-export const OpenAICompatChatCompletionsRequestBodySchema = z.extend(
+export const OpenAICompatChatCompletionsRequestSchema = z.extend(
   OpenAICompatChatCompletionsParamsSchema,
   {
     model: z.string(),
@@ -118,22 +118,20 @@ export const OpenAICompatChatCompletionsRequestBodySchema = z.extend(
   },
 );
 
-export type OpenAICompatChatCompletionsRequestBody = z.infer<
-  typeof OpenAICompatChatCompletionsRequestBodySchema
+export type OpenAICompatChatCompletionsRequest = z.infer<
+  typeof OpenAICompatChatCompletionsRequestSchema
 >;
 
-export const OpenAICompatChatCompletionChoiceSchema = z.object({
+export const OpenAICompatChoiceSchema = z.object({
   index: z.number(),
   message: OpenAICompatAssistantMessageSchema,
   finish_reason: OpenAICompatFinishReasonSchema,
   logprobs: z.optional(z.any()),
 });
 
-export type OpenAICompatChatCompletionChoice = z.infer<
-  typeof OpenAICompatChatCompletionChoiceSchema
->;
+export type OpenAICompatChoice = z.infer<typeof OpenAICompatChoiceSchema>;
 
-export const OpenAICompatChatCompletionsUsageSchema = z.object({
+export const OpenAICompatUsageSchema = z.object({
   prompt_tokens: z.number(),
   completion_tokens: z.number(),
   total_tokens: z.number(),
@@ -149,24 +147,20 @@ export const OpenAICompatChatCompletionsUsageSchema = z.object({
   ),
 });
 
-export type OpenAICompatChatCompletionsUsage = z.infer<
-  typeof OpenAICompatChatCompletionsUsageSchema
->;
+export type OpenAICompatUsage = z.infer<typeof OpenAICompatUsageSchema>;
 
-export const OpenAICompatChatCompletionsResponseBodySchema = z.object({
+export const OpenAICompatChatCompletionSchema = z.object({
   id: z.string(),
   object: z.literal("chat.completion"),
   created: z.number(),
   model: z.string(),
-  choices: z.array(OpenAICompatChatCompletionChoiceSchema),
-  usage: z.optional(OpenAICompatChatCompletionsUsageSchema),
+  choices: z.array(OpenAICompatChoiceSchema),
+  usage: z.optional(OpenAICompatUsageSchema),
   system_fingerprint: z.optional(z.string()),
   providerMetadata: z.optional(z.any()),
 });
 
-export type OpenAICompatChatCompletionsResponseBody = z.infer<
-  typeof OpenAICompatChatCompletionsResponseBodySchema
->;
+export type OpenAICompatChatCompletion = z.infer<typeof OpenAICompatChatCompletionSchema>;
 
 export type OpenAICompatMessage = z.infer<typeof OpenAICompatMessageSchema>;
 export type OpenAICompatSystemMessage = z.infer<typeof OpenAICompatSystemMessageSchema>;

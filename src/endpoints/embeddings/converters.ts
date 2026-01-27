@@ -3,9 +3,9 @@ import type { EmbedManyResult } from "ai";
 
 import type {
   OpenAICompatEmbedding,
-  OpenAICompatEmbeddingParams,
-  OpenAICompatEmbeddingResponseBody,
-  OpenAICompatEmbeddingUsage,
+  OpenAICompatEmbeddingsParams,
+  OpenAICompatEmbeddingResponse,
+  OpenAICompatEmbeddingsUsage,
 } from "./schema";
 
 export type EmbeddingCallOptions = {
@@ -17,8 +17,8 @@ function fromOpenAICompatInput(input: string | string[]): string[] {
   return Array.isArray(input) ? input : [input];
 }
 
-export function fromOpenAICompatEmbeddingParams(
-  params: OpenAICompatEmbeddingParams,
+export function fromOpenAICompatEmbeddingsParams(
+  params: OpenAICompatEmbeddingsParams,
 ): EmbeddingCallOptions {
   const { input, ...rest } = params;
   const values = fromOpenAICompatInput(input);
@@ -31,17 +31,17 @@ export function fromOpenAICompatEmbeddingParams(
   };
 }
 
-export function toOpenAICompatEmbeddingResponseBody(
+export function toOpenAICompatEmbedding(
   embedManyResult: EmbedManyResult,
   modelId: string,
-): OpenAICompatEmbeddingResponseBody {
+): OpenAICompatEmbeddingResponse {
   const data: OpenAICompatEmbedding[] = embedManyResult.embeddings.map((embedding, index) => ({
     object: "embedding",
     embedding,
     index,
   }));
 
-  const usage: OpenAICompatEmbeddingUsage = {
+  const usage: OpenAICompatEmbeddingsUsage = {
     prompt_tokens: embedManyResult.usage?.tokens || 0,
     total_tokens: embedManyResult.usage?.tokens || 0,
   };
@@ -55,14 +55,11 @@ export function toOpenAICompatEmbeddingResponseBody(
   };
 }
 
-export function toOpenAICompatEmbeddingResponse(
+export function createOpenAICompatEmbeddingResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
 ): Response {
-  return new Response(
-    JSON.stringify(toOpenAICompatEmbeddingResponseBody(embedManyResult, modelId)),
-    {
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+  return new Response(JSON.stringify(toOpenAICompatEmbedding(embedManyResult, modelId)), {
+    headers: { "Content-Type": "application/json" },
+  });
 }

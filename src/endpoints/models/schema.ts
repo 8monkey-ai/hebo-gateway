@@ -25,7 +25,7 @@ export const OpenAICompatModelSchema = z.catchall(
 
 export type OpenAICompatModel = z.infer<typeof OpenAICompatModelSchema>;
 
-export interface OpenAICompatList<T> {
+export interface OpenAICompatModelList<T> {
   object: "list";
   data: T[];
 }

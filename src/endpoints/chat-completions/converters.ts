@@ -17,7 +17,7 @@ import { jsonSchema, tool } from "ai";
 import type {
   OpenAICompatAssistantMessage,
   OpenAICompatChatCompletionsParams,
-  OpenAICompatChatCompletionsResponseBody,
+  OpenAICompatChatCompletion,
   OpenAICompatContentPart,
   OpenAICompatFinishReason,
   OpenAICompatMessage,
@@ -26,7 +26,7 @@ import type {
   OpenAICompatToolChoice,
   OpenAICompatUserMessage,
   OpenAICompatToolMessage,
-  OpenAICompatChatCompletionsUsage,
+  OpenAICompatUsage,
 } from "./schema";
 
 import { OpenAICompatError } from "../../utils/errors";
@@ -251,10 +251,10 @@ function parseToolOutput(content: string) {
 
 // --- Response Flow ---
 
-export function toOpenAICompatChatCompletionsResponseBody(
+export function toOpenAICompatChatCompletion(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-): OpenAICompatChatCompletionsResponseBody {
+): OpenAICompatChatCompletion {
   const finish_reason = toOpenAICompatFinishReason(result.finishReason);
 
   return {
@@ -273,29 +273,29 @@ export function toOpenAICompatChatCompletionsResponseBody(
     providerMetadata: result.providerMetadata,
   };
 }
-export function toOpenAICompatChatCompletionsResponse(
+export function createOpenAICompatChatCompletionResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(JSON.stringify(toOpenAICompatChatCompletionsResponseBody(result, model)), {
+  return new Response(JSON.stringify(toOpenAICompatChatCompletion(result, model)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toOpenAICompatStream(
+export function toOpenAICompatChatCompletionStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
-    .pipeThrough(new OpenAICompatTransformStream(model))
+    .pipeThrough(new OpenAICompatChatCompletionStream(model))
     .pipeThrough(new SSETransformStream())
     .pipeThrough(new TextEncoderStream());
 }
-export function toOpenAICompatStreamResponse(
+export function createOpenAICompatChatCompletionStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(toOpenAICompatStream(result, model), {
+  return new Response(toOpenAICompatChatCompletionStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -304,7 +304,7 @@ export function toOpenAICompatStreamResponse(
   });
 }
 
-export class OpenAICompatTransformStream extends TransformStream {
+export class OpenAICompatChatCompletionStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -419,7 +419,7 @@ export const toOpenAICompatMessage = (
 
 export function toOpenAICompatUsage(
   usage: LanguageModelUsage | undefined,
-): OpenAICompatChatCompletionsUsage | undefined {
+): OpenAICompatUsage | undefined {
   if (!usage) return undefined;
   return {
     prompt_tokens: usage.inputTokens ?? 0,
