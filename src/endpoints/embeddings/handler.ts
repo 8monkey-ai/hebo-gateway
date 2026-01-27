@@ -7,11 +7,8 @@ import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
-import {
-  fromOpenAICompatibleEmbeddingParams,
-  toOpenAICompatibleEmbeddingResponse,
-} from "./converters";
-import { OpenAICompatibleEmbeddingRequestBodySchema } from "./schema";
+import { fromOpenAICompatEmbeddingParams, toOpenAICompatEmbeddingResponse } from "./converters";
+import { OpenAICompatEmbeddingRequestBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -28,7 +25,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatibleEmbeddingRequestBodySchema.safeParse(json);
+    const parsed = OpenAICompatEmbeddingRequestBodySchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -65,9 +62,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
-    let embedArgs;
+    let embeddingOptions;
     try {
-      embedArgs = fromOpenAICompatibleEmbeddingParams(params);
+      embeddingOptions = fromOpenAICompatEmbeddingParams(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -76,13 +73,13 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     try {
       embedManyResult = await embedMany({
         model: embeddingModel,
-        ...embedArgs,
+        ...embeddingOptions,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toOpenAICompatibleEmbeddingResponse(embedManyResult, modelId);
+    return toOpenAICompatEmbeddingResponse(embedManyResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

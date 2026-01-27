@@ -8,11 +8,11 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  fromOpenAICompatibleChatCompletionsParams,
-  toOpenAICompatibleChatCompletionsResponse,
-  toOpenAICompatibleStreamResponse,
+  fromOpenAICompatChatCompletionsParams,
+  toOpenAICompatChatCompletionsResponse,
+  toOpenAICompatStreamResponse,
 } from "./converters";
-import { OpenAICompatibleChatCompletionsRequestBodySchema } from "./schema";
+import { OpenAICompatChatCompletionsRequestBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -29,7 +29,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatibleChatCompletionsRequestBodySchema.safeParse(json);
+    const parsed = OpenAICompatChatCompletionsRequestBodySchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -66,9 +66,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = provider.languageModel(resolvedModelId);
 
-    let textArgs;
+    let textOptions;
     try {
-      textArgs = fromOpenAICompatibleChatCompletionsParams(params);
+      textOptions = fromOpenAICompatChatCompletionsParams(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -77,10 +77,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       try {
         const result = streamText({
           model: languageModel,
-          ...textArgs,
+          ...textOptions,
         });
 
-        return toOpenAICompatibleStreamResponse(result, modelId);
+        return toOpenAICompatStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
@@ -90,13 +90,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     try {
       generateTextResult = await generateText({
         model: languageModel,
-        ...textArgs,
+        ...textOptions,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toOpenAICompatibleChatCompletionsResponse(generateTextResult, modelId);
+    return toOpenAICompatChatCompletionsResponse(generateTextResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

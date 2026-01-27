@@ -1,48 +1,45 @@
 import * as z from "zod/mini";
 
-export const OpenAICompatibleEmbeddingParamsSchema = z.object({
+export const OpenAICompatEmbeddingParamsSchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
   encoding_format: z.optional(z.enum(["float", "base64"])),
   dimensions: z.optional(z.number()),
   user: z.optional(z.string()),
 });
 
-export type OpenAICompatibleEmbeddingParams = z.infer<typeof OpenAICompatibleEmbeddingParamsSchema>;
+export type OpenAICompatEmbeddingParams = z.infer<typeof OpenAICompatEmbeddingParamsSchema>;
 
-export const OpenAICompatibleEmbeddingRequestBodySchema = z.extend(
-  OpenAICompatibleEmbeddingParamsSchema,
-  {
-    model: z.string(),
-  },
-);
+export const OpenAICompatEmbeddingRequestBodySchema = z.extend(OpenAICompatEmbeddingParamsSchema, {
+  model: z.string(),
+});
 
-export type OpenAICompatibleEmbeddingRequestBody = z.infer<
-  typeof OpenAICompatibleEmbeddingRequestBodySchema
+export type OpenAICompatEmbeddingRequestBody = z.infer<
+  typeof OpenAICompatEmbeddingRequestBodySchema
 >;
 
-export const OpenAICompatibleEmbeddingSchema = z.object({
+export const OpenAICompatEmbeddingSchema = z.object({
   object: z.literal("embedding"),
   embedding: z.array(z.number()),
   index: z.number(),
 });
 
-export type OpenAICompatibleEmbedding = z.infer<typeof OpenAICompatibleEmbeddingSchema>;
+export type OpenAICompatEmbedding = z.infer<typeof OpenAICompatEmbeddingSchema>;
 
-export const OpenAICompatibleEmbeddingUsageSchema = z.object({
+export const OpenAICompatEmbeddingUsageSchema = z.object({
   prompt_tokens: z.number(),
   total_tokens: z.number(),
 });
 
-export type OpenAICompatibleEmbeddingUsage = z.infer<typeof OpenAICompatibleEmbeddingUsageSchema>;
+export type OpenAICompatEmbeddingUsage = z.infer<typeof OpenAICompatEmbeddingUsageSchema>;
 
-export const OpenAICompatibleEmbeddingResponseBodySchema = z.object({
+export const OpenAICompatEmbeddingResponseBodySchema = z.object({
   object: z.literal("list"),
-  data: z.array(OpenAICompatibleEmbeddingSchema),
+  data: z.array(OpenAICompatEmbeddingSchema),
   model: z.string(),
-  usage: OpenAICompatibleEmbeddingUsageSchema,
+  usage: OpenAICompatEmbeddingUsageSchema,
   providerMetadata: z.optional(z.any()),
 });
 
-export type OpenAICompatibleEmbeddingResponseBody = z.infer<
-  typeof OpenAICompatibleEmbeddingResponseBodySchema
+export type OpenAICompatEmbeddingResponseBody = z.infer<
+  typeof OpenAICompatEmbeddingResponseBodySchema
 >;

@@ -1,10 +1,7 @@
 import type { ModelCatalog, CatalogModel } from "../../models/types";
-import type { OpenAICompatibleList, OpenAICompatibleModel } from "./schema";
+import type { OpenAICompatList, OpenAICompatModel } from "./schema";
 
-export function toOpenAICompatibleModel(
-  id: string,
-  catalogModel: CatalogModel,
-): OpenAICompatibleModel {
+export function toOpenAICompatModel(id: string, catalogModel: CatalogModel): OpenAICompatModel {
   const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);
   if (created) {
@@ -14,7 +11,7 @@ export function toOpenAICompatibleModel(
     }
   }
 
-  const model: OpenAICompatibleModel = {
+  const model: OpenAICompatModel = {
     id,
     object: "model",
     created: createdTimestamp,
@@ -38,24 +35,22 @@ export function toOpenAICompatibleModel(
   return model;
 }
 
-export function toOpenAICompatibleModelList(
-  models: ModelCatalog,
-): OpenAICompatibleList<OpenAICompatibleModel> {
+export function toOpenAICompatModelList(models: ModelCatalog): OpenAICompatList<OpenAICompatModel> {
   return {
     object: "list",
     data: Object.entries(models).map(([id, catalogModel]) =>
-      toOpenAICompatibleModel(id, catalogModel!),
+      toOpenAICompatModel(id, catalogModel!),
     ),
   };
 }
-export function toOpenAICompatibleModelListResponse(models: ModelCatalog): Response {
-  return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
+export function toOpenAICompatModelListResponse(models: ModelCatalog): Response {
+  return new Response(JSON.stringify(toOpenAICompatModelList(models)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toOpenAICompatibleModelResponse(id: string, catalogModel: CatalogModel): Response {
-  return new Response(JSON.stringify(toOpenAICompatibleModel(id, catalogModel)), {
+export function toOpenAICompatModelResponse(id: string, catalogModel: CatalogModel): Response {
+  return new Response(JSON.stringify(toOpenAICompatModel(id, catalogModel)), {
     headers: { "Content-Type": "application/json" },
   });
 }

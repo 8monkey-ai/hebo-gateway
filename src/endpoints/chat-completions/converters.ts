@@ -15,23 +15,23 @@ import type {
 import { jsonSchema, tool } from "ai";
 
 import type {
-  OpenAICompatibleAssistantMessage,
-  OpenAICompatibleChatCompletionsParams,
-  OpenAICompatibleChatCompletionsResponseBody,
-  OpenAICompatibleContentPart,
-  OpenAICompatibleFinishReason,
-  OpenAICompatibleMessage,
-  OpenAICompatibleMessageToolCall,
-  OpenAICompatibleTool,
-  OpenAICompatibleToolChoice,
-  OpenAICompatibleUserMessage,
-  OpenAICompatibleToolMessage,
-  OpenAICompatibleChatCompletionsUsage,
+  OpenAICompatAssistantMessage,
+  OpenAICompatChatCompletionsParams,
+  OpenAICompatChatCompletionsResponseBody,
+  OpenAICompatContentPart,
+  OpenAICompatFinishReason,
+  OpenAICompatMessage,
+  OpenAICompatMessageToolCall,
+  OpenAICompatTool,
+  OpenAICompatToolChoice,
+  OpenAICompatUserMessage,
+  OpenAICompatToolMessage,
+  OpenAICompatChatCompletionsUsage,
 } from "./schema";
 
 import { OpenAICompatError } from "../../utils/errors";
 
-export type VercelAIChatCompletionsModelParams = {
+export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
@@ -41,15 +41,15 @@ export type VercelAIChatCompletionsModelParams = {
 
 // --- Request Flow ---
 
-export function fromOpenAICompatibleChatCompletionsParams(
-  params: OpenAICompatibleChatCompletionsParams,
-): VercelAIChatCompletionsModelParams {
+export function fromOpenAICompatChatCompletionsParams(
+  params: OpenAICompatChatCompletionsParams,
+): TextCallOptions {
   const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
   return {
-    messages: fromOpenAICompatibleMessages(messages),
-    tools: fromOpenAICompatibleTools(tools),
-    toolChoice: fromOpenAICompatibleToolChoice(tool_choice),
+    messages: fromOpenAICompatMessages(messages),
+    tools: fromOpenAICompatTools(tools),
+    toolChoice: fromOpenAICompatToolChoice(tool_choice),
     temperature,
     providerOptions: {
       openAICompat: rest,
@@ -57,7 +57,7 @@ export function fromOpenAICompatibleChatCompletionsParams(
   };
 }
 
-export function fromOpenAICompatibleMessages(messages: OpenAICompatibleMessage[]): ModelMessage[] {
+export function fromOpenAICompatMessages(messages: OpenAICompatMessage[]): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -70,39 +70,37 @@ export function fromOpenAICompatibleMessages(messages: OpenAICompatibleMessage[]
     }
 
     if (message.role === "user") {
-      modelMessages.push(fromOpenAICompatibleUserMessage(message));
+      modelMessages.push(fromOpenAICompatUserMessage(message));
       continue;
     }
 
-    modelMessages.push(fromOpenAICompatibleAssistantMessage(message));
-    const toolResult = fromOpenAICompatibleToolResultMessage(message, toolById);
+    modelMessages.push(fromOpenAICompatAssistantMessage(message));
+    const toolResult = fromOpenAICompatToolResultMessage(message, toolById);
     if (toolResult) modelMessages.push(toolResult);
   }
 
   return modelMessages;
 }
 
-function indexToolMessages(messages: OpenAICompatibleMessage[]) {
-  const map = new Map<string, OpenAICompatibleToolMessage>();
+function indexToolMessages(messages: OpenAICompatMessage[]) {
+  const map = new Map<string, OpenAICompatToolMessage>();
   for (const m of messages) {
     if (m.role === "tool") map.set(m.tool_call_id, m);
   }
   return map;
 }
 
-export function fromOpenAICompatibleUserMessage(
-  message: OpenAICompatibleUserMessage,
-): ModelMessage {
+export function fromOpenAICompatUserMessage(message: OpenAICompatUserMessage): ModelMessage {
   return {
     role: "user",
     content: Array.isArray(message.content)
-      ? fromOpenAICompatibleContent(message.content)
+      ? fromOpenAICompatContent(message.content)
       : message.content,
   };
 }
 
-export function fromOpenAICompatibleAssistantMessage(
-  message: OpenAICompatibleAssistantMessage,
+export function fromOpenAICompatAssistantMessage(
+  message: OpenAICompatAssistantMessage,
 ): ModelMessage {
   const { tool_calls, role, content } = message;
 
@@ -115,7 +113,7 @@ export function fromOpenAICompatibleAssistantMessage(
 
   return {
     role: role,
-    content: tool_calls.map((tc: OpenAICompatibleMessageToolCall) => {
+    content: tool_calls.map((tc: OpenAICompatMessageToolCall) => {
       const { id, function: fn } = tc;
       return {
         type: "tool-call",
@@ -127,9 +125,9 @@ export function fromOpenAICompatibleAssistantMessage(
   };
 }
 
-export function fromOpenAICompatibleToolResultMessage(
-  message: OpenAICompatibleAssistantMessage,
-  toolById: Map<string, OpenAICompatibleToolMessage>,
+export function fromOpenAICompatToolResultMessage(
+  message: OpenAICompatAssistantMessage,
+  toolById: Map<string, OpenAICompatToolMessage>,
 ): ModelMessage | undefined {
   const toolCalls = message.tool_calls ?? [];
   if (toolCalls.length === 0) return undefined;
@@ -150,7 +148,7 @@ export function fromOpenAICompatibleToolResultMessage(
   return toolResultParts.length > 0 ? { role: "tool", content: toolResultParts } : undefined;
 }
 
-export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]): UserContent {
+export function fromOpenAICompatContent(content: OpenAICompatContentPart[]): UserContent {
   return content.map((part) => {
     if (part.type === "image_url") {
       const url = part.image_url.url;
@@ -209,8 +207,8 @@ export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart
   });
 }
 
-export const fromOpenAICompatibleTools = (
-  tools: OpenAICompatibleTool[] | undefined,
+export const fromOpenAICompatTools = (
+  tools: OpenAICompatTool[] | undefined,
 ): ToolSet | undefined => {
   if (!tools) {
     return;
@@ -226,8 +224,8 @@ export const fromOpenAICompatibleTools = (
   return toolSet;
 };
 
-export const fromOpenAICompatibleToolChoice = (
-  toolChoice: OpenAICompatibleToolChoice | undefined,
+export const fromOpenAICompatToolChoice = (
+  toolChoice: OpenAICompatToolChoice | undefined,
 ): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
     return undefined;
@@ -253,11 +251,11 @@ function parseToolOutput(content: string) {
 
 // --- Response Flow ---
 
-export function toOpenAICompatibleChatCompletionsResponseBody(
+export function toOpenAICompatChatCompletionsResponseBody(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-): OpenAICompatibleChatCompletionsResponseBody {
-  const finish_reason = toOpenAICompatibleFinishReason(result.finishReason);
+): OpenAICompatChatCompletionsResponseBody {
+  const finish_reason = toOpenAICompatFinishReason(result.finishReason);
 
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
@@ -267,40 +265,37 @@ export function toOpenAICompatibleChatCompletionsResponseBody(
     choices: [
       {
         index: 0,
-        message: toOpenAICompatibleMessage(result),
+        message: toOpenAICompatMessage(result),
         finish_reason,
       },
     ],
-    usage: result.usage && toOpenAICompatibleUsage(result.usage),
+    usage: result.usage && toOpenAICompatUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
 }
-export function toOpenAICompatibleChatCompletionsResponse(
+export function toOpenAICompatChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(
-    JSON.stringify(toOpenAICompatibleChatCompletionsResponseBody(result, model)),
-    {
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+  return new Response(JSON.stringify(toOpenAICompatChatCompletionsResponseBody(result, model)), {
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
-export function toOpenAICompatibleStream(
+export function toOpenAICompatStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
-    .pipeThrough(new OpenAICompatibleTransformStream(model))
+    .pipeThrough(new OpenAICompatTransformStream(model))
     .pipeThrough(new SSETransformStream())
     .pipeThrough(new TextEncoderStream());
 }
-export function toOpenAICompatibleStreamResponse(
+export function toOpenAICompatStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(toOpenAICompatibleStream(result, model), {
+  return new Response(toOpenAICompatStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -309,7 +304,7 @@ export function toOpenAICompatibleStreamResponse(
   });
 }
 
-export class OpenAICompatibleTransformStream extends TransformStream {
+export class OpenAICompatTransformStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -342,7 +337,7 @@ export class OpenAICompatibleTransformStream extends TransformStream {
               createChunk({
                 tool_calls: [
                   {
-                    ...toOpenAICompatibleToolCall(part.toolCallId, part.toolName, part.input),
+                    ...toOpenAICompatToolCall(part.toolCallId, part.toolName, part.input),
                     index: toolCallIndexCounter++,
                   },
                 ],
@@ -355,8 +350,8 @@ export class OpenAICompatibleTransformStream extends TransformStream {
             controller.enqueue(
               createChunk(
                 {},
-                toOpenAICompatibleFinishReason(part.finishReason),
-                toOpenAICompatibleUsage(part.totalUsage),
+                toOpenAICompatFinishReason(part.finishReason),
+                toOpenAICompatUsage(part.totalUsage),
               ),
             );
             break;
@@ -394,17 +389,17 @@ export class SSETransformStream extends TransformStream {
   }
 }
 
-export const toOpenAICompatibleMessage = (
+export const toOpenAICompatMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
-): OpenAICompatibleAssistantMessage => {
-  const message: OpenAICompatibleAssistantMessage = {
+): OpenAICompatAssistantMessage => {
+  const message: OpenAICompatAssistantMessage = {
     role: "assistant",
     content: null,
   };
 
   if (result.toolCalls && result.toolCalls.length > 0) {
     message.tool_calls = result.toolCalls.map((toolCall) =>
-      toOpenAICompatibleToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
+      toOpenAICompatToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
     );
   }
 
@@ -422,9 +417,9 @@ export const toOpenAICompatibleMessage = (
   return message;
 };
 
-export function toOpenAICompatibleUsage(
+export function toOpenAICompatUsage(
   usage: LanguageModelUsage | undefined,
-): OpenAICompatibleChatCompletionsUsage | undefined {
+): OpenAICompatChatCompletionsUsage | undefined {
   if (!usage) return undefined;
   return {
     prompt_tokens: usage.inputTokens ?? 0,
@@ -439,11 +434,11 @@ export function toOpenAICompatibleUsage(
   };
 }
 
-export function toOpenAICompatibleToolCall(
+export function toOpenAICompatToolCall(
   id: string,
   name: string,
   args: unknown,
-): OpenAICompatibleMessageToolCall {
+): OpenAICompatMessageToolCall {
   return {
     id,
     type: "function",
@@ -454,11 +449,11 @@ export function toOpenAICompatibleToolCall(
   };
 }
 
-export const toOpenAICompatibleFinishReason = (
+export const toOpenAICompatFinishReason = (
   finishReason: FinishReason,
-): OpenAICompatibleFinishReason => {
+): OpenAICompatFinishReason => {
   if (finishReason === "error" || finishReason === "other") {
     return "stop";
   }
-  return (finishReason as string).replaceAll("-", "_") as OpenAICompatibleFinishReason;
+  return (finishReason as string).replaceAll("-", "_") as OpenAICompatFinishReason;
 };
