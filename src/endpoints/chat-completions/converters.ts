@@ -16,7 +16,7 @@ import { jsonSchema, tool } from "ai";
 
 import type {
   CompletionsInputs,
-  CompletionsMessageToolCall,
+  CompletionsToolCall,
   CompletionsTool,
   CompletionsToolChoice,
   CompletionsContentPart,
@@ -113,7 +113,7 @@ export function fromCompletionsAssistantMessage(
 
   return {
     role: role,
-    content: tool_calls.map((tc: CompletionsMessageToolCall) => {
+    content: tool_calls.map((tc: CompletionsToolCall) => {
       const { id, function: fn } = tc;
       return {
         type: "tool-call",
@@ -436,11 +436,7 @@ export function toCompletionUsage(
   };
 }
 
-export function toCompletionToolCall(
-  id: string,
-  name: string,
-  args: unknown,
-): CompletionsMessageToolCall {
+export function toCompletionToolCall(id: string, name: string, args: unknown): CompletionsToolCall {
   return {
     id,
     type: "function",

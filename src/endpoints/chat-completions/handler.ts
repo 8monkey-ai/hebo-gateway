@@ -22,14 +22,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
-    let json;
+    let body;
     try {
-      json = await req.json();
+      body = await req.json();
     } catch {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = CompletionsBodySchema.safeParse(json);
+    const parsed = CompletionsBodySchema.safeParse(body);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -40,8 +40,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       );
     }
 
-    const requestBody = parsed.data;
-    const { model: modelId, stream, ...inputs } = requestBody;
+    const { model: modelId, stream, ...inputs } = parsed.data;
 
     let resolvedModelId;
     try {
@@ -74,21 +73,22 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const languageModel = provider.languageModel(resolvedModelId);
 
     if (stream) {
+      let result;
       try {
-        const result = streamText({
+        result = streamText({
           model: languageModel,
           ...textOptions,
         });
-
-        return createCompletionsStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
+
+      return createCompletionsStreamResponse(result, modelId);
     }
 
-    let generateTextResult;
+    let result;
     try {
-      generateTextResult = await generateText({
+      result = await generateText({
         model: languageModel,
         ...textOptions,
       });
@@ -96,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createCompletionsResponse(generateTextResult, modelId);
+    return createCompletionsResponse(result, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

@@ -27,7 +27,7 @@ export type CompletionsContentPart =
   | z.infer<typeof CompletionsContentPartImageSchema>
   | z.infer<typeof CompletionsContentPartFileSchema>;
 
-export const CompletionsMessageToolCallSchema = z.object({
+export const CompletionsToolCallSchema = z.object({
   type: z.literal("function"),
   id: z.string(),
   function: z.object({
@@ -35,7 +35,7 @@ export const CompletionsMessageToolCallSchema = z.object({
     name: z.string(),
   }),
 });
-export type CompletionsMessageToolCall = z.infer<typeof CompletionsMessageToolCallSchema>;
+export type CompletionsToolCall = z.infer<typeof CompletionsToolCallSchema>;
 
 export const CompletionsSystemMessageSchema = z.object({
   role: z.literal("system"),
@@ -61,7 +61,7 @@ export type CompletionsUserMessage = z.infer<typeof CompletionsUserMessageSchema
 export const CompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
   content: z.union([z.string(), z.null()]),
-  tool_calls: z.optional(z.array(CompletionsMessageToolCallSchema)),
+  tool_calls: z.optional(z.array(CompletionsToolCallSchema)),
   reasoning: z.optional(z.string()),
   reasoning_content: z.optional(z.string()),
 });

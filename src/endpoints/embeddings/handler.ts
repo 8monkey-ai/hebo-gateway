@@ -18,14 +18,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
-    let json;
+    let body;
     try {
-      json = await req.json();
+      body = await req.json();
     } catch {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = EmbeddingsBodySchema.safeParse(json);
+    const parsed = EmbeddingsBodySchema.safeParse(body);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -36,8 +36,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       );
     }
 
-    const requestBody = parsed.data;
-    const { model: modelId, ...inputs } = requestBody;
+    const { model: modelId, ...inputs } = parsed.data;
 
     let resolvedModelId;
     try {
@@ -69,9 +68,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
-    let embedManyResult;
+    let result;
     try {
-      embedManyResult = await embedMany({
+      result = await embedMany({
         model: embeddingModel,
         ...embedOptions,
       });
@@ -79,7 +78,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createEmbeddingsResponse(embedManyResult, modelId);
+    return createEmbeddingsResponse(result, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };
