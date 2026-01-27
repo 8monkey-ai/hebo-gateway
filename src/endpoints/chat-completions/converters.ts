@@ -6,6 +6,7 @@ import type {
   ToolResultPart,
   ToolSet,
   ModelMessage,
+  UserContent,
   LanguageModelUsage,
 } from "ai";
 
@@ -31,7 +32,7 @@ import { toOpenAICompatibleError } from "../../utils/errors";
 export type VercelAIChatCompletionsModelParams = {
   messages: ModelMessage[];
   tools?: ToolSet;
-  toolChoice?: ToolChoice<unknown>;
+  toolChoice?: ToolChoice<ToolSet>;
   temperature?: number;
   providerOptions: Record<string, unknown>;
 };
@@ -91,7 +92,7 @@ export function fromOpenAICompatibleUserMessage(
   if (Array.isArray(message.content)) {
     return {
       role: "user",
-      content: fromOpenAICompatibleContent(message.content) as unknown as ModelMessage["content"],
+      content: fromOpenAICompatibleContent(message.content) as unknown as UserContent,
     };
   }
   return message as ModelMessage;
@@ -220,7 +221,7 @@ export const fromOpenAICompatibleTools = (
 
 export const fromOpenAICompatibleToolChoice = (
   toolChoice: OpenAICompatibleToolChoice | undefined,
-): ToolChoice<unknown> | undefined => {
+): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
     return undefined;
   }
@@ -246,7 +247,7 @@ function parseToolOutput(content: string) {
 // --- Response Flow ---
 
 export function toOpenAICompatibleChatCompletionsResponseBody(
-  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: GenerateTextResult<ToolSet, any>,
   model: string,
 ): OpenAICompatibleChatCompletionsResponseBody {
   const finish_reason = toOpenAICompatibleFinishReason(result.finishReason);
@@ -268,7 +269,7 @@ export function toOpenAICompatibleChatCompletionsResponseBody(
   };
 }
 export function toOpenAICompatibleChatCompletionsResponse(
-  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: GenerateTextResult<ToolSet, any>,
   model: string,
 ): Response {
   return new Response(
@@ -280,7 +281,7 @@ export function toOpenAICompatibleChatCompletionsResponse(
 }
 
 export function toOpenAICompatibleStream(
-  result: StreamTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: StreamTextResult<ToolSet, any>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
@@ -289,7 +290,7 @@ export function toOpenAICompatibleStream(
     .pipeThrough(new TextEncoderStream());
 }
 export function toOpenAICompatibleStreamResponse(
-  result: StreamTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: StreamTextResult<ToolSet, any>,
   model: string,
 ): Response {
   return new Response(toOpenAICompatibleStream(result, model), {
@@ -301,7 +302,7 @@ export function toOpenAICompatibleStreamResponse(
   });
 }
 
-export class OpenAICompatibleTransformStream extends TransformStream<unknown, unknown> {
+export class OpenAICompatibleTransformStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -373,7 +374,7 @@ export class OpenAICompatibleTransformStream extends TransformStream<unknown, un
   }
 }
 
-export class SSETransformStream extends TransformStream<unknown, string> {
+export class SSETransformStream extends TransformStream {
   constructor() {
     super({
       transform(chunk, controller) {
@@ -387,7 +388,7 @@ export class SSETransformStream extends TransformStream<unknown, string> {
 }
 
 export const toOpenAICompatibleMessage = (
-  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: GenerateTextResult<ToolSet, any>,
 ): OpenAICompatibleAssistantMessage => {
   const message: OpenAICompatibleAssistantMessage = {
     role: "assistant",
@@ -426,7 +427,7 @@ export function toOpenAICompatibleUsage(
       reasoning_tokens: usage.outputTokenDetails.reasoningTokens ?? 0,
     },
     prompt_tokens_details: {
-      cached_tokens: usage.inputTokenDetails.cachedReadTokens ?? 0,
+      cached_tokens: usage.inputTokenDetails.cacheReadTokens ?? 0,
     },
   };
 }

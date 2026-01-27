@@ -1,3 +1,5 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
+
 import { generateText, streamText } from "ai";
 import * as z from "zod/mini";
 
@@ -62,7 +64,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
       const providerOptions = {
         [languageModel.provider]: rawOptions,
-      };
+      } as unknown as ProviderOptions;
 
       if (stream) {
         try {

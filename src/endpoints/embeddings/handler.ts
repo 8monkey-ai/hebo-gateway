@@ -1,3 +1,5 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
+
 import { embedMany } from "ai";
 import * as z from "zod/mini";
 
@@ -55,7 +57,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
       const providerOptions = {
         [embeddingModel.provider]: rawOptions,
-      };
+      } as unknown as ProviderOptions;
 
       let embedManyResult;
       try {
