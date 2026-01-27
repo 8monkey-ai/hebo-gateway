@@ -65,7 +65,6 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
           providerOptions,
         });
       } catch (error) {
-        console.error(`[embeddings] Error generating embeddings:`, error);
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
 

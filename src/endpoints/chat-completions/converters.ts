@@ -423,10 +423,10 @@ export function toOpenAICompatibleUsage(
     completion_tokens: usage.outputTokens ?? 0,
     total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
     completion_tokens_details: {
-      reasoning_tokens: usage.reasoningTokens ?? 0,
+      reasoning_tokens: usage.outputTokenDetails.reasoningTokens ?? 0,
     },
     prompt_tokens_details: {
-      cached_tokens: usage.cachedInputTokens ?? 0,
+      cached_tokens: usage.inputTokenDetails.cachedReadTokens ?? 0,
     },
   };
 }
