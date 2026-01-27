@@ -26,31 +26,31 @@
     "type": "git",
     "url": "git+https://github.com/8monkey-ai/hebo-gateway.git"
   },
-  "type": "module",
-  "sideEffects": false,
   "files": [
     "dist"
   ],
+  "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./endpoints/models": {
-      "import": "./dist/endpoints/models/index.js",
-      "types": "./dist/endpoints/models/index.d.ts"
+      "types": "./dist/endpoints/models/index.d.ts",
+      "import": "./dist/endpoints/models/index.js"
     },
     "./endpoints/embeddings": {
-      "import": "./dist/endpoints/embeddings/index.js",
-      "types": "./dist/endpoints/embeddings/index.d.ts"
+      "types": "./dist/endpoints/embeddings/index.d.ts",
+      "import": "./dist/endpoints/embeddings/index.js"
     },
     "./models": {
-      "import": "./dist/models/index.js",
-      "types": "./dist/models/index.d.ts"
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js"
     },
     "./providers": {
-      "import": "./dist/providers/index.js",
-      "types": "./dist/providers/index.d.ts"
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js"
     }
   },
   "scripts": {

@@ -1,13 +1,16 @@
 import type { GatewayHooks, RequestPatch } from "../types";
 
-const applyRequestPatch = (request: Request, patch: RequestPatch) => {
+const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   if (!patch.headers && patch.body === undefined) return request;
 
+  if (!patch.headers) {
+    // eslint-disable-next-line no-invalid-fetch-options
+    return new Request(request, { body: patch.body });
+  }
+
   const headers = new Headers(request.headers);
-  if (patch.headers) {
-    for (const [key, value] of new Headers(patch.headers)) {
-      headers.set(key, value);
-    }
+  for (const [key, value] of new Headers(patch.headers)) {
+    headers.set(key, value);
   }
 
   const init: RequestInit = { headers };
@@ -22,19 +25,14 @@ export const withHooks = (
 ) => {
   const handler = async (request: Request): Promise<Response> => {
     const beforeResult = await hooks?.before?.({ request });
+    if (beforeResult instanceof Response) return beforeResult;
 
-    if (beforeResult instanceof Response) {
-      return beforeResult;
-    }
-
-    const nextRequest =
-      beforeResult && ("headers" in beforeResult || "body" in beforeResult)
-        ? applyRequestPatch(request, beforeResult)
-        : request;
+    const nextRequest = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
 
     const response = await run(nextRequest);
 
-    return (await hooks?.after?.({ response })) ?? response;
+    const after = await hooks?.after?.({ response });
+    return after ?? response;
   };
   return handler;
 };
