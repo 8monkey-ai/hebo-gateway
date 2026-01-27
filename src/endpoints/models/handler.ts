@@ -2,10 +2,11 @@ import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
 import { createErrorResponse } from "../../utils/errors";
+import { withHooks } from "../../utils/hooks";
 import { toOpenAICompatibleModelListResponse, toOpenAICompatibleModelResponse } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
-  const { models } = parseConfig(config);
+  const { models, hooks } = parseConfig(config);
 
   // eslint-disable-next-line require-await
   const handler = async (req: Request): Promise<Response> => {
@@ -34,5 +35,5 @@ export const models = (config: GatewayConfig): Endpoint => {
     return toOpenAICompatibleModelResponse(modelId, model);
   };
 
-  return { handler: handler as typeof fetch };
+  return { handler: withHooks(hooks, handler) };
 };

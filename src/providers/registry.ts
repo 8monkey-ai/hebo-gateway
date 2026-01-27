@@ -4,20 +4,22 @@ import { customProvider, type ProviderRegistryProvider } from "ai";
 
 import type { ModelCatalog, ModelId } from "../models/types";
 
-export const resolveProvider = (
-  providers: ProviderRegistryProvider,
-  models: ModelCatalog,
-  modelId: ModelId,
-  modality: "text" | "image" | "audio" | "video" | "embeddings",
-) => {
+export const resolveProvider = (args: {
+  providers: ProviderRegistryProvider;
+  models: ModelCatalog;
+  modelId: ModelId;
+  operation: "text" | "embeddings";
+}) => {
+  const { providers, models, modelId, operation } = args;
+
   const catalogModel = models[modelId];
 
   if (!catalogModel) {
     throw new Error(`Model '${modelId}' not found in catalog`);
   }
 
-  if (!catalogModel.modalities.output.includes(modality)) {
-    throw new Error(`Model '${modelId}' does not support '${modality}' output`);
+  if (!catalogModel.modalities.output.includes(operation)) {
+    throw new Error(`Model '${modelId}' does not support '${operation}' output`);
   }
 
   const resolvedProvider = catalogModel.providers[0];
@@ -26,7 +28,7 @@ export const resolveProvider = (
     throw new Error(`No providers configured for model '${modelId}'`);
   }
 
-  switch (modality) {
+  switch (operation) {
     case "text":
       return customProvider({
         languageModels: {
@@ -40,7 +42,7 @@ export const resolveProvider = (
         },
       });
     default:
-      throw new Error(`Modality '${modality}' is not yet supported`);
+      throw new Error(`Operation '${operation}' is not yet supported`);
   }
 };
 

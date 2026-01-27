@@ -1,5 +1,5 @@
-import { createProviderRegistry } from "ai";
-import { MockLanguageModelV3, MockProviderV3, simulateReadableStream } from "ai/test";
+import { createProviderRegistry, simulateReadableStream } from "ai";
+import { MockLanguageModelV3, MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";

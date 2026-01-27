@@ -22,12 +22,12 @@ test("Voyage 4 Lite ID transformation in gateway config", () => {
   const modelId = "voyage/voyage-4-lite";
 
   // 1. Resolve the provider for embeddings
-  const provider = resolveProvider(
-    parsedConfig.providers,
-    parsedConfig.models,
+  const provider = resolveProvider({
+    providers: parsedConfig.providers,
+    models: parsedConfig.models,
     modelId,
-    "embeddings",
-  );
+    operation: "embeddings",
+  });
 
   // 2. Get the actual embedding model instance
   const embeddingModel = provider.embeddingModel(modelId);

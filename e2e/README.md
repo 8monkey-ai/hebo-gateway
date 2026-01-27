@@ -35,7 +35,7 @@ Route: `/v1/gateway/models`
 
 ```sh
 cd e2e/next
-bun next dev
+bun --bun next dev
 ```
 
 Routes:
@@ -47,7 +47,7 @@ Routes:
 
 ```sh
 cd e2e/tanstack
-bun vite dev
+bun --bun vite dev
 ```
 
 Route: `/api/gateway/models`

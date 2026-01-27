@@ -4,9 +4,9 @@ Roll your own AI gateway for full control over models, providers, routing logic,
 
 ## Overview
 
-Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as stand-alone service.
+Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as a standalone service.
 
-In contrast to other projects like LiteLLM or Portkey, it's built from the ground-up to be highly-extensible to your own needs. This would not have been possible without standing on the shoulders of giants, in this case the Vercel AI SDK.
+In contrast to other projects like LiteLLM or Portkey, it's built from the ground up to be highly extensible to your own needs. This would not have been possible without standing on the shoulders of giants, in this case the Vercel AI SDK.
 
 ## Features
 
@@ -20,7 +20,7 @@ In contrast to other projects like LiteLLM or Portkey, it's built from the groun
 
 ## Yet Another AI Gateway?
 
-Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to get started quickly with a managed service and a shared catalog. LiteLLM and Portkey target teams that need enterprise control by providing a self-hosted gateway. But all of them are off-the shelve solutions, none allows for true extensibility. Hebo Gateway is for teams that want the same conveniences, but fully own their gateway, integrate it into their own applications and host on their own infrastructure.
+Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to get started quickly with a managed service and a shared catalog. LiteLLM and Portkey target teams that need enterprise control by providing a self-hosted gateway. But all of them are off-the-shelf solutions; none allow for true extensibility. Hebo Gateway is for teams that want the same conveniences, but fully own their gateway, integrate it into their own applications and host on their own infrastructure.
 
 - **Bring your own routing logic.** Hooks let you implement custom auth, rate limits, observability, and traffic shaping without forking a vendor.
 - **Provider-native compatibility.** It speaks OpenAI-compatible APIs and accepts any Vercel AI SDK provider, so you can plug in existing SDKs and credentials quickly.
@@ -31,7 +31,7 @@ Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to 
 ## Installation
 
 ```bash
-bun add @hebo-ai/gateway
+bun add @hebo-ai/gateway ai @ai-sdk/groq
 ```
 
 ## Quickstart
@@ -39,12 +39,9 @@ bun add @hebo-ai/gateway
 ### Configuration
 
 ```ts
-import {
-  gateway,
-  createGroqWithCanonicalIds,
-  createModelCatalog,
-  gptOss20b, gptOss
-} from "@hebo-ai/gateway";
+import { createModelCatalog, gateway } from "@hebo-ai/gateway";
+import { groqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
+import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
@@ -62,7 +59,7 @@ export const gw = gateway({
       providers: ["groq"],
     }),
     // Or add a whole model family
-    ...gptOss["all"].map((model) => 
+    ...gptOss["all"].map((model) =>
       model({})
     ),
   ),
@@ -92,7 +89,7 @@ console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 
 ### Call the Gateway
 
-Since Hebo Gateway exposes OpenAI-Compatible endpoints, it can be used with a broad set of common AI SDKs like Vercel AI SDK, TanStack AI, Langchain, the official OpenAI SDK and others.
+Since Hebo Gateway exposes OpenAI-compatible endpoints, it can be used with a broad set of common AI SDKs like Vercel AI SDK, TanStack AI, LangChain, the official OpenAI SDK and others.
 
 Here is a quick example using the Vercel AI SDK:
 
@@ -106,6 +103,8 @@ const hebo = createOpenAICompatible({
 });
 
 const { text } = await generateText({
+  // Notice how this is using 'openai/gpt-oss-20b' instead of 'gpt-oss-20b'
+  // The gateway automatically maps modelIDs to the upstream provider ones
   model: hebo("openai/gpt-oss-20b"),
   prompt: "Tell me a joke about monkeys",
 });
@@ -146,6 +145,12 @@ console.log(`🐒 Hebo Gateway is running with Hono framework`);
 `app/api/gateway/[...all]/route.ts`
 
 ```ts
+const gw = gateway({
+  // Required: add `basePath` to your gateway config
+  basePath: "/api/gateway",
+  // ...
+});
+
 export const POST = gw.handler, GET = gw.handler;
 ```
 
@@ -232,7 +237,9 @@ Hebo Gateway ships model presets under `models/presets`, exported from the packa
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
 
 ```ts
-import { createModelCatalog, claude, claudeSonnet45, gptOss20b } from "@hebo-ai/gateway";
+import { createModelCatalog } from "@hebo-ai/gateway";
+import { gptOss20b } from "@hebo-ai/gateway/models/gpt-oss";
+import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/claude";
 
 // Individual preset
 const models = createModelCatalog(
@@ -285,7 +292,7 @@ const gw = gateway({
 
 ### Hooks
 
-Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality.
+Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality. All hooks are available as async and non-async.
 
 ```ts
 const gw = gateway({
@@ -296,29 +303,59 @@ const gw = gateway({
     // ...
   },
   hooks: {
-    before: async (request: Request) => {
+    /**
+     * Runs before any endpoint handler logic.
+     * @param ctx.request Incoming request.
+     * @returns Optional RequestPatch to merge into headers / override body.
+     * Returning a Response stops execution of the endpoint.
+     */
+    before: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
       // Example Use Cases:
       // - Transform request body
       // - Verify authentication
       // - Enforce rate limits
       // - Observability integration
+      return undefined;
     },
-    resolveModelId: async (modelId: string) => {
+    /**
+     * Maps a user-provided model ID or alias to a canonical ID.
+     * @param ctx.modelId Incoming model ID.
+     * @returns Canonical model ID or undefined to keep original.
+     */
+    resolveModelId: async (ctx: { modelId: ModelId }): Promise<ModelId | void> => {
       // Example Use Cases:
       // - Resolve modelAlias to modelId
+      return undefined;
     },
-    resolveProvider: async (
-      originalModelId: string,
-      resolvedModelId: string
-    ) => {
+    /**
+     * Picks a provider instance for the request.
+     * @param ctx.providers Provider registry.
+     * @param ctx.models ModelCatalog from config.
+     * @param ctx.modelId Resolved model ID.
+     * @param ctx.operation Operation type ("text" | "embeddings").
+     * @returns ProviderV3 to override, or undefined to use default.
+     */
+    resolveProvider: async (ctx: {
+      providers: ProviderRegistryProvider;
+      models: ModelCatalog;
+      modelId: ModelId;
+      operation: "text" | "embeddings";
+    }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
       // - Bring-your-own-key authentication
+      return undefined;
     },
-    after: async (response: Response) => {
+    /**
+     * Runs after the endpoint handler.
+     * @param ctx.response Response returned by the handler.
+     * @returns Response to replace, or undefined to keep original.
+     */
+    after: async (ctx: { response: Response }): Promise<Response | void> => {
       // Example Use Cases:
       // - Transform response
       // - Response logging
+      return undefined;
     },
   },
 });
@@ -340,51 +377,49 @@ const app = new Elysia()
 console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
+## Low-level Schemas & Converters
 
-## Low-level functions via deep imports
-
-We also provide low-level helper functions for advanced use cases. They are available via deep-imports and completely tree-shakable.
-
-### Schema
+We also provide full schemas, helper functions and types to convert between OpenAI <> Vercel AI SDK for advanced use cases like creating your own endpoint. They are available via deep-imports and completely tree-shakeable.
 
 ```ts
+import { streamText } from "ai";
+import { createGroq } from "@ai-sdk/groq";
+import * as z from "zod";
 import {
-  // Full schema
-  OpenAICompatChatCompletionsParams, // Request
-  OpenAICompatChatCompletion, // Response
+  OpenAICompatibleChatCompletionsParamsSchema,
+  fromOpenAICompatibleChatCompletionsParams,
+  toOpenAICompatibleStreamResponse,
+} from "@hebo-ai/gateway/endpoints/chat-completions";
 
-  // Individual parameters
-  OpenAICompatMessage,
-  OpenAICompatTemperatureRange,
-  OpenAICompatTool,
-  OpenAICompatToolChoice,
-  OpenAICompatReasoningEffort,
-  OpenAICompatReasoning,
-  // ...
-} from "hebo-ai/gateway/oai-compat/schema";
+const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+
+export async function handler(req: Request): Promise<Response> {
+
+  const body = await req.json();
+
+  const parsed = OpenAICompatibleChatCompletionsParamsSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response(z.prettifyError(parsed.error), { status: 422 });
+  }
+
+  const { model, ...params } = parsed.data;
+
+  const { messages, tools, toolChoice, temperature, providerOptions } =
+    fromOpenAICompatibleChatCompletionsParams(params);
+
+  const result = await streamText({
+    model: groq(model),
+    messages,
+    tools,
+    toolChoice,
+    temperature,
+    providerOptions: { groq: providerOptions },
+  });
+
+  return toOpenAICompatibleStreamResponse(result, model);
+}
 ```
 
-### Message conversion
+Non-streaming versions are available via `toOpenAICompatibleChatCompletionsResponse`. Equivalent interfaces are available in the `embeddings` and `models` endpoints.
 
-```ts
-import {
-  convertToLanguageModelParams,
-  convertToModelMessages,
-  convertToToolSet,
-  convertToToolChoice,
-  extractExtraBody,
-  toOpenAICompatStreamResponse,
-  toOpenAICompatStream,
-  OpenAICompatTransformStream,
-} from "@hebo-aikit/gateway/oai-compat/helpers";
-```
- 
-### Middlewares
-
-```ts
-import {
-  openAICompatBedrockTransform,
-  openAICompatClaudeTransform,
-  // ...
-} from "@hebo-aikit/gateway/oai-compat/middlewares";
-```
+Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.

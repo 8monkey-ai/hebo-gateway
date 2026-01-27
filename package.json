@@ -1,7 +1,133 @@
 {
   "name": "@hebo-ai/gateway",
+  "version": "0.0.3",
+  "description": "Hebo Gateway - Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more.",
+  "keywords": [
+    "ai",
+    "anthropic",
+    "bedrock",
+    "elysiajs",
+    "gateway",
+    "groq",
+    "hono",
+    "llm",
+    "nextjs",
+    "openai",
+    "tanstack-start",
+    "vercel-ai-sdk",
+    "voyage"
+  ],
+  "homepage": "https://hebo.ai/gateway",
+  "bugs": {
+    "url": "https://github.com/8monkey-ai/hebo-gateway/issues"
+  },
+  "license": "FSL-1.1-ALv2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/8monkey-ai/hebo-gateway.git"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "src"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "dev-source": "./src/index.ts"
+    },
+    "./endpoints": {
+      "types": "./dist/endpoints/index.d.ts",
+      "import": "./dist/endpoints/index.js",
+      "dev-source": "./src/endpoints/index.ts"
+    },
+    "./endpoints/chat-completions": {
+      "types": "./dist/endpoints/chat-completions/index.d.ts",
+      "import": "./dist/endpoints/chat-completions/index.js",
+      "dev-source": "./src/endpoints/chat-completions/index.ts"
+    },
+    "./endpoints/embeddings": {
+      "types": "./dist/endpoints/embeddings/index.d.ts",
+      "import": "./dist/endpoints/embeddings/index.js",
+      "dev-source": "./src/endpoints/embeddings/index.ts"
+    },
+    "./endpoints/models": {
+      "types": "./dist/endpoints/models/index.d.ts",
+      "import": "./dist/endpoints/models/index.js",
+      "dev-source": "./src/endpoints/models/index.ts"
+    },
+    "./models/claude": {
+      "types": "./dist/models/presets/claude.d.ts",
+      "import": "./dist/models/presets/claude.js",
+      "dev-source": "./src/models/presets/claude.ts"
+    },
+    "./models/cohere": {
+      "types": "./dist/models/presets/cohere.d.ts",
+      "import": "./dist/models/presets/cohere.js",
+      "dev-source": "./src/models/presets/cohere.ts"
+    },
+    "./models/gemini": {
+      "types": "./dist/models/presets/gemini.d.ts",
+      "import": "./dist/models/presets/gemini.js",
+      "dev-source": "./src/models/presets/gemini.ts"
+    },
+    "./models/gpt-oss": {
+      "types": "./dist/models/presets/gpt-oss.d.ts",
+      "import": "./dist/models/presets/gpt-oss.js",
+      "dev-source": "./src/models/presets/gpt-oss.ts"
+    },
+    "./models/llama": {
+      "types": "./dist/models/presets/llama.d.ts",
+      "import": "./dist/models/presets/llama.js",
+      "dev-source": "./src/models/presets/llama.ts"
+    },
+    "./models/voyage": {
+      "types": "./dist/models/presets/voyage.d.ts",
+      "import": "./dist/models/presets/voyage.js",
+      "dev-source": "./src/models/presets/voyage.ts"
+    },
+    "./providers/anthropic": {
+      "types": "./dist/providers/canonical/anthropic.d.ts",
+      "import": "./dist/providers/canonical/anthropic.js",
+      "dev-source": "./src/providers/canonical/anthropic.ts"
+    },
+    "./providers/bedrock": {
+      "types": "./dist/providers/canonical/bedrock.d.ts",
+      "import": "./dist/providers/canonical/bedrock.js",
+      "dev-source": "./src/providers/canonical/bedrock.ts"
+    },
+    "./providers/cohere": {
+      "types": "./dist/providers/canonical/cohere.d.ts",
+      "import": "./dist/providers/canonical/cohere.js",
+      "dev-source": "./src/providers/canonical/cohere.ts"
+    },
+    "./providers/groq": {
+      "types": "./dist/providers/canonical/groq.d.ts",
+      "import": "./dist/providers/canonical/groq.js",
+      "dev-source": "./src/providers/canonical/groq.ts"
+    },
+    "./providers/openai": {
+      "types": "./dist/providers/canonical/openai.d.ts",
+      "import": "./dist/providers/canonical/openai.js",
+      "dev-source": "./src/providers/canonical/openai.ts"
+    },
+    "./providers/vertex": {
+      "types": "./dist/providers/canonical/vertex.d.ts",
+      "import": "./dist/providers/canonical/vertex.js",
+      "dev-source": "./src/providers/canonical/vertex.ts"
+    },
+    "./providers/voyage": {
+      "types": "./dist/providers/canonical/voyage.d.ts",
+      "import": "./dist/providers/canonical/voyage.js",
+      "dev-source": "./src/providers/canonical/voyage.ts"
+    }
+  },
   "scripts": {
+    "build": "tsc",
     "dev": "bun --hot src/index.ts",
     "clean": "git clean -fdx -e '.env*' .",
     "format": "oxfmt .",
@@ -15,22 +141,32 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@ai-sdk/amazon-bedrock": "^4.0.30",
+    "@ai-sdk/anthropic": "^3.0.23",
+    "@ai-sdk/cohere": "^3.0.11",
+    "@ai-sdk/google-vertex": "^4.0.28",
+    "@ai-sdk/groq": "^3.0.15",
+    "@ai-sdk/openai": "^3.0.18",
+    "@ai-sdk/provider": "^3.0.5",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@tanstack/react-router": "^1.154.1",
     "@tanstack/react-start": "^1.154.1",
     "@types/bun": "latest",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
+    "ai": "^6.0.42",
     "elysia": "^1.4.22",
     "hono": "^4.11.4",
     "lefthook": "^2.0.15",
     "next": "^16.1.4",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.39.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "voyage-ai-provider": "^3.0.0"
   },
   "peerDependencies": {
     "@ai-sdk/amazon-bedrock": "^4.0.30",
+    "@ai-sdk/anthropic": "^3.0.23",
     "@ai-sdk/cohere": "^3.0.11",
     "@ai-sdk/google-vertex": "^4.0.28",
     "@ai-sdk/groq": "^3.0.15",
@@ -40,12 +176,27 @@
     "typescript": "^5",
     "voyage-ai-provider": "^3.0.0"
   },
-  "optionalDependencies": {
-    "@ai-sdk/amazon-bedrock": "^4.0.30",
-    "@ai-sdk/cohere": "^3.0.11",
-    "@ai-sdk/google-vertex": "^4.0.28",
-    "@ai-sdk/groq": "^3.0.15",
-    "@ai-sdk/openai": "^3.0.18",
-    "voyage-ai-provider": "^3.0.0"
+  "peerDependenciesMeta": {
+    "@ai-sdk/amazon-bedrock": {
+      "optional": true
+    },
+    "@ai-sdk/anthropic": {
+      "optional": true
+    },
+    "@ai-sdk/cohere": {
+      "optional": true
+    },
+    "@ai-sdk/google-vertex": {
+      "optional": true
+    },
+    "@ai-sdk/groq": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "voyage-ai-provider": {
+      "optional": true
+    }
   }
 }
