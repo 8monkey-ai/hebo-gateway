@@ -13,7 +13,6 @@ import {
   toOpenAICompatibleStreamResponse,
 } from "./converters";
 import { OpenAICompatibleChatCompletionsRequestBodySchema } from "./schema";
-import { withHooks } from "../../utils/hooks";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -86,7 +85,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     if (stream) {
       try {
-        const result = await streamText({
+        const result = streamText({
           model: languageModel,
           messages,
           tools: toolSet,
