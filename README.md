@@ -377,7 +377,7 @@ const app = new Elysia()
 console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
-## Low-level Schema & Converters
+## Low-level Schemas & Converters
 
 We also provide full schemas, helper functions and types to convert between OpenAI <> Vercel AI SDK for advanced use cases like creating your own endpoint. They are available via deep-imports and completely tree-shakeable.
 
