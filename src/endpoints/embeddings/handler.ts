@@ -65,23 +65,18 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
-    let rawOptions, values;
+    let embedArgs;
     try {
-      ({ providerOptions: rawOptions, values } = fromOpenAICompatibleEmbeddingParams(params));
+      embedArgs = fromOpenAICompatibleEmbeddingParams(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
-
-    const providerOptions = {
-      [embeddingModel.provider]: rawOptions.openAICompat ?? {},
-    };
 
     let embedManyResult;
     try {
       embedManyResult = await embedMany({
         model: embeddingModel,
-        values,
-        providerOptions,
+        ...embedArgs,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);

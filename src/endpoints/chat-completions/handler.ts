@@ -66,32 +66,18 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = provider.languageModel(resolvedModelId);
 
-    let messages, rawOptions, temperature, toolChoice, toolSet;
+    let textArgs;
     try {
-      ({
-        messages,
-        providerOptions: rawOptions,
-        temperature,
-        toolChoice,
-        tools: toolSet,
-      } = fromOpenAICompatibleChatCompletionsParams(params));
+      textArgs = fromOpenAICompatibleChatCompletionsParams(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
-
-    const providerOptions = {
-      [languageModel.provider]: rawOptions,
-    };
 
     if (stream) {
       try {
         const result = streamText({
           model: languageModel,
-          messages,
-          tools: toolSet,
-          toolChoice,
-          temperature,
-          providerOptions,
+          ...textArgs,
         });
 
         return toOpenAICompatibleStreamResponse(result, modelId);
@@ -104,11 +90,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     try {
       generateTextResult = await generateText({
         model: languageModel,
-        messages,
-        tools: toolSet,
-        toolChoice,
-        temperature,
-        providerOptions,
+        ...textArgs,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
