@@ -33,5 +33,5 @@
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": true
   },
-  "exclude": ["node_modules", "dist", "e2e"]
+  "exclude": ["**/*.test.ts", "node_modules", "dist", "e2e"]
 }

@@ -33,24 +33,34 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "dev-source": "./dist/index.ts"
     },
-    "./endpoints/models": {
-      "types": "./dist/endpoints/models/index.d.ts",
-      "import": "./dist/endpoints/models/index.js"
+    "./endpoints/chat-completions": {
+      "types": "./dist/endpoints/completions/index.d.mts",
+      "import": "./dist/endpoints/completions/index.mjs",
+      "dev-source": "./dist/endpoints/completions/index.ts"
     },
     "./endpoints/embeddings": {
-      "types": "./dist/endpoints/embeddings/index.d.ts",
-      "import": "./dist/endpoints/embeddings/index.js"
+      "types": "./dist/endpoints/embeddings/index.d.mts",
+      "import": "./dist/endpoints/embeddings/index.mjs",
+      "dev-source": "./dist/endpoints/embeddings/index.ts"
+    },
+    "./endpoints/models": {
+      "types": "./dist/endpoints/models/index.d.mts",
+      "import": "./dist/endpoints/models/index.mjs",
+      "dev-source": "./dist/endpoints/models/index.ts"
     },
     "./models": {
-      "types": "./dist/models/index.d.ts",
-      "import": "./dist/models/index.js"
+      "types": "./dist/models/index.d.mts",
+      "import": "./dist/models/index.mjs",
+      "dev-source": "./dist/models/index.ts"
     },
     "./providers": {
-      "types": "./dist/providers/index.d.ts",
-      "import": "./dist/providers/index.js"
+      "types": "./dist/providers/index.d.mts",
+      "import": "./dist/providers/index.mjs",
+      "dev-source": "./dist/providers/index.ts"
     }
   },
   "scripts": {
