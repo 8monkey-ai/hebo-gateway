@@ -41,11 +41,21 @@ export function toOpenAICompatibleModel(
 export function toOpenAICompatibleModelList(
   models: ModelCatalog,
 ): OpenAICompatibleList<OpenAICompatibleModel> {
-  const data = Object.entries(models).map(([id, catalogModel]) =>
-    toOpenAICompatibleModel(id, catalogModel!),
-  );
   return {
     object: "list",
-    data,
+    data: Object.entries(models).map(([id, catalogModel]) =>
+      toOpenAICompatibleModel(id, catalogModel!),
+    ),
   };
+}
+export function toOpenAICompatibleModelListResponse(models: ModelCatalog): Response {
+  return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export function toOpenAICompatibleModelResponse(id: string, catalogModel: CatalogModel): Response {
+  return new Response(JSON.stringify(toOpenAICompatibleModel(id, catalogModel)), {
+    headers: { "Content-Type": "application/json" },
+  });
 }

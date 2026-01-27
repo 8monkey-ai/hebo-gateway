@@ -10,7 +10,7 @@ export const resolveProvider = (
   modelId: ModelId,
   modality: "text" | "image" | "audio" | "video" | "embeddings",
 ) => {
-  const catalogModel = models[modelId];
+  const catalogModel = models[modelId as ModelId];
 
   if (!catalogModel) {
     throw new Error(`Model '${modelId}' not found in catalog`);
@@ -100,10 +100,11 @@ export const withCanonicalIds = (
   const fallbackProvider: ProviderV3 = needsFallbackWrap
     ? {
         ...provider,
+        specificationVersion: "v3",
         languageModel: (id: string) =>
           provider.languageModel(applyFallbackAffixes(normalizeId(id))),
         embeddingModel: (id: string) =>
-          provider.embeddingModel(applyFallbackAffixes(normalizeId(id))),
+          provider.textEmbeddingModel(applyFallbackAffixes(normalizeId(id))), // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
       }
     : provider;
 
@@ -121,12 +122,12 @@ export const withCanonicalIds = (
   };
 
   return customProvider({
-    languageModels: mapModels(provider.languageModel) satisfies Partial<
-      Record<CanonicalModelId, LanguageModelV3>
-    >,
-    embeddingModels: mapModels(provider.embeddingModel) satisfies Partial<
-      Record<CanonicalModelId, EmbeddingModelV3>
-    >,
+    languageModels: (provider.languageModel
+      ? mapModels(provider.languageModel)
+      : {}) satisfies Partial<Record<CanonicalModelId, LanguageModelV3>>,
+    embeddingModels: (provider.embeddingModel
+      ? mapModels(provider.embeddingModel)
+      : {}) satisfies Partial<Record<CanonicalModelId, EmbeddingModelV3>>,
     fallbackProvider,
   });
 };

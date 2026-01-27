@@ -1,23 +1,40 @@
-export interface ApiError {
-  code: string;
+export interface OpenAICompatibleError {
   message: string;
-  detail?: string;
+  type: string;
+  param?: string;
+  code?: string;
+}
+
+export interface OpenAICompatibleErrorResponse {
+  error: OpenAICompatibleError;
+}
+
+export function toOpenAICompatibleError(
+  message: string,
+  type: string = "server_error",
+  code?: string,
+  param?: string,
+): OpenAICompatibleErrorResponse {
+  return {
+    error: {
+      message,
+      type,
+      param,
+      code,
+    },
+  };
 }
 
 export function createErrorResponse(
   code: string,
-  message: string,
+  error: unknown,
   status: number,
-  detail?: string,
+  param?: string,
 ): Response {
-  const error: ApiError = {
-    code,
-    message,
-  };
-  if (detail) {
-    error.detail = detail;
-  }
-  return new Response(JSON.stringify(error), {
+  const message = error instanceof Error ? error.message : String(error);
+  const type = status < 500 ? "invalid_request_error" : "server_error";
+
+  return new Response(JSON.stringify(toOpenAICompatibleError(message, type, code, param)), {
     status,
     headers: { "Content-Type": "application/json" },
   });

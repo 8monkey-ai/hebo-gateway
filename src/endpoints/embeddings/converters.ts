@@ -9,7 +9,7 @@ import type {
 
 export type VercelAIEmbeddingsModelParams = {
   values: string[];
-  providerOptions: Record<string, any>;
+  providerOptions: Record<string, unknown>;
 };
 
 function fromOpenAICompatibleInput(input: string | string[]): string[] {
@@ -50,4 +50,16 @@ export function toOpenAICompatibleEmbeddingResponseBody(
     usage,
     providerMetadata: embedManyResult.providerMetadata,
   };
+}
+
+export function toOpenAICompatibleEmbeddingResponse(
+  embedManyResult: EmbedManyResult,
+  modelId: string,
+): Response {
+  return new Response(
+    JSON.stringify(toOpenAICompatibleEmbeddingResponseBody(embedManyResult, modelId)),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }

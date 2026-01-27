@@ -2,7 +2,7 @@ import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
 import { createErrorResponse } from "../../utils/errors";
-import { toOpenAICompatibleModel, toOpenAICompatibleModelList } from "./converters";
+import { toOpenAICompatibleModelListResponse, toOpenAICompatibleModelResponse } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
   const { models } = parseConfig(config);
@@ -16,9 +16,7 @@ export const models = (config: GatewayConfig): Endpoint => {
     const rawId = req.url.split("/models/", 2)[1]?.split("?", 1)[0];
 
     if (!rawId) {
-      return new Response(JSON.stringify(toOpenAICompatibleModelList(models)), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return toOpenAICompatibleModelListResponse(models);
     }
 
     let modelId = rawId;
@@ -33,11 +31,7 @@ export const models = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("NOT_FOUND", `Model '${modelId}' not found`, 404);
     }
 
-    const openAICompatibleModel = toOpenAICompatibleModel(modelId, model);
-
-    return new Response(JSON.stringify(openAICompatibleModel), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return toOpenAICompatibleModelResponse(modelId, model);
   };
 
   return { handler: handler as typeof fetch };
