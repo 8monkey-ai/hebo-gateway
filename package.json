@@ -27,40 +27,43 @@
     "url": "git+https://github.com/8monkey-ai/hebo-gateway.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "type": "module",
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "dev-source": "./dist/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "dev-source": "./src/index.ts"
     },
     "./endpoints/chat-completions": {
-      "types": "./dist/endpoints/completions/index.d.mts",
-      "import": "./dist/endpoints/completions/index.mjs",
-      "dev-source": "./dist/endpoints/completions/index.ts"
+      "types": "./dist/endpoints/chat-completions/index.d.ts",
+      "import": "./dist/endpoints/chat-completions/index.js",
+      "dev-source": "./src/endpoints/chat-completions/index.ts"
     },
     "./endpoints/embeddings": {
-      "types": "./dist/endpoints/embeddings/index.d.mts",
-      "import": "./dist/endpoints/embeddings/index.mjs",
-      "dev-source": "./dist/endpoints/embeddings/index.ts"
+      "types": "./dist/endpoints/embeddings/index.d.ts",
+      "import": "./dist/endpoints/embeddings/index.js",
+      "dev-source": "./src/endpoints/embeddings/index.ts"
     },
     "./endpoints/models": {
-      "types": "./dist/endpoints/models/index.d.mts",
-      "import": "./dist/endpoints/models/index.mjs",
-      "dev-source": "./dist/endpoints/models/index.ts"
+      "types": "./dist/endpoints/models/index.d.ts",
+      "import": "./dist/endpoints/models/index.js",
+      "dev-source": "./src/endpoints/models/index.ts"
     },
     "./models": {
-      "types": "./dist/models/index.d.mts",
-      "import": "./dist/models/index.mjs",
-      "dev-source": "./dist/models/index.ts"
+      "types": "./dist/models/index.d.ts",
+      "import": "./dist/models/index.js",
+      "dev-source": "./src/models/index.ts"
     },
     "./providers": {
-      "types": "./dist/providers/index.d.mts",
-      "import": "./dist/providers/index.mjs",
-      "dev-source": "./dist/providers/index.ts"
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js",
+      "dev-source": "./src/providers/index.ts"
     }
   },
   "scripts": {
