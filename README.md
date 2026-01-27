@@ -31,7 +31,7 @@ Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to 
 ## Installation
 
 ```bash
-bun add @hebo-ai/gateway @ai-sdk/groq
+bun add @hebo-ai/gateway ai @ai-sdk/groq
 ```
 
 ## Quickstart
