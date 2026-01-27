@@ -98,29 +98,14 @@ export const withCanonicalIds = (
     stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
 
   const fallbackProvider: ProviderV3 = needsFallbackWrap
-    ? ({
+    ? {
         ...provider,
         specificationVersion: "v3",
-        ...(provider.languageModel
-          ? {
-              languageModel: (id: string) =>
-                provider.languageModel!(applyFallbackAffixes(normalizeId(id))),
-            }
-          : {}),
-        ...(provider.embeddingModel
-          ? {
-              embeddingModel: (id: string) =>
-                provider.embeddingModel!(applyFallbackAffixes(normalizeId(id))),
-            }
-          : {}),
-        // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
-        ...(!provider.embeddingModel && provider.textEmbeddingModel
-          ? {
-              embeddingModel: (id: string) =>
-                provider.textEmbeddingModel!(applyFallbackAffixes(normalizeId(id))),
-            }
-          : {}),
-      } as unknown as ProviderV3)
+        languageModel: (id: string) =>
+          provider.languageModel(applyFallbackAffixes(normalizeId(id))),
+        embeddingModel: (id: string) =>
+          provider.textEmbeddingModel(applyFallbackAffixes(normalizeId(id))), // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+      }
     : provider;
 
   const mapModels = <T>(fn: (id: string) => T) => {
