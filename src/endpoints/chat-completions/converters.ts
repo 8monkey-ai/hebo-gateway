@@ -267,7 +267,7 @@ export function toCompletions(
         finish_reason,
       } satisfies CompletionsChoice,
     ],
-    usage: result.usage && toCompletionUsage(result.usage),
+    usage: result.usage && toCompletionsUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
 }
@@ -339,7 +339,7 @@ export class CompletionsStream extends TransformStream {
               createChunk({
                 tool_calls: [
                   {
-                    ...toCompletionToolCall(part.toolCallId, part.toolName, part.input),
+                    ...toCompletionsToolCall(part.toolCallId, part.toolName, part.input),
                     index: toolCallIndexCounter++,
                   },
                 ],
@@ -353,7 +353,7 @@ export class CompletionsStream extends TransformStream {
               createChunk(
                 {},
                 toCompletionsFinishReason(part.finishReason),
-                toCompletionUsage(part.totalUsage),
+                toCompletionsUsage(part.totalUsage),
               ),
             );
             break;
@@ -401,7 +401,7 @@ export const toCompletionsMessage = (
 
   if (result.toolCalls && result.toolCalls.length > 0) {
     message.tool_calls = result.toolCalls.map((toolCall) =>
-      toCompletionToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
+      toCompletionsToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
     );
   }
 
@@ -419,7 +419,7 @@ export const toCompletionsMessage = (
   return message;
 };
 
-export function toCompletionUsage(
+export function toCompletionsUsage(
   usage: LanguageModelUsage | undefined,
 ): CompletionsUsage | undefined {
   if (!usage) return undefined;
@@ -436,7 +436,11 @@ export function toCompletionUsage(
   };
 }
 
-export function toCompletionToolCall(id: string, name: string, args: unknown): CompletionsToolCall {
+export function toCompletionsToolCall(
+  id: string,
+  name: string,
+  args: unknown,
+): CompletionsToolCall {
   return {
     id,
     type: "function",
