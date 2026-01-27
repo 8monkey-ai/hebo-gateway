@@ -1,3 +1,4 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -6,7 +7,9 @@ import type {
   ToolResultPart,
   ToolSet,
   ModelMessage,
+  UserContent,
   LanguageModelUsage,
+  Output,
 } from "ai";
 
 import { jsonSchema, tool } from "ai";
@@ -31,9 +34,9 @@ import { toOpenAICompatibleError } from "../../utils/errors";
 export type VercelAIChatCompletionsModelParams = {
   messages: ModelMessage[];
   tools?: ToolSet;
-  toolChoice?: ToolChoice<unknown>;
+  toolChoice?: ToolChoice<ToolSet>;
   temperature?: number;
-  providerOptions: Record<string, unknown>;
+  providerOptions: ProviderOptions;
 };
 
 // --- Request Flow ---
@@ -48,7 +51,9 @@ export function fromOpenAICompatibleChatCompletionsParams(
     tools: fromOpenAICompatibleTools(tools),
     toolChoice: fromOpenAICompatibleToolChoice(tool_choice),
     temperature,
-    providerOptions: rest,
+    providerOptions: {
+      openAICompat: rest,
+    },
   };
 }
 
@@ -60,7 +65,7 @@ export function fromOpenAICompatibleMessages(messages: OpenAICompatibleMessage[]
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
-      modelMessages.push(message as ModelMessage);
+      modelMessages.push(message);
       continue;
     }
 
@@ -88,13 +93,12 @@ function indexToolMessages(messages: OpenAICompatibleMessage[]) {
 export function fromOpenAICompatibleUserMessage(
   message: OpenAICompatibleUserMessage,
 ): ModelMessage {
-  if (Array.isArray(message.content)) {
-    return {
-      role: "user",
-      content: fromOpenAICompatibleContent(message.content) as unknown as ModelMessage["content"],
-    };
-  }
-  return message as ModelMessage;
+  return {
+    role: "user",
+    content: Array.isArray(message.content)
+      ? fromOpenAICompatibleContent(message.content)
+      : message.content,
+  };
 }
 
 export function fromOpenAICompatibleAssistantMessage(
@@ -105,8 +109,8 @@ export function fromOpenAICompatibleAssistantMessage(
   if (!tool_calls || tool_calls.length === 0) {
     return {
       role: role,
-      content: content as string | null,
-    } as ModelMessage;
+      content: content ?? "",
+    };
   }
 
   return {
@@ -120,7 +124,7 @@ export function fromOpenAICompatibleAssistantMessage(
         input: parseToolOutput(fn.arguments).value,
       };
     }),
-  } as ModelMessage;
+  };
 }
 
 export function fromOpenAICompatibleToolResultMessage(
@@ -143,28 +147,31 @@ export function fromOpenAICompatibleToolResultMessage(
     });
   }
 
-  return toolResultParts.length > 0
-    ? ({ role: "tool", content: toolResultParts } as ModelMessage)
-    : undefined;
+  return toolResultParts.length > 0 ? { role: "tool", content: toolResultParts } : undefined;
 }
 
-export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]) {
+export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]): UserContent {
   return content.map((part) => {
     if (part.type === "image_url") {
       const url = part.image_url.url;
       if (url.startsWith("data:")) {
         const parts = url.split(",");
-        if (parts.length < 2) return part;
-
         const metadata = parts[0];
         const base64Data = parts[1];
-        if (!metadata || !base64Data) return part;
+
+        if (!metadata || !base64Data) {
+          throw new Error("Invalid data URL: missing metadata or data");
+        }
 
         const mimeTypePart = metadata.split(":")[1];
-        if (!mimeTypePart) return part;
+        if (!mimeTypePart) {
+          throw new Error("Invalid data URL: missing MIME type part");
+        }
 
         const mimeType = mimeTypePart.split(";")[0];
-        if (!mimeType) return part;
+        if (!mimeType) {
+          throw new Error("Invalid data URL: missing MIME type");
+        }
 
         return mimeType.startsWith("image/")
           ? {
@@ -178,6 +185,7 @@ export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart
               mediaType: mimeType,
             };
       }
+
       return {
         type: "image" as const,
         image: new URL(url),
@@ -220,7 +228,7 @@ export const fromOpenAICompatibleTools = (
 
 export const fromOpenAICompatibleToolChoice = (
   toolChoice: OpenAICompatibleToolChoice | undefined,
-): ToolChoice<unknown> | undefined => {
+): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
     return undefined;
   }
@@ -246,7 +254,7 @@ function parseToolOutput(content: string) {
 // --- Response Flow ---
 
 export function toOpenAICompatibleChatCompletionsResponseBody(
-  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): OpenAICompatibleChatCompletionsResponseBody {
   const finish_reason = toOpenAICompatibleFinishReason(result.finishReason);
@@ -268,7 +276,7 @@ export function toOpenAICompatibleChatCompletionsResponseBody(
   };
 }
 export function toOpenAICompatibleChatCompletionsResponse(
-  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
   return new Response(
@@ -280,7 +288,7 @@ export function toOpenAICompatibleChatCompletionsResponse(
 }
 
 export function toOpenAICompatibleStream(
-  result: StreamTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
@@ -289,7 +297,7 @@ export function toOpenAICompatibleStream(
     .pipeThrough(new TextEncoderStream());
 }
 export function toOpenAICompatibleStreamResponse(
-  result: StreamTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
   return new Response(toOpenAICompatibleStream(result, model), {
@@ -301,7 +309,7 @@ export function toOpenAICompatibleStreamResponse(
   });
 }
 
-export class OpenAICompatibleTransformStream extends TransformStream<unknown, unknown> {
+export class OpenAICompatibleTransformStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -373,7 +381,7 @@ export class OpenAICompatibleTransformStream extends TransformStream<unknown, un
   }
 }
 
-export class SSETransformStream extends TransformStream<unknown, string> {
+export class SSETransformStream extends TransformStream {
   constructor() {
     super({
       transform(chunk, controller) {
@@ -387,7 +395,7 @@ export class SSETransformStream extends TransformStream<unknown, string> {
 }
 
 export const toOpenAICompatibleMessage = (
-  result: GenerateTextResult<Record<string, unknown>, Record<string, unknown>>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
 ): OpenAICompatibleAssistantMessage => {
   const message: OpenAICompatibleAssistantMessage = {
     role: "assistant",
@@ -426,7 +434,7 @@ export function toOpenAICompatibleUsage(
       reasoning_tokens: usage.outputTokenDetails.reasoningTokens ?? 0,
     },
     prompt_tokens_details: {
-      cached_tokens: usage.inputTokenDetails.cachedReadTokens ?? 0,
+      cached_tokens: usage.inputTokenDetails.cacheReadTokens ?? 0,
     },
   };
 }

@@ -1,3 +1,4 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type { EmbedManyResult } from "ai";
 
 import type {
@@ -9,7 +10,7 @@ import type {
 
 export type VercelAIEmbeddingsModelParams = {
   values: string[];
-  providerOptions: Record<string, unknown>;
+  providerOptions: ProviderOptions;
 };
 
 function fromOpenAICompatibleInput(input: string | string[]): string[] {
@@ -24,7 +25,9 @@ export function fromOpenAICompatibleEmbeddingParams(
 
   return {
     values,
-    providerOptions: rest,
+    providerOptions: {
+      openAICompat: rest,
+    },
   };
 }
 

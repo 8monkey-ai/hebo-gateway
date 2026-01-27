@@ -10,6 +10,7 @@ const baseUrl = "http://localhost/chat/completions";
 
 describe("Chat Completions Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
+    // eslint-disable-next-line require-await
     doGenerate: async (options) => {
       const isToolCall = options.tools && options.tools.length > 0;
 
@@ -17,8 +18,8 @@ describe("Chat Completions Handler", () => {
         return {
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: {
-            inputTokens: { total: 15, noCache: 15, cacheRead: 0, cacheWrite: 0 },
-            outputTokens: { total: 25, text: 0, reasoning: 0 },
+            inputTokens: { total: 15, noCache: 15, cacheRead: 20, cacheWrite: 0 },
+            outputTokens: { total: 25, text: 0, reasoning: 10 },
           },
           content: [
             {
@@ -28,7 +29,7 @@ describe("Chat Completions Handler", () => {
               input: '{"location":"San Francisco, CA"}',
             },
           ],
-          providerMetadata: { some: "metadata" },
+          providerMetadata: { provider: { key: "value" } },
           warnings: [],
         };
       }
@@ -36,7 +37,7 @@ describe("Chat Completions Handler", () => {
       return {
         finishReason: { unified: "stop", raw: "stop" },
         usage: {
-          inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
+          inputTokens: { total: 10, noCache: 10, cacheRead: 20, cacheWrite: 0 },
           outputTokens: { total: 20, text: 20, reasoning: 10 },
         },
         content: [
@@ -45,10 +46,11 @@ describe("Chat Completions Handler", () => {
             text: "Hello from AI",
           },
         ],
-        providerMetadata: { some: "metadata" },
+        providerMetadata: { provider: { key: "value" } },
         warnings: [],
       };
     },
+    // eslint-disable-next-line require-await
     doStream: async () => ({
       stream: simulateReadableStream({
         chunks: [
@@ -60,7 +62,7 @@ describe("Chat Completions Handler", () => {
             type: "finish",
             finishReason: { unified: "stop", raw: "stop" },
             usage: {
-              inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+              inputTokens: { total: 5, noCache: 5, cacheRead: 20, cacheWrite: 0 },
               outputTokens: { total: 5, text: 5, reasoning: 10 },
             },
           },
@@ -176,10 +178,10 @@ describe("Chat Completions Handler", () => {
           reasoning_tokens: 10,
         },
         prompt_tokens_details: {
-          cached_tokens: 0,
+          cached_tokens: 20,
         },
       },
-      providerMetadata: { some: "metadata" },
+      providerMetadata: { provider: { key: "value" } },
     });
   });
 
@@ -235,13 +237,13 @@ describe("Chat Completions Handler", () => {
         completion_tokens: 25,
         total_tokens: 40,
         completion_tokens_details: {
-          reasoning_tokens: 0,
+          reasoning_tokens: 10,
         },
         prompt_tokens_details: {
-          cached_tokens: 0,
+          cached_tokens: 20,
         },
       },
-      providerMetadata: { some: "metadata" },
+      providerMetadata: { provider: { key: "value" } },
     });
   });
 

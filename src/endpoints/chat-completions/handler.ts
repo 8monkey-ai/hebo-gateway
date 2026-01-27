@@ -52,21 +52,26 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
       const languageModel = provider.languageModel(modelId);
 
-      const {
-        messages,
-        tools: toolSet,
-        toolChoice,
-        temperature,
-        providerOptions: rawOptions,
-      } = fromOpenAICompatibleChatCompletionsParams(params);
+      let messages, rawOptions, temperature, toolChoice, toolSet;
+      try {
+        ({
+          messages,
+          providerOptions: rawOptions,
+          temperature,
+          toolChoice,
+          tools: toolSet,
+        } = fromOpenAICompatibleChatCompletionsParams(params));
+      } catch (error) {
+        return createErrorResponse("BAD_REQUEST", error, 400);
+      }
 
       const providerOptions = {
-        [languageModel.provider]: rawOptions,
+        [languageModel.provider]: rawOptions.openAICompat ?? {},
       };
 
       if (stream) {
         try {
-          const result = await streamText({
+          const result = streamText({
             model: languageModel,
             messages,
             tools: toolSet,

@@ -32,6 +32,7 @@ describe("Embeddings Handler", () => {
     openai: new MockProviderV3({
       embeddingModels: {
         "text-embedding-3-small": new MockEmbeddingModelV3({
+          // eslint-disable-next-line require-await
           doEmbed: async (options) => ({
             embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
             usage: { tokens: 10 },
@@ -56,7 +57,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  const endpoint = embeddings({ providers: registry, models: catalog }, true);
+  const endpoint = embeddings({ providers: registry, models: catalog });
 
   test("should return 400 if model does not support embeddings", async () => {
     const request = postJson(baseUrl, {

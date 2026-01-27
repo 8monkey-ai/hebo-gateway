@@ -51,10 +51,15 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
       const embeddingModel = provider.embeddingModel(modelId);
 
-      const { values, providerOptions: rawOptions } = fromOpenAICompatibleEmbeddingParams(params);
+      let rawOptions, values;
+      try {
+        ({ providerOptions: rawOptions, values } = fromOpenAICompatibleEmbeddingParams(params));
+      } catch (error) {
+        return createErrorResponse("BAD_REQUEST", error, 400);
+      }
 
       const providerOptions = {
-        [embeddingModel.provider]: rawOptions,
+        [embeddingModel.provider]: rawOptions.openAICompat ?? {},
       };
 
       let embedManyResult;
