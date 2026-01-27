@@ -97,6 +97,7 @@
   },
   "peerDependencies": {
     "@ai-sdk/amazon-bedrock": "^4.0.30",
+    "@ai-sdk/anthropic": "^3.0.23",
     "@ai-sdk/cohere": "^3.0.11",
     "@ai-sdk/google-vertex": "^4.0.28",
     "@ai-sdk/groq": "^3.0.15",
@@ -108,6 +109,9 @@
   },
   "peerDependenciesMeta": {
     "@ai-sdk/amazon-bedrock": {
+      "optional": true
+    },    
+    "@ai-sdk/anthropic": {
       "optional": true
     },
     "@ai-sdk/cohere": {
