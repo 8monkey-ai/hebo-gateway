@@ -8,7 +8,7 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  parseCompletionsInputs,
+  transformCompletionsInputs,
   createCompletionsResponse,
   createCompletionsStreamResponse,
 } from "./converters";
@@ -51,7 +51,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     let textOptions;
     try {
-      textOptions = parseCompletionsInputs(inputs);
+      textOptions = transformCompletionsInputs(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }

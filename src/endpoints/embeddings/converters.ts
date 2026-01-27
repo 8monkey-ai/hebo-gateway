@@ -8,7 +8,7 @@ export type EmbedCallOptions = {
   providerOptions: ProviderOptions;
 };
 
-export function parseEmbeddingsInputs(params: EmbeddingsInputs): EmbedCallOptions {
+export function transformEmbeddingsInputs(params: EmbeddingsInputs): EmbedCallOptions {
   const { input, ...rest } = params;
 
   return {

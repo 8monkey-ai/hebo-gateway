@@ -43,7 +43,7 @@ export type TextCallOptions = {
 
 // --- Request Flow ---
 
-export function parseCompletionsInputs(params: CompletionsInputs): TextCallOptions {
+export function transformCompletionsInputs(params: CompletionsInputs): TextCallOptions {
   const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
   return {
@@ -289,6 +289,7 @@ export function toCompletionsStream(
     .pipeThrough(new SSETransformStream())
     .pipeThrough(new TextEncoderStream());
 }
+
 export function createCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
