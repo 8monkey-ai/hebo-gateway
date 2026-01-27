@@ -20,12 +20,12 @@ export function toOpenAICompatibleModel(
     created: createdTimestamp,
     owned_by: providers?.[0] || "system",
     architecture: {
-      input_modalities: (modalities.input || []) as string[],
+      input_modalities: modalities.input || [],
       modality:
         modalities.input &&
         modalities.output &&
         `${modalities.input?.[0]}->${modalities.output?.[0]}`,
-      output_modalities: (modalities.output || []) as string[],
+      output_modalities: modalities.output || [],
     },
     endpoints:
       providers?.map((provider) => ({
