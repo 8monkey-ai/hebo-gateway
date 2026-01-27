@@ -29,7 +29,7 @@ import type {
   OpenAICompatibleChatCompletionsUsage,
 } from "./schema";
 
-import { toOpenAICompatibleError } from "../../utils/errors";
+import { OpenAICompatError } from "../../utils/errors";
 
 export type VercelAIChatCompletionsModelParams = {
   messages: ModelMessage[];
@@ -367,7 +367,7 @@ export class OpenAICompatibleTransformStream extends TransformStream {
             const msg = error instanceof Error ? error.message : String(error);
             const e = error as { code?: string; status?: number };
             controller.enqueue(
-              toOpenAICompatibleError(
+              new OpenAICompatError(
                 msg,
                 e.status && e.status < 500 ? "invalid_request_error" : "server_error",
                 e.code,

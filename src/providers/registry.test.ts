@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 
 import { parseConfig } from "../config";
-import { createVoyageWithCanonicalIds, voyage4Lite, createModelCatalog } from "../index";
+import { createModelCatalog } from "../index";
+import { voyage4Lite } from "../models/presets/voyage";
+import { createVoyageWithCanonicalIds } from "../providers/canonical/voyage";
 import { resolveProvider } from "./registry";
 
 test("Voyage 4 Lite ID transformation in gateway config", () => {

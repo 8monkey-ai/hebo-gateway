@@ -1,28 +1,9 @@
-export interface OpenAICompatibleError {
-  message: string;
-  type: string;
-  param?: string;
-  code?: string;
-}
+export class OpenAICompatError {
+  readonly error;
 
-export interface OpenAICompatibleErrorResponse {
-  error: OpenAICompatibleError;
-}
-
-export function toOpenAICompatibleError(
-  message: string,
-  type: string = "server_error",
-  code?: string,
-  param?: string,
-): OpenAICompatibleErrorResponse {
-  return {
-    error: {
-      message,
-      type,
-      param,
-      code,
-    },
-  };
+  constructor(message: string, type: string = "server_error", code?: string, param?: string) {
+    this.error = { message, type, code, param };
+  }
 }
 
 export function createErrorResponse(
@@ -34,7 +15,7 @@ export function createErrorResponse(
   const message = error instanceof Error ? error.message : String(error);
   const type = status < 500 ? "invalid_request_error" : "server_error";
 
-  return new Response(JSON.stringify(toOpenAICompatibleError(message, type, code, param)), {
+  return new Response(JSON.stringify(new OpenAICompatError(message, type, code, param)), {
     status,
     headers: { "Content-Type": "application/json" },
   });
