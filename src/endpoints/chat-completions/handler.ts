@@ -8,11 +8,11 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  fromOpenAICompatChatCompletionsParams,
-  createOpenAICompatChatCompletionResponse,
-  createOpenAICompatChatCompletionStreamResponse,
+  fromOpenAICompatCompletionsParams,
+  createOpenAICompatCompletionResponse,
+  createOpenAICompatCompletionStreamResponse,
 } from "./converters";
-import { OpenAICompatChatCompletionsRequestSchema } from "./schema";
+import { OpenAICompatCompletionsRequestSchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -29,7 +29,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = OpenAICompatChatCompletionsRequestSchema.safeParse(json);
+    const parsed = OpenAICompatCompletionsRequestSchema.safeParse(json);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -68,7 +68,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     let textOptions;
     try {
-      textOptions = fromOpenAICompatChatCompletionsParams(params);
+      textOptions = fromOpenAICompatCompletionsParams(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -80,7 +80,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           ...textOptions,
         });
 
-        return createOpenAICompatChatCompletionStreamResponse(result, modelId);
+        return createOpenAICompatCompletionStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
@@ -96,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createOpenAICompatChatCompletionResponse(generateTextResult, modelId);
+    return createOpenAICompatCompletionResponse(generateTextResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

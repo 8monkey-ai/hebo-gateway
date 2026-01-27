@@ -6,13 +6,11 @@ export const OpenAICompatEmbeddingsParamsSchema = z.object({
   dimensions: z.optional(z.number()),
   user: z.optional(z.string()),
 });
-
 export type OpenAICompatEmbeddingsParams = z.infer<typeof OpenAICompatEmbeddingsParamsSchema>;
 
 export const OpenAICompatEmbeddingsRequestSchema = z.extend(OpenAICompatEmbeddingsParamsSchema, {
   model: z.string(),
 });
-
 export type OpenAICompatEmbeddingsRequest = z.infer<typeof OpenAICompatEmbeddingsRequestSchema>;
 
 export const OpenAICompatEmbeddingDataSchema = z.object({
@@ -20,14 +18,12 @@ export const OpenAICompatEmbeddingDataSchema = z.object({
   embedding: z.array(z.number()),
   index: z.number(),
 });
-
 export type OpenAICompatEmbeddingData = z.infer<typeof OpenAICompatEmbeddingDataSchema>;
 
 export const OpenAICompatEmbeddingUsageSchema = z.object({
   prompt_tokens: z.number(),
   total_tokens: z.number(),
 });
-
 export type OpenAICompatEmbeddingUsage = z.infer<typeof OpenAICompatEmbeddingUsageSchema>;
 
 export const OpenAICompatEmbeddingSchema = z.object({
@@ -37,5 +33,4 @@ export const OpenAICompatEmbeddingSchema = z.object({
   usage: OpenAICompatEmbeddingUsageSchema,
   providerMetadata: z.optional(z.any()),
 });
-
 export type OpenAICompatEmbedding = z.infer<typeof OpenAICompatEmbeddingSchema>;
