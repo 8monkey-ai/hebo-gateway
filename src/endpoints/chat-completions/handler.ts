@@ -6,6 +6,7 @@ import type { GatewayConfig, Endpoint } from "../../types";
 import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
+import { withHooks } from "../../utils/hooks";
 import {
   fromOpenAICompatibleChatCompletionsParams,
   toOpenAICompatibleChatCompletionsResponse,
