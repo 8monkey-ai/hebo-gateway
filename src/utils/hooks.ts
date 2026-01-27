@@ -1,5 +1,7 @@
 import type { GatewayHooks, RequestPatch } from "../types";
 
+import { createErrorResponse } from "./errors";
+
 const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   if (!patch.headers && patch.body === undefined) return request;
 
@@ -24,15 +26,26 @@ export const withHooks = (
   run: (request: Request) => Promise<Response>,
 ) => {
   const handler = async (request: Request): Promise<Response> => {
-    const beforeResult = await hooks?.before?.({ request });
+    let beforeResult;
+    try {
+      beforeResult = await hooks?.before?.({ request });
+    } catch (error) {
+      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+    }
     if (beforeResult instanceof Response) return beforeResult;
 
     const nextRequest = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
 
     const response = await run(nextRequest);
 
-    const after = await hooks?.after?.({ response });
+    let after;
+    try {
+      after = await hooks?.after?.({ response });
+    } catch (error) {
+      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+    }
     return after ?? response;
   };
+
   return handler;
 };
