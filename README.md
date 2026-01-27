@@ -107,6 +107,8 @@ const hebo = createOpenAICompatible({
 });
 
 const { text } = await generateText({
+  // Notice how this is using 'openai/gpt-oss-20b' instead of 'gpt-oss-20b'
+  // The gateway automatically maps modelIDs to the upstream provider ones
   model: hebo("openai/gpt-oss-20b"),
   prompt: "Tell me a joke about monkeys",
 });
