@@ -37,7 +37,7 @@ describe("Chat Completions Handler", () => {
         finishReason: { unified: "stop", raw: "stop" },
         usage: {
           inputTokens: { total: 10, noCache: 10, cacheRead: 0, cacheWrite: 0 },
-          outputTokens: { total: 20, text: 20, reasoning: 0 },
+          outputTokens: { total: 20, text: 20, reasoning: 10 },
         },
         content: [
           {
@@ -61,7 +61,7 @@ describe("Chat Completions Handler", () => {
             finishReason: { unified: "stop", raw: "stop" },
             usage: {
               inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
-              outputTokens: { total: 5, text: 5, reasoning: 0 },
+              outputTokens: { total: 5, text: 5, reasoning: 10 },
             },
           },
         ],
@@ -173,7 +173,7 @@ describe("Chat Completions Handler", () => {
         completion_tokens: 20,
         total_tokens: 30,
         completion_tokens_details: {
-          reasoning_tokens: 0,
+          reasoning_tokens: 10,
         },
         prompt_tokens_details: {
           cached_tokens: 0,
