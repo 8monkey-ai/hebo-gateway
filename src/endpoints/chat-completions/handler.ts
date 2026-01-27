@@ -1,5 +1,3 @@
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
-
 import { generateText, streamText } from "ai";
 import * as z from "zod/mini";
 
@@ -54,17 +52,22 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
       const languageModel = provider.languageModel(modelId);
 
-      const {
-        messages,
-        tools: toolSet,
-        toolChoice,
-        temperature,
-        providerOptions: rawOptions,
-      } = fromOpenAICompatibleChatCompletionsParams(params);
+      let messages, rawOptions, temperature, toolChoice, toolSet;
+      try {
+        ({
+          messages,
+          providerOptions: rawOptions,
+          temperature,
+          toolChoice,
+          tools: toolSet,
+        } = fromOpenAICompatibleChatCompletionsParams(params));
+      } catch (error) {
+        return createErrorResponse("BAD_REQUEST", error, 400);
+      }
 
       const providerOptions = {
-        [languageModel.provider]: rawOptions,
-      } as unknown as ProviderOptions;
+        [languageModel.provider]: rawOptions.openAICompat ?? {},
+      };
 
       if (stream) {
         try {

@@ -103,8 +103,9 @@ export const withCanonicalIds = (
         specificationVersion: "v3",
         languageModel: (id: string) =>
           provider.languageModel(applyFallbackAffixes(normalizeId(id))),
+        // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
         embeddingModel: (id: string) =>
-          provider.textEmbeddingModel(applyFallbackAffixes(normalizeId(id))), // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+          provider.textEmbeddingModel(applyFallbackAffixes(normalizeId(id))),
       }
     : provider;
 

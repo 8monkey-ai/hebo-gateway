@@ -1,5 +1,3 @@
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
-
 import { embedMany } from "ai";
 import * as z from "zod/mini";
 
@@ -53,11 +51,16 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
       const embeddingModel = provider.embeddingModel(modelId);
 
-      const { values, providerOptions: rawOptions } = fromOpenAICompatibleEmbeddingParams(params);
+      let rawOptions, values;
+      try {
+        ({ providerOptions: rawOptions, values } = fromOpenAICompatibleEmbeddingParams(params));
+      } catch (error) {
+        return createErrorResponse("BAD_REQUEST", error, 400);
+      }
 
       const providerOptions = {
-        [embeddingModel.provider]: rawOptions,
-      } as unknown as ProviderOptions;
+        [embeddingModel.provider]: rawOptions.openAICompat ?? {},
+      };
 
       let embedManyResult;
       try {

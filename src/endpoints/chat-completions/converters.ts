@@ -51,7 +51,9 @@ export function fromOpenAICompatibleChatCompletionsParams(
     tools: fromOpenAICompatibleTools(tools),
     toolChoice: fromOpenAICompatibleToolChoice(tool_choice),
     temperature,
-    providerOptions: rest,
+    providerOptions: {
+      openAICompat: rest,
+    },
   };
 }
 
@@ -94,7 +96,7 @@ export function fromOpenAICompatibleUserMessage(
   if (Array.isArray(message.content)) {
     return {
       role: "user",
-      content: fromOpenAICompatibleContent(message.content) as UserContent,
+      content: fromOpenAICompatibleContent(message.content),
     };
   }
   return message as ModelMessage;
@@ -151,23 +153,28 @@ export function fromOpenAICompatibleToolResultMessage(
     : undefined;
 }
 
-export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]) {
+export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]): UserContent {
   return content.map((part) => {
     if (part.type === "image_url") {
       const url = part.image_url.url;
       if (url.startsWith("data:")) {
         const parts = url.split(",");
-        if (parts.length < 2) return part;
-
         const metadata = parts[0];
         const base64Data = parts[1];
-        if (!metadata || !base64Data) return part;
+
+        if (!metadata || !base64Data) {
+          throw new Error("Invalid data URL: missing metadata or data");
+        }
 
         const mimeTypePart = metadata.split(":")[1];
-        if (!mimeTypePart) return part;
+        if (!mimeTypePart) {
+          throw new Error("Invalid data URL: missing MIME type part");
+        }
 
         const mimeType = mimeTypePart.split(";")[0];
-        if (!mimeType) return part;
+        if (!mimeType) {
+          throw new Error("Invalid data URL: missing MIME type");
+        }
 
         return mimeType.startsWith("image/")
           ? {
@@ -181,6 +188,7 @@ export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart
               mediaType: mimeType,
             };
       }
+
       return {
         type: "image" as const,
         image: new URL(url),

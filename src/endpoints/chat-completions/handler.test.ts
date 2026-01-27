@@ -10,6 +10,7 @@ const baseUrl = "http://localhost/chat/completions";
 
 describe("Chat Completions Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
+    // eslint-disable-next-line require-await
     doGenerate: async (options) => {
       const isToolCall = options.tools && options.tools.length > 0;
 
@@ -28,7 +29,7 @@ describe("Chat Completions Handler", () => {
               input: '{"location":"San Francisco, CA"}',
             },
           ],
-          providerMetadata: { some: "metadata" },
+          providerMetadata: { provider: { key: "value" } },
           warnings: [],
         };
       }
@@ -45,10 +46,11 @@ describe("Chat Completions Handler", () => {
             text: "Hello from AI",
           },
         ],
-        providerMetadata: { some: "metadata" },
+        providerMetadata: { provider: { key: "value" } },
         warnings: [],
       };
     },
+    // eslint-disable-next-line require-await
     doStream: async () => ({
       stream: simulateReadableStream({
         chunks: [
@@ -179,7 +181,7 @@ describe("Chat Completions Handler", () => {
           cached_tokens: 20,
         },
       },
-      providerMetadata: { some: "metadata" },
+      providerMetadata: { provider: { key: "value" } },
     });
   });
 
@@ -241,7 +243,7 @@ describe("Chat Completions Handler", () => {
           cached_tokens: 20,
         },
       },
-      providerMetadata: { some: "metadata" },
+      providerMetadata: { provider: { key: "value" } },
     });
   });
 

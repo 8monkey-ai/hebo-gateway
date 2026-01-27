@@ -25,7 +25,9 @@ export function fromOpenAICompatibleEmbeddingParams(
 
   return {
     values,
-    providerOptions: rest as ProviderOptions,
+    providerOptions: {
+      openAICompat: rest,
+    },
   };
 }
 
