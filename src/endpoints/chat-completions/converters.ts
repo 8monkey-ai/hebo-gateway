@@ -65,7 +65,7 @@ export function fromOpenAICompatibleMessages(messages: OpenAICompatibleMessage[]
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
-      modelMessages.push(message as ModelMessage);
+      modelMessages.push(message);
       continue;
     }
 
@@ -93,13 +93,12 @@ function indexToolMessages(messages: OpenAICompatibleMessage[]) {
 export function fromOpenAICompatibleUserMessage(
   message: OpenAICompatibleUserMessage,
 ): ModelMessage {
-  if (Array.isArray(message.content)) {
-    return {
-      role: "user",
-      content: fromOpenAICompatibleContent(message.content),
-    };
-  }
-  return message as ModelMessage;
+  return {
+    role: "user",
+    content: Array.isArray(message.content)
+      ? fromOpenAICompatibleContent(message.content)
+      : message.content,
+  };
 }
 
 export function fromOpenAICompatibleAssistantMessage(
@@ -110,8 +109,8 @@ export function fromOpenAICompatibleAssistantMessage(
   if (!tool_calls || tool_calls.length === 0) {
     return {
       role: role,
-      content: content as string | null,
-    } as ModelMessage;
+      content: content ?? "",
+    };
   }
 
   return {
@@ -125,7 +124,7 @@ export function fromOpenAICompatibleAssistantMessage(
         input: parseToolOutput(fn.arguments).value,
       };
     }),
-  } as ModelMessage;
+  };
 }
 
 export function fromOpenAICompatibleToolResultMessage(
@@ -148,9 +147,7 @@ export function fromOpenAICompatibleToolResultMessage(
     });
   }
 
-  return toolResultParts.length > 0
-    ? ({ role: "tool", content: toolResultParts } as ModelMessage)
-    : undefined;
+  return toolResultParts.length > 0 ? { role: "tool", content: toolResultParts } : undefined;
 }
 
 export function fromOpenAICompatibleContent(content: OpenAICompatibleContentPart[]): UserContent {
