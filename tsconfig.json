@@ -9,6 +9,7 @@
     "allowJs": true,
 
     // Path alias for absolute imports
+    "rootDir": "./src",
     "paths": {
       "#/": ["./src/"],
       "#/*": ["./src/*"]
@@ -20,6 +21,7 @@
     "allowImportingTsExtensions": false,
     "verbatimModuleSyntax": true,
     "noEmit": false,
+    "declaration": true,
 
     // Best practices
     "strict": true,
@@ -33,5 +35,5 @@
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": true
   },
-  "exclude": ["**/*.test.ts", "node_modules", "dist", "e2e"]
+  "exclude": ["**/*.test.ts", "node_modules", "dist", "e2e", "test"],
 }
