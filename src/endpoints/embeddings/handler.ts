@@ -8,8 +8,8 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  fromOpenAICompatEmbeddingsParams,
-  createOpenAICompatEmbeddingResponse,
+  parseOpenAICompatEmbeddingsOptions,
+  createOpenAICompatEmbeddingsResponse,
 } from "./converters";
 import { OpenAICompatEmbeddingsRequestSchema } from "./schema";
 
@@ -65,9 +65,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
-    let embeddingOptions;
+    let embedOptions;
     try {
-      embeddingOptions = fromOpenAICompatEmbeddingsParams(params);
+      embedOptions = parseOpenAICompatEmbeddingsOptions(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -76,13 +76,13 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     try {
       embedManyResult = await embedMany({
         model: embeddingModel,
-        ...embeddingOptions,
+        ...embedOptions,
       });
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createOpenAICompatEmbeddingResponse(embedManyResult, modelId);
+    return createOpenAICompatEmbeddingsResponse(embedManyResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

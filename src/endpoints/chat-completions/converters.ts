@@ -15,18 +15,20 @@ import type {
 import { jsonSchema, tool } from "ai";
 
 import type {
-  OpenAICompatCompletionsParams,
-  OpenAICompatCompletionsContentPart,
-  OpenAICompatCompletionsMessage,
+  OpenAICompatCompletionsOptions,
   OpenAICompatCompletionsMessageToolCall,
   OpenAICompatCompletionsTool,
   OpenAICompatCompletionsToolChoice,
-  OpenAICompatCompletionsAssistantMessage,
+  OpenAICompatCompletionsContentPart,
+  OpenAICompatCompletionsMessage,
+  OpenAICompatCompletionsSystemMessage,
   OpenAICompatCompletionsUserMessage,
+  OpenAICompatCompletionsAssistantMessage,
   OpenAICompatCompletionsToolMessage,
-  OpenAICompatCompletion,
-  OpenAICompatCompletionFinishReason,
-  OpenAICompatCompletionUsage,
+  OpenAICompatCompletions,
+  OpenAICompatCompletionsFinishReason,
+  OpenAICompatCompletionsUsage,
+  OpenAICompatCompletionsChoice,
 } from "./schema";
 
 import { OpenAICompatError } from "../../utils/errors";
@@ -41,8 +43,8 @@ export type TextCallOptions = {
 
 // --- Request Flow ---
 
-export function fromOpenAICompatCompletionsParams(
-  params: OpenAICompatCompletionsParams,
+export function parseOpenAICompatCompletionsOptions(
+  params: OpenAICompatCompletionsOptions,
 ): TextCallOptions {
   const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
@@ -67,7 +69,7 @@ export function fromOpenAICompatCompletionsMessages(
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
-      modelMessages.push(message);
+      modelMessages.push(message satisfies OpenAICompatCompletionsSystemMessage);
       continue;
     }
 
@@ -257,11 +259,11 @@ function parseToolOutput(content: string) {
 
 // --- Response Flow ---
 
-export function toOpenAICompatCompletion(
+export function toOpenAICompatCompletions(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-): OpenAICompatCompletion {
-  const finish_reason = toOpenAICompatCompletionFinishReason(result.finishReason);
+): OpenAICompatCompletions {
+  const finish_reason = toOpenAICompatCompletionsFinishReason(result.finishReason);
 
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
@@ -271,37 +273,37 @@ export function toOpenAICompatCompletion(
     choices: [
       {
         index: 0,
-        message: toOpenAICompatCompletionMessage(result),
+        message: toOpenAICompatCompletionsMessage(result),
         finish_reason,
-      },
+      } satisfies OpenAICompatCompletionsChoice,
     ],
     usage: result.usage && toOpenAICompatCompletionUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
 }
-export function createOpenAICompatCompletionResponse(
+export function createOpenAICompatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(JSON.stringify(toOpenAICompatCompletion(result, model)), {
+  return new Response(JSON.stringify(toOpenAICompatCompletions(result, model)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toOpenAICompatCompletionStream(
+export function toOpenAICompatCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
-    .pipeThrough(new OpenAICompatCompletionStream(model))
+    .pipeThrough(new OpenAICompatCompletionsStream(model))
     .pipeThrough(new SSETransformStream())
     .pipeThrough(new TextEncoderStream());
 }
-export function createOpenAICompatCompletionStreamResponse(
+export function createOpenAICompatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(toOpenAICompatCompletionStream(result, model), {
+  return new Response(toOpenAICompatCompletionsStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -310,13 +312,17 @@ export function createOpenAICompatCompletionStreamResponse(
   });
 }
 
-export class OpenAICompatCompletionStream extends TransformStream {
+export class OpenAICompatCompletionsStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
 
-    const createChunk = (delta: unknown, finish_reason: unknown = null, usage?: unknown) => ({
+    const createChunk = (
+      delta: unknown,
+      finish_reason?: OpenAICompatCompletionsFinishReason,
+      usage?: OpenAICompatCompletionsUsage,
+    ) => ({
       id: streamId,
       object: "chat.completion.chunk",
       created: creationTime,
@@ -356,7 +362,7 @@ export class OpenAICompatCompletionStream extends TransformStream {
             controller.enqueue(
               createChunk(
                 {},
-                toOpenAICompatCompletionFinishReason(part.finishReason),
+                toOpenAICompatCompletionsFinishReason(part.finishReason),
                 toOpenAICompatCompletionUsage(part.totalUsage),
               ),
             );
@@ -395,7 +401,7 @@ export class SSETransformStream extends TransformStream {
   }
 }
 
-export const toOpenAICompatCompletionMessage = (
+export const toOpenAICompatCompletionsMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
 ): OpenAICompatCompletionsAssistantMessage => {
   const message: OpenAICompatCompletionsAssistantMessage = {
@@ -425,7 +431,7 @@ export const toOpenAICompatCompletionMessage = (
 
 export function toOpenAICompatCompletionUsage(
   usage: LanguageModelUsage | undefined,
-): OpenAICompatCompletionUsage | undefined {
+): OpenAICompatCompletionsUsage | undefined {
   if (!usage) return undefined;
   return {
     prompt_tokens: usage.inputTokens ?? 0,
@@ -455,11 +461,11 @@ export function toOpenAICompatCompletionToolCall(
   };
 }
 
-export const toOpenAICompatCompletionFinishReason = (
+export const toOpenAICompatCompletionsFinishReason = (
   finishReason: FinishReason,
-): OpenAICompatCompletionFinishReason => {
+): OpenAICompatCompletionsFinishReason => {
   if (finishReason === "error" || finishReason === "other") {
     return "stop";
   }
-  return (finishReason as string).replaceAll("-", "_") as OpenAICompatCompletionFinishReason;
+  return (finishReason as string).replaceAll("-", "_") as OpenAICompatCompletionsFinishReason;
 };

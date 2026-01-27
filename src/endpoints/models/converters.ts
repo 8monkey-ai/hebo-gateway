@@ -35,9 +35,7 @@ export function toOpenAICompatModel(id: string, catalogModel: CatalogModel): Ope
   return model;
 }
 
-export function toOpenAICompatModelList(
-  models: ModelCatalog,
-): OpenAICompatModelList<OpenAICompatModel> {
+export function toOpenAICompatModels(models: ModelCatalog): OpenAICompatModelList {
   return {
     object: "list",
     data: Object.entries(models).map(([id, catalogModel]) =>
@@ -45,8 +43,8 @@ export function toOpenAICompatModelList(
     ),
   };
 }
-export function createOpenAICompatModelListResponse(models: ModelCatalog): Response {
-  return new Response(JSON.stringify(toOpenAICompatModelList(models)), {
+export function createOpenAICompatModelsResponse(models: ModelCatalog): Response {
+  return new Response(JSON.stringify(toOpenAICompatModels(models)), {
     headers: { "Content-Type": "application/json" },
   });
 }

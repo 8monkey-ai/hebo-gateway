@@ -3,7 +3,7 @@ import type { GatewayConfig, Endpoint } from "../../types";
 import { parseConfig } from "../../config";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
-import { createOpenAICompatModelListResponse, createOpenAICompatModelResponse } from "./converters";
+import { createOpenAICompatModelsResponse, createOpenAICompatModelResponse } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
   const { models, hooks } = parseConfig(config);
@@ -17,7 +17,7 @@ export const models = (config: GatewayConfig): Endpoint => {
     const rawId = req.url.split("/models/", 2)[1]?.split("?", 1)[0];
 
     if (!rawId) {
-      return createOpenAICompatModelListResponse(models);
+      return createOpenAICompatModelsResponse(models);
     }
 
     let modelId = rawId;

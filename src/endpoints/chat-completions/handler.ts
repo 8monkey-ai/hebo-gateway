@@ -8,9 +8,9 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  fromOpenAICompatCompletionsParams,
-  createOpenAICompatCompletionResponse,
-  createOpenAICompatCompletionStreamResponse,
+  parseOpenAICompatCompletionsOptions,
+  createOpenAICompatCompletionsResponse,
+  createOpenAICompatCompletionsStreamResponse,
 } from "./converters";
 import { OpenAICompatCompletionsRequestSchema } from "./schema";
 
@@ -68,7 +68,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     let textOptions;
     try {
-      textOptions = fromOpenAICompatCompletionsParams(params);
+      textOptions = parseOpenAICompatCompletionsOptions(params);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -80,7 +80,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           ...textOptions,
         });
 
-        return createOpenAICompatCompletionStreamResponse(result, modelId);
+        return createOpenAICompatCompletionsStreamResponse(result, modelId);
       } catch (error) {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
@@ -96,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createOpenAICompatCompletionResponse(generateTextResult, modelId);
+    return createOpenAICompatCompletionsResponse(generateTextResult, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

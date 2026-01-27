@@ -22,15 +22,10 @@ export const OpenAICompatModelSchema = z.catchall(
   }),
   z.unknown(),
 );
-
 export type OpenAICompatModel = z.infer<typeof OpenAICompatModelSchema>;
-
-export interface OpenAICompatModelList<T> {
-  object: "list";
-  data: T[];
-}
 
 export const OpenAICompatModelListSchema = z.object({
   object: z.literal("list"),
   data: z.array(OpenAICompatModelSchema),
 });
+export type OpenAICompatModelList = z.infer<typeof OpenAICompatModelListSchema>;
