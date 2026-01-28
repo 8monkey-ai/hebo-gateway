@@ -4,7 +4,7 @@ import type { ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
-export const withCanonicalIdsForOpenAI = (
+export const withCanonicalIdsForVoyage = (
   provider: VoyageProvider,
   extraMapping?: Record<ModelId, string>,
 ) =>

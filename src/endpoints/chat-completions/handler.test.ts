@@ -8,7 +8,7 @@ import { chatCompletions } from "./handler";
 
 const baseUrl = "http://localhost/chat/completions";
 
-describe("Chat ChatCompletions Handler", () => {
+describe("Chat Completions Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
     // eslint-disable-next-line require-await
     doGenerate: async (options) => {

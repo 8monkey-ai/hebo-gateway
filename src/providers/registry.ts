@@ -110,9 +110,10 @@ export const withCanonicalIds = (
     if (fn === undefined) return out;
 
     for (const [k, v] of Object.entries(mapping ?? {})) {
+      if (v === undefined) continue;
       // This is lazy so that provider is only create once called
       Object.defineProperty(out, k, {
-        get: () => fn(applyPrefix(v!)),
+        get: () => fn(applyPrefix(v)),
       });
     }
 
