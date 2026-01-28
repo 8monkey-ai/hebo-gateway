@@ -1,16 +1,13 @@
-import { createVoyage, voyage, type VoyageProviderSettings } from "voyage-ai-provider";
+import type { VoyageProvider } from "voyage-ai-provider";
+
+import type { ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
-export const voyageWithCanonicalIds = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(voyage, extraMapping, {
-    stripNamespace: true,
-  });
-
-export const createVoyageWithCanonicalIds = (
-  settings: VoyageProviderSettings,
-  extraMapping?: Record<string, string>,
+export const withCanonicalIdsForOpenAI = (
+  provider: VoyageProvider,
+  extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(createVoyage(settings), extraMapping, {
+  withCanonicalIds(provider, extraMapping, {
     stripNamespace: true,
   });

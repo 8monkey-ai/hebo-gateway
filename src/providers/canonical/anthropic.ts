@@ -1,32 +1,14 @@
-import {
-  createAnthropic,
-  anthropic,
-  type AnthropicProviderSettings,
-  type AnthropicProvider,
-} from "@ai-sdk/anthropic";
+import { type AnthropicProvider } from "@ai-sdk/anthropic";
+
+import type { ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
-export const anthropicCanonicalIdAdapter = (
+export const withCanonicalIdsForAnthropic = (
   provider: AnthropicProvider,
-  extraMapping?: Record<string, string>,
+  extraMapping?: Record<ModelId, string>,
 ) =>
   withCanonicalIds(provider, extraMapping, {
-    stripNamespace: true,
-    normalizeDelimiters: true,
-  });
-
-export const anthropicWithCanonicalIds = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(anthropic, extraMapping, {
-    stripNamespace: true,
-    normalizeDelimiters: true,
-  });
-
-export const createAnthropicWithCanonicalIds = (
-  settings: AnthropicProviderSettings,
-  extraMapping?: Record<string, string>,
-) =>
-  withCanonicalIds(createAnthropic(settings), extraMapping, {
     stripNamespace: true,
     normalizeDelimiters: true,
   });

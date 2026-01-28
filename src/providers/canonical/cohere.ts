@@ -1,6 +1,6 @@
-import { createCohere, cohere, type CohereProviderSettings } from "@ai-sdk/cohere";
+import { type CohereProvider } from "@ai-sdk/cohere";
 
-import type { CanonicalModelId } from "../../models/types";
+import type { CanonicalModelId, ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
@@ -14,21 +14,12 @@ const MAPPING = {
   "cohere/command-r-plus": "command-r-plus-08-2024",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
-export const cohereWithCanonicalIds = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(
-    cohere,
-    { ...MAPPING, ...extraMapping },
-    {
-      stripNamespace: true,
-    },
-  );
-
-export const createCohereWithCanonicalIds = (
-  settings: CohereProviderSettings,
-  extraMapping?: Record<string, string>,
+export const withCanonicalIdsForCohere = (
+  provider: CohereProvider,
+  extraMapping?: Record<ModelId, string>,
 ) =>
   withCanonicalIds(
-    createCohere(settings),
+    provider,
     { ...MAPPING, ...extraMapping },
     {
       stripNamespace: true,

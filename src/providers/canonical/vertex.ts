@@ -1,18 +1,14 @@
-import { createVertex, vertex, type GoogleVertexProviderSettings } from "@ai-sdk/google-vertex";
+import type { GoogleVertexProvider } from "@ai-sdk/google-vertex";
+
+import type { ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
-export const vertexWithCanonicalIds = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(vertex, extraMapping, {
-    stripNamespace: true,
-    normalizeDelimiters: ["anthropic"],
-  });
-
-export const createVertexWithCanonicalIds = (
-  settings: GoogleVertexProviderSettings,
-  extraMapping?: Record<string, string>,
+export const withCanonicalIdsForOpenAI = (
+  provider: GoogleVertexProvider,
+  extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(createVertex(settings), extraMapping, {
+  withCanonicalIds(provider, extraMapping, {
     stripNamespace: true,
     normalizeDelimiters: ["anthropic"],
   });

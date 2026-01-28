@@ -1,16 +1,13 @@
-import { createOpenAI, openai, type OpenAIProviderSettings } from "@ai-sdk/openai";
+import { type OpenAIProvider } from "@ai-sdk/openai";
+
+import type { ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
-export const openaiWithCanonicalIds = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(openai, extraMapping, {
-    stripNamespace: true,
-  });
-
-export const createOpenAIWithCanonicalIds = (
-  settings: OpenAIProviderSettings,
-  extraMapping?: Record<string, string>,
+export const withCanonicalIdsForOpenAI = (
+  provider: OpenAIProvider,
+  extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(createOpenAI(settings), extraMapping, {
+  withCanonicalIds(provider, extraMapping, {
     stripNamespace: true,
   });

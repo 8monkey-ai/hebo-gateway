@@ -40,7 +40,7 @@ export const resolveProvider = (args: {
 
 export const withCanonicalIds = (
   provider: ProviderV3,
-  mapping?: Record<string, string>,
+  mapping?: Partial<Record<ModelId, string>>,
   options?: {
     /** @default true */
     stripNamespace?: boolean;
@@ -112,7 +112,7 @@ export const withCanonicalIds = (
     for (const [k, v] of Object.entries(mapping ?? {})) {
       // This is lazy so that provider is only create once called
       Object.defineProperty(out, k, {
-        get: () => fn(applyPrefix(v)),
+        get: () => fn(applyPrefix(v!)),
       });
     }
 

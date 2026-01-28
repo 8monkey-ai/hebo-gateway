@@ -1,6 +1,6 @@
-import { createGroq, groq, type GroqProviderSettings } from "@ai-sdk/groq";
+import { type GroqProvider } from "@ai-sdk/groq";
 
-import type { CanonicalModelId } from "../../models/types";
+import type { CanonicalModelId, ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
@@ -11,15 +11,7 @@ const MAPPING = {
   "meta/llama-4-maverick": "meta-llama/llama-4-maverick-17b-128e-instruct",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
-export const groqWithCanonicalIds = (extraMapping?: Record<string, string>) =>
-  withCanonicalIds(groq, { ...MAPPING, ...extraMapping }, { stripNamespace: false });
-
-export const createGroqWithCanonicalIds = (
-  settings: GroqProviderSettings,
-  extraMapping?: Record<string, string>,
-) =>
-  withCanonicalIds(
-    createGroq(settings),
-    { ...MAPPING, ...extraMapping },
-    { stripNamespace: false },
-  );
+export const withCanonicalIdsForGroq = (
+  provider: GroqProvider,
+  extraMapping?: Record<ModelId, string>,
+) => withCanonicalIds(provider, { ...MAPPING, ...extraMapping }, { stripNamespace: false });
