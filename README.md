@@ -31,16 +31,19 @@ bun add @hebo-ai/gateway ai @ai-sdk/groq
 Start by creating a gateway instance with at least one provider and a few models.
 
 ```ts
+import { createGroq } from "@ai-sdk/groq";
 import { gateway, createModelCatalog } from "@hebo-ai/gateway";
-import { createGroqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
+import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
   providers: {
-    // Any Vercel AI SDK provider +WithCanonicalIds
-    groq: createGroqWithCanonicalIds({
-      apiKey: process.env.GROQ_API_KEY,
+    // Any Vercel AI SDK provider + withCanonicalIdsForX helper
+    groq: withCanonicalIdsForGroq(
+      createGroq({
+        apiKey: process.env.GROQ_API_KEY,
+      }),
     },
   },
 
@@ -194,13 +197,13 @@ Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For H
 
 Out-of-the-box canonical providers:
 
-- Amazon Bedrock (`createAmazonBedrockWithCanonicalIds`): `@hebo-ai/gateway/providers/bedrock`
-- Anthropic (`createAnthropicWithCanonicalIds`): `@hebo-ai/gateway/providers/anthropic`
-- Cohere (`createCohereWithCanonicalIds`): `@hebo-ai/gateway/providers/cohere`
-- Google Vertex AI (`createVertexWithCanonicalIds`): `@hebo-ai/gateway/providers/vertex`
-- Groq (`createGroqWithCanonicalIds`): `@hebo-ai/gateway/providers/groq`
-- OpenAI (`createOpenAIWithCanonicalIds`): `@hebo-ai/gateway/providers/openai`
-- Voyage (`createVoyageWithCanonicalIds`): `@hebo-ai/gateway/providers/voyage`
+- Amazon Bedrock (`withCanonicalIdsForBedrock`): `@hebo-ai/gateway/providers/bedrock`
+- Anthropic (`withCanonicalIdsForAnthropic`): `@hebo-ai/gateway/providers/anthropic`
+- Cohere (`withCanonicalIdsForCohere`): `@hebo-ai/gateway/providers/cohere`
+- Google Vertex AI (`withCanonicalIdsForVertex`): `@hebo-ai/gateway/providers/vertex`
+- Groq (`withCanonicalIdsForGroq`): `@hebo-ai/gateway/providers/groq`
+- OpenAI (`withCanonicalIdsForOpenAI`): `@hebo-ai/gateway/providers/openai`
+- Voyage (`withCanonicalIdsForVoyage`): `@hebo-ai/gateway/providers/voyage`
 
 If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
@@ -356,14 +359,14 @@ const gw = gateway({
     },
     /**
      * Picks a provider instance for the request.
-     * @param ctx.providers Provider registry.
+     * @param ctx.providers ProviderRegistry from config.
      * @param ctx.models ModelCatalog from config.
      * @param ctx.modelId Resolved model ID.
      * @param ctx.operation Operation type ("text" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
-      providers: ProviderRegistryProvider;
+      providers: ProviderRegistry;
       models: ModelCatalog;
       modelId: ModelId;
       operation: "text" | "embeddings";
