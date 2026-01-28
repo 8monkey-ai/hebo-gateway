@@ -1,12 +1,13 @@
+import { groq } from "@ai-sdk/groq";
 import { Hono } from "hono";
 
 import { createModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
-import { groqWithCanonicalIds } from "#/providers/canonical/groq";
+import { gptOss } from "#/models/gpt-oss";
+import { withCanonicalIdsForGroq } from "#/providers/groq";
 
 const gw = gateway({
   providers: {
-    groq: groqWithCanonicalIds(),
+    groq: withCanonicalIdsForGroq(groq),
   },
   models: createModelCatalog(...gptOss["all"].map((preset) => preset({}))),
 });

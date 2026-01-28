@@ -1,15 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
+import { groq } from "@ai-sdk/groq";
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 
 import { createModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
-import { groqWithCanonicalIds } from "#/providers/canonical/groq";
+import { gptOss } from "#/models/gpt-oss";
+import { withCanonicalIdsForGroq } from "#/providers/groq";
 
 const gw = gateway({
   basePath: "/api/pages/gateway",
   providers: {
-    groq: groqWithCanonicalIds(),
+    groq: withCanonicalIdsForGroq(groq),
   },
   models: createModelCatalog(...gptOss["all"].map((preset) => preset({}))),
 });

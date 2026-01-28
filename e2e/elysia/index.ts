@@ -1,16 +1,18 @@
+import { createGroq } from "@ai-sdk/groq";
 import { Elysia } from "elysia";
+import { createVoyage } from "voyage-ai-provider";
 
 import { createModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/presets/gpt-oss";
-import { llama } from "#/models/presets/llama";
-import { voyage } from "#/models/presets/voyage";
-import { groqWithCanonicalIds } from "#/providers/canonical/groq";
-import { voyageWithCanonicalIds } from "#/providers/canonical/voyage";
+import { gptOss } from "#/models/gpt-oss";
+import { llama } from "#/models/llama";
+import { voyage } from "#/models/voyage";
+import { withCanonicalIdsForGroq } from "#/providers/groq";
+import { withCanonicalIdsForVoyage } from "#/providers/voyage";
 
 const gw = gateway({
   providers: {
-    groq: groqWithCanonicalIds(),
-    voyage: voyageWithCanonicalIds(),
+    groq: withCanonicalIdsForGroq(createGroq()),
+    voyage: withCanonicalIdsForVoyage(createVoyage()),
   },
   models: createModelCatalog(
     ...gptOss["all"].map((preset) => preset({})),
