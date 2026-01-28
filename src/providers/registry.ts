@@ -22,9 +22,9 @@ export const resolveProvider = (args: {
     throw new Error(`Model '${modelId}' does not support '${operation}' output`);
   }
 
-  const resolvedProvider = catalogModel.providers[0];
+  const resolvedProviderId = catalogModel.providers[0];
 
-  if (!resolvedProvider) {
+  if (!resolvedProviderId) {
     throw new Error(`No providers configured for model '${modelId}'`);
   }
 
@@ -32,13 +32,13 @@ export const resolveProvider = (args: {
     case "text":
       return customProvider({
         languageModels: {
-          [modelId]: providers.languageModel(`${resolvedProvider}:${modelId}`),
+          [modelId]: providers.languageModel(`${resolvedProviderId}:${modelId}`),
         },
       });
     case "embeddings":
       return customProvider({
         embeddingModels: {
-          [modelId]: providers.embeddingModel(`${resolvedProvider}:${modelId}`),
+          [modelId]: providers.embeddingModel(`${resolvedProviderId}:${modelId}`),
         },
       });
     default:
