@@ -28,6 +28,8 @@ bun add @hebo-ai/gateway ai @ai-sdk/groq
 
 ### Setup A Gateway Instance
 
+Start by creating a gateway instance with at least one provider and a few models.
+
 ```ts
 import { gateway, createModelCatalog } from "@hebo-ai/gateway";
 import { createGroqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
@@ -403,9 +405,9 @@ const app = new Elysia()
 console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
-## Low-level Schemas & Converters
+### Low-level Schemas & Converters
 
-We also provide full schemas, helper functions and types to convert between OpenAI <> Vercel AI SDK for advanced use cases like creating your own endpoint. They are available via deep-imports and completely tree-shakeable.
+We also provide full schemas, helper functions and types to convert between **OpenAI <> Vercel AI SDK** for advanced use cases like creating your own endpoint. They are available via deep-imports and completely tree-shakeable.
 
 ```ts
 import { streamText } from "ai";
