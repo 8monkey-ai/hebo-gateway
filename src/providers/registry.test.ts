@@ -1,16 +1,19 @@
 import { expect, test } from "bun:test";
+import { createVoyage } from "voyage-ai-provider";
 
 import { parseConfig } from "../config";
 import { voyage4Lite } from "../models/presets/voyage";
-import { createVoyageWithCanonicalIds } from "../providers/canonical/voyage";
+import { withCanonicalIdsForVoyage } from "../providers/canonical/voyage";
 import { resolveProvider } from "./registry";
 
 test("Voyage 4 Lite ID transformation in gateway config", () => {
   const config = {
     providers: {
-      voyage: createVoyageWithCanonicalIds({
-        apiKey: "test-key",
-      }),
+      voyage: withCanonicalIdsForVoyage(
+        createVoyage({
+          apiKey: "test-key",
+        }),
+      ),
     },
     models: {
       ...voyage4Lite({
