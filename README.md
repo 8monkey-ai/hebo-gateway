@@ -4,29 +4,19 @@ Roll your own AI gateway for full control over models, providers, routing logic,
 
 ## Overview
 
-Hebo Gateway is a configurable AI gateway that standardizes providers, models, and request/response handling behind a unified interface. Integrate it into your existing applications or deploy as a standalone service.
+Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
 
-In contrast to other projects like LiteLLM or Portkey, it's built from the ground up to be highly extensible to your own needs. This would not have been possible without standing on the shoulders of giants, in this case the Vercel AI SDK.
+Hebo Gateway is an open-source, embeddable AI gateway framework built to live inside your app. It gives you full control over providers, models, routing, and the request lifecycle.
 
 ## Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
-- 🧭 Canonical model IDs and snakeCase/camelCase parameters across providers.
+- 🧭 Canonical model IDs and parameter naming across providers.
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
-
-## Yet Another AI Gateway?
-
-Hosted gateways like OpenRouter or Vercel AI Gateway are great when you want to get started quickly with a managed service and a shared catalog. LiteLLM and Portkey target teams that need enterprise control by providing a self-hosted gateway. But all of them are off-the-shelf solutions; none allow for true extensibility. Hebo Gateway is for teams that want the same conveniences, but fully own their gateway, integrate it into their own applications and host on their own infrastructure.
-
-- **Bring your own routing logic.** Hooks let you implement custom auth, rate limits, observability, and traffic shaping without forking a vendor.
-- **Provider-native compatibility.** It speaks OpenAI-compatible APIs and accepts any Vercel AI SDK provider, so you can plug in existing SDKs and credentials quickly.
-- **Canonical model IDs.** Normalize model IDs and parameters across providers, while keeping a rich model catalog that your app can depend on.
-- **Framework-native integration.** Mount the handler inside Hono, Elysia, Next.js, TanStack, or any WinterCG runtime.
-- **Composable building blocks.** Use the gateway end-to-end, or just the converters, schemas, and middleware helpers.
 
 ## Installation
 
@@ -36,10 +26,10 @@ bun add @hebo-ai/gateway ai @ai-sdk/groq
 
 ## Quickstart
 
-### Configuration
+### Setup A Gateway Instance
 
 ```ts
-import { createModelCatalog, gateway } from "@hebo-ai/gateway";
+import { gateway, createModelCatalog } from "@hebo-ai/gateway";
 import { createGroqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
@@ -59,8 +49,8 @@ export const gw = gateway({
       providers: ["groq"],
     }),
     // Or add a whole model family
-    ...gptOss["all"].map((model) =>
-      model({})
+    ...gptOss["all"].map((preset) =>
+      preset({})
     ),
   ),
 });
@@ -68,9 +58,9 @@ export const gw = gateway({
 
 ### Mount Route Handlers
 
-Hebo Gateway plugs into any existing framework. Simply mount the gateway’s `handler` under a prefix, and keep using your framework’s existing lifecycle for authentication, logging, observability, and more.
+Hebo Gateway plugs into your favorite web framework. Simply mount the gateway’s `handler` under a prefix, and keep using your existing lifecycle hooks for authentication, logging, observability, and more.
 
-Here is an example using ElysiaJS (our favorite):
+Here is an example using **ElysiaJS** (our favorite):
 
 `src/index.ts`
 
@@ -89,7 +79,7 @@ console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 
 ### Call the Gateway
 
-Since Hebo Gateway exposes OpenAI-compatible endpoints, it can be used with a broad set of common AI SDKs like Vercel AI SDK, TanStack AI, LangChain, the official OpenAI SDK and others.
+Since Hebo Gateway exposes OpenAI-compatible endpoints, it can be used with a broad set of common AI SDKs like **Vercel AI SDK**, **TanStack AI**, **LangChain**, the official **OpenAI SDK** and others.
 
 Here is a quick example using the Vercel AI SDK:
 
@@ -114,7 +104,7 @@ console.log(text);
 
 ## Framework Support
 
-Hebo Gateway exposes WinterCG-compatible handlers that integrate into any existing framework.
+Hebo Gateway exposes **WinterCG-compatible** handlers that integrate with almost any existing framework.
 
 ### ElysiaJS
 
@@ -194,11 +184,23 @@ export const Route = createFileRoute("/api/$")({
 });
 ```
 
-## Advanced Configuration
+## Configuration Reference
 
 ### Providers
 
-The provider registry accepts any Vercel AI SDK `ProviderV3`. Hebo Gateway simply expects canonical model IDs (for example `openai/gpt-4.1-mini`). If a provider uses different IDs or delimiters, wrap it with `withCanonicalIds` to canonicalize the IDs before registering.
+Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For Hebo to be able to route a model across different providers, the names need to be canonicalized to a common form, for example 'openai/gpt-4.1-mini' instead of 'gpt-4.1-mini'.
+
+Out-of-the-box canonical providers:
+
+- Amazon Bedrock (`createAmazonBedrockWithCanonicalIds`): `@hebo-ai/gateway/providers/bedrock`
+- Anthropic (`createAnthropicWithCanonicalIds`): `@hebo-ai/gateway/providers/anthropic`
+- Cohere (`createCohereWithCanonicalIds`): `@hebo-ai/gateway/providers/cohere`
+- Google Vertex AI (`createVertexWithCanonicalIds`): `@hebo-ai/gateway/providers/vertex`
+- Groq (`createGroqWithCanonicalIds`): `@hebo-ai/gateway/providers/groq`
+- OpenAI (`createOpenAIWithCanonicalIds`): `@hebo-ai/gateway/providers/openai`
+- Voyage (`createVoyageWithCanonicalIds`): `@hebo-ai/gateway/providers/voyage`
+
+If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
 ```ts
 import { createOpenAI } from "@ai-sdk/openai";
@@ -228,12 +230,35 @@ const gw = gateway({
 
 ### Models
 
-#### Presets
+Registering models tells Hebo Gateway which models are available, under which canonical ID and what capabilities they have.
 
-Hebo Gateway ships model presets under `models/presets`, exported from the package. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models. Presets come in two forms:
+#### Model Presets
 
+To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models. 
+
+Presets come in two forms:
 - Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
+
+Out-of-the-box model presets:
+
+- **Claude** — `@hebo-ai/gateway/models/claude`  
+  Family: `claude` (`v4.5`, `v4.x`, `latest`, `all`)
+
+- **Gemini** — `@hebo-ai/gateway/models/gemini`  
+  Family: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `latest`, `preview`, `all`)
+
+- **GPT-OSS** — `@hebo-ai/gateway/models/gpt-oss`  
+  Family: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
+
+- **Llama** — `@hebo-ai/gateway/models/llama`  
+  Family: `llama` (`v3.1`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+
+- **Cohere** — `@hebo-ai/gateway/models/cohere`  
+  Family: `cohere` (`v4`, `v4.x`, `latest`, `all`)
+
+- **Voyage** — `@hebo-ai/gateway/models/voyage`  
+  Family: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 ```ts
 import { createModelCatalog } from "@hebo-ai/gateway";
@@ -252,9 +277,9 @@ const modelsFromFamily = createModelCatalog(
 );
 ```
 
-#### Custom Models
+#### User-defined Models
 
-As the ecosystem is moving faster than anyone can keep-up with, you can always define your own custom catalog entries by following the `CatalogModel` type.
+As the ecosystem is moving faster than anyone can keep-up with, you can always register your own model entries by following the `CatalogModel` type.
 
 ```ts
 const gw = gateway({
@@ -262,15 +287,15 @@ const gw = gateway({
     // ...
   },
   models: createModelCatalog({
-    "anthropic/claude-sonnet-4.5": {
-      name: "Claude Sonnet 4.5",
-      created: "2025-09-29",
-      knowledge: "2025-07",
+    "openai/gpt-5.2": {
+      name: "GPT 5.2",
+      created: "2025-12-11",
+      knowledge: "2025-08",
       modalities: {
         input: ["text", "image", "pdf", "file"],
         output: ["text"],
       },
-      context: 200000,
+      context: 400000,
       capabilities: [
         "attachments",
         "reasoning",
@@ -278,7 +303,7 @@ const gw = gateway({
         "structured_output",
         "temperature",
       ],
-      providers: ["bedrock"],
+      providers: ["openai"],
       // Additional properties are merged into the model object
       additionalProperties: {
         customProperty: "customValue",
@@ -360,9 +385,11 @@ const gw = gateway({
 });
 ```
 
+## Advanced Usage
+
 ### Selective Route Mounting
 
-If you want to have more flexibility, for example for custom rate limit checks, you can also choose to only mount individual routes from the gateway's `routes` property.
+If you want to have more flexibility, for example for custom rate limit checks per route, you can also choose to only mount individual routes from the gateway's `routes` property.
 
 ```ts
 const gw = gateway({
@@ -414,6 +441,6 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `createCompletionsResponse`. Equivalent interfaces are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `createCompletionsResponse`. Equivalent schemas and helper are available in the `embeddings` and `models` endpoints.
 
 Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.
