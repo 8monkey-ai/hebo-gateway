@@ -40,7 +40,7 @@ const resolvePrefix = ({ geo = "us", arn }: BedrockCanonicalOptions = {}) =>
 
 export const withCanonicalIdsForBedrock = (
   provider: AmazonBedrockProvider,
-  opts?: BedrockCanonicalOptions,
+  options?: BedrockCanonicalOptions,
   extraMapping?: Record<ModelId, string>,
 ) =>
   withCanonicalIds(
@@ -50,7 +50,7 @@ export const withCanonicalIdsForBedrock = (
       stripNamespace: false,
       namespaceSeparator: ".",
       normalizeDelimiters: true,
-      prefix: resolvePrefix(opts),
+      prefix: resolvePrefix(options),
       postfix: "-v1:0",
     },
   );
