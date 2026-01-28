@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 
 import { parseConfig } from "../config";
-import { createModelCatalog } from "../index";
 import { voyage4Lite } from "../models/presets/voyage";
 import { createVoyageWithCanonicalIds } from "../providers/canonical/voyage";
 import { resolveProvider } from "./registry";
@@ -13,11 +12,11 @@ test("Voyage 4 Lite ID transformation in gateway config", () => {
         apiKey: "test-key",
       }),
     },
-    models: createModelCatalog(
-      voyage4Lite({
+    models: {
+      ...voyage4Lite({
         providers: ["voyage"],
       }),
-    ),
+    },
   };
 
   const parsedConfig = parseConfig(config);
@@ -39,6 +38,6 @@ test("Voyage 4 Lite ID transformation in gateway config", () => {
 
   // 4. Check the providers registry directly
   const registry = parsedConfig.providers;
-  const directModel = registry.embeddingModel(`voyage:${modelId}`);
+  const directModel = registry["voyage"]!.embeddingModel(modelId);
   expect(directModel.modelId).toBe("voyage-4-lite");
 });

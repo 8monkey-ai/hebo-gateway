@@ -1,11 +1,11 @@
 import * as z from "zod/mini";
 
-export const CompletionsContentPartTextSchema = z.object({
+export const ChatCompletionsContentPartTextSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
 });
 
-export const CompletionsContentPartImageSchema = z.object({
+export const ChatCompletionsContentPartImageSchema = z.object({
   type: z.literal("image_url"),
   image_url: z.object({
     url: z.string(),
@@ -13,7 +13,7 @@ export const CompletionsContentPartImageSchema = z.object({
   }),
 });
 
-export const CompletionsContentPartFileSchema = z.object({
+export const ChatCompletionsContentPartFileSchema = z.object({
   type: z.literal("file"),
   file: z.object({
     data: z.string(),
@@ -22,12 +22,12 @@ export const CompletionsContentPartFileSchema = z.object({
   }),
 });
 
-export type CompletionsContentPart =
-  | z.infer<typeof CompletionsContentPartTextSchema>
-  | z.infer<typeof CompletionsContentPartImageSchema>
-  | z.infer<typeof CompletionsContentPartFileSchema>;
+export type ChatCompletionsContentPart =
+  | z.infer<typeof ChatCompletionsContentPartTextSchema>
+  | z.infer<typeof ChatCompletionsContentPartImageSchema>
+  | z.infer<typeof ChatCompletionsContentPartFileSchema>;
 
-export const CompletionsToolCallSchema = z.object({
+export const ChatCompletionsToolCallSchema = z.object({
   type: z.literal("function"),
   id: z.string(),
   function: z.object({
@@ -35,54 +35,54 @@ export const CompletionsToolCallSchema = z.object({
     name: z.string(),
   }),
 });
-export type CompletionsToolCall = z.infer<typeof CompletionsToolCallSchema>;
+export type ChatCompletionsToolCall = z.infer<typeof ChatCompletionsToolCallSchema>;
 
-export const CompletionsSystemMessageSchema = z.object({
+export const ChatCompletionsSystemMessageSchema = z.object({
   role: z.literal("system"),
   content: z.string(),
 });
-export type CompletionsSystemMessage = z.infer<typeof CompletionsSystemMessageSchema>;
+export type ChatCompletionsSystemMessage = z.infer<typeof ChatCompletionsSystemMessageSchema>;
 
-export const CompletionsUserMessageSchema = z.object({
+export const ChatCompletionsUserMessageSchema = z.object({
   role: z.literal("user"),
   content: z.union([
     z.string(),
     z.array(
       z.union([
-        CompletionsContentPartTextSchema,
-        CompletionsContentPartImageSchema,
-        CompletionsContentPartFileSchema,
+        ChatCompletionsContentPartTextSchema,
+        ChatCompletionsContentPartImageSchema,
+        ChatCompletionsContentPartFileSchema,
       ]),
     ),
   ]),
 });
-export type CompletionsUserMessage = z.infer<typeof CompletionsUserMessageSchema>;
+export type ChatCompletionsUserMessage = z.infer<typeof ChatCompletionsUserMessageSchema>;
 
-export const CompletionsAssistantMessageSchema = z.object({
+export const ChatCompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
   content: z.union([z.string(), z.null()]),
-  tool_calls: z.optional(z.array(CompletionsToolCallSchema)),
+  tool_calls: z.optional(z.array(ChatCompletionsToolCallSchema)),
   reasoning: z.optional(z.string()),
   reasoning_content: z.optional(z.string()),
 });
-export type CompletionsAssistantMessage = z.infer<typeof CompletionsAssistantMessageSchema>;
+export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
 
-export const CompletionsToolMessageSchema = z.object({
+export const ChatCompletionsToolMessageSchema = z.object({
   role: z.literal("tool"),
   content: z.string(),
   tool_call_id: z.string(),
 });
-export type CompletionsToolMessage = z.infer<typeof CompletionsToolMessageSchema>;
+export type ChatCompletionsToolMessage = z.infer<typeof ChatCompletionsToolMessageSchema>;
 
-export const CompletionsMessageSchema = z.union([
-  CompletionsSystemMessageSchema,
-  CompletionsUserMessageSchema,
-  CompletionsAssistantMessageSchema,
-  CompletionsToolMessageSchema,
+export const ChatCompletionsMessageSchema = z.union([
+  ChatCompletionsSystemMessageSchema,
+  ChatCompletionsUserMessageSchema,
+  ChatCompletionsAssistantMessageSchema,
+  ChatCompletionsToolMessageSchema,
 ]);
-export type CompletionsMessage = z.infer<typeof CompletionsMessageSchema>;
+export type ChatCompletionsMessage = z.infer<typeof ChatCompletionsMessageSchema>;
 
-export const CompletionsToolSchema = z.object({
+export const ChatCompletionsToolSchema = z.object({
   type: z.literal("function"),
   function: z.object({
     name: z.string(),
@@ -90,9 +90,9 @@ export const CompletionsToolSchema = z.object({
     parameters: z.record(z.string(), z.any()),
   }),
 });
-export type CompletionsTool = z.infer<typeof CompletionsToolSchema>;
+export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
 
-export const CompletionsToolChoiceSchema = z.union([
+export const ChatCompletionsToolChoiceSchema = z.union([
   z.literal("none"),
   z.literal("auto"),
   z.literal("required"),
@@ -103,39 +103,39 @@ export const CompletionsToolChoiceSchema = z.union([
     }),
   }),
 ]);
-export type CompletionsToolChoice = z.infer<typeof CompletionsToolChoiceSchema>;
+export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
 
-export const CompletionsInputsSchema = z.object({
-  messages: z.array(CompletionsMessageSchema),
-  tools: z.optional(z.array(CompletionsToolSchema)),
-  tool_choice: z.optional(CompletionsToolChoiceSchema),
+export const ChatCompletionsInputsSchema = z.object({
+  messages: z.array(ChatCompletionsMessageSchema),
+  tools: z.optional(z.array(ChatCompletionsToolSchema)),
+  tool_choice: z.optional(ChatCompletionsToolChoiceSchema),
   temperature: z.optional(z.number()),
 });
-export type CompletionsInputs = z.infer<typeof CompletionsInputsSchema>;
+export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
-export const CompletionsBodySchema = z.extend(CompletionsInputsSchema, {
+export const ChatCompletionsBodySchema = z.extend(ChatCompletionsInputsSchema, {
   model: z.string(),
   stream: z.optional(z.boolean()),
 });
-export type CompletionsBody = z.infer<typeof CompletionsBodySchema>;
+export type ChatCompletionsBody = z.infer<typeof ChatCompletionsBodySchema>;
 
-export const CompletionsFinishReasonSchema = z.union([
+export const ChatCompletionsFinishReasonSchema = z.union([
   z.literal("stop"),
   z.literal("length"),
   z.literal("content_filter"),
   z.literal("tool_calls"),
 ]);
-export type CompletionsFinishReason = z.infer<typeof CompletionsFinishReasonSchema>;
+export type ChatCompletionsFinishReason = z.infer<typeof ChatCompletionsFinishReasonSchema>;
 
-export const CompletionsChoiceSchema = z.object({
+export const ChatCompletionsChoiceSchema = z.object({
   index: z.number(),
-  message: CompletionsAssistantMessageSchema,
-  finish_reason: CompletionsFinishReasonSchema,
+  message: ChatCompletionsAssistantMessageSchema,
+  finish_reason: ChatCompletionsFinishReasonSchema,
   logprobs: z.optional(z.any()),
 });
-export type CompletionsChoice = z.infer<typeof CompletionsChoiceSchema>;
+export type ChatCompletionsChoice = z.infer<typeof ChatCompletionsChoiceSchema>;
 
-export const CompletionsUsageSchema = z.object({
+export const ChatCompletionsUsageSchema = z.object({
   prompt_tokens: z.number(),
   completion_tokens: z.number(),
   total_tokens: z.number(),
@@ -150,21 +150,21 @@ export const CompletionsUsageSchema = z.object({
     }),
   ),
 });
-export type CompletionsUsage = z.infer<typeof CompletionsUsageSchema>;
+export type ChatCompletionsUsage = z.infer<typeof ChatCompletionsUsageSchema>;
 
-export const CompletionsSchema = z.object({
+export const ChatCompletionsSchema = z.object({
   id: z.string(),
   object: z.literal("chat.completion"),
   created: z.number(),
   model: z.string(),
-  choices: z.array(CompletionsChoiceSchema),
-  usage: z.optional(CompletionsUsageSchema),
+  choices: z.array(ChatCompletionsChoiceSchema),
+  usage: z.optional(ChatCompletionsUsageSchema),
   system_fingerprint: z.optional(z.string()),
   providerMetadata: z.optional(z.any()),
 });
-export type Completions = z.infer<typeof CompletionsSchema>;
+export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
-export type CompletionsToolCallDelta = {
+export type ChatCompletionsToolCallDelta = {
   id: string;
   index: number;
   type: "function";

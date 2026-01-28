@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createProviderRegistry } from "ai";
 
-import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "../../gateway/";
+import { createModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/presets/gpt-oss";
+import { groqWithCanonicalIds } from "#/providers/canonical/groq";
 
 const gw = gateway({
-  basePath: "/api/gateway",
-  providers: createProviderRegistry({
+  basePath: "/api/pages/gateway",
+  providers: {
     groq: groqWithCanonicalIds(),
-  }),
-  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
+  },
+  models: createModelCatalog(...gptOss["all"].map((preset) => preset({}))),
 });
 
 export const Route = createFileRoute("/api/$")({

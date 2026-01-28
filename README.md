@@ -236,9 +236,10 @@ Registering models tells Hebo Gateway which models are available, under which ca
 
 #### Model Presets
 
-To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models. 
+To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
 
 Presets come in two forms:
+
 - Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
 
@@ -414,9 +415,9 @@ import { streamText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import * as z from "zod";
 import {
-  CompletionsBodySchema,
-  transformCompletionsInputs,
-  createCompletionsStreamResponse,
+  ChatCompletionsBodySchema,
+  transformChatCompletionsInputs,
+  createChatCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
@@ -425,24 +426,24 @@ export async function handler(req: Request): Promise<Response> {
 
   const body = await req.json();
 
-  const parsed = CompletionsBodySchema.safeParse(body);
+  const parsed = ChatCompletionsBodySchema.safeParse(body);
   if (!parsed.success) {
     return new Response(z.prettifyError(parsed.error), { status: 422 });
   }
 
   const { model, ...inputs } = parsed.data;
 
-  const textOptions = transformCompletionsInputs(inputs);
+  const textOptions = transformChatCompletionsInputs(inputs);
 
   const result = await streamText({
     model: groq(model),
     ...textOptions
   });
 
-  return createCompletionsStreamResponse(result, model);
+  return createChatCompletionsStreamResponse(result, model);
 }
 ```
 
-Non-streaming versions are available via `createCompletionsResponse`. Equivalent schemas and helper are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helper are available in the `embeddings` and `models` endpoints.
 
 Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.

@@ -1,13 +1,13 @@
-import { createProviderRegistry } from "ai";
-
-import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "#/";
+import { createModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/presets/gpt-oss";
+import { groqWithCanonicalIds } from "#/providers/canonical/groq";
 
 const gw = gateway({
   basePath: "/api/app/gateway",
-  providers: createProviderRegistry({
+  providers: {
     groq: groqWithCanonicalIds(),
-  }),
-  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
+  },
+  models: createModelCatalog(...gptOss["all"].map((preset) => preset({}))),
 });
 
 export const GET = gw.handler,

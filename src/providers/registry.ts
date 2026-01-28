@@ -1,11 +1,12 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 
-import { customProvider, type ProviderRegistryProvider } from "ai";
+import { customProvider } from "ai";
 
 import type { ModelCatalog, ModelId } from "../models/types";
+import type { ProviderRegistry } from "./types";
 
 export const resolveProvider = (args: {
-  providers: ProviderRegistryProvider;
+  providers: ProviderRegistry;
   models: ModelCatalog;
   modelId: ModelId;
   operation: "text" | "embeddings";
@@ -18,32 +19,23 @@ export const resolveProvider = (args: {
     throw new Error(`Model '${modelId}' not found in catalog`);
   }
 
-  if (!catalogModel.modalities.output.includes(operation)) {
+  if (catalogModel.modalities && !catalogModel.modalities.output.includes(operation)) {
     throw new Error(`Model '${modelId}' does not support '${operation}' output`);
   }
 
+  // FUTURE: implement fallback logic [e.g. runtime config invalid]
   const resolvedProviderId = catalogModel.providers[0];
 
   if (!resolvedProviderId) {
     throw new Error(`No providers configured for model '${modelId}'`);
   }
 
-  switch (operation) {
-    case "text":
-      return customProvider({
-        languageModels: {
-          [modelId]: providers.languageModel(`${resolvedProviderId}:${modelId}`),
-        },
-      });
-    case "embeddings":
-      return customProvider({
-        embeddingModels: {
-          [modelId]: providers.embeddingModel(`${resolvedProviderId}:${modelId}`),
-        },
-      });
-    default:
-      throw new Error(`Operation '${operation}' is not yet supported`);
+  const provider = providers[resolvedProviderId];
+  if (!provider) {
+    throw new Error(`Provider '${resolvedProviderId}' not configured`);
   }
+
+  return provider;
 };
 
 export const withCanonicalIds = (

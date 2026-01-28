@@ -15,20 +15,20 @@ import type {
 import { jsonSchema, tool } from "ai";
 
 import type {
-  CompletionsInputs,
-  CompletionsToolCall,
-  CompletionsTool,
-  CompletionsToolChoice,
-  CompletionsContentPart,
-  CompletionsMessage,
-  CompletionsSystemMessage,
-  CompletionsUserMessage,
-  CompletionsAssistantMessage,
-  CompletionsToolMessage,
-  Completions,
-  CompletionsFinishReason,
-  CompletionsUsage,
-  CompletionsChoice,
+  ChatCompletionsInputs,
+  ChatCompletionsToolCall,
+  ChatCompletionsTool,
+  ChatCompletionsToolChoice,
+  ChatCompletionsContentPart,
+  ChatCompletionsMessage,
+  ChatCompletionsSystemMessage,
+  ChatCompletionsUserMessage,
+  ChatCompletionsAssistantMessage,
+  ChatCompletionsToolMessage,
+  ChatCompletions,
+  ChatCompletionsFinishReason,
+  ChatCompletionsUsage,
+  ChatCompletionsChoice,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
@@ -43,13 +43,13 @@ export type TextCallOptions = {
 
 // --- Request Flow ---
 
-export function transformCompletionsInputs(params: CompletionsInputs): TextCallOptions {
+export function transformChatCompletionsInputs(params: ChatCompletionsInputs): TextCallOptions {
   const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
   return {
-    messages: fromCompletionsMessages(messages),
-    tools: fromCompletionsTools(tools),
-    toolChoice: fromCompletionsToolChoice(tool_choice),
+    messages: fromChatCompletionsMessages(messages),
+    tools: fromChatCompletionsTools(tools),
+    toolChoice: fromChatCompletionsToolChoice(tool_choice),
     temperature,
     providerOptions: {
       openAICompat: rest,
@@ -57,7 +57,7 @@ export function transformCompletionsInputs(params: CompletionsInputs): TextCallO
   };
 }
 
-export function fromCompletionsMessages(messages: CompletionsMessage[]): ModelMessage[] {
+export function fromChatCompletionsMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -65,42 +65,42 @@ export function fromCompletionsMessages(messages: CompletionsMessage[]): ModelMe
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
-      modelMessages.push(message satisfies CompletionsSystemMessage);
+      modelMessages.push(message satisfies ChatCompletionsSystemMessage);
       continue;
     }
 
     if (message.role === "user") {
-      modelMessages.push(fromCompletionsUserMessage(message));
+      modelMessages.push(fromChatCompletionsUserMessage(message));
       continue;
     }
 
-    modelMessages.push(fromCompletionsAssistantMessage(message));
-    const toolResult = fromCompletionsToolResultMessage(message, toolById);
+    modelMessages.push(fromChatCompletionsAssistantMessage(message));
+    const toolResult = fromChatCompletionsToolResultMessage(message, toolById);
     if (toolResult) modelMessages.push(toolResult);
   }
 
   return modelMessages;
 }
 
-function indexToolMessages(messages: CompletionsMessage[]) {
-  const map = new Map<string, CompletionsToolMessage>();
+function indexToolMessages(messages: ChatCompletionsMessage[]) {
+  const map = new Map<string, ChatCompletionsToolMessage>();
   for (const m of messages) {
     if (m.role === "tool") map.set(m.tool_call_id, m);
   }
   return map;
 }
 
-export function fromCompletionsUserMessage(message: CompletionsUserMessage): ModelMessage {
+export function fromChatCompletionsUserMessage(message: ChatCompletionsUserMessage): ModelMessage {
   return {
     role: "user",
     content: Array.isArray(message.content)
-      ? fromCompletionsContent(message.content)
+      ? fromChatCompletionsContent(message.content)
       : message.content,
   };
 }
 
-export function fromCompletionsAssistantMessage(
-  message: CompletionsAssistantMessage,
+export function fromChatCompletionsAssistantMessage(
+  message: ChatCompletionsAssistantMessage,
 ): ModelMessage {
   const { tool_calls, role, content } = message;
 
@@ -113,7 +113,7 @@ export function fromCompletionsAssistantMessage(
 
   return {
     role: role,
-    content: tool_calls.map((tc: CompletionsToolCall) => {
+    content: tool_calls.map((tc: ChatCompletionsToolCall) => {
       const { id, function: fn } = tc;
       return {
         type: "tool-call",
@@ -125,9 +125,9 @@ export function fromCompletionsAssistantMessage(
   };
 }
 
-export function fromCompletionsToolResultMessage(
-  message: CompletionsAssistantMessage,
-  toolById: Map<string, CompletionsToolMessage>,
+export function fromChatCompletionsToolResultMessage(
+  message: ChatCompletionsAssistantMessage,
+  toolById: Map<string, ChatCompletionsToolMessage>,
 ): ModelMessage | undefined {
   const toolCalls = message.tool_calls ?? [];
   if (toolCalls.length === 0) return undefined;
@@ -148,7 +148,7 @@ export function fromCompletionsToolResultMessage(
   return toolResultParts.length > 0 ? { role: "tool", content: toolResultParts } : undefined;
 }
 
-export function fromCompletionsContent(content: CompletionsContentPart[]): UserContent {
+export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]): UserContent {
   return content.map((part) => {
     if (part.type === "image_url") {
       const url = part.image_url.url;
@@ -207,7 +207,9 @@ export function fromCompletionsContent(content: CompletionsContentPart[]): UserC
   });
 }
 
-export const fromCompletionsTools = (tools: CompletionsTool[] | undefined): ToolSet | undefined => {
+export const fromChatCompletionsTools = (
+  tools: ChatCompletionsTool[] | undefined,
+): ToolSet | undefined => {
   if (!tools) {
     return;
   }
@@ -222,8 +224,8 @@ export const fromCompletionsTools = (tools: CompletionsTool[] | undefined): Tool
   return toolSet;
 };
 
-export const fromCompletionsToolChoice = (
-  toolChoice: CompletionsToolChoice | undefined,
+export const fromChatCompletionsToolChoice = (
+  toolChoice: ChatCompletionsToolChoice | undefined,
 ): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
     return undefined;
@@ -249,11 +251,11 @@ function parseToolOutput(content: string) {
 
 // --- Response Flow ---
 
-export function toCompletions(
+export function toChatCompletions(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-): Completions {
-  const finish_reason = toCompletionsFinishReason(result.finishReason);
+): ChatCompletions {
+  const finish_reason = toChatCompletionsFinishReason(result.finishReason);
 
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
@@ -263,38 +265,38 @@ export function toCompletions(
     choices: [
       {
         index: 0,
-        message: toCompletionsMessage(result),
+        message: toChatCompletionsMessage(result),
         finish_reason,
-      } satisfies CompletionsChoice,
+      } satisfies ChatCompletionsChoice,
     ],
-    usage: result.usage && toCompletionsUsage(result.usage),
+    usage: result.usage && toChatCompletionsUsage(result.usage),
     providerMetadata: result.providerMetadata,
   };
 }
-export function createCompletionsResponse(
+export function createChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(JSON.stringify(toCompletions(result, model)), {
+  return new Response(JSON.stringify(toChatCompletions(result, model)), {
     headers: { "Content-Type": "application/json" },
   });
 }
 
-export function toCompletionsStream(
+export function toChatCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): ReadableStream<Uint8Array> {
   return result.fullStream
-    .pipeThrough(new CompletionsStream(model))
+    .pipeThrough(new ChatCompletionsStream(model))
     .pipeThrough(new SSETransformStream())
     .pipeThrough(new TextEncoderStream());
 }
 
-export function createCompletionsStreamResponse(
+export function createChatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
 ): Response {
-  return new Response(toCompletionsStream(result, model), {
+  return new Response(toChatCompletionsStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
@@ -303,7 +305,7 @@ export function createCompletionsStreamResponse(
   });
 }
 
-export class CompletionsStream extends TransformStream {
+export class ChatCompletionsStream extends TransformStream {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -311,8 +313,8 @@ export class CompletionsStream extends TransformStream {
 
     const createChunk = (
       delta: unknown,
-      finish_reason?: CompletionsFinishReason,
-      usage?: CompletionsUsage,
+      finish_reason?: ChatCompletionsFinishReason,
+      usage?: ChatCompletionsUsage,
     ) => ({
       id: streamId,
       object: "chat.completion.chunk",
@@ -340,7 +342,7 @@ export class CompletionsStream extends TransformStream {
               createChunk({
                 tool_calls: [
                   {
-                    ...toCompletionsToolCall(part.toolCallId, part.toolName, part.input),
+                    ...toChatCompletionsToolCall(part.toolCallId, part.toolName, part.input),
                     index: toolCallIndexCounter++,
                   },
                 ],
@@ -353,8 +355,8 @@ export class CompletionsStream extends TransformStream {
             controller.enqueue(
               createChunk(
                 {},
-                toCompletionsFinishReason(part.finishReason),
-                toCompletionsUsage(part.totalUsage),
+                toChatCompletionsFinishReason(part.finishReason),
+                toChatCompletionsUsage(part.totalUsage),
               ),
             );
             break;
@@ -392,17 +394,17 @@ export class SSETransformStream extends TransformStream {
   }
 }
 
-export const toCompletionsMessage = (
+export const toChatCompletionsMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
-): CompletionsAssistantMessage => {
-  const message: CompletionsAssistantMessage = {
+): ChatCompletionsAssistantMessage => {
+  const message: ChatCompletionsAssistantMessage = {
     role: "assistant",
     content: null,
   };
 
   if (result.toolCalls && result.toolCalls.length > 0) {
     message.tool_calls = result.toolCalls.map((toolCall) =>
-      toCompletionsToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
+      toChatCompletionsToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
     );
   }
 
@@ -420,9 +422,9 @@ export const toCompletionsMessage = (
   return message;
 };
 
-export function toCompletionsUsage(
+export function toChatCompletionsUsage(
   usage: LanguageModelUsage | undefined,
-): CompletionsUsage | undefined {
+): ChatCompletionsUsage | undefined {
   if (!usage) return undefined;
   return {
     prompt_tokens: usage.inputTokens ?? 0,
@@ -437,11 +439,11 @@ export function toCompletionsUsage(
   };
 }
 
-export function toCompletionsToolCall(
+export function toChatCompletionsToolCall(
   id: string,
   name: string,
   args: unknown,
-): CompletionsToolCall {
+): ChatCompletionsToolCall {
   return {
     id,
     type: "function",
@@ -452,9 +454,11 @@ export function toCompletionsToolCall(
   };
 }
 
-export const toCompletionsFinishReason = (finishReason: FinishReason): CompletionsFinishReason => {
+export const toChatCompletionsFinishReason = (
+  finishReason: FinishReason,
+): ChatCompletionsFinishReason => {
   if (finishReason === "error" || finishReason === "other") {
     return "stop";
   }
-  return (finishReason as string).replaceAll("-", "_") as CompletionsFinishReason;
+  return (finishReason as string).replaceAll("-", "_") as ChatCompletionsFinishReason;
 };

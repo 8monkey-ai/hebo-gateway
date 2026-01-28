@@ -59,10 +59,10 @@ export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
 export type ModelId = CanonicalModelId | (string & {});
 
 export type CatalogModel = {
-  name: string;
+  name?: string;
   created?: string;
   knowledge?: string;
-  modalities: {
+  modalities?: {
     input: readonly ("text" | "image" | "file" | "audio" | "video" | "pdf")[];
     output: readonly ("text" | "image" | "audio" | "video" | "embeddings")[];
   };

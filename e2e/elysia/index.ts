@@ -1,25 +1,21 @@
-import { createProviderRegistry } from "ai";
 import { Elysia } from "elysia";
 
-import {
-  createModelCatalog,
-  gateway,
-  groqWithCanonicalIds,
-  voyageWithCanonicalIds,
-  gptOss,
-  voyage,
-  llama,
-} from "#/";
+import { createModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/presets/gpt-oss";
+import { llama } from "#/models/presets/llama";
+import { voyage } from "#/models/presets/voyage";
+import { groqWithCanonicalIds } from "#/providers/canonical/groq";
+import { voyageWithCanonicalIds } from "#/providers/canonical/voyage";
 
 const gw = gateway({
-  providers: createProviderRegistry({
+  providers: {
     groq: groqWithCanonicalIds(),
     voyage: voyageWithCanonicalIds(),
-  }),
+  },
   models: createModelCatalog(
-    ...gptOss["all"].map((model) => model({})),
-    ...voyage["all"].map((model) => model({})),
-    ...llama["all"].map((model) => model({})),
+    ...gptOss["all"].map((preset) => preset({})),
+    ...voyage["all"].map((preset) => preset({})),
+    ...llama["all"].map((preset) => preset({})),
   ),
 });
 
