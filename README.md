@@ -32,7 +32,7 @@ Start by creating a gateway instance with at least one provider and a few models
 
 ```ts
 import { createGroq } from "@ai-sdk/groq";
-import { gateway, createModelCatalog } from "@hebo-ai/gateway";
+import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
@@ -48,14 +48,14 @@ export const gw = gateway({
   },
 
   // MODEL CATALOG
-  models: createModelCatalog(
-    // Choose a preset for common SOTA models
-    gptOss20b({
-      providers: ["groq"],
-    }),
-    // Or add a whole model family with default providers
-    ...gptOss["all"].map(
-      preset => preset()
+  models: defineModelCatalog(
+    // Choose a pre-configured preset for common SOTA models
+    gptOss20b(),
+    // Or add a whole model family with your own provider list
+    gptOss["all"].map(
+      preset => preset({
+        providers: ["groq"],
+      })
     ),
   ),
 });
@@ -211,7 +211,6 @@ If an adapter is not yet provided, you can create your own by wrapping the provi
 import { createOpenAI } from "@ai-sdk/openai";
 import {
   gateway,
-  createModelCatalog,
   withCanonicalIds,
 } from "@hebo-ai/gateway";
 
@@ -227,9 +226,9 @@ const gw = gateway({
   providers: {
     openai,
   },
-  models: createModelCatalog({
+  models: {
     // ...your models pointing at canonical IDs above
-  }),
+  },
 });
 ```
 
@@ -267,19 +266,19 @@ Out-of-the-box model presets:
   Family: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 ```ts
-import { createModelCatalog } from "@hebo-ai/gateway";
+import { defineModelCatalog } from "@hebo-ai/gateway";
 import { gptOss20b } from "@hebo-ai/gateway/models/gpt-oss";
 import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/claude";
 
 // Individual preset
-const models = createModelCatalog(
+const models = defineModelCatalog(
   gptOss20b({ providers: ["groq"] }),
   claudeSonnet45({ providers: ["bedrock"] }),
 );
 
 // Family preset (pick a group and apply the same override to each)
-const modelsFromFamily = createModelCatalog(
-  ...claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
+const modelsFromFamily = defineModelCatalog(
+  claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
 );
 ```
 

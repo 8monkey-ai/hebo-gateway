@@ -6,18 +6,8 @@ type ModelCatalogInput =
   | ModelCatalog[]
   | (() => ModelCatalog)[];
 
-export function createModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalog {
-  const catalogs: ModelCatalog[] = [];
-
-  for (const input of inputs) {
-    if (Array.isArray(input)) {
-      for (const item of input) {
-        catalogs.push(typeof item === "function" ? item() : item);
-      }
-    } else {
-      catalogs.push(typeof input === "function" ? input() : input);
-    }
-  }
+export function defineModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalog {
+  const catalogs = inputs.flat().map((input) => (typeof input === "function" ? input() : input));
 
   return Object.assign({}, ...catalogs);
 }

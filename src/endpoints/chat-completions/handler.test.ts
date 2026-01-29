@@ -3,7 +3,7 @@ import { MockLanguageModelV3, MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
-import { createModelCatalog } from "../../models/catalog";
+import { defineModelCatalog } from "../../models/catalog";
 import { chatCompletions } from "./handler";
 
 const baseUrl = "http://localhost/chat/completions";
@@ -79,7 +79,7 @@ describe("Chat Completions Handler", () => {
         },
       }),
     },
-    models: createModelCatalog({
+    models: defineModelCatalog({
       "openai/gpt-oss-20b": {
         name: "GPT-OSS 20B",
         modalities: { input: ["text", "file"], output: ["text"] },
