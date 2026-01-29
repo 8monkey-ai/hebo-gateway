@@ -208,24 +208,26 @@ Out-of-the-box canonical providers:
 If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
 ```ts
-import { createOpenAI } from "@ai-sdk/openai";
+import { createAzure } from "@ai-sdk/openai";
 import {
   gateway,
   withCanonicalIds,
 } from "@hebo-ai/gateway";
 
-const openai = withCanonicalIds(
-  createOpenAI({ apiKey: process.env["OPENAI_API_KEY"] }), {
-    mapping: {
-      "openai/gpt-4.1-mini": "gpt-4.1-mini",
-      "openai/text-embedding-3-small": "text-embedding-3-small",
-    },
-  },
+const azure = withCanonicalIds(
+  createAzure({
+    resourceName: process.env["AZURE_RESOURCE_NAME"],
+    apiKey: process.env["AZURE_API_KEY"]
+  }), {
+  mapping: {
+    "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
+    "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
+  }},
 );
 
 const gw = gateway({
   providers: {
-    openai,
+    azure,
   },
   models: {
     // ...your models pointing at canonical IDs above
