@@ -3,7 +3,7 @@ import type { EmbeddingModelMiddleware } from "ai";
 import { modelMiddlewareMatcher } from "../../model-middleware";
 
 // Convert `dimensions` (OpenAI) to `output_dimension` (Cohere)
-export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
+export const cohereEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
@@ -30,4 +30,4 @@ export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: voyageEmbeddingModelMiddleware });
+modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: cohereEmbeddingModelMiddleware });
