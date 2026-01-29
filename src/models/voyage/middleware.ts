@@ -1,6 +1,6 @@
 import type { EmbeddingModelMiddleware } from "ai";
 
-import { modelMiddlewareMatcher } from "../../model-middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Voyage)
 export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
@@ -10,8 +10,8 @@ export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     const unhandled = params.providerOptions?.["unhandled"];
     if (!unhandled) return params;
 
-    const { dimensions, ...rest } = unhandled;
-    if (dimensions === null || dimensions === undefined) return params;
+    const dimensions = unhandled["dimensions"];
+    if (!dimensions) return params;
 
     if (![256, 512, 1024, 1536, 2048].includes(dimensions as number)) {
       throw new Error(
@@ -19,16 +19,10 @@ export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
       );
     }
 
-    return {
-      ...params,
-      providerOptions: {
-        ...params.providerOptions,
-        unhandled: {
-          ...rest,
-          outputDimension: dimensions,
-        },
-      },
-    };
+    (params.providerOptions!["handled"] ??= {})["outputDimension"] = dimensions;
+    delete unhandled["dimensions"];
+
+    return params;
   },
 };
 

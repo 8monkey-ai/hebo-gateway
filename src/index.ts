@@ -1,6 +1,7 @@
 export * from "./gateway";
-export * from "./model-middleware";
 export type * from "./types";
+
+export * from "./middleware/matcher";
 
 export * from "./endpoints/chat-completions";
 export * from "./endpoints/embeddings";

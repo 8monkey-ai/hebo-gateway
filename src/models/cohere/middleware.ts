@@ -1,6 +1,6 @@
 import type { EmbeddingModelMiddleware } from "ai";
 
-import { modelMiddlewareMatcher } from "../../model-middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Convert `dimensions` (OpenAI) to `output_dimension` (Cohere)
 export const cohereEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
@@ -10,23 +10,17 @@ export const cohereEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     const unhandled = params.providerOptions?.["unhandled"];
     if (!unhandled) return params;
 
-    const { dimensions, ...rest } = unhandled;
-    if (dimensions === null || dimensions === undefined) return params;
+    const dimensions = unhandled["dimensions"];
+    if (!dimensions) return params;
 
     if (![256, 384, 512, 1024, 1536].includes(dimensions as number)) {
       throw new Error("Cohere embeddings only support dimensions of 256, 384, 512, 1024, or 1536.");
     }
 
-    return {
-      ...params,
-      providerOptions: {
-        ...params.providerOptions,
-        unhandled: {
-          ...rest,
-          output_dimension: dimensions,
-        },
-      },
-    };
+    (params.providerOptions!["handled"] ??= {})["output_dimension"] = dimensions;
+    delete unhandled["dimensions"];
+
+    return params;
   },
 };
 

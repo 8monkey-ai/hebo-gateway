@@ -1,31 +1,8 @@
-import type { EmbeddingModelMiddleware } from "ai";
+import type { CanonicalProviderId } from "../types";
 
-import { modelMiddlewareMatcher } from "../../model-middleware";
-
-// Pass `outputDimension` into 'cohere' provider
-export const cohereEmbeddingProviderMiddleware: EmbeddingModelMiddleware = {
-  specificationVersion: "v3",
-  // eslint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unhandled = params.providerOptions?.["unhandled"];
-    if (!unhandled) return params;
-
-    const { output_dimension, ...rest } = unhandled;
-    if (output_dimension === null || output_dimension === undefined) return params;
-
-    return {
-      ...params,
-      providerOptions: {
-        ...params.providerOptions,
-        unhandled: rest,
-        cohere: {
-          outputDimension: output_dimension,
-        },
-      },
-    };
-  },
-};
+import { createCamelCaseProviderOptionsMiddleware } from "../../middleware/camel-case";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 modelMiddlewareMatcher.useForProvider("cohere.textEmbedding", {
-  embedding: cohereEmbeddingProviderMiddleware,
+  embedding: createCamelCaseProviderOptionsMiddleware("cohere" satisfies CanonicalProviderId),
 });

@@ -1,7 +1,7 @@
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { ModelId } from "./models/types";
-import type { ProviderId } from "./providers/types";
+import type { ModelId } from "../models/types";
+import type { ProviderId } from "../providers/types";
 
 type MiddlewareEntry = {
   language?: LanguageModelMiddleware | LanguageModelMiddleware[];
