@@ -7,7 +7,7 @@ import { parseConfig } from "../../config";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
-import { transformEmbeddingsInputs, createEmbeddingsResponse } from "./converters";
+import { convertToEmbedCallOptions, createEmbeddingsResponse } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
@@ -47,7 +47,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     let embedOptions;
     try {
-      embedOptions = transformEmbeddingsInputs(inputs);
+      embedOptions = convertToEmbedCallOptions(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }

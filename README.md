@@ -419,7 +419,7 @@ import { createGroq } from "@ai-sdk/groq";
 import * as z from "zod";
 import {
   ChatCompletionsBodySchema,
-  transformChatCompletionsInputs,
+  convertToTextCallOptions,
   createChatCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 
@@ -436,7 +436,7 @@ export async function handler(req: Request): Promise<Response> {
 
   const { model, ...inputs } = parsed.data;
 
-  const textOptions = transformChatCompletionsInputs(inputs);
+  const textOptions = convertToTextCallOptions(inputs);
 
   const result = await streamText({
     model: groq(model),

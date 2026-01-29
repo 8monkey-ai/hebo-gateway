@@ -43,7 +43,7 @@ export type TextCallOptions = {
 
 // --- Request Flow ---
 
-export function transformChatCompletionsInputs(params: ChatCompletionsInputs): TextCallOptions {
+export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCallOptions {
   const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
 
   return {
