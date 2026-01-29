@@ -2,5 +2,5 @@ import { createCamelCaseProviderOptionsMiddleware } from "../../middleware/camel
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 modelMiddlewareMatcher.useForProvider("groq.chat", {
-  embedding: createCamelCaseProviderOptionsMiddleware("gorq"),
+  embedding: createCamelCaseProviderOptionsMiddleware("groq"),
 });
