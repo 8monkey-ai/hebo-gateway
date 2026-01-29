@@ -1,9 +1,10 @@
-import { generateText, streamText } from "ai";
+import { generateText, streamText, wrapLanguageModel } from "ai";
 import * as z from "zod/mini";
 
 import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
+import { modelMiddlewareMatcher } from "../../model-middleware";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
@@ -72,11 +73,16 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = provider.languageModel(resolvedModelId);
 
+    const languageModelWithMiddleware = wrapLanguageModel({
+      model: languageModel,
+      middleware: modelMiddlewareMatcher.forLanguage(resolvedModelId, languageModel.provider),
+    });
+
     if (stream) {
       let result;
       try {
         result = streamText({
-          model: languageModel,
+          model: languageModelWithMiddleware,
           ...textOptions,
         });
       } catch (error) {
@@ -89,7 +95,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     let result;
     try {
       result = await generateText({
-        model: languageModel,
+        model: languageModelWithMiddleware,
         ...textOptions,
       });
     } catch (error) {
