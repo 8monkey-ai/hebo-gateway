@@ -50,7 +50,7 @@ export const gw = gateway({
   // MODEL CATALOG
   models: defineModelCatalog(
     // Choose a pre-configured preset for common SOTA models
-    gptOss20b(),
+    gptOss20b,
     // Or add a whole model family with your own provider list
     gptOss["all"].map(
       preset => preset({
