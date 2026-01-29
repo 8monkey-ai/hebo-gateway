@@ -52,7 +52,7 @@ export function presetFor<Ids extends string, T extends Record<string, unknown>>
     base: Base,
   ) {
     return <const O extends DeepPartial<T>>(override?: O) => {
-      const merged = deepMerge(base, override);
+      const merged = deepMerge(base, override ?? ({} as O));
       return { [id]: merged } as Record<Id, Base & O>;
     };
   };
