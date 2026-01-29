@@ -14,7 +14,7 @@ export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOp
   return {
     values: Array.isArray(input) ? input : [input],
     providerOptions: {
-      openAICompat: rest,
+      unhandled: rest,
     },
   };
 }

@@ -19,7 +19,7 @@ const expectedEmbeddingResponse = (count: number) => ({
     total_tokens: count * 10,
   },
   providerMetadata: {
-    openai: {
+    provider: {
       key: "value",
     },
   },
@@ -35,7 +35,7 @@ describe("Embeddings Handler", () => {
             doEmbed: async (options) => ({
               embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
               usage: { tokens: 10 },
-              providerMetadata: { openai: { key: "value" } },
+              providerMetadata: { provider: { key: "value" } },
               warnings: [],
             }),
           }),

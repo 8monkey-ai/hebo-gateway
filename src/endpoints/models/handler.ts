@@ -15,7 +15,6 @@ export const models = (config: GatewayConfig): Endpoint => {
     }
 
     const rawId = req.url.split("/models/", 2)[1]?.split("?", 1)[0];
-
     if (!rawId) {
       return createModelsResponse(models);
     }

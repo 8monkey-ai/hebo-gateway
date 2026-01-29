@@ -52,7 +52,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     toolChoice: fromChatCompletionsToolChoice(tool_choice),
     temperature,
     providerOptions: {
-      openAICompat: rest,
+      unhandled: rest,
     },
   };
 }

@@ -33,7 +33,12 @@
     "src"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/providers/**/*.js",
+    "./dist/models/**/*.js",
+    "./src/providers/**/*.ts",
+    "./src/models/**/*.ts"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

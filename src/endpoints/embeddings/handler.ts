@@ -1,9 +1,10 @@
-import { embedMany } from "ai";
+import { embedMany, wrapEmbeddingModel } from "ai";
 import * as z from "zod/mini";
 
 import type { GatewayConfig, Endpoint } from "../../types";
 
 import { parseConfig } from "../../config";
+import { modelMiddlewareMatcher } from "../../model-middleware";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
@@ -68,10 +69,15 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
 
+    const embeddingModelWithMiddleware = wrapEmbeddingModel({
+      model: embeddingModel,
+      middleware: modelMiddlewareMatcher.forEmbedding(resolvedModelId, embeddingModel.provider),
+    });
+
     let result;
     try {
       result = await embedMany({
-        model: embeddingModel,
+        model: embeddingModelWithMiddleware,
         ...embedOptions,
       });
     } catch (error) {
