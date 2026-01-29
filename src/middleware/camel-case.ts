@@ -7,24 +7,11 @@ function snakeToCamel(key: string): string {
   return key.replaceAll(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
-}
-
 function camelizeKeysDeep(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
+  if (value === null || typeof value !== "object") return value;
 
   if (Array.isArray(value)) {
     return value.map((v) => camelizeKeysDeep(v));
-  }
-
-  if (!isPlainObject(value)) {
-    return value;
   }
 
   const out: Record<string, unknown> = {};
