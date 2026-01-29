@@ -44,7 +44,7 @@ export const gw = gateway({
       createGroq({
         apiKey: process.env.GROQ_API_KEY,
       }),
-    },
+    ),
   },
 
   // MODEL CATALOG

@@ -9,7 +9,7 @@ const gw = gateway({
   providers: {
     groq: withCanonicalIdsForGroq(groq),
   },
-  models: createModelCatalog(...gptOss["all"].map((preset) => preset({}))),
+  models: createModelCatalog(...gptOss["all"].map((preset) => preset())),
 });
 
 export default new Hono().mount("/v1/gateway/", gw.handler);

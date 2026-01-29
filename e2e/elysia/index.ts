@@ -15,9 +15,9 @@ const gw = gateway({
     voyage: withCanonicalIdsForVoyage(createVoyage()),
   },
   models: createModelCatalog(
-    ...gptOss["all"].map((preset) => preset({})),
-    ...voyage["all"].map((preset) => preset({})),
-    ...llama["all"].map((preset) => preset({})),
+    ...gptOss["all"].map((preset) => preset()),
+    ...voyage["all"].map((preset) => preset()),
+    ...llama["all"].map((preset) => preset()),
   ),
 });
 
