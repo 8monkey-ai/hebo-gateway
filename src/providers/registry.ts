@@ -10,7 +10,7 @@ export const resolveProvider = (args: {
   models: ModelCatalog;
   modelId: ModelId;
   operation: "text" | "embeddings";
-}) => {
+}): ProviderV3 => {
   const { providers, models, modelId, operation } = args;
 
   const catalogModel = models[modelId];
@@ -35,12 +35,6 @@ export const resolveProvider = (args: {
     throw new Error(`Provider '${resolvedProviderId}' not configured`);
   }
 
-  if (operation === "text" && !provider.languageModel) {
-    throw new Error(`Provider '${resolvedProviderId}' does not support text`);
-  } else if (operation === "embeddings" && !provider.embeddingModel) {
-    throw new Error(`Provider '${resolvedProviderId}' does not support embeddings`);
-  }
-
   return provider;
 };
 
@@ -58,7 +52,10 @@ export type CanonicalIdsOptions = {
   };
 };
 
-export const withCanonicalIds = (provider: ProviderV3, config: CanonicalIdsOptions = {}) => {
+export const withCanonicalIds = (
+  provider: ProviderV3,
+  config: CanonicalIdsOptions = {},
+): ProviderV3 => {
   const {
     mapping,
     options: {
@@ -101,16 +98,17 @@ export const withCanonicalIds = (provider: ProviderV3, config: CanonicalIdsOptio
   const needsFallbackWrap =
     stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
 
-  const fallbackProvider: ProviderV3 = needsFallbackWrap
-    ? {
+  // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+  const languageModel = provider.languageModel;
+  const embeddingModel = provider.textEmbeddingModel!;
+
+  const fallbackProvider = needsFallbackWrap
+    ? ({
         ...provider,
         specificationVersion: "v3",
-        languageModel: (id: string) =>
-          provider.languageModel(applyFallbackAffixes(normalizeId(id))),
-        // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
-        embeddingModel: (id: string) =>
-          provider.textEmbeddingModel!(applyFallbackAffixes(normalizeId(id))),
-      }
+        languageModel: (id: string) => languageModel(applyFallbackAffixes(normalizeId(id))),
+        embeddingModel: (id: string) => embeddingModel(applyFallbackAffixes(normalizeId(id))),
+      } satisfies ProviderV3)
     : provider;
 
   const mapModels = <T>(fn?: (id: string) => T) => {
@@ -131,9 +129,8 @@ export const withCanonicalIds = (provider: ProviderV3, config: CanonicalIdsOptio
   };
 
   return customProvider({
-    languageModels: mapModels(provider.languageModel),
-    // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
-    embeddingModels: mapModels(provider.textEmbeddingModel),
+    languageModels: mapModels(languageModel),
+    embeddingModels: mapModels(embeddingModel),
     fallbackProvider,
   });
 };
