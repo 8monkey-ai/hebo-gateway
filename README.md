@@ -53,9 +53,9 @@ export const gw = gateway({
     gptOss20b({
       providers: ["groq"],
     }),
-    // Or add a whole model family
-    ...gptOss["all"].map((preset) =>
-      preset({})
+    // Or add a whole model family with default providers
+    ...gptOss["all"].map(
+      preset => preset()
     ),
   ),
 });
@@ -292,7 +292,7 @@ const gw = gateway({
   providers: {
     // ...
   },
-  models: createModelCatalog({
+  models: {
     "openai/gpt-5.2": {
       name: "GPT 5.2",
       created: "2025-12-11",
@@ -316,7 +316,7 @@ const gw = gateway({
       }
     },
     // ...
-  }),
+  },
 });
 ```
 
