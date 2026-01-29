@@ -18,10 +18,9 @@ export const withCanonicalIdsForCohere = (
   provider: CohereProvider,
   extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(
-    provider,
-    { ...MAPPING, ...extraMapping },
-    {
+  withCanonicalIds(provider, {
+    mapping: { ...MAPPING, ...extraMapping },
+    options: {
       stripNamespace: true,
     },
-  );
+  });

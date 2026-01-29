@@ -8,7 +8,10 @@ export const withCanonicalIdsForVertex = (
   provider: GoogleVertexProvider,
   extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(provider, extraMapping, {
-    stripNamespace: true,
-    normalizeDelimiters: ["anthropic"],
+  withCanonicalIds(provider, {
+    mapping: extraMapping,
+    options: {
+      stripNamespace: true,
+      normalizeDelimiters: ["anthropic"],
+    },
   });

@@ -14,4 +14,8 @@ const MAPPING = {
 export const withCanonicalIdsForGroq = (
   provider: GroqProvider,
   extraMapping?: Record<ModelId, string>,
-) => withCanonicalIds(provider, { ...MAPPING, ...extraMapping }, { stripNamespace: false });
+) =>
+  withCanonicalIds(provider, {
+    mapping: { ...MAPPING, ...extraMapping },
+    options: { stripNamespace: false },
+  });

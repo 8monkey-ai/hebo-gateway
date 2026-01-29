@@ -8,7 +8,10 @@ export const withCanonicalIdsForAnthropic = (
   provider: AnthropicProvider,
   extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(provider, extraMapping, {
-    stripNamespace: true,
-    normalizeDelimiters: true,
+  withCanonicalIds(provider, {
+    mapping: extraMapping,
+    options: {
+      stripNamespace: true,
+      normalizeDelimiters: true,
+    },
   });

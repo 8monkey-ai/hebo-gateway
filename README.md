@@ -215,10 +215,11 @@ import {
 } from "@hebo-ai/gateway";
 
 const openai = withCanonicalIds(
-  createOpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-  {
-    "openai/gpt-4.1-mini": "gpt-4.1-mini",
-    "openai/text-embedding-3-small": "text-embedding-3-small",
+  createOpenAI({ apiKey: process.env["OPENAI_API_KEY"] }), {
+    mapping: {
+      "openai/gpt-4.1-mini": "gpt-4.1-mini",
+      "openai/text-embedding-3-small": "text-embedding-3-small",
+    },
   },
 );
 

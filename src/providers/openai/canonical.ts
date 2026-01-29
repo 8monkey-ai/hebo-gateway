@@ -8,6 +8,9 @@ export const withCanonicalIdsForOpenAI = (
   provider: OpenAIProvider,
   extraMapping?: Record<ModelId, string>,
 ) =>
-  withCanonicalIds(provider, extraMapping, {
-    stripNamespace: true,
+  withCanonicalIds(provider, {
+    mapping: extraMapping,
+    options: {
+      stripNamespace: true,
+    },
   });

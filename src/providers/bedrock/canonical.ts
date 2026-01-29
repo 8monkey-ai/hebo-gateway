@@ -38,19 +38,25 @@ export type BedrockCanonicalOptions = {
 const resolvePrefix = ({ geo = "us", arn }: BedrockCanonicalOptions = {}) =>
   `${arn ? `arn:aws:bedrock:${arn.region}:${arn.accountId}:inference-profile/` : ""}${geo}.`;
 
+export type BedrockCanonicalConfig = {
+  options?: BedrockCanonicalOptions;
+  extraMapping?: Record<ModelId, string>;
+};
+
 export const withCanonicalIdsForBedrock = (
   provider: AmazonBedrockProvider,
-  options?: BedrockCanonicalOptions,
-  extraMapping?: Record<ModelId, string>,
+  config: BedrockCanonicalConfig = {},
 ) =>
-  withCanonicalIds(
-    provider,
-    { ...MAPPING, ...extraMapping },
-    {
+  withCanonicalIds(provider, {
+    mapping: {
+      ...MAPPING,
+      ...config.extraMapping,
+    },
+    options: {
       stripNamespace: false,
       namespaceSeparator: ".",
       normalizeDelimiters: true,
-      prefix: resolvePrefix(options),
+      prefix: resolvePrefix(config.options),
       postfix: "-v1:0",
     },
-  );
+  });

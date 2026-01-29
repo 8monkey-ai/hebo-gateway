@@ -38,9 +38,8 @@ export const resolveProvider = (args: {
   return provider;
 };
 
-export const withCanonicalIds = (
-  provider: ProviderV3,
-  mapping?: Partial<Record<ModelId, string>>,
+export type CanonicalIdsOptions = {
+  mapping?: Partial<Record<ModelId, string>>;
   options?: {
     /** @default true */
     stripNamespace?: boolean;
@@ -50,15 +49,20 @@ export const withCanonicalIds = (
     postfix?: string;
     /** @default "/" */
     namespaceSeparator?: "/" | "." | ":";
-  },
-) => {
+  };
+};
+
+export const withCanonicalIds = (provider: ProviderV3, config: CanonicalIdsOptions = {}) => {
   const {
-    stripNamespace = true,
-    normalizeDelimiters = false,
-    prefix,
-    postfix,
-    namespaceSeparator = "/",
-  } = options ?? {};
+    mapping,
+    options: {
+      stripNamespace = true,
+      normalizeDelimiters = false,
+      prefix,
+      postfix,
+      namespaceSeparator = "/",
+    } = {},
+  } = config;
 
   const shouldNormalizeDelimiters = (canonicalId: string) => {
     if (typeof normalizeDelimiters === "boolean") return normalizeDelimiters;
