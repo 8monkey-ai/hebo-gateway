@@ -322,6 +322,8 @@ const gw = gateway({
 });
 ```
 
+Note: the only mandatory property is the `providers` array, everything else is optional metadata.
+
 ### Hooks
 
 Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality. All hooks are available as async and non-async.
@@ -449,6 +451,6 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helper are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
 
 Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.

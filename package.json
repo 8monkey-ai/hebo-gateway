@@ -116,14 +116,14 @@
       "dev-source": "./src/providers/openai/index.ts"
     },
     "./providers/vertex": {
-      "types": "./dist/providers/vertex/canonical.d.ts",
-      "import": "./dist/providers/vertex/canonical.js",
-      "dev-source": "./src/providers/vertex/canonical.ts"
+      "types": "./dist/providers/vertex/index.d.ts",
+      "import": "./dist/providers/vertex/index.js",
+      "dev-source": "./src/providers/vertex/index.ts"
     },
     "./providers/voyage": {
-      "types": "./dist/providers/voyage/canonical.d.ts",
-      "import": "./dist/providers/voyage/canonical.js",
-      "dev-source": "./src/providers/voyage/canonical.ts"
+      "types": "./dist/providers/voyage/index.d.ts",
+      "import": "./dist/providers/voyage/index.js",
+      "dev-source": "./src/providers/voyage/index.ts"
     }
   },
   "scripts": {

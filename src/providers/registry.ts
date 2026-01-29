@@ -35,6 +35,12 @@ export const resolveProvider = (args: {
     throw new Error(`Provider '${resolvedProviderId}' not configured`);
   }
 
+  if (operation === "text" && !provider.languageModel) {
+    throw new Error(`Provider '${resolvedProviderId}' does not support text`);
+  } else if (operation === "embeddings" && !provider.embeddingModel) {
+    throw new Error(`Provider '${resolvedProviderId}' does not support embeddings`);
+  }
+
   return provider;
 };
 
