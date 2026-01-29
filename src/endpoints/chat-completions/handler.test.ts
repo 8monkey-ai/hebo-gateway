@@ -1,9 +1,9 @@
-import { createProviderRegistry, simulateReadableStream } from "ai";
+import { simulateReadableStream } from "ai";
 import { MockLanguageModelV3, MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
-import { createModelCatalog } from "../../models/catalog";
+import { defineModelCatalog } from "../../models/catalog";
 import { chatCompletions } from "./handler";
 
 const baseUrl = "http://localhost/chat/completions";
@@ -71,23 +71,22 @@ describe("Chat Completions Handler", () => {
     }),
   });
 
-  const registry = createProviderRegistry({
-    groq: new MockProviderV3({
-      languageModels: {
-        "openai/gpt-oss-20b": mockLanguageModel,
+  const endpoint = chatCompletions({
+    providers: {
+      groq: new MockProviderV3({
+        languageModels: {
+          "openai/gpt-oss-20b": mockLanguageModel,
+        },
+      }),
+    },
+    models: defineModelCatalog({
+      "openai/gpt-oss-20b": {
+        name: "GPT-OSS 20B",
+        modalities: { input: ["text", "file"], output: ["text"] },
+        providers: ["groq"],
       },
     }),
   });
-
-  const catalog = createModelCatalog({
-    "openai/gpt-oss-20b": {
-      name: "GPT-OSS 20B",
-      modalities: { input: ["text", "file"], output: ["text"] },
-      providers: ["groq"],
-    },
-  });
-
-  const endpoint = chatCompletions({ providers: registry, models: catalog });
 
   test("should return 405 for non-POST requests", async () => {
     const request = new Request(baseUrl, { method: "GET" });

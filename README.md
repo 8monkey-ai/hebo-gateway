@@ -31,28 +31,31 @@ bun add @hebo-ai/gateway ai @ai-sdk/groq
 Start by creating a gateway instance with at least one provider and a few models.
 
 ```ts
-import { gateway, createModelCatalog } from "@hebo-ai/gateway";
-import { createGroqWithCanonicalIds } from "@hebo-ai/gateway/providers/groq";
+import { createGroq } from "@ai-sdk/groq";
+import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
+import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
   providers: {
-    // Any Vercel AI SDK provider +WithCanonicalIds
-    groq: createGroqWithCanonicalIds({
-      apiKey: process.env.GROQ_API_KEY,
-    },
+    // Any Vercel AI SDK provider + withCanonicalIdsForX helper
+    groq: withCanonicalIdsForGroq(
+      createGroq({
+        apiKey: process.env.GROQ_API_KEY,
+      }),
+    ),
   },
 
   // MODEL CATALOG
-  models: createModelCatalog(
-    // Choose a preset for common SOTA models
-    gptOss20b({
-      providers: ["groq"],
-    }),
-    // Or add a whole model family
-    ...gptOss["all"].map((preset) =>
-      preset({})
+  models: defineModelCatalog(
+    // Choose a pre-configured preset for common SOTA models
+    gptOss20b,
+    // Or add a whole model family with your own provider list
+    gptOss["all"].map(
+      preset => preset({
+        providers: ["groq"],
+      })
     ),
   ),
 });
@@ -194,39 +197,41 @@ Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For H
 
 Out-of-the-box canonical providers:
 
-- Amazon Bedrock (`createAmazonBedrockWithCanonicalIds`): `@hebo-ai/gateway/providers/bedrock`
-- Anthropic (`createAnthropicWithCanonicalIds`): `@hebo-ai/gateway/providers/anthropic`
-- Cohere (`createCohereWithCanonicalIds`): `@hebo-ai/gateway/providers/cohere`
-- Google Vertex AI (`createVertexWithCanonicalIds`): `@hebo-ai/gateway/providers/vertex`
-- Groq (`createGroqWithCanonicalIds`): `@hebo-ai/gateway/providers/groq`
-- OpenAI (`createOpenAIWithCanonicalIds`): `@hebo-ai/gateway/providers/openai`
-- Voyage (`createVoyageWithCanonicalIds`): `@hebo-ai/gateway/providers/voyage`
+- Amazon Bedrock (`withCanonicalIdsForBedrock`): `@hebo-ai/gateway/providers/bedrock`
+- Anthropic (`withCanonicalIdsForAnthropic`): `@hebo-ai/gateway/providers/anthropic`
+- Cohere (`withCanonicalIdsForCohere`): `@hebo-ai/gateway/providers/cohere`
+- Google Vertex AI (`withCanonicalIdsForVertex`): `@hebo-ai/gateway/providers/vertex`
+- Groq (`withCanonicalIdsForGroq`): `@hebo-ai/gateway/providers/groq`
+- OpenAI (`withCanonicalIdsForOpenAI`): `@hebo-ai/gateway/providers/openai`
+- Voyage (`withCanonicalIdsForVoyage`): `@hebo-ai/gateway/providers/voyage`
 
 If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
 ```ts
-import { createOpenAI } from "@ai-sdk/openai";
+import { createAzure } from "@ai-sdk/openai";
 import {
   gateway,
-  createModelCatalog,
   withCanonicalIds,
 } from "@hebo-ai/gateway";
 
-const openai = withCanonicalIds(
-  createOpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-  {
-    "openai/gpt-4.1-mini": "gpt-4.1-mini",
-    "openai/text-embedding-3-small": "text-embedding-3-small",
-  },
+const azure = withCanonicalIds(
+  createAzure({
+    resourceName: process.env["AZURE_RESOURCE_NAME"],
+    apiKey: process.env["AZURE_API_KEY"]
+  }), {
+  mapping: {
+    "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
+    "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
+  }},
 );
 
 const gw = gateway({
   providers: {
-    openai,
+    azure,
   },
-  models: createModelCatalog({
+  models: {
     // ...your models pointing at canonical IDs above
-  }),
+  },
 });
 ```
 
@@ -236,9 +241,10 @@ Registering models tells Hebo Gateway which models are available, under which ca
 
 #### Model Presets
 
-To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models. 
+To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
 
 Presets come in two forms:
+
 - Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
 
@@ -263,19 +269,19 @@ Out-of-the-box model presets:
   Family: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 ```ts
-import { createModelCatalog } from "@hebo-ai/gateway";
+import { defineModelCatalog } from "@hebo-ai/gateway";
 import { gptOss20b } from "@hebo-ai/gateway/models/gpt-oss";
 import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/claude";
 
 // Individual preset
-const models = createModelCatalog(
+const models = defineModelCatalog(
   gptOss20b({ providers: ["groq"] }),
   claudeSonnet45({ providers: ["bedrock"] }),
 );
 
 // Family preset (pick a group and apply the same override to each)
-const modelsFromFamily = createModelCatalog(
-  ...claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
+const modelsFromFamily = defineModelCatalog(
+  claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
 );
 ```
 
@@ -288,7 +294,7 @@ const gw = gateway({
   providers: {
     // ...
   },
-  models: createModelCatalog({
+  models: {
     "openai/gpt-5.2": {
       name: "GPT 5.2",
       created: "2025-12-11",
@@ -312,9 +318,11 @@ const gw = gateway({
       }
     },
     // ...
-  }),
+  },
 });
 ```
+
+Note: the only mandatory property is the `providers` array, everything else is optional metadata.
 
 ### Hooks
 
@@ -355,14 +363,14 @@ const gw = gateway({
     },
     /**
      * Picks a provider instance for the request.
-     * @param ctx.providers Provider registry.
+     * @param ctx.providers ProviderRegistry from config.
      * @param ctx.models ModelCatalog from config.
      * @param ctx.modelId Resolved model ID.
      * @param ctx.operation Operation type ("text" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
-      providers: ProviderRegistryProvider;
+      providers: ProviderRegistry;
       models: ModelCatalog;
       modelId: ModelId;
       operation: "text" | "embeddings";
@@ -414,9 +422,9 @@ import { streamText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import * as z from "zod";
 import {
-  CompletionsBodySchema,
-  transformCompletionsInputs,
-  createCompletionsStreamResponse,
+  ChatCompletionsBodySchema,
+  convertToTextCallOptions,
+  createChatCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
@@ -425,24 +433,24 @@ export async function handler(req: Request): Promise<Response> {
 
   const body = await req.json();
 
-  const parsed = CompletionsBodySchema.safeParse(body);
+  const parsed = ChatCompletionsBodySchema.safeParse(body);
   if (!parsed.success) {
     return new Response(z.prettifyError(parsed.error), { status: 422 });
   }
 
   const { model, ...inputs } = parsed.data;
 
-  const textOptions = transformCompletionsInputs(inputs);
+  const textOptions = convertToTextCallOptions(inputs);
 
   const result = await streamText({
     model: groq(model),
     ...textOptions
   });
 
-  return createCompletionsStreamResponse(result, model);
+  return createChatCompletionsStreamResponse(result, model);
 }
 ```
 
-Non-streaming versions are available via `createCompletionsResponse`. Equivalent schemas and helper are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
 
 Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.

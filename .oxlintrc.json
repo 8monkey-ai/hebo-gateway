@@ -10,6 +10,8 @@
   "rules": {
     "react-in-jsx-scope": "off",
     "max-lines-per-function": "off",
+    "max-classes-per-file": "off",
+    "max-lines": "off",
     "anchor-has-content": "off",
     "max-dependencies": "off"
   },

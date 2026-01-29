@@ -46,17 +46,13 @@ export function deepMerge<A extends object, B extends object>(base: A, override?
   return out as unknown as A & B;
 }
 
-type RequiredKeys<T> = { [K in keyof T]-?: object extends Pick<T, K> ? never : K }[keyof T];
-type MissingRequiredKeys<T, Base> = Exclude<RequiredKeys<T>, keyof Base>;
-type OverrideFor<T, Base> = DeepPartial<T> & Pick<T, MissingRequiredKeys<T, Base>>;
-
 export function presetFor<Ids extends string, T extends Record<string, unknown>>() {
   return function preset<const Id extends Ids, const Base extends DeepPartial<T>>(
     id: Id,
     base: Base,
   ) {
-    return <const O extends OverrideFor<T, Base>>(override: O) => {
-      const merged = deepMerge(base, override);
+    return <const O extends DeepPartial<T>>(override?: O) => {
+      const merged = deepMerge(base, override ?? ({} as O));
       return { [id]: merged } as Record<Id, Base & O>;
     };
   };

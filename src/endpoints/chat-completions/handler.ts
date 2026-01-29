@@ -8,11 +8,11 @@ import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
-  transformCompletionsInputs,
-  createCompletionsResponse,
-  createCompletionsStreamResponse,
+  convertToTextCallOptions,
+  createChatCompletionsResponse,
+  createChatCompletionsStreamResponse,
 } from "./converters";
-import { CompletionsBodySchema } from "./schema";
+import { ChatCompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const { providers, models, hooks } = parseConfig(config);
@@ -29,7 +29,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
-    const parsed = CompletionsBodySchema.safeParse(body);
+    const parsed = ChatCompletionsBodySchema.safeParse(body);
 
     if (!parsed.success) {
       return createErrorResponse(
@@ -51,7 +51,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     let textOptions;
     try {
-      textOptions = transformCompletionsInputs(inputs);
+      textOptions = convertToTextCallOptions(inputs);
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -83,7 +83,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
 
-      return createCompletionsStreamResponse(result, modelId);
+      return createChatCompletionsStreamResponse(result, modelId);
     }
 
     let result;
@@ -96,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createCompletionsResponse(result, modelId);
+    return createChatCompletionsResponse(result, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

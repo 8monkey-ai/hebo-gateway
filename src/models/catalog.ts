@@ -1,5 +1,13 @@
 import type { ModelCatalog } from "./types";
 
-export function createModelCatalog(...entries: ModelCatalog[]): ModelCatalog {
-  return Object.assign({}, ...entries);
+type ModelCatalogInput =
+  | ModelCatalog
+  | (() => ModelCatalog)
+  | ModelCatalog[]
+  | (() => ModelCatalog)[];
+
+export function defineModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalog {
+  const catalogs = inputs.flat().map((input) => (typeof input === "function" ? input() : input));
+
+  return Object.assign({}, ...catalogs);
 }

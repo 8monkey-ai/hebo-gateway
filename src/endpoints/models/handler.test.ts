@@ -1,45 +1,42 @@
-import { createProviderRegistry } from "ai";
 import { MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
 import { parseResponse } from "../../../test/helpers/http";
-import { createModelCatalog } from "../../models/catalog";
 import { models } from "./handler";
 
 const baseUrl = "http://localhost/models";
 
 describe("Models Handler", () => {
-  const registry = createProviderRegistry({
-    anthropic: new MockProviderV3(),
-    google: new MockProviderV3(),
-  });
-
-  const catalog = createModelCatalog({
-    "anthropic/claude-opus-4.5": {
-      name: "Claude Opus 4.5",
-      created: "2025-09-29T10:00:00.000Z",
-      knowledge: "2025-07",
-      modalities: {
-        input: ["text", "image"],
-        output: ["text"],
-      },
-      context: 200000,
-      capabilities: ["reasoning", "tool_call"],
-      providers: ["anthropic"],
+  const endpoint = models({
+    providers: {
+      anthropic: new MockProviderV3(),
+      google: new MockProviderV3(),
     },
-    "google/gemini-3-flash": {
-      name: "Gemini 3 Flash",
-      created: "2025-10-01T08:30:00.000Z",
-      modalities: {
-        input: ["text", "video"],
-        output: ["text"],
+    models: {
+      "anthropic/claude-opus-4.5": {
+        name: "Claude Opus 4.5",
+        created: "2025-09-29T10:00:00.000Z",
+        knowledge: "2025-07",
+        modalities: {
+          input: ["text", "image"],
+          output: ["text"],
+        },
+        context: 200000,
+        capabilities: ["reasoning", "tool_call"],
+        providers: ["anthropic"],
       },
-      context: 128000,
-      providers: ["google"],
+      "google/gemini-3-flash": {
+        name: "Gemini 3 Flash",
+        created: "2025-10-01T08:30:00.000Z",
+        modalities: {
+          input: ["text", "video"],
+          output: ["text"],
+        },
+        context: 128000,
+        providers: ["google"],
+      },
     },
   });
-
-  const endpoint = models({ providers: registry, models: catalog });
 
   test("should list models via GET request with realistic data (exact match)", async () => {
     const request = new Request(baseUrl, { method: "GET" });

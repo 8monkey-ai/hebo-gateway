@@ -1,26 +1,20 @@
-import { createProviderRegistry } from "ai";
+import { createGroq } from "@ai-sdk/groq";
 import { Elysia } from "elysia";
+import { createVoyage } from "voyage-ai-provider";
 
-import {
-  createModelCatalog,
-  gateway,
-  groqWithCanonicalIds,
-  voyageWithCanonicalIds,
-  gptOss,
-  voyage,
-  llama,
-} from "#/";
+import { defineModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/gpt-oss";
+import { llama } from "#/models/llama";
+import { voyage } from "#/models/voyage";
+import { withCanonicalIdsForGroq } from "#/providers/groq";
+import { withCanonicalIdsForVoyage } from "#/providers/voyage";
 
 const gw = gateway({
-  providers: createProviderRegistry({
-    groq: groqWithCanonicalIds(),
-    voyage: voyageWithCanonicalIds(),
-  }),
-  models: createModelCatalog(
-    ...gptOss["all"].map((model) => model({})),
-    ...voyage["all"].map((model) => model({})),
-    ...llama["all"].map((model) => model({})),
-  ),
+  providers: {
+    groq: withCanonicalIdsForGroq(createGroq()),
+    voyage: withCanonicalIdsForVoyage(createVoyage()),
+  },
+  models: defineModelCatalog(gptOss["all"], voyage["all"], llama["all"]),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);

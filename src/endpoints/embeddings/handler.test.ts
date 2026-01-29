@@ -1,9 +1,7 @@
-import { createProviderRegistry } from "ai";
 import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
-import { createModelCatalog } from "../../models/catalog";
 import { embeddings } from "./handler";
 
 const baseUrl = "http://localhost/embeddings";
@@ -28,36 +26,35 @@ const expectedEmbeddingResponse = (count: number) => ({
 });
 
 describe("Embeddings Handler", () => {
-  const registry = createProviderRegistry({
-    openai: new MockProviderV3({
-      embeddingModels: {
-        "text-embedding-3-small": new MockEmbeddingModelV3({
-          // eslint-disable-next-line require-await
-          doEmbed: async (options) => ({
-            embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
-            usage: { tokens: 10 },
-            providerMetadata: { openai: { key: "value" } },
-            warnings: [],
+  const endpoint = embeddings({
+    providers: {
+      openai: new MockProviderV3({
+        embeddingModels: {
+          "text-embedding-3-small": new MockEmbeddingModelV3({
+            // eslint-disable-next-line require-await
+            doEmbed: async (options) => ({
+              embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
+              usage: { tokens: 10 },
+              providerMetadata: { openai: { key: "value" } },
+              warnings: [],
+            }),
           }),
-        }),
+        },
+      }),
+    },
+    models: {
+      "text-embedding-3-small": {
+        name: "OpenAI Embedding Model",
+        modalities: { input: ["text"], output: ["embeddings"] },
+        providers: ["openai"],
       },
-    }),
-  });
-
-  const catalog = createModelCatalog({
-    "text-embedding-3-small": {
-      name: "OpenAI Embedding Model",
-      modalities: { input: ["text"], output: ["embeddings"] },
-      providers: ["openai"],
-    },
-    "gpt-oss-20b": {
-      name: "GPT-OSS 20B",
-      modalities: { input: ["text"], output: ["text"] },
-      providers: ["openai"],
+      "gpt-oss-20b": {
+        name: "GPT-OSS 20B",
+        modalities: { input: ["text"], output: ["text"] },
+        providers: ["openai"],
+      },
     },
   });
-
-  const endpoint = embeddings({ providers: registry, models: catalog });
 
   test("should return 400 if model does not support embeddings", async () => {
     const request = postJson(baseUrl, {

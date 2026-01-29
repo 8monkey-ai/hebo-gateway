@@ -1,5 +1,4 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
-import type { ProviderRegistryProvider } from "ai";
 
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderRegistry } from "./providers/types";
@@ -39,14 +38,14 @@ export type GatewayHooks = {
   resolveModelId?: (ctx: { modelId: ModelId }) => ModelId | void | Promise<ModelId | void>;
   /**
    * Picks a provider instance for the request.
-   * @param ctx.providers Provider registry.
+   * @param ctx.providers ProviderRegistry from config.
    * @param ctx.models ModelCatalog from config.
    * @param ctx.modelId Resolved model ID.
    * @param ctx.operation Operation type ("text" | "embeddings").
    * @returns ProviderV3 to override, or undefined to use default.
    */
   resolveProvider?: (ctx: {
-    providers: ProviderRegistryProvider;
+    providers: ProviderRegistry;
     models: ModelCatalog;
     modelId: ModelId;
     operation: "text" | "embeddings";
@@ -62,7 +61,7 @@ export type GatewayHooks = {
 /**
  * Main configuration object for the gateway.
  */
-export type GatewayConfigBase = {
+export type GatewayConfig = {
   /**
    * Optional base path the gateway is mounted under (e.g. "/v1/gateway").
    */
@@ -81,14 +80,8 @@ export type GatewayConfigBase = {
   hooks?: GatewayHooks;
 };
 
-export type GatewayConfigRegistry = Omit<GatewayConfigBase, "providers"> & {
-  providers: ProviderRegistryProvider;
-};
-
-export type GatewayConfig = GatewayConfigBase | GatewayConfigRegistry;
-
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = GatewayConfigRegistry & {
+export type GatewayConfigParsed = GatewayConfig & {
   [kParsed]: true;
 };
 

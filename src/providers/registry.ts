@@ -1,15 +1,16 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 
-import { customProvider, type ProviderRegistryProvider } from "ai";
+import { customProvider } from "ai";
 
 import type { ModelCatalog, ModelId } from "../models/types";
+import type { ProviderRegistry } from "./types";
 
 export const resolveProvider = (args: {
-  providers: ProviderRegistryProvider;
+  providers: ProviderRegistry;
   models: ModelCatalog;
   modelId: ModelId;
   operation: "text" | "embeddings";
-}) => {
+}): ProviderV3 => {
   const { providers, models, modelId, operation } = args;
 
   const catalogModel = models[modelId];
@@ -18,37 +19,27 @@ export const resolveProvider = (args: {
     throw new Error(`Model '${modelId}' not found in catalog`);
   }
 
-  if (!catalogModel.modalities.output.includes(operation)) {
+  if (catalogModel.modalities && !catalogModel.modalities.output.includes(operation)) {
     throw new Error(`Model '${modelId}' does not support '${operation}' output`);
   }
 
+  // FUTURE: implement fallback logic [e.g. runtime config invalid]
   const resolvedProviderId = catalogModel.providers[0];
 
   if (!resolvedProviderId) {
     throw new Error(`No providers configured for model '${modelId}'`);
   }
 
-  switch (operation) {
-    case "text":
-      return customProvider({
-        languageModels: {
-          [modelId]: providers.languageModel(`${resolvedProviderId}:${modelId}`),
-        },
-      });
-    case "embeddings":
-      return customProvider({
-        embeddingModels: {
-          [modelId]: providers.embeddingModel(`${resolvedProviderId}:${modelId}`),
-        },
-      });
-    default:
-      throw new Error(`Operation '${operation}' is not yet supported`);
+  const provider = providers[resolvedProviderId];
+  if (!provider) {
+    throw new Error(`Provider '${resolvedProviderId}' not configured`);
   }
+
+  return provider;
 };
 
-export const withCanonicalIds = (
-  provider: ProviderV3,
-  mapping?: Record<string, string>,
+export type CanonicalIdsOptions = {
+  mapping?: Partial<Record<ModelId, string>>;
   options?: {
     /** @default true */
     stripNamespace?: boolean;
@@ -58,15 +49,23 @@ export const withCanonicalIds = (
     postfix?: string;
     /** @default "/" */
     namespaceSeparator?: "/" | "." | ":";
-  },
-) => {
+  };
+};
+
+export const withCanonicalIds = (
+  provider: ProviderV3,
+  config: CanonicalIdsOptions = {},
+): ProviderV3 => {
   const {
-    stripNamespace = true,
-    normalizeDelimiters = false,
-    prefix,
-    postfix,
-    namespaceSeparator = "/",
-  } = options ?? {};
+    mapping,
+    options: {
+      stripNamespace = true,
+      normalizeDelimiters = false,
+      prefix,
+      postfix,
+      namespaceSeparator = "/",
+    } = {},
+  } = config;
 
   const shouldNormalizeDelimiters = (canonicalId: string) => {
     if (typeof normalizeDelimiters === "boolean") return normalizeDelimiters;
@@ -99,16 +98,17 @@ export const withCanonicalIds = (
   const needsFallbackWrap =
     stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
 
-  const fallbackProvider: ProviderV3 = needsFallbackWrap
-    ? {
+  // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+  const languageModel = provider.languageModel;
+  const embeddingModel = provider.textEmbeddingModel!;
+
+  const fallbackProvider = needsFallbackWrap
+    ? ({
         ...provider,
         specificationVersion: "v3",
-        languageModel: (id: string) =>
-          provider.languageModel(applyFallbackAffixes(normalizeId(id))),
-        // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
-        embeddingModel: (id: string) =>
-          provider.textEmbeddingModel!(applyFallbackAffixes(normalizeId(id))),
-      }
+        languageModel: (id: string) => languageModel(applyFallbackAffixes(normalizeId(id))),
+        embeddingModel: (id: string) => embeddingModel(applyFallbackAffixes(normalizeId(id))),
+      } satisfies ProviderV3)
     : provider;
 
   const mapModels = <T>(fn?: (id: string) => T) => {
@@ -118,6 +118,7 @@ export const withCanonicalIds = (
     if (fn === undefined) return out;
 
     for (const [k, v] of Object.entries(mapping ?? {})) {
+      if (v === undefined) continue;
       // This is lazy so that provider is only create once called
       Object.defineProperty(out, k, {
         get: () => fn(applyPrefix(v)),
@@ -128,9 +129,8 @@ export const withCanonicalIds = (
   };
 
   return customProvider({
-    languageModels: mapModels(provider.languageModel),
-    // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
-    embeddingModels: mapModels(provider.textEmbeddingModel),
+    languageModels: mapModels(languageModel),
+    embeddingModels: mapModels(embeddingModel),
     fallbackProvider,
   });
 };

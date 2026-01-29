@@ -1,17 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
+import { groq } from "@ai-sdk/groq";
 import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
-import { createProviderRegistry } from "ai";
 
-import { createModelCatalog, gateway, groqWithCanonicalIds, gptOss } from "#/";
+import { defineModelCatalog, gateway } from "#/";
+import { gptOss } from "#/models/gpt-oss";
+import { withCanonicalIdsForGroq } from "#/providers/groq";
 
 const gw = gateway({
   basePath: "/api/pages/gateway",
-  providers: createProviderRegistry({
-    groq: groqWithCanonicalIds(),
-  }),
-  models: createModelCatalog(...gptOss["all"].map((model) => model({}))),
+  providers: {
+    groq: withCanonicalIdsForGroq(groq),
+  },
+  models: defineModelCatalog(gptOss["all"]),
 });
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await sendResponse(res, await gw.handler(createRequest(req, res)));
 }

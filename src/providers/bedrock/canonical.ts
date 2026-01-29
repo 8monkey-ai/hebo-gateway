@@ -1,10 +1,6 @@
-import {
-  createAmazonBedrock,
-  bedrock,
-  type AmazonBedrockProviderSettings,
-} from "@ai-sdk/amazon-bedrock";
+import { type AmazonBedrockProvider } from "@ai-sdk/amazon-bedrock";
 
-import type { CanonicalModelId } from "../../models/types";
+import type { CanonicalModelId, ModelId } from "../../models/types";
 
 import { withCanonicalIds } from "../registry";
 
@@ -39,34 +35,28 @@ export type BedrockCanonicalOptions = {
   arn?: { region: string; accountId: string };
 };
 
-export type BedrockCanonicalSettings = AmazonBedrockProviderSettings & BedrockCanonicalOptions;
-
-const resolvePrefix = ({ geo = "us", arn }: BedrockCanonicalSettings = {}) =>
+const resolvePrefix = ({ geo = "us", arn }: BedrockCanonicalOptions = {}) =>
   `${arn ? `arn:aws:bedrock:${arn.region}:${arn.accountId}:inference-profile/` : ""}${geo}.`;
 
-const mergeMapping = (extra?: Record<string, string>) =>
-  ({ ...MAPPING, ...extra }) as Record<string, string>;
+export type BedrockCanonicalConfig = {
+  options?: BedrockCanonicalOptions;
+  extraMapping?: Record<ModelId, string>;
+};
 
-export const bedrockWithCanonicalIds = (
-  opts?: BedrockCanonicalOptions,
-  extraMapping?: Record<string, string>,
+export const withCanonicalIdsForBedrock = (
+  provider: AmazonBedrockProvider,
+  config: BedrockCanonicalConfig = {},
 ) =>
-  withCanonicalIds(bedrock, mergeMapping(extraMapping), {
-    stripNamespace: false,
-    namespaceSeparator: ".",
-    normalizeDelimiters: true,
-    prefix: resolvePrefix(opts),
-    postfix: "-v1:0",
-  });
-
-export const createAmazonBedrockWithCanonicalIds = (
-  { geo, arn, ...bedrockSettings }: BedrockCanonicalSettings,
-  extraMapping?: Record<string, string>,
-) =>
-  withCanonicalIds(createAmazonBedrock(bedrockSettings), mergeMapping(extraMapping), {
-    stripNamespace: false,
-    namespaceSeparator: ".",
-    normalizeDelimiters: true,
-    prefix: resolvePrefix({ geo, arn }),
-    postfix: "-v1:0",
+  withCanonicalIds(provider, {
+    mapping: {
+      ...MAPPING,
+      ...config.extraMapping,
+    },
+    options: {
+      stripNamespace: false,
+      namespaceSeparator: ".",
+      normalizeDelimiters: true,
+      prefix: resolvePrefix(config.options),
+      postfix: "-v1:0",
+    },
   });

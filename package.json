@@ -1,6 +1,6 @@
 {
   "name": "@hebo-ai/gateway",
-  "version": "0.1.2",
+  "version": "0.2.0-beta",
   "description": "Hebo Gateway - Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more.",
   "keywords": [
     "ai",
@@ -61,69 +61,69 @@
       "dev-source": "./src/endpoints/models/index.ts"
     },
     "./models/claude": {
-      "types": "./dist/models/presets/claude.d.ts",
-      "import": "./dist/models/presets/claude.js",
-      "dev-source": "./src/models/presets/claude.ts"
+      "types": "./dist/models/claude/index.d.ts",
+      "import": "./dist/models/claude/index.js",
+      "dev-source": "./src/models/claude/index.ts"
     },
     "./models/cohere": {
-      "types": "./dist/models/presets/cohere.d.ts",
-      "import": "./dist/models/presets/cohere.js",
-      "dev-source": "./src/models/presets/cohere.ts"
+      "types": "./dist/models/cohere/index.d.ts",
+      "import": "./dist/models/cohere/index.js",
+      "dev-source": "./src/models/cohere/index.ts"
     },
     "./models/gemini": {
-      "types": "./dist/models/presets/gemini.d.ts",
-      "import": "./dist/models/presets/gemini.js",
-      "dev-source": "./src/models/presets/gemini.ts"
+      "types": "./dist/models/gemini/index.d.ts",
+      "import": "./dist/models/gemini/index.js",
+      "dev-source": "./src/models/gemini/index.ts"
     },
     "./models/gpt-oss": {
-      "types": "./dist/models/presets/gpt-oss.d.ts",
-      "import": "./dist/models/presets/gpt-oss.js",
-      "dev-source": "./src/models/presets/gpt-oss.ts"
+      "types": "./dist/models/gpt-oss/index.d.ts",
+      "import": "./dist/models/gpt-oss/index.js",
+      "dev-source": "./src/models/gpt-oss/index.ts"
     },
     "./models/llama": {
-      "types": "./dist/models/presets/llama.d.ts",
-      "import": "./dist/models/presets/llama.js",
-      "dev-source": "./src/models/presets/llama.ts"
+      "types": "./dist/models/llama/index.d.ts",
+      "import": "./dist/models/llama/index.js",
+      "dev-source": "./src/models/llama/index.ts"
     },
     "./models/voyage": {
-      "types": "./dist/models/presets/voyage.d.ts",
-      "import": "./dist/models/presets/voyage.js",
-      "dev-source": "./src/models/presets/voyage.ts"
+      "types": "./dist/models/voyage/index.d.ts",
+      "import": "./dist/models/voyage/index.js",
+      "dev-source": "./src/models/voyage/index.ts"
     },
     "./providers/anthropic": {
-      "types": "./dist/providers/canonical/anthropic.d.ts",
-      "import": "./dist/providers/canonical/anthropic.js",
-      "dev-source": "./src/providers/canonical/anthropic.ts"
+      "types": "./dist/providers/anthropic/index.d.ts",
+      "import": "./dist/providers/anthropic/index.js",
+      "dev-source": "./src/providers/anthropic/index.ts"
     },
     "./providers/bedrock": {
-      "types": "./dist/providers/canonical/bedrock.d.ts",
-      "import": "./dist/providers/canonical/bedrock.js",
-      "dev-source": "./src/providers/canonical/bedrock.ts"
+      "types": "./dist/providers/bedrock/index.d.ts",
+      "import": "./dist/providers/bedrock/index.js",
+      "dev-source": "./src/providers/bedrock/index.ts"
     },
     "./providers/cohere": {
-      "types": "./dist/providers/canonical/cohere.d.ts",
-      "import": "./dist/providers/canonical/cohere.js",
-      "dev-source": "./src/providers/canonical/cohere.ts"
+      "types": "./dist/providers/cohere/index.d.ts",
+      "import": "./dist/providers/cohere/index.js",
+      "dev-source": "./src/providers/cohere/index.ts"
     },
     "./providers/groq": {
-      "types": "./dist/providers/canonical/groq.d.ts",
-      "import": "./dist/providers/canonical/groq.js",
-      "dev-source": "./src/providers/canonical/groq.ts"
+      "types": "./dist/providers/groq/index.d.ts",
+      "import": "./dist/providers/groq/index.js",
+      "dev-source": "./src/providers/groq/index.ts"
     },
     "./providers/openai": {
-      "types": "./dist/providers/canonical/openai.d.ts",
-      "import": "./dist/providers/canonical/openai.js",
-      "dev-source": "./src/providers/canonical/openai.ts"
+      "types": "./dist/providers/openai/index.d.ts",
+      "import": "./dist/providers/openai/index.js",
+      "dev-source": "./src/providers/openai/index.ts"
     },
     "./providers/vertex": {
-      "types": "./dist/providers/canonical/vertex.d.ts",
-      "import": "./dist/providers/canonical/vertex.js",
-      "dev-source": "./src/providers/canonical/vertex.ts"
+      "types": "./dist/providers/vertex/index.d.ts",
+      "import": "./dist/providers/vertex/index.js",
+      "dev-source": "./src/providers/vertex/index.ts"
     },
     "./providers/voyage": {
-      "types": "./dist/providers/canonical/voyage.d.ts",
-      "import": "./dist/providers/canonical/voyage.js",
-      "dev-source": "./src/providers/canonical/voyage.ts"
+      "types": "./dist/providers/voyage/index.d.ts",
+      "import": "./dist/providers/voyage/index.js",
+      "dev-source": "./src/providers/voyage/index.ts"
     }
   },
   "scripts": {
