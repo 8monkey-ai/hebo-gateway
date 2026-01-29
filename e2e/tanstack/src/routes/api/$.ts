@@ -10,7 +10,7 @@ const gw = gateway({
   providers: {
     groq: withCanonicalIdsForGroq(groq),
   },
-  models: createModelCatalog(...gptOss["all"].map((preset) => preset())),
+  models: createModelCatalog(gptOss["all"]),
 });
 
 export const Route = createFileRoute("/api/$")({

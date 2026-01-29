@@ -12,7 +12,7 @@ const gw = gateway({
   providers: {
     groq: withCanonicalIdsForGroq(groq),
   },
-  models: createModelCatalog(...gptOss["all"].map((preset) => preset())),
+  models: createModelCatalog(gptOss["all"]),
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

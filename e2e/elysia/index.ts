@@ -14,11 +14,7 @@ const gw = gateway({
     groq: withCanonicalIdsForGroq(createGroq()),
     voyage: withCanonicalIdsForVoyage(createVoyage()),
   },
-  models: createModelCatalog(
-    ...gptOss["all"].map((preset) => preset()),
-    ...voyage["all"].map((preset) => preset()),
-    ...llama["all"].map((preset) => preset()),
-  ),
+  models: createModelCatalog(gptOss["all"], voyage["all"], llama["all"]),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
