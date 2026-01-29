@@ -1,6 +1,6 @@
-import { createCamelCaseProviderOptionsMiddleware } from "../../middleware/camel-case";
+import { createCamelCaseProviderOptionsEmbeddingMiddleware } from "../../middleware/camel-case";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 modelMiddlewareMatcher.useForProvider("voyage.embedding", {
-  embedding: createCamelCaseProviderOptionsMiddleware("voyage"),
+  embedding: createCamelCaseProviderOptionsEmbeddingMiddleware("voyage"),
 });

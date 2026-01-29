@@ -26,7 +26,7 @@ function camelizeKeysDeep(value: unknown): unknown {
  * Converts snake_case params in providerOptions to camelCase
  * and moves all of them into providerOptions[providerName].
  */
-export function createCamelCaseProviderOptionsMiddleware(
+export function createCamelCaseProviderOptionsEmbeddingMiddleware(
   providerName: ProviderId,
 ): EmbeddingModelMiddleware {
   return {
