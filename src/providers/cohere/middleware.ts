@@ -1,6 +1,6 @@
-import { createCamelCaseProviderOptionsEmbeddingMiddleware } from "../../middleware/camel-case";
+import { createNormalizedProviderOptionsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 modelMiddlewareMatcher.useForProvider("cohere.textEmbedding", {
-  embedding: createCamelCaseProviderOptionsEmbeddingMiddleware("cohere"),
+  embedding: createNormalizedProviderOptionsEmbeddingMiddleware("cohere"),
 });

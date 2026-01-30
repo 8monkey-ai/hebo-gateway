@@ -1,6 +1,6 @@
-import { createCamelCaseProviderOptionsEmbeddingMiddleware } from "../../middleware/camel-case";
+import { createNormalizedProviderOptionsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 modelMiddlewareMatcher.useForProvider("openai.*", {
-  embedding: createCamelCaseProviderOptionsEmbeddingMiddleware("openai"),
+  embedding: createNormalizedProviderOptionsEmbeddingMiddleware("openai"),
 });

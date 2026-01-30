@@ -1,7 +1,7 @@
-import { createCamelCaseProviderOptionsEmbeddingMiddleware } from "../../middleware/camel-case";
+import { createNormalizedProviderOptionsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Future: Not for cohere models
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
-  embedding: createCamelCaseProviderOptionsEmbeddingMiddleware("bedrock"),
+  embedding: createNormalizedProviderOptionsEmbeddingMiddleware("bedrock"),
 });
