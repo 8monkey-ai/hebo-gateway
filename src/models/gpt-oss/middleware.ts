@@ -24,6 +24,6 @@ export const openAIEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("openai/text-embedding-", {
+modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
   embedding: openAIEmbeddingModelMiddleware,
 });

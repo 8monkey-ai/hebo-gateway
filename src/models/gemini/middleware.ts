@@ -24,6 +24,6 @@ export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("google/gemini-*embedding*", {
+modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
   embedding: geminiEmbeddingModelMiddleware,
 });
