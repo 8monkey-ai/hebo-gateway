@@ -10,10 +10,10 @@ export const openAIEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     const unhandled = params.providerOptions?.["unhandled"];
     if (!unhandled) return params;
 
-    let dimensions = unhandled["dimensions"];
+    let dimensions = unhandled["dimensions"] as number;
     if (!dimensions) dimensions = 1024;
 
-    if ((dimensions as number) > 3072) {
+    if (dimensions > 3072) {
       throw new Error("OpenAI embeddings only support dimensions up to 3072.");
     }
 

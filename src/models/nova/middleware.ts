@@ -10,10 +10,10 @@ export const novaEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     const unhandled = params.providerOptions?.["unhandled"];
     if (!unhandled) return params;
 
-    let dimensions = unhandled["dimensions"];
+    let dimensions = unhandled["dimensions"] as number;
     if (!dimensions) dimensions = 1024;
 
-    if (![256, 384, 1024, 3072].includes(dimensions as number)) {
+    if (![256, 384, 1024, 3072].includes(dimensions)) {
       throw new Error("Nova embeddings only support dimensions of 256, 384, 1024, or 3072.");
     }
 
