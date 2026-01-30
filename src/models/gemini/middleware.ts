@@ -13,10 +13,6 @@ export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     let dimensions = unhandled["dimensions"] as number;
     if (!dimensions) dimensions = 1024;
 
-    if (dimensions > 3072) {
-      throw new Error("Google embeddings only support dimensions up to 3072.");
-    }
-
     (params.providerOptions!["google"] ??= {})["outputDimensionality"] = dimensions;
     delete unhandled["dimensions"];
 

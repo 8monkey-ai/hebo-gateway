@@ -13,12 +13,6 @@ export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     let dimensions = unhandled["dimensions"] as number;
     if (!dimensions) dimensions = 1024;
 
-    if (![256, 512, 1024, 1536, 2048].includes(dimensions)) {
-      throw new Error(
-        "Voyage embeddings only support dimensions of 256, 512, 1024, 1536, or 2048.",
-      );
-    }
-
     (params.providerOptions!["voyage"] ??= {})["outputDimension"] = dimensions;
     delete unhandled["dimensions"];
 
