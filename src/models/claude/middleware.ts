@@ -14,21 +14,21 @@ export const anthropicReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning || typeof reasoning !== "object") return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {});
-    const { enabled, effort, max_tokens: reasoning_max_tokens } = reasoning;
+    const { enabled, effort, max_tokens: reasoningMaxTokens } = reasoning;
 
     if (enabled === false) {
       target["thinking"] = { type: "disabled" };
-    } else if (reasoning_max_tokens) {
-      target["thinking"] = { type: "enabled", budget_tokens: reasoning_max_tokens };
+    } else if (reasoningMaxTokens) {
+      target["thinking"] = { type: "enabled", budgetTokens: reasoningMaxTokens };
     } else if (effort) {
       const maxCompletionTokens = params.maxOutputTokens ?? 4096;
 
       const budget = calculateBudgetFromEffort(effort, maxCompletionTokens);
       if (budget > 0) {
-        target["thinking"] = { type: "enabled", budget_tokens: budget };
+        target["thinking"] = { type: "enabled", budgetTokens: budget };
       }
     } else if (enabled !== false) {
-      target["thinking"] = { type: "enabled", budget_tokens: 1024 };
+      target["thinking"] = { type: "enabled", budgetTokens: 1024 };
     }
 
     delete unhandled["reasoning"];

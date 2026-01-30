@@ -23,7 +23,7 @@ test("anthropicReasoningMiddleware > should transform reasoning_effort string to
       anthropic: {
         thinking: {
           type: "enabled",
-          budget_tokens: 8000,
+          budgetTokens: 8000,
         },
       },
       unhandled: {},
@@ -52,7 +52,7 @@ test("anthropicReasoningMiddleware > should respect Anthropic minimum budget of 
       anthropic: {
         thinking: {
           type: "enabled",
-          budget_tokens: 1024,
+          budgetTokens: 1024,
         },
       },
       unhandled: {},
@@ -82,7 +82,7 @@ test("anthropicReasoningMiddleware > should transform reasoning object to thinki
       anthropic: {
         thinking: {
           type: "enabled",
-          budget_tokens: 2000,
+          budgetTokens: 2000,
         },
       },
       unhandled: {},
