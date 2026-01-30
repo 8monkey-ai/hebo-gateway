@@ -12,6 +12,8 @@ export function createErrorResponse(
   status: number,
   param?: string,
 ): Response {
+  // FUTURE: unpack upstream `AISDKError` and forward to the client
+  // E.g. invalid ProviderOptions contain InvalidArgumentError in error.cause
   const message = error instanceof Error ? error.message : String(error);
   const type = status < 500 ? "invalid_request_error" : "server_error";
 
