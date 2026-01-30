@@ -105,11 +105,35 @@ export const ChatCompletionsToolChoiceSchema = z.union([
 ]);
 export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
 
+export const ChatCompletionsReasoningEffortSchema = z.union([
+  z.literal("none"),
+  z.literal("minimal"),
+  z.literal("low"),
+  z.literal("medium"),
+  z.literal("high"),
+  z.literal("xhigh"),
+]);
+export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
+
+export const ChatCompletionsReasoningConfigSchema = z.union([
+  ChatCompletionsReasoningEffortSchema,
+  z.object({
+    enabled: z.optional(z.boolean()),
+    effort: z.optional(ChatCompletionsReasoningEffortSchema),
+    max_tokens: z.optional(z.number()),
+    exclude: z.optional(z.boolean()),
+  }),
+]);
+export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
+
 export const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z.optional(z.array(ChatCompletionsToolSchema)),
   tool_choice: z.optional(ChatCompletionsToolChoiceSchema),
   temperature: z.optional(z.number()),
+  max_tokens: z.optional(z.number()),
+  reasoning: z.optional(ChatCompletionsReasoningConfigSchema),
+  reasoning_effort: z.optional(ChatCompletionsReasoningEffortSchema),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 

@@ -38,19 +38,26 @@ export type TextCallOptions = {
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
   temperature?: number;
+  maxOutputTokens?: number;
   providerOptions: ProviderOptions;
 };
 
 // --- Request Flow ---
 
 export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCallOptions {
-  const { messages, tools, tool_choice, temperature = 1, ...rest } = params;
+  const { messages, tools, tool_choice, temperature = 1, max_tokens, ...rest } = params;
+
+  if (rest.reasoning_effort) {
+    rest.reasoning = { effort: rest.reasoning_effort };
+    delete (rest as any).reasoning_effort;
+  }
 
   return {
     messages: fromChatCompletionsMessages(messages),
     tools: fromChatCompletionsTools(tools),
     toolChoice: fromChatCompletionsToolChoice(tool_choice),
     temperature,
+    maxOutputTokens: max_tokens,
     providerOptions: {
       unhandled: rest,
     },
