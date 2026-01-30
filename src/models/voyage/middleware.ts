@@ -19,7 +19,7 @@ export const voyageEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
       );
     }
 
-    (params.providerOptions!["handled"] ??= {})["outputDimension"] = dimensions;
+    (params.providerOptions!["voyage"] ??= {})["outputDimension"] = dimensions;
     delete unhandled["dimensions"];
 
     return params;

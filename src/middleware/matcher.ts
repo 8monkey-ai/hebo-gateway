@@ -3,6 +3,11 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 
+import {
+  createNormalizedProviderEmbeddingMiddleware,
+  createNormalizedProviderLanguageMiddleware,
+} from "./common";
+
 type MiddlewareEntry = {
   language?: LanguageModelMiddleware | LanguageModelMiddleware[];
   embedding?: EmbeddingModelMiddleware | EmbeddingModelMiddleware[];
@@ -74,6 +79,7 @@ class ModelMiddlewareMatcher {
   forLanguage(modelId: ModelId, providerId: ProviderId): LanguageModelMiddleware[] {
     const out: LanguageModelMiddleware[] = [];
     for (const s of this.model.match(modelId)) out.push(...s.language);
+    out.push(createNormalizedProviderLanguageMiddleware(extractProviderNamespace(providerId)));
     for (const s of this.provider.match(providerId)) out.push(...s.language);
     return out;
   }
@@ -81,6 +87,7 @@ class ModelMiddlewareMatcher {
   forEmbedding(modelId: ModelId, providerId: ProviderId): EmbeddingModelMiddleware[] {
     const out: EmbeddingModelMiddleware[] = [];
     for (const s of this.model.match(modelId)) out.push(...s.embedding);
+    out.push(createNormalizedProviderEmbeddingMiddleware(extractProviderNamespace(providerId)));
     for (const s of this.provider.match(providerId)) out.push(...s.embedding);
     return out;
   }
@@ -112,4 +119,12 @@ function matches(key: string, r: Rule): boolean {
     case "includes":
       return key.includes(r.value);
   }
+}
+
+export function extractProviderNamespace(id: string): string {
+  const firstDot = id.indexOf(".");
+  const head = firstDot === -1 ? id : id.slice(0, firstDot);
+
+  const dash = head.indexOf("-");
+  return dash === -1 ? head : head.slice(dash + 1);
 }

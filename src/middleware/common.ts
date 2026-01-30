@@ -1,5 +1,5 @@
 import type { JSONObject } from "@ai-sdk/provider";
-import type { EmbeddingModelMiddleware } from "ai";
+import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { ProviderId } from "../providers/types";
 
@@ -26,13 +26,22 @@ function camelizeKeysDeep(value: unknown): unknown {
  * Converts snake_case params in providerOptions to camelCase
  * and moves all of them into providerOptions[providerName].
  */
-export function createNormalizedProviderOptionsEmbeddingMiddleware(
+type Kind = "embedding" | "language";
+type MiddlewareFor<K extends Kind> = K extends "embedding"
+  ? EmbeddingModelMiddleware
+  : LanguageModelMiddleware;
+type TransformOptsFor<K extends Kind> = Parameters<
+  NonNullable<MiddlewareFor<K>["transformParams"]>
+>[0];
+function createNormalizedProviderMiddleware<K extends Kind>(
+  _kind: K,
   providerName: ProviderId,
-): EmbeddingModelMiddleware {
+): MiddlewareFor<K> {
   return {
-    specificationVersion: "v3",
+    specificationVersion: "v3" as const,
     // eslint-disable-next-line require-await
-    transformParams: async ({ params }) => {
+    transformParams: async (options: TransformOptsFor<K>) => {
+      const { params } = options;
       const providerOptions = params.providerOptions;
       if (!providerOptions) return params;
 
@@ -40,10 +49,22 @@ export function createNormalizedProviderOptionsEmbeddingMiddleware(
       for (const key in providerOptions) {
         if (key === providerName) continue;
         Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
-        delete providerOptions[key];
+        if (key === "unhandled") delete providerOptions[key];
       }
 
       return params;
     },
-  };
+  } as MiddlewareFor<K>;
+}
+
+export function createNormalizedProviderEmbeddingMiddleware(
+  providerName: ProviderId,
+): EmbeddingModelMiddleware {
+  return createNormalizedProviderMiddleware("embedding", providerName);
+}
+
+export function createNormalizedProviderLanguageMiddleware(
+  providerName: ProviderId,
+): LanguageModelMiddleware {
+  return createNormalizedProviderMiddleware("language", providerName);
 }

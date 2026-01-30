@@ -14,10 +14,10 @@ export const cohereEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     if (!dimensions) return params;
 
     if (![256, 384, 512, 1024, 1536].includes(dimensions as number)) {
-      throw new Error("Cohere embeddings only support dimensions of 256, 384, 512, 1024, or 1536.");
+      throw new Error("Cohere embeddings only support dimensions of 256, 512, 1024, or 1536.");
     }
 
-    (params.providerOptions!["handled"] ??= {})["output_dimension"] = dimensions;
+    (params.providerOptions!["cohere"] ??= {})["outputDimension"] = dimensions;
     delete unhandled["dimensions"];
 
     return params;
