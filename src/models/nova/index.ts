@@ -17,7 +17,7 @@ export const cohereEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
       throw new Error("Nova embeddings only support dimensions of 256, 384, 1024, or 3072.");
     }
 
-    (params.providerOptions!["cohere"] ??= {})["embeddingDimension"] = dimensions;
+    (params.providerOptions!["nova"] ??= {})["embeddingDimension"] = dimensions;
     delete unhandled["dimensions"];
 
     return params;
