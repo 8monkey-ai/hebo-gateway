@@ -2,8 +2,8 @@ import type { EmbeddingModelMiddleware } from "ai";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
-// Convert `dimensions` (OpenAI) to `embeddingDimension` (Nova)
-export const novaEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
+// Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
+export const openAIEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
@@ -13,17 +13,17 @@ export const novaEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     let dimensions = unhandled["dimensions"];
     if (!dimensions) dimensions = 1024;
 
-    if (![256, 384, 1024, 3072].includes(dimensions as number)) {
-      throw new Error("Nova embeddings only support dimensions of 256, 384, 1024, or 3072.");
+    if ((dimensions as number) > 3072) {
+      throw new Error("OpenAI embeddings only support dimensions up to 3072.");
     }
 
-    (params.providerOptions!["nova"] ??= {})["embeddingDimension"] = dimensions;
+    (params.providerOptions!["openai"] ??= {})["dimensions"] = dimensions;
     delete unhandled["dimensions"];
 
     return params;
   },
 };
 
-modelMiddlewareMatcher.useForModel("amazon/nova-*embeddings*", {
-  embedding: novaEmbeddingModelMiddleware,
+modelMiddlewareMatcher.useForModel("openai/text-embedding-", {
+  embedding: openAIEmbeddingModelMiddleware,
 });

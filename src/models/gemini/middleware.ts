@@ -10,8 +10,8 @@ export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     const unhandled = params.providerOptions?.["unhandled"];
     if (!unhandled) return params;
 
-    const dimensions = unhandled["dimensions"];
-    if (!dimensions) return params;
+    let dimensions = unhandled["dimensions"];
+    if (!dimensions) dimensions = 1024;
 
     if ((dimensions as number) > 3072) {
       throw new Error("Google embeddings only support dimensions up to 3072.");
@@ -24,6 +24,6 @@ export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("google/*embedding*", {
+modelMiddlewareMatcher.useForModel("google/gemini-*embedding*", {
   embedding: geminiEmbeddingModelMiddleware,
 });
