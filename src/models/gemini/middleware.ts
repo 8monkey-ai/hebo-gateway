@@ -2,7 +2,7 @@ import type { EmbeddingModelMiddleware } from "ai";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
-// Convert `dimensions` (OpenAI) to `output_dimensionality` (Google)
+// Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
