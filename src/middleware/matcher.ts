@@ -100,7 +100,7 @@ function compilePattern(pattern: string): (key: string) => boolean {
   const re = new RegExp(
     `^${pattern
       .split("*")
-      .map((p) => p.replaceAll(/[\\^$+?.()|[\]{}]/g, "\\$&"))
+      .map((p) => p.replaceAll(/[-\\^$+?.()|[\]{}]/g, "\\$&"))
       .join(".*")}$`,
   );
 
