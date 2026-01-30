@@ -18,11 +18,9 @@ type Stored = {
   embedding: EmbeddingModelMiddleware[];
 };
 
-type MatchKind = "exact" | "startsWith" | "endsWith" | "includes";
-
 type Rule = {
-  kind: MatchKind;
-  value: string;
+  pattern: string;
+  test: (key: string) => boolean;
   stored: Stored;
 };
 
@@ -34,14 +32,12 @@ class SimpleMatcher {
 
   use(pattern: string, entry: MiddlewareEntry) {
     this.cache.clear();
-    const kind = getKind(pattern);
-    const value = pattern.replaceAll("*", "");
 
     const stored: Stored = { language: [], embedding: [] };
     if (entry.language) stored.language.push(...toArray(entry.language));
     if (entry.embedding) stored.embedding.push(...toArray(entry.embedding));
 
-    this.rules.push({ kind, value, stored });
+    this.rules.push({ pattern, test: compilePattern(pattern), stored });
   }
 
   match(key: string): Stored[] {
@@ -49,7 +45,7 @@ class SimpleMatcher {
     if (cached) return cached;
 
     const out: Stored[] = [];
-    for (const r of this.rules) if (matches(key, r)) out.push(r.stored);
+    for (const r of this.rules) if (r.test(key)) out.push(r.stored);
 
     if (this.cache.size >= SimpleMatcher.MAX_CACHE) {
       let n = Math.ceil(SimpleMatcher.MAX_CACHE * 0.2);
@@ -58,8 +54,8 @@ class SimpleMatcher {
         if (--n === 0) break;
       }
     }
-    this.cache.set(key, out);
 
+    this.cache.set(key, out);
     return out;
   }
 }
@@ -98,27 +94,17 @@ export type { ModelMiddlewareMatcher };
 
 const toArray = <T>(v: T | T[]) => (Array.isArray(v) ? v : [v]);
 
-function getKind(pattern: string) {
-  const hasStart = pattern.startsWith("*");
-  const hasEnd = pattern.endsWith("*");
+function compilePattern(pattern: string): (key: string) => boolean {
+  if (!pattern.includes("*")) return (key) => key === pattern;
 
-  const kind: MatchKind =
-    hasStart && hasEnd ? "includes" : hasStart ? "endsWith" : hasEnd ? "startsWith" : "exact";
+  const re = new RegExp(
+    `^${pattern
+      .split("*")
+      .map((p) => p.replaceAll(/[\\^$+?.()|[\]{}]/g, "\\$&"))
+      .join(".*")}$`,
+  );
 
-  return kind;
-}
-
-function matches(key: string, r: Rule): boolean {
-  switch (r.kind) {
-    case "exact":
-      return key === r.value;
-    case "endsWith":
-      return key.endsWith(r.value);
-    case "startsWith":
-      return key.startsWith(r.value);
-    case "includes":
-      return key.includes(r.value);
-  }
+  return (key) => re.test(key);
 }
 
 export function extractProviderNamespace(id: string): string {
