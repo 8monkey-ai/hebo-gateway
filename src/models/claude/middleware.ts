@@ -43,6 +43,7 @@ export const anthropicReasoningMiddleware: LanguageModelMiddleware = {
 
 function calculateBudgetFromEffort(effort: string, maxTokens: number): number {
   let percentage = 0;
+  // recommended mapping from https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-compat/advanced#reasoning-parameters
   switch (effort) {
     case "none":
       return 0;
