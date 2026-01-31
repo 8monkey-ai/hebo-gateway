@@ -1,5 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
+import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
+
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 /**
@@ -10,8 +12,8 @@ export const anthropicReasoningMiddleware: LanguageModelMiddleware = {
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unhandled = params.providerOptions?.["unhandled"];
-    const reasoning = unhandled?.["reasoning"];
-    if (!reasoning || typeof reasoning !== "object") return params;
+    const reasoning = unhandled?.["reasoning"] as ChatCompletionsReasoningConfig | undefined;
+    if (!reasoning) return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {});
     const { enabled, effort, max_tokens: reasoningMaxTokens } = reasoning;
@@ -21,17 +23,20 @@ export const anthropicReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoningMaxTokens) {
       target["thinking"] = { type: "enabled", budgetTokens: reasoningMaxTokens };
     } else if (effort) {
-      const maxCompletionTokens = params.maxOutputTokens ?? 4096;
+      // default max tokens based on https://platform.claude.com/docs/en/about-claude/models/overview
+      const maxCompletionTokens = params.maxOutputTokens ?? 64000;
 
       const budget = calculateBudgetFromEffort(effort, maxCompletionTokens);
       if (budget > 0) {
         target["thinking"] = { type: "enabled", budgetTokens: budget };
       }
-    } else if (enabled !== false) {
+    } else {
       target["thinking"] = { type: "enabled", budgetTokens: 1024 };
     }
 
-    delete unhandled["reasoning"];
+    if (unhandled) {
+      delete unhandled["reasoning"];
+    }
     return params;
   },
 };
@@ -64,10 +69,10 @@ function calculateBudgetFromEffort(effort: string, maxTokens: number): number {
   return Math.max(1024, Math.floor(maxTokens * percentage));
 }
 
-modelMiddlewareMatcher.useForModel("anthropic/claude-*sonnet*", {
+modelMiddlewareMatcher.useForModel("anthropic/claude-*3*7*", {
   language: anthropicReasoningMiddleware,
 });
 
-modelMiddlewareMatcher.useForModel("anthropic/claude-*opus*", {
+modelMiddlewareMatcher.useForModel("anthropic/claude-*4*", {
   language: anthropicReasoningMiddleware,
 });

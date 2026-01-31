@@ -45,11 +45,19 @@ export type TextCallOptions = {
 // --- Request Flow ---
 
 export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCallOptions {
-  const { messages, tools, tool_choice, temperature = 1, max_tokens, ...rest } = params;
+  const {
+    messages,
+    tools,
+    tool_choice,
+    temperature = 1,
+    max_tokens,
+    max_completion_tokens,
+    reasoning_effort,
+    ...rest
+  } = params;
 
-  if (rest.reasoning_effort) {
-    rest.reasoning = { effort: rest.reasoning_effort };
-    delete (rest as any).reasoning_effort;
+  if (reasoning_effort) {
+    rest.reasoning = { effort: reasoning_effort };
   }
 
   return {
@@ -57,7 +65,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     tools: fromChatCompletionsTools(tools),
     toolChoice: fromChatCompletionsToolChoice(tool_choice),
     temperature,
-    maxOutputTokens: max_tokens,
+    maxOutputTokens: max_completion_tokens ?? max_tokens,
     providerOptions: {
       unhandled: rest,
     },

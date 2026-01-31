@@ -115,26 +115,32 @@ export const ChatCompletionsReasoningEffortSchema = z.union([
 ]);
 export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
 
-export const ChatCompletionsReasoningConfigSchema = z.union([
-  ChatCompletionsReasoningEffortSchema,
-  z.object({
-    enabled: z.optional(z.boolean()),
-    effort: z.optional(ChatCompletionsReasoningEffortSchema),
-    max_tokens: z.optional(z.number()),
-    exclude: z.optional(z.boolean()),
-  }),
-]);
+export const ChatCompletionsReasoningConfigSchema = z.object({
+  enabled: z.optional(z.boolean()),
+  effort: z.optional(ChatCompletionsReasoningEffortSchema),
+  max_tokens: z.optional(z.number()),
+  exclude: z.optional(z.boolean()),
+});
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
-export const ChatCompletionsInputsSchema = z.object({
+const ChatCompletionsCoreInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z.optional(z.array(ChatCompletionsToolSchema)),
   tool_choice: z.optional(ChatCompletionsToolChoiceSchema),
   temperature: z.optional(z.number()),
   max_tokens: z.optional(z.number()),
+  max_completion_tokens: z.optional(z.number()),
+});
+
+const ChatCompletionsExtensionInputsSchema = z.object({
   reasoning: z.optional(ChatCompletionsReasoningConfigSchema),
   reasoning_effort: z.optional(ChatCompletionsReasoningEffortSchema),
 });
+
+export const ChatCompletionsInputsSchema = z.extend(
+  ChatCompletionsCoreInputsSchema,
+  ChatCompletionsExtensionInputsSchema.shape,
+);
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
 export const ChatCompletionsBodySchema = z.extend(ChatCompletionsInputsSchema, {
