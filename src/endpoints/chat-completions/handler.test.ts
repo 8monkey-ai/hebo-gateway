@@ -269,4 +269,34 @@ describe("Chat Completions Handler", () => {
     expect(result).toContain('"finish_reason":"stop');
     expect(result).toContain("data: [DONE]");
   });
+
+  test("should accept reasoning and reasoning_effort parameters", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "hi" }],
+      reasoning: {
+        effort: "high",
+        max_tokens: 1000,
+      },
+      reasoning_effort: "medium",
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse(res);
+    expect(data.model).toBe("openai/gpt-oss-20b");
+  });
+
+  test("should accept max_completion_tokens parameter", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "hi" }],
+      max_completion_tokens: 100,
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse(res);
+    expect(data.model).toBe("openai/gpt-oss-20b");
+  });
 });
