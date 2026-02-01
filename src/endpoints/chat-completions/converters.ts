@@ -39,6 +39,11 @@ export type TextCallOptions = {
   toolChoice?: ToolChoice<ToolSet>;
   temperature?: number;
   maxOutputTokens?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  seed?: number;
+  stopSequences?: string[];
+  topP?: number;
   providerOptions: ProviderOptions;
 };
 
@@ -49,10 +54,15 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     messages,
     tools,
     tool_choice,
-    temperature = 1,
+    temperature,
     max_tokens,
     max_completion_tokens,
     reasoning_effort,
+    frequency_penalty,
+    presence_penalty,
+    seed,
+    stop,
+    top_p,
     ...rest
   } = params;
 
@@ -66,6 +76,11 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     toolChoice: fromChatCompletionsToolChoice(tool_choice),
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
+    frequencyPenalty: frequency_penalty,
+    presencePenalty: presence_penalty,
+    seed,
+    stopSequences: stop ? (Array.isArray(stop) ? stop : [stop]) : undefined,
+    topP: top_p,
     providerOptions: {
       unknown: rest,
     },

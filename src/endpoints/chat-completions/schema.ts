@@ -146,6 +146,11 @@ const ChatCompletionsInputsCoreSchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   max_tokens: z.int().nonnegative().optional(),
   max_completion_tokens: z.int().nonnegative().optional(),
+  frequency_penalty: z.number().min(-2.0).max(2.0).optional(),
+  presence_penalty: z.number().min(-2.0).max(2.0).optional(),
+  seed: z.int().optional(),
+  stop: z.union([z.string(), z.array(z.string())]).optional(),
+  top_p: z.number().min(0).max(1.0).optional(),
 });
 export type ChatCompletionsInputsCore = z.infer<typeof ChatCompletionsInputsCoreSchema>;
 
