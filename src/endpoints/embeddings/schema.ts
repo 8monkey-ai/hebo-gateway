@@ -2,9 +2,7 @@ import * as z from "zod";
 
 export const EmbeddingsInputsSchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
-  encoding_format: z.enum(["float", "base64"]).optional(),
   dimensions: z.int().nonnegative().max(65536).optional(),
-  user: z.string().optional(),
 });
 export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 

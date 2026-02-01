@@ -66,7 +66,6 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
   // FUTURE: this should support arrays of TextContentPart and RefusalContentPart
   content: z.union([z.string(), z.null()]).optional(),
   name: z.string().optional(),
-  refusal: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
   // FUTURE: Are these extensions to the core, or just not documented by OpenAI?
@@ -218,8 +217,6 @@ export const ChatCompletionsCoreSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
-  service_tier: z.string().optional(),
-  system_fingerprint: z.string().optional(),
 });
 export type ChatCompletionsCore = z.infer<typeof ChatCompletionsCoreSchema>;
 
@@ -262,8 +259,6 @@ export const ChatCompletionsChunkSchema = z.object({
   id: z.string(),
   model: z.string(),
   object: z.literal("chat.completion.chunk"),
-  service_tier: z.string().optional(),
-  system_fingerprint: z.string().optional(),
   usage: ChatCompletionsUsageSchema.nullable(),
   provider_metadata: z.any().optional(),
 });
