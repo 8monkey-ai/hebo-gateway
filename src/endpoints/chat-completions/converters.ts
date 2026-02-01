@@ -310,7 +310,6 @@ export function toChatCompletions(
       } satisfies ChatCompletionsChoice,
     ],
     usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
-    // FUTURE: need to also implement for streams
     provider_metadata: result.providerMetadata,
   };
 }
@@ -361,11 +360,13 @@ export class ChatCompletionsStream extends TransformStream<
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
+    let lastProviderMetadata: unknown | undefined;
 
     const createChunk = (
       delta: ChatCompletionsDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
+      provider_metadata?: unknown,
     ) =>
       ({
         id: streamId,
@@ -380,10 +381,15 @@ export class ChatCompletionsStream extends TransformStream<
           } satisfies ChatCompletionsChoiceDelta,
         ],
         ...(usage ? { usage } : { usage: null }),
+        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
       }) satisfies ChatCompletionsChunk;
 
     super({
       transform(part, controller) {
+        if ("providerMetadata" in part && part.providerMetadata !== undefined) {
+          lastProviderMetadata = part.providerMetadata;
+        }
+
         switch (part.type) {
           case "text-delta": {
             controller.enqueue(createChunk({ role: "assistant", content: part.text }));
@@ -415,6 +421,7 @@ export class ChatCompletionsStream extends TransformStream<
                 {},
                 toChatCompletionsFinishReason(part.finishReason),
                 toChatCompletionsUsage(part.totalUsage),
+                lastProviderMetadata,
               ),
             );
             break;

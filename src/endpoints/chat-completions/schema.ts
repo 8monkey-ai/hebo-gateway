@@ -265,5 +265,6 @@ export const ChatCompletionsChunkSchema = z.object({
   service_tier: z.string().optional(),
   system_fingerprint: z.string().optional(),
   usage: ChatCompletionsUsageSchema.nullable(),
+  provider_metadata: z.any().optional(),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
