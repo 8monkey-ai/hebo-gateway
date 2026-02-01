@@ -166,7 +166,10 @@ test("anthropicReasoningMiddleware > should use 64k as default fallback for maxO
     prompt: [],
     providerOptions: {
       unknown: {
-        reasoning: { effort: "medium" }, // 0.5 * 64000 = 32000
+        reasoning: {
+          // 0.5 * 64000 = 32000
+          effort: "medium",
+        },
       },
     },
   };

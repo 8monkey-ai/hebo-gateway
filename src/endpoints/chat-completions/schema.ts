@@ -229,13 +229,8 @@ export const ChatCompletionsSchema = z.object({
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
 export const ChatCompletionsToolCallDeltaSchema = z.object({
-  id: z.string(),
   index: z.int().nonnegative(),
-  type: z.literal("function"),
-  function: z.object({
-    name: z.string(),
-    arguments: z.string(),
-  }),
+  ...ChatCompletionsToolCallSchema.shape,
 });
 export type ChatCompletionsToolCallDelta = z.infer<typeof ChatCompletionsToolCallDeltaSchema>;
 

@@ -15,6 +15,7 @@ import type {
   UserContent,
   LanguageModelUsage,
   Output,
+  TextStreamPart,
 } from "ai";
 
 import { jsonSchema, tool } from "ai";
@@ -37,6 +38,7 @@ import type {
   ChatCompletionsDelta,
   ChatCompletionsChoiceDelta,
   ChatCompletionsChunk,
+  ChatCompletionsToolCallDelta,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
@@ -310,6 +312,7 @@ export function toChatCompletions(
       } satisfies ChatCompletionsChoice,
     ],
     usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
+    // FUTURE: need to also implement for streams
     provider_metadata: result.providerMetadata,
   };
 }
@@ -352,7 +355,10 @@ export function toChatCompletionsStreamResponse(
   );
 }
 
-export class ChatCompletionsStream extends TransformStream {
+export class ChatCompletionsStream extends TransformStream<
+  TextStreamPart<ToolSet>,
+  ChatCompletionsChunk | OpenAIError
+> {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
@@ -399,7 +405,7 @@ export class ChatCompletionsStream extends TransformStream {
                   {
                     ...toChatCompletionsToolCall(part.toolCallId, part.toolName, part.input),
                     index: toolCallIndexCounter++,
-                  },
+                  } satisfies ChatCompletionsToolCallDelta,
                 ],
               }),
             );
@@ -479,21 +485,23 @@ export const toChatCompletionsAssistantMessage = (
 
 export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
   return {
-    ...(usage.inputTokens != null && {
+    ...(usage.inputTokens !== undefined && {
       prompt_tokens: usage.inputTokens,
     }),
-    ...(usage.outputTokens != null && {
+    ...(usage.outputTokens !== undefined && {
       completion_tokens: usage.outputTokens,
     }),
-    ...((usage.totalTokens != null || usage.inputTokens != null || usage.outputTokens != null) && {
+    ...((usage.totalTokens !== undefined ||
+      usage.inputTokens !== undefined ||
+      usage.outputTokens !== undefined) && {
       total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
     }),
-    ...(usage.outputTokenDetails?.reasoningTokens != null && {
+    ...(usage.outputTokenDetails?.reasoningTokens !== undefined && {
       completion_tokens_details: {
         reasoning_tokens: usage.outputTokenDetails.reasoningTokens,
       },
     }),
-    ...(usage.inputTokenDetails?.cacheReadTokens != null && {
+    ...(usage.inputTokenDetails?.cacheReadTokens !== undefined && {
       prompt_tokens_details: {
         cached_tokens: usage.inputTokenDetails.cacheReadTokens,
       },
