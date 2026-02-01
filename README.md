@@ -483,7 +483,7 @@ export async function handler(req: Request): Promise<Response> {
     ...textOptions
   });
 
-  return createChatCompletionsStreamResponse(result, model);
+  return toChatCompletionsStreamResponse(result, model);
 }
 ```
 
