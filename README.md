@@ -401,6 +401,31 @@ const gw = gateway({
 });
 ```
 
+## OpenAI Extensions
+
+### Reasoning
+
+In addition to the official `reasoning_effort` parameter, the chat completions endpoint accepts a `reasoning` object for more fine-grained control of the budget. It's treated as provider-agnostic input and normalized before hitting the upstream model.
+
+```json
+{
+  "model": "anthropic/claude-4-sonnet",
+  "messages": [{ "role": "user", "content": "Explain the tradeoffs." }],
+  "reasoning": { "effort": "medium" }
+}
+```
+
+Normalization rules:
+  - `enabled` -> fall-back to model default if none provided
+  - `max_tokens`: fall-back to model default if model supports
+  - `effort` -> budget = percentage of `max_tokens`
+    - `none`: 0%
+    - `minimal`: 10%
+    - `low`: 20%
+    - `medium`: 50% (default)
+    - `high`: 80%
+    - `xhigh`: 95%
+
 ## Advanced Usage
 
 ### Selective Route Mounting
