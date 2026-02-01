@@ -300,7 +300,7 @@ export function toChatCompletions(
         finish_reason,
       } satisfies ChatCompletionsChoice,
     ],
-    usage: result.totalUsage && toChatCompletionsUsage(result.totalUsage),
+    usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
     provider_metadata: result.providerMetadata,
   };
 }
