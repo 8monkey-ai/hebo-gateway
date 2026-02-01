@@ -28,8 +28,8 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
   }));
 
   const usage: EmbeddingsUsage = {
-    prompt_tokens: embedManyResult.usage?.tokens || 0,
-    total_tokens: embedManyResult.usage?.tokens || 0,
+    prompt_tokens: embedManyResult.usage.tokens,
+    total_tokens: embedManyResult.usage.tokens,
   };
 
   return {

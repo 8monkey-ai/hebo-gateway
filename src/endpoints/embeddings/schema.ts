@@ -1,10 +1,10 @@
-import * as z from "zod/mini";
+import * as z from "zod";
 
 export const EmbeddingsInputsSchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
-  encoding_format: z.optional(z.enum(["float", "base64"])),
-  dimensions: z.optional(z.number()),
-  user: z.optional(z.string()),
+  encoding_format: z.enum(["float", "base64"]).optional(),
+  dimensions: z.int().nonnegative().max(65536).optional(),
+  user: z.string().optional(),
 });
 export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 
@@ -23,13 +23,13 @@ export type EmbeddingsBody = z.infer<typeof EmbeddingsBodySchema>;
 export const EmbeddingsDataSchema = z.object({
   object: z.literal("embedding"),
   embedding: z.array(z.number()),
-  index: z.number(),
+  index: z.int().nonnegative(),
 });
 export type EmbeddingsData = z.infer<typeof EmbeddingsDataSchema>;
 
 export const EmbeddingsUsageSchema = z.object({
-  prompt_tokens: z.number(),
-  total_tokens: z.number(),
+  prompt_tokens: z.int().nonnegative().optional(),
+  total_tokens: z.int().nonnegative().optional(),
 });
 export type EmbeddingsUsage = z.infer<typeof EmbeddingsUsageSchema>;
 
@@ -37,7 +37,7 @@ export const EmbeddingsCoreSchema = z.object({
   object: z.literal("list"),
   data: z.array(EmbeddingsDataSchema),
   model: z.string(),
-  usage: EmbeddingsUsageSchema,
+  usage: EmbeddingsUsageSchema.nullable(),
 });
 export type EmbeddingsCore = z.infer<typeof EmbeddingsCoreSchema>;
 

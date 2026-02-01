@@ -1,4 +1,4 @@
-import * as z from "zod/mini";
+import * as z from "zod";
 
 export const ChatCompletionsContentPartTextSchema = z.object({
   type: z.literal("text"),
@@ -9,7 +9,7 @@ export const ChatCompletionsContentPartImageSchema = z.object({
   type: z.literal("image_url"),
   image_url: z.object({
     url: z.string(),
-    detail: z.optional(z.union([z.literal("low"), z.literal("high"), z.literal("auto")])),
+    detail: z.union([z.literal("low"), z.literal("high"), z.literal("auto")]).optional(),
   }),
 });
 
@@ -18,10 +18,11 @@ export const ChatCompletionsContentPartFileSchema = z.object({
   file: z.object({
     data: z.string(),
     media_type: z.string(),
-    filename: z.string(),
+    filename: z.string().optional(),
   }),
 });
 
+// FUTURE: missing ContentPartAudio
 export type ChatCompletionsContentPart =
   | z.infer<typeof ChatCompletionsContentPartTextSchema>
   | z.infer<typeof ChatCompletionsContentPartImageSchema>
@@ -40,6 +41,7 @@ export type ChatCompletionsToolCall = z.infer<typeof ChatCompletionsToolCallSche
 export const ChatCompletionsSystemMessageSchema = z.object({
   role: z.literal("system"),
   content: z.string(),
+  name: z.string().optional(),
 });
 export type ChatCompletionsSystemMessage = z.infer<typeof ChatCompletionsSystemMessageSchema>;
 
@@ -55,20 +57,27 @@ export const ChatCompletionsUserMessageSchema = z.object({
       ]),
     ),
   ]),
+  name: z.string().optional(),
 });
 export type ChatCompletionsUserMessage = z.infer<typeof ChatCompletionsUserMessageSchema>;
 
 export const ChatCompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
-  content: z.union([z.string(), z.null()]),
-  tool_calls: z.optional(z.array(ChatCompletionsToolCallSchema)),
-  reasoning: z.optional(z.string()),
-  reasoning_content: z.optional(z.string()),
+  // FUTURE: this should support arrays of TextContentPart and RefusalContentPart
+  content: z.union([z.string(), z.null()]).optional(),
+  name: z.string().optional(),
+  refusal: z.string().optional(),
+  // FUTURE: This should also support Custom Tool Calls
+  tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
+  // FUTURE: these are extensions to the core, separate out from Core
+  reasoning: z.string().optional(),
+  reasoning_content: z.string().optional(),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
 
 export const ChatCompletionsToolMessageSchema = z.object({
   role: z.literal("tool"),
+  // FUTURE: this should also support arrays of TextContentParts
   content: z.string(),
   tool_call_id: z.string(),
 });
@@ -86,8 +95,9 @@ export const ChatCompletionsToolSchema = z.object({
   type: z.literal("function"),
   function: z.object({
     name: z.string(),
-    description: z.optional(z.string()),
+    description: z.string().optional(),
     parameters: z.record(z.string(), z.any()),
+    // Mising strict parameter
   }),
 });
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
@@ -96,6 +106,7 @@ export const ChatCompletionsToolChoiceSchema = z.union([
   z.literal("none"),
   z.literal("auto"),
   z.literal("required"),
+  // FUTURE: missing AllowedTools and CustomToolChoice
   z.object({
     type: z.literal("function"),
     function: z.object({
@@ -125,31 +136,36 @@ export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReaso
 
 const ChatCompletionsInputsCoreSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
-  tools: z.optional(z.array(ChatCompletionsToolSchema)),
-  tool_choice: z.optional(ChatCompletionsToolChoiceSchema),
-  temperature: z.optional(z.number()),
-  max_tokens: z.optional(z.number()),
-  max_completion_tokens: z.optional(z.number()),
+  tools: z
+    .array(
+      // FUTURE: Missing CustomTool
+      ChatCompletionsToolSchema,
+    )
+    .optional(),
+  tool_choice: ChatCompletionsToolChoiceSchema.optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  max_tokens: z.int().nonnegative().optional(),
+  max_completion_tokens: z.int().nonnegative().optional(),
 });
 export type ChatCompletionsInputsCore = z.infer<typeof ChatCompletionsInputsCoreSchema>;
 
 const ChatCompletionsInputsSchema = z.object({
   ...ChatCompletionsInputsCoreSchema.shape,
-  reasoning: z.optional(ChatCompletionsReasoningConfigSchema),
-  reasoning_effort: z.optional(ChatCompletionsReasoningEffortSchema),
+  reasoning: ChatCompletionsReasoningConfigSchema.optional(),
+  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
 export const ChatCompletionsBodyCoreSchema = z.object({
   model: z.string(),
-  stream: z.optional(z.boolean()),
+  stream: z.boolean().optional(),
   ...ChatCompletionsInputsCoreSchema.shape,
 });
 export type ChatCompletionsBodyCore = z.infer<typeof ChatCompletionsBodyCoreSchema>;
 
 export const ChatCompletionsBodySchema = z.looseObject({
   model: z.string(),
-  stream: z.optional(z.boolean()),
+  stream: z.boolean().optional(),
   ...ChatCompletionsInputsSchema.shape,
 });
 export type ChatCompletionsBody = z.infer<typeof ChatCompletionsBodySchema>;
@@ -163,44 +179,47 @@ export const ChatCompletionsFinishReasonSchema = z.union([
 export type ChatCompletionsFinishReason = z.infer<typeof ChatCompletionsFinishReasonSchema>;
 
 export const ChatCompletionsChoiceSchema = z.object({
-  index: z.number(),
+  index: z.int().nonnegative(),
   message: ChatCompletionsAssistantMessageSchema,
   finish_reason: ChatCompletionsFinishReasonSchema,
-  logprobs: z.optional(z.any()),
+  // FUTURE: model this out
+  logprobs: z.any().optional(),
 });
 export type ChatCompletionsChoice = z.infer<typeof ChatCompletionsChoiceSchema>;
 
 export const ChatCompletionsUsageSchema = z.object({
-  prompt_tokens: z.number(),
-  completion_tokens: z.number(),
-  total_tokens: z.number(),
-  completion_tokens_details: z.optional(
-    z.object({
-      reasoning_tokens: z.optional(z.number()),
-    }),
-  ),
-  prompt_tokens_details: z.optional(
-    z.object({
-      cached_tokens: z.optional(z.number()),
-    }),
-  ),
+  prompt_tokens: z.int().nonnegative().optional(),
+  completion_tokens: z.int().nonnegative().optional(),
+  total_tokens: z.int().nonnegative().optional(),
+  completion_tokens_details: z
+    .object({
+      // FUTURE: add missing properties
+      reasoning_tokens: z.int().nonnegative().optional(),
+    })
+    .optional(),
+  prompt_tokens_details: z
+    .object({
+      // FUTURE: add missing properties
+      cached_tokens: z.int().nonnegative().optional(),
+    })
+    .optional(),
 });
 export type ChatCompletionsUsage = z.infer<typeof ChatCompletionsUsageSchema>;
 
 export const ChatCompletionsCoreSchema = z.object({
   id: z.string(),
   object: z.literal("chat.completion"),
-  created: z.number(),
+  created: z.int().nonnegative(),
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
-  usage: z.optional(ChatCompletionsUsageSchema),
-  system_fingerprint: z.optional(z.string()),
+  usage: ChatCompletionsUsageSchema.nullable(),
+  system_fingerprint: z.string().optional(),
 });
 export type ChatCompletionsCore = z.infer<typeof ChatCompletionsCoreSchema>;
 
 export const ChatCompletionsSchema = z.object({
   ...ChatCompletionsCoreSchema.shape,
-  provider_metadata: z.optional(z.any()),
+  provider_metadata: z.any().optional(),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 

@@ -1,28 +1,31 @@
-import * as z from "zod/mini";
+import * as z from "zod";
 
 export const ModelCoreSchema = z.object({
   id: z.string(),
   object: z.literal("model"),
-  created: z.number(),
+  created: z.int().nonnegative(),
   owned_by: z.string(),
 });
 export type ModelCore = z.infer<typeof ModelCoreSchema>;
 
 export const ModelSchema = z.looseObject({
   ...ModelCoreSchema.shape,
-  description: z.optional(z.string()),
-  architecture: z.optional(
-    z.object({
-      modality: z.optional(z.string()),
-      input_modalities: z.optional(z.readonly(z.array(z.string()))),
-      output_modalities: z.optional(z.readonly(z.array(z.string()))),
-    }),
-  ),
+  name: z.string().optional(),
+  knowledge: z.string().optional(),
+  context: z.int().nonnegative().optional(),
+  architecture: z
+    .object({
+      modality: z.string().optional(),
+      input_modalities: z.array(z.string()).readonly().optional(),
+      output_modalities: z.array(z.string()).readonly().optional(),
+    })
+    .optional(),
   endpoints: z.array(
     z.object({
       tag: z.string(),
     }),
   ),
+  capabilities: z.array(z.string()).readonly().optional(),
 });
 export type Model = z.infer<typeof ModelSchema>;
 

@@ -205,7 +205,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
       };
     }
     if (part.type === "file") {
-      const { data, media_type } = part.file;
+      let { data, media_type, filename } = part.file;
       return media_type.startsWith("image/")
         ? {
             type: "image" as const,
@@ -215,6 +215,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         : {
             type: "file" as const,
             data: Buffer.from(data, "base64"),
+            filename,
             mediaType: media_type,
           };
     }
@@ -284,7 +285,7 @@ export function toChatCompletions(
         finish_reason,
       } satisfies ChatCompletionsChoice,
     ],
-    usage: result.usage && toChatCompletionsUsage(result.usage),
+    usage: result.totalUsage && toChatCompletionsUsage(result.totalUsage),
     provider_metadata: result.providerMetadata,
   };
 }
@@ -443,20 +444,27 @@ export const toChatCompletionsMessage = (
   return message;
 };
 
-export function toChatCompletionsUsage(
-  usage: LanguageModelUsage | undefined,
-): ChatCompletionsUsage | undefined {
-  if (!usage) return undefined;
+export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
   return {
-    prompt_tokens: usage.inputTokens ?? 0,
-    completion_tokens: usage.outputTokens ?? 0,
-    total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
-    completion_tokens_details: {
-      reasoning_tokens: usage.outputTokenDetails.reasoningTokens ?? 0,
-    },
-    prompt_tokens_details: {
-      cached_tokens: usage.inputTokenDetails.cacheReadTokens ?? 0,
-    },
+    ...(usage.inputTokens != null && {
+      prompt_tokens: usage.inputTokens,
+    }),
+    ...(usage.outputTokens != null && {
+      completion_tokens: usage.outputTokens,
+    }),
+    ...((usage.totalTokens != null || usage.inputTokens != null || usage.outputTokens != null) && {
+      total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
+    }),
+    ...(usage.outputTokenDetails?.reasoningTokens != null && {
+      completion_tokens_details: {
+        reasoning_tokens: usage.outputTokenDetails.reasoningTokens,
+      },
+    }),
+    ...(usage.inputTokenDetails?.cacheReadTokens != null && {
+      prompt_tokens_details: {
+        cached_tokens: usage.inputTokenDetails.cacheReadTokens,
+      },
+    }),
   };
 }
 
