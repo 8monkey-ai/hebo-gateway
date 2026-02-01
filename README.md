@@ -488,4 +488,4 @@ export async function handler(req: Request): Promise<Response> {
 
 Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
 
-Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.
+Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `z.toJSONSchema(...)` function. This can be useful, for example, to create OpenAPI documentation.
