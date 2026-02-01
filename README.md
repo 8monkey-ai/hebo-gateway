@@ -456,7 +456,7 @@ import * as z from "zod";
 import {
   ChatCompletionsBodySchema,
   convertToTextCallOptions,
-  createChatCompletionsStreamResponse,
+  toChatCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 import { forwardParamsMiddleware } from "@hebo-ai/gateway/middleware/common";
 
