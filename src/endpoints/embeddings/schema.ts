@@ -12,7 +12,7 @@ export const EmbeddingsBodyCoreSchema = z.object({
   model: z.string(),
   ...EmbeddingsInputsSchema.shape,
 });
-export type EmbeddingsCoreBody = z.infer<typeof EmbeddingsBodyCoreSchema>;
+export type EmbeddingsBodyCore = z.infer<typeof EmbeddingsBodyCoreSchema>;
 
 export const EmbeddingsBodySchema = z.looseObject({
   model: z.string(),
