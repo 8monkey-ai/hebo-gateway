@@ -377,11 +377,10 @@ export class ChatCompletionsStream extends TransformStream<
         choices: [
           {
             index: 0,
-            message: delta,
+            delta,
             finish_reason: finish_reason ?? null,
           } satisfies ChatCompletionsChoiceDelta,
         ],
-        service_tier: "auto",
         ...(usage ? { usage } : { usage: null }),
       }) satisfies ChatCompletionsChunk;
 

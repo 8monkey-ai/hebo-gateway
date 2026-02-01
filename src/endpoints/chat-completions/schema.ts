@@ -218,6 +218,7 @@ export const ChatCompletionsCoreSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: z.string().optional(),
   system_fingerprint: z.string().optional(),
 });
 export type ChatCompletionsCore = z.infer<typeof ChatCompletionsCoreSchema>;
@@ -248,7 +249,7 @@ export type ChatCompletionsDelta = z.infer<typeof ChatCompletionsDeltaSchema>;
 
 export const ChatCompletionsChoiceDeltaSchema = z.object({
   index: z.int().nonnegative(),
-  message: ChatCompletionsDeltaSchema,
+  delta: ChatCompletionsDeltaSchema,
   finish_reason: ChatCompletionsFinishReasonSchema.nullable(),
   // FUTURE: model this out
   logprobs: z.any().optional(),
@@ -261,7 +262,7 @@ export const ChatCompletionsChunkSchema = z.object({
   id: z.string(),
   model: z.string(),
   object: z.literal("chat.completion.chunk"),
-  service_tier: z.enum(["auto", "default", "flex", "priority"]),
+  service_tier: z.string().optional(),
   system_fingerprint: z.string().optional(),
   usage: ChatCompletionsUsageSchema.nullable(),
 });
