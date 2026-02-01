@@ -14,6 +14,7 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
+  ProviderMetadata,
 } from "ai";
 
 import { jsonSchema, tool } from "ai";
@@ -360,29 +361,28 @@ export class ChatCompletionsStream extends TransformStream<
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
-    let lastProviderMetadata: unknown | undefined;
+    let lastProviderMetadata: ProviderMetadata;
 
     const createChunk = (
       delta: ChatCompletionsDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-      provider_metadata?: unknown,
-    ) =>
-      ({
-        id: streamId,
-        object: "chat.completion.chunk",
-        created: creationTime,
-        model,
-        choices: [
-          {
-            index: 0,
-            delta,
-            finish_reason: finish_reason ?? null,
-          } satisfies ChatCompletionsChoiceDelta,
-        ],
-        ...(usage ? { usage } : { usage: null }),
-        ...(provider_metadata !== undefined ? { provider_metadata } : {}),
-      }) satisfies ChatCompletionsChunk;
+      provider_metadata?: ProviderMetadata,
+    ): ChatCompletionsChunk => ({
+      id: streamId,
+      object: "chat.completion.chunk",
+      created: creationTime,
+      model,
+      choices: [
+        {
+          index: 0,
+          delta,
+          finish_reason: finish_reason ?? null,
+        } satisfies ChatCompletionsChoiceDelta,
+      ],
+      ...(usage ? { usage } : { usage: null }),
+      ...(provider_metadata !== undefined ? { provider_metadata } : {}),
+    });
 
     super({
       transform(part, controller) {
