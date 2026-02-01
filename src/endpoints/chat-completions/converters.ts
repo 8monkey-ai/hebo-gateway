@@ -17,7 +17,7 @@ import type {
   ProviderMetadata,
 } from "ai";
 
-import { jsonSchema, tool } from "ai";
+import { jsonSchema, JsonToSseTransformStream, tool } from "ai";
 
 import type {
   ChatCompletionsToolCall,
@@ -331,7 +331,7 @@ export function toChatCompletionsStream(
 ): ReadableStream<Uint8Array> {
   return result.fullStream
     .pipeThrough(new ChatCompletionsStream(model))
-    .pipeThrough(new SSETransformStream())
+    .pipeThrough(new JsonToSseTransformStream())
     .pipeThrough(new TextEncoderStream());
 }
 
@@ -441,19 +441,6 @@ export class ChatCompletionsStream extends TransformStream<
             break;
           }
         }
-      },
-    });
-  }
-}
-
-export class SSETransformStream extends TransformStream {
-  constructor() {
-    super({
-      transform(chunk, controller) {
-        controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
-      },
-      flush(controller) {
-        controller.enqueue("data: [DONE]\n\n");
       },
     });
   }
