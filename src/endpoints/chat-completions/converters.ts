@@ -1,9 +1,4 @@
-import type {
-  AssistantModelMessage,
-  ProviderOptions,
-  ToolModelMessage,
-  UserModelMessage,
-} from "@ai-sdk/provider-utils";
+import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -16,6 +11,9 @@ import type {
   LanguageModelUsage,
   Output,
   TextStreamPart,
+  AssistantModelMessage,
+  ToolModelMessage,
+  UserModelMessage,
 } from "ai";
 
 import { jsonSchema, tool } from "ai";
