@@ -180,7 +180,7 @@ describe("Chat Completions Handler", () => {
           cached_tokens: 20,
         },
       },
-      providerMetadata: { provider: { key: "value" } },
+      provider_metadata: { provider: { key: "value" } },
     });
   });
 
@@ -242,7 +242,7 @@ describe("Chat Completions Handler", () => {
           cached_tokens: 20,
         },
       },
-      providerMetadata: { provider: { key: "value" } },
+      provider_metadata: { provider: { key: "value" } },
     });
   });
 

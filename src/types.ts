@@ -1,5 +1,7 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 
+import type { ChatCompletionsBodyCore } from "./endpoints/chat-completions/schema";
+import type { EmbeddingsCoreBody } from "./endpoints/embeddings/schema";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderRegistry } from "./providers/types";
 
@@ -32,14 +34,19 @@ export type GatewayHooks = {
   }) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
+   * @param ctx.body The parsed body object with all call parameters.
    * @param ctx.modelId Incoming model ID.
    * @returns Canonical model ID or undefined to keep original.
    */
-  resolveModelId?: (ctx: { modelId: ModelId }) => ModelId | void | Promise<ModelId | void>;
+  resolveModelId?: (ctx: {
+    body: ChatCompletionsBodyCore | EmbeddingsCoreBody;
+    modelId: ModelId;
+  }) => ModelId | void | Promise<ModelId | void>;
   /**
    * Picks a provider instance for the request.
    * @param ctx.providers ProviderRegistry from config.
    * @param ctx.models ModelCatalog from config.
+   * @param ctx.body The parsed body object with all call parameters.
    * @param ctx.modelId Resolved model ID.
    * @param ctx.operation Operation type ("text" | "embeddings").
    * @returns ProviderV3 to override, or undefined to use default.
@@ -47,6 +54,7 @@ export type GatewayHooks = {
   resolveProvider?: (ctx: {
     providers: ProviderRegistry;
     models: ModelCatalog;
+    body: ChatCompletionsBodyCore | EmbeddingsCoreBody;
     modelId: ModelId;
     operation: "text" | "embeddings";
   }) => ProviderV3 | void | Promise<ProviderV3 | void>;

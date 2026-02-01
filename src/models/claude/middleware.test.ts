@@ -1,8 +1,9 @@
+import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { anthropicReasoningMiddleware } from "./middleware";
+import { claudeReasoningMiddleware } from "./middleware";
 
 test("anthropicReasoningMiddleware > matching patterns", () => {
   const matching = [
@@ -22,32 +23,35 @@ test("anthropicReasoningMiddleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.forLanguage(id, "anthropic");
-    expect(middleware).toContain(anthropicReasoningMiddleware);
+    const middleware = modelMiddlewareMatcher.for(id, "anthropic");
+    expect(middleware).toContain(claudeReasoningMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.forLanguage(id, "anthropic");
-    expect(middleware).not.toContain(anthropicReasoningMiddleware);
+    const middleware = modelMiddlewareMatcher.for(id, "anthropic");
+    expect(middleware).not.toContain(claudeReasoningMiddleware);
   }
 });
 
 test("anthropicReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
-  const params: any = {
+  const params = {
+    prompt: [],
     maxOutputTokens: 10000,
     providerOptions: {
-      unhandled: {
+      unknown: {
         reasoning: { effort: "high" },
       },
     },
   };
 
-  const result = await anthropicReasoningMiddleware.transformParams!({
-    params,
+  const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
   });
 
   expect(result).toEqual({
+    prompt: [],
     maxOutputTokens: 10000,
     providerOptions: {
       anthropic: {
@@ -56,27 +60,30 @@ test("anthropicReasoningMiddleware > should transform reasoning_effort string to
           budgetTokens: 8000,
         },
       },
-      unhandled: {},
+      unknown: {},
     },
   });
 });
 
 test("anthropicReasoningMiddleware > should respect Anthropic minimum budget of 1024", async () => {
-  const params: any = {
+  const params = {
+    prompt: [],
     maxOutputTokens: 2000,
     providerOptions: {
-      unhandled: {
+      unknown: {
         reasoning: { effort: "minimal" },
       },
     },
   };
 
-  const result = await anthropicReasoningMiddleware.transformParams!({
-    params,
+  const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
   });
 
   expect(result).toEqual({
+    prompt: [],
     maxOutputTokens: 2000,
     providerOptions: {
       anthropic: {
@@ -85,15 +92,16 @@ test("anthropicReasoningMiddleware > should respect Anthropic minimum budget of 
           budgetTokens: 1024,
         },
       },
-      unhandled: {},
+      unknown: {},
     },
   });
 });
 
 test("anthropicReasoningMiddleware > should transform reasoning object to thinking budget", async () => {
-  const params: any = {
+  const params = {
+    prompt: [],
     providerOptions: {
-      unhandled: {
+      unknown: {
         reasoning: {
           effort: "medium",
           max_tokens: 2000,
@@ -102,12 +110,14 @@ test("anthropicReasoningMiddleware > should transform reasoning object to thinki
     },
   };
 
-  const result = await anthropicReasoningMiddleware.transformParams!({
-    params,
+  const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
   });
 
   expect(result).toEqual({
+    prompt: [],
     providerOptions: {
       anthropic: {
         thinking: {
@@ -115,15 +125,16 @@ test("anthropicReasoningMiddleware > should transform reasoning object to thinki
           budgetTokens: 2000,
         },
       },
-      unhandled: {},
+      unknown: {},
     },
   });
 });
 
 test("anthropicReasoningMiddleware > should handle disabled reasoning", async () => {
-  const params: any = {
+  const params = {
+    prompt: [],
     providerOptions: {
-      unhandled: {
+      unknown: {
         reasoning: {
           enabled: false,
         },
@@ -131,35 +142,39 @@ test("anthropicReasoningMiddleware > should handle disabled reasoning", async ()
     },
   };
 
-  const result = await anthropicReasoningMiddleware.transformParams!({
-    params,
+  const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
   });
 
   expect(result).toEqual({
+    prompt: [],
     providerOptions: {
       anthropic: {
         thinking: {
           type: "disabled",
         },
       },
-      unhandled: {},
+      unknown: {},
     },
   });
 });
 
 test("anthropicReasoningMiddleware > should use 64k as default fallback for maxOutputTokens", async () => {
-  const params: any = {
+  const params = {
+    prompt: [],
     providerOptions: {
-      unhandled: {
+      unknown: {
         reasoning: { effort: "medium" }, // 0.5 * 64000 = 32000
       },
     },
   };
 
-  const result = await anthropicReasoningMiddleware.transformParams!({
-    params,
+  const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
   });
 
   expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);

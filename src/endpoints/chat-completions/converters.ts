@@ -15,7 +15,6 @@ import type {
 import { jsonSchema, tool } from "ai";
 
 import type {
-  ChatCompletionsInputs,
   ChatCompletionsToolCall,
   ChatCompletionsTool,
   ChatCompletionsToolChoice,
@@ -25,10 +24,11 @@ import type {
   ChatCompletionsUserMessage,
   ChatCompletionsAssistantMessage,
   ChatCompletionsToolMessage,
-  ChatCompletions,
   ChatCompletionsFinishReason,
   ChatCompletionsUsage,
   ChatCompletionsChoice,
+  ChatCompletionsInputs,
+  ChatCompletions,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
@@ -67,7 +67,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
     providerOptions: {
-      unhandled: rest,
+      unknown: rest,
     },
   };
 }
@@ -205,7 +205,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
       };
     }
     if (part.type === "file") {
-      const { data, media_type } = part.file;
+      let { data, media_type, filename } = part.file;
       return media_type.startsWith("image/")
         ? {
             type: "image" as const,
@@ -215,6 +215,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         : {
             type: "file" as const,
             data: Buffer.from(data, "base64"),
+            filename,
             mediaType: media_type,
           };
     }
@@ -284,16 +285,20 @@ export function toChatCompletions(
         finish_reason,
       } satisfies ChatCompletionsChoice,
     ],
-    usage: result.usage && toChatCompletionsUsage(result.usage),
-    providerMetadata: result.providerMetadata,
+    usage: result.totalUsage && toChatCompletionsUsage(result.totalUsage),
+    provider_metadata: result.providerMetadata,
   };
 }
 export function createChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(JSON.stringify(toChatCompletions(result, model)), {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
   });
 }
 
@@ -310,12 +315,14 @@ export function toChatCompletionsStream(
 export function createChatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(toChatCompletionsStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      ...headers,
     },
   });
 }
@@ -437,20 +444,27 @@ export const toChatCompletionsMessage = (
   return message;
 };
 
-export function toChatCompletionsUsage(
-  usage: LanguageModelUsage | undefined,
-): ChatCompletionsUsage | undefined {
-  if (!usage) return undefined;
+export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
   return {
-    prompt_tokens: usage.inputTokens ?? 0,
-    completion_tokens: usage.outputTokens ?? 0,
-    total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
-    completion_tokens_details: {
-      reasoning_tokens: usage.outputTokenDetails.reasoningTokens ?? 0,
-    },
-    prompt_tokens_details: {
-      cached_tokens: usage.inputTokenDetails.cacheReadTokens ?? 0,
-    },
+    ...(usage.inputTokens != null && {
+      prompt_tokens: usage.inputTokens,
+    }),
+    ...(usage.outputTokens != null && {
+      completion_tokens: usage.outputTokens,
+    }),
+    ...((usage.totalTokens != null || usage.inputTokens != null || usage.outputTokens != null) && {
+      total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
+    }),
+    ...(usage.outputTokenDetails?.reasoningTokens != null && {
+      completion_tokens_details: {
+        reasoning_tokens: usage.outputTokenDetails.reasoningTokens,
+      },
+    }),
+    ...(usage.inputTokenDetails?.cacheReadTokens != null && {
+      prompt_tokens_details: {
+        cached_tokens: usage.inputTokenDetails.cacheReadTokens,
+      },
+    }),
   };
 }
 

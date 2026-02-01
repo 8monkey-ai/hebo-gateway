@@ -45,14 +45,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     let resolvedModelId;
     try {
-      resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
-
-    let textOptions;
-    try {
-      textOptions = convertToTextCallOptions(inputs);
+      resolvedModelId = (await hooks?.resolveModelId?.({ body: parsed.data, modelId })) ?? modelId;
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -62,6 +55,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       const args = {
         providers,
         models,
+        body: parsed.data,
         modelId: resolvedModelId,
         operation: "text" as const,
       };
@@ -73,9 +67,16 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = provider.languageModel(resolvedModelId);
 
+    let textOptions;
+    try {
+      textOptions = convertToTextCallOptions(inputs);
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
+
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
-      middleware: modelMiddlewareMatcher.forLanguage(resolvedModelId, languageModel.provider),
+      middleware: modelMiddlewareMatcher.for(resolvedModelId, languageModel.provider),
     });
 
     if (stream) {

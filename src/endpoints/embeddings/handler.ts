@@ -41,14 +41,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     let resolvedModelId;
     try {
-      resolvedModelId = (await hooks?.resolveModelId?.({ modelId })) ?? modelId;
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
-
-    let embedOptions;
-    try {
-      embedOptions = convertToEmbedCallOptions(inputs);
+      resolvedModelId = (await hooks?.resolveModelId?.({ body: parsed.data, modelId })) ?? modelId;
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
@@ -58,6 +51,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       const args = {
         providers,
         models,
+        body: parsed.data,
         modelId: resolvedModelId,
         operation: "embeddings" as const,
       };
@@ -68,6 +62,13 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     const embeddingModel = provider.embeddingModel(resolvedModelId);
+
+    let embedOptions;
+    try {
+      embedOptions = convertToEmbedCallOptions(inputs);
+    } catch (error) {
+      return createErrorResponse("BAD_REQUEST", error, 400);
+    }
 
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
       model: embeddingModel,

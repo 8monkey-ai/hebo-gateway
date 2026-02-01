@@ -7,12 +7,12 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 /**
  * Anthropic Reasoning Transformation
  */
-export const anthropicReasoningMiddleware: LanguageModelMiddleware = {
+export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
-    const unhandled = params.providerOptions?.["unhandled"];
-    const reasoning = unhandled?.["reasoning"] as ChatCompletionsReasoningConfig | undefined;
+    const unknown = params.providerOptions?.["unknown"];
+    const reasoning = unknown?.["reasoning"] as ChatCompletionsReasoningConfig | undefined;
     if (!reasoning) return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {});
@@ -34,8 +34,8 @@ export const anthropicReasoningMiddleware: LanguageModelMiddleware = {
       target["thinking"] = { type: "enabled", budgetTokens: 1024 };
     }
 
-    if (unhandled) {
-      delete unhandled["reasoning"];
+    if (unknown) {
+      delete unknown["reasoning"];
     }
     return params;
   },
@@ -70,10 +70,6 @@ function calculateBudgetFromEffort(effort: string, maxTokens: number): number {
   return Math.max(1024, Math.floor(maxTokens * percentage));
 }
 
-modelMiddlewareMatcher.useForModel("anthropic/claude-*3*7*", {
-  language: anthropicReasoningMiddleware,
-});
-
-modelMiddlewareMatcher.useForModel("anthropic/claude-*4*", {
-  language: anthropicReasoningMiddleware,
+modelMiddlewareMatcher.useForModel(["anthropic/claude-*3*7*", "anthropic/claude-*4*"], {
+  language: claudeReasoningMiddleware,
 });

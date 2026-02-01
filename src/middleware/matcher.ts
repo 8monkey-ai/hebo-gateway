@@ -3,10 +3,7 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 
-import {
-  createNormalizedProviderEmbeddingMiddleware,
-  createNormalizedProviderLanguageMiddleware,
-} from "./common";
+import { forwardParamsMiddleware, forwardParamsEmbeddingMiddleware } from "./common";
 
 type MiddlewareEntry = {
   language?: LanguageModelMiddleware | LanguageModelMiddleware[];
@@ -64,18 +61,22 @@ class ModelMiddlewareMatcher {
   private model = new SimpleMatcher();
   private provider = new SimpleMatcher();
 
-  useForModel(pattern: ModelId | string, entry: MiddlewareEntry) {
-    this.model.use(pattern, entry);
+  useForModel(patterns: ModelId | readonly ModelId[], entry: MiddlewareEntry) {
+    for (const pattern of toArray(patterns)) {
+      this.model.use(pattern, entry);
+    }
   }
 
-  useForProvider(pattern: ProviderId | string, entry: MiddlewareEntry) {
-    this.provider.use(pattern, entry);
+  useForProvider(patterns: ProviderId | readonly ProviderId[], entry: MiddlewareEntry) {
+    for (const pattern of toArray(patterns)) {
+      this.provider.use(pattern, entry);
+    }
   }
 
-  forLanguage(modelId: ModelId, providerId: ProviderId): LanguageModelMiddleware[] {
+  for(modelId: ModelId, providerId: ProviderId): LanguageModelMiddleware[] {
     const out: LanguageModelMiddleware[] = [];
     for (const s of this.model.match(modelId)) out.push(...s.language);
-    out.push(createNormalizedProviderLanguageMiddleware(extractProviderNamespace(providerId)));
+    out.push(forwardParamsMiddleware(extractProviderNamespace(providerId)));
     for (const s of this.provider.match(providerId)) out.push(...s.language);
     return out;
   }
@@ -83,7 +84,7 @@ class ModelMiddlewareMatcher {
   forEmbedding(modelId: ModelId, providerId: ProviderId): EmbeddingModelMiddleware[] {
     const out: EmbeddingModelMiddleware[] = [];
     for (const s of this.model.match(modelId)) out.push(...s.embedding);
-    out.push(createNormalizedProviderEmbeddingMiddleware(extractProviderNamespace(providerId)));
+    out.push(forwardParamsEmbeddingMiddleware(extractProviderNamespace(providerId)));
     for (const s of this.provider.match(providerId)) out.push(...s.embedding);
     return out;
   }
@@ -92,7 +93,7 @@ class ModelMiddlewareMatcher {
 export const modelMiddlewareMatcher = new ModelMiddlewareMatcher();
 export type { ModelMiddlewareMatcher };
 
-const toArray = <T>(v: T | T[]) => (Array.isArray(v) ? v : [v]);
+const toArray = <T>(v: T | readonly T[]) => (Array.isArray(v) ? v : [v]);
 
 function compilePattern(pattern: string): (key: string) => boolean {
   if (!pattern.includes("*")) return (key) => key === pattern;

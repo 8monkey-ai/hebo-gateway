@@ -1,7 +1,8 @@
+import type { JSONObject } from "@ai-sdk/provider";
 import type { ProviderOptions } from "@ai-sdk/provider-utils";
 import type { EmbedManyResult } from "ai";
 
-import type { EmbeddingsInputs, Embeddings, EmbeddingsData, EmbeddingsUsage } from "./schema";
+import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
 
 export type EmbedCallOptions = {
   values: string[];
@@ -14,7 +15,7 @@ export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOp
   return {
     values: Array.isArray(input) ? input : [input],
     providerOptions: {
-      unhandled: rest,
+      unknown: rest as JSONObject,
     },
   };
 }
@@ -27,8 +28,8 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
   }));
 
   const usage: EmbeddingsUsage = {
-    prompt_tokens: embedManyResult.usage?.tokens || 0,
-    total_tokens: embedManyResult.usage?.tokens || 0,
+    prompt_tokens: embedManyResult.usage.tokens,
+    total_tokens: embedManyResult.usage.tokens,
   };
 
   return {
@@ -36,15 +37,19 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
     data,
     model: modelId,
     usage,
-    providerMetadata: embedManyResult.providerMetadata,
+    provider_metadata: embedManyResult.providerMetadata,
   };
 }
 
 export function createEmbeddingsResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(JSON.stringify(toEmbeddings(embedManyResult, modelId)), {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
   });
 }

@@ -65,6 +65,11 @@
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
     },
+    "./middleware/common": {
+      "types": "./dist/middleware/common.d.ts",
+      "import": "./dist/middleware/common.js",
+      "dev-source": "./src/middleware/common.ts"
+    },
     "./models/claude": {
       "types": "./dist/models/claude/index.d.ts",
       "import": "./dist/models/claude/index.js",
