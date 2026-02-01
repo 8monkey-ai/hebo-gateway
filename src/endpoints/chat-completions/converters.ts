@@ -71,9 +71,9 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
   }
 
   return {
-    messages: fromChatCompletionsMessages(messages),
-    tools: fromChatCompletionsTools(tools),
-    toolChoice: fromChatCompletionsToolChoice(tool_choice),
+    messages: convertToModelMessages(messages),
+    tools: convertToToolSet(tools),
+    toolChoice: convertToToolChoice(tool_choice),
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
     frequencyPenalty: frequency_penalty,
@@ -87,7 +87,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
   };
 }
 
-export function fromChatCompletionsMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
+export function convertToModelMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -238,9 +238,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
   });
 }
 
-export const fromChatCompletionsTools = (
-  tools: ChatCompletionsTool[] | undefined,
-): ToolSet | undefined => {
+export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
   if (!tools) {
     return;
   }
@@ -255,7 +253,7 @@ export const fromChatCompletionsTools = (
   return toolSet;
 };
 
-export const fromChatCompletionsToolChoice = (
+export const convertToToolChoice = (
   toolChoice: ChatCompletionsToolChoice | undefined,
 ): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
