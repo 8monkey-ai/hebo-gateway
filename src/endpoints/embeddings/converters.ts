@@ -44,7 +44,7 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
 export function createEmbeddingsResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
-  headers?: HeadersInit,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(JSON.stringify(toEmbeddings(embedManyResult, modelId)), {
     headers: {

@@ -41,7 +41,10 @@ export function toModels(models: ModelCatalog): ModelList {
     data: Object.entries(models).map(([id, catalogModel]) => toModel(id, catalogModel!)),
   };
 }
-export function createModelsResponse(models: ModelCatalog, headers?: HeadersInit): Response {
+export function createModelsResponse(
+  models: ModelCatalog,
+  headers?: Record<string, string>,
+): Response {
   return new Response(JSON.stringify(toModels(models)), {
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +56,7 @@ export function createModelsResponse(models: ModelCatalog, headers?: HeadersInit
 export function createModelResponse(
   id: string,
   catalogModel: CatalogModel,
-  headers?: HeadersInit,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(JSON.stringify(toModel(id, catalogModel)), {
     headers: {

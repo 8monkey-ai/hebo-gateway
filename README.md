@@ -360,7 +360,7 @@ const gw = gateway({
     resolveModelId?: (ctx: {
       body: ChatCompletionsBody | EmbeddingsBody;
       modelId: ModelId;
-    }) => ModelId | void | Promise<ModelId | void>;
+    }) => ModelId | void | Promise<ModelId | void> {
       // Example Use Cases:
       // - Resolve modelAlias to modelId
       return undefined;
@@ -416,15 +416,16 @@ In addition to the official `reasoning_effort` parameter, the chat completions e
 ```
 
 Normalization rules:
-  - `enabled` -> fall-back to model default if none provided
-  - `max_tokens`: fall-back to model default if model supports
-  - `effort` -> budget = percentage of `max_tokens`
-    - `none`: 0%
-    - `minimal`: 10%
-    - `low`: 20%
-    - `medium`: 50% (default)
-    - `high`: 80%
-    - `xhigh`: 95%
+
+- `enabled` -> fall-back to model default if none provided
+- `max_tokens`: fall-back to model default if model supports
+- `effort` -> budget = percentage of `max_tokens`
+  - `none`: 0%
+  - `minimal`: 10%
+  - `low`: 20%
+  - `medium`: 50% (default)
+  - `high`: 80%
+  - `xhigh`: 95%
 
 ## Advanced Usage
 

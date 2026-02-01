@@ -291,7 +291,7 @@ export function toChatCompletions(
 export function createChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-  headers?: HeadersInit,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(JSON.stringify(toChatCompletions(result, model)), {
     headers: {
@@ -314,7 +314,7 @@ export function toChatCompletionsStream(
 export function createChatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-  headers?: HeadersInit,
+  headers?: Record<string, string>,
 ): Response {
   return new Response(toChatCompletionsStream(result, model), {
     headers: {
