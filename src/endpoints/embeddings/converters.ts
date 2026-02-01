@@ -4,6 +4,8 @@ import type { EmbedManyResult } from "ai";
 
 import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
 
+import { mergeResponseInit } from "../../utils/response";
+
 export type EmbedCallOptions = {
   values: string[];
   providerOptions: ProviderOptions;
@@ -44,12 +46,10 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
 export function createEmbeddingsResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
-  headers?: Record<string, string>,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(JSON.stringify(toEmbeddings(embedManyResult, modelId)), {
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  });
+  return new Response(
+    JSON.stringify(toEmbeddings(embedManyResult, modelId)),
+    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
+  );
 }

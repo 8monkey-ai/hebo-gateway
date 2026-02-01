@@ -1,6 +1,8 @@
 import type { ModelCatalog, CatalogModel } from "../../models/types";
 import type { ModelList, Model } from "./schema";
 
+import { mergeResponseInit } from "../../utils/response";
+
 export function toModel(id: string, catalogModel: CatalogModel): Model {
   const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);
@@ -41,27 +43,20 @@ export function toModels(models: ModelCatalog): ModelList {
     data: Object.entries(models).map(([id, catalogModel]) => toModel(id, catalogModel!)),
   };
 }
-export function createModelsResponse(
-  models: ModelCatalog,
-  headers?: Record<string, string>,
-): Response {
-  return new Response(JSON.stringify(toModels(models)), {
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  });
+export function createModelsResponse(models: ModelCatalog, responseInit?: ResponseInit): Response {
+  return new Response(
+    JSON.stringify(toModels(models)),
+    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
+  );
 }
 
 export function createModelResponse(
   id: string,
   catalogModel: CatalogModel,
-  headers?: Record<string, string>,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(JSON.stringify(toModel(id, catalogModel)), {
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  });
+  return new Response(
+    JSON.stringify(toModel(id, catalogModel)),
+    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
+  );
 }

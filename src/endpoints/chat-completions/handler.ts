@@ -10,8 +10,8 @@ import { createErrorResponse } from "../../utils/errors";
 import { withHooks } from "../../utils/hooks";
 import {
   convertToTextCallOptions,
-  createChatCompletionsResponse,
-  createChatCompletionsStreamResponse,
+  toChatCompletionsResponse,
+  toChatCompletionsStreamResponse,
 } from "./converters";
 import { ChatCompletionsBodySchema } from "./schema";
 
@@ -90,7 +90,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
 
-      return createChatCompletionsStreamResponse(result, modelId);
+      return toChatCompletionsStreamResponse(result, modelId);
     }
 
     let result;
@@ -103,7 +103,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createChatCompletionsResponse(result, modelId);
+    return toChatCompletionsResponse(result, modelId);
   };
 
   return { handler: withHooks(hooks, handler) };

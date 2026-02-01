@@ -1,4 +1,9 @@
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
+import type {
+  AssistantModelMessage,
+  ProviderOptions,
+  ToolModelMessage,
+  UserModelMessage,
+} from "@ai-sdk/provider-utils";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -32,6 +37,7 @@ import type {
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
+import { mergeResponseInit } from "../../utils/response";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -120,7 +126,9 @@ function indexToolMessages(messages: ChatCompletionsMessage[]) {
   return map;
 }
 
-export function fromChatCompletionsUserMessage(message: ChatCompletionsUserMessage): ModelMessage {
+export function fromChatCompletionsUserMessage(
+  message: ChatCompletionsUserMessage,
+): UserModelMessage {
   return {
     role: "user",
     content: Array.isArray(message.content)
@@ -131,7 +139,7 @@ export function fromChatCompletionsUserMessage(message: ChatCompletionsUserMessa
 
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
-): ModelMessage {
+): AssistantModelMessage {
   const { tool_calls, role, content } = message;
 
   if (!tool_calls || tool_calls.length === 0) {
@@ -158,7 +166,7 @@ export function fromChatCompletionsAssistantMessage(
 export function fromChatCompletionsToolResultMessage(
   message: ChatCompletionsAssistantMessage,
   toolById: Map<string, ChatCompletionsToolMessage>,
-): ModelMessage | undefined {
+): ToolModelMessage | undefined {
   const toolCalls = message.tool_calls ?? [];
   if (toolCalls.length === 0) return undefined;
 
@@ -302,17 +310,15 @@ export function toChatCompletions(
     provider_metadata: result.providerMetadata,
   };
 }
-export function createChatCompletionsResponse(
+export function toChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
-  headers?: Record<string, string>,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(JSON.stringify(toChatCompletions(result, model)), {
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  });
+  return new Response(
+    JSON.stringify(toChatCompletions(result, model)),
+    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
+  );
 }
 
 export function toChatCompletionsStream(
@@ -325,19 +331,22 @@ export function toChatCompletionsStream(
     .pipeThrough(new TextEncoderStream());
 }
 
-export function createChatCompletionsStreamResponse(
+export function toChatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-  headers?: Record<string, string>,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(toChatCompletionsStream(result, model), {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      ...headers,
-    },
-  });
+  return new Response(
+    toChatCompletionsStream(result, model),
+    mergeResponseInit(
+      {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+      responseInit,
+    ),
+  );
 }
 
 export class ChatCompletionsStream extends TransformStream {
