@@ -34,6 +34,9 @@ import type {
   ChatCompletionsChoice,
   ChatCompletionsInputs,
   ChatCompletions,
+  ChatCompletionsDelta,
+  ChatCompletionsChoiceDelta,
+  ChatCompletionsChunk,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
@@ -302,7 +305,7 @@ export function toChatCompletions(
     choices: [
       {
         index: 0,
-        message: toChatCompletionsMessage(result),
+        message: toChatCompletionsAssistantMessage(result),
         finish_reason,
       } satisfies ChatCompletionsChoice,
     ],
@@ -356,17 +359,25 @@ export class ChatCompletionsStream extends TransformStream {
     let toolCallIndexCounter = 0;
 
     const createChunk = (
-      delta: unknown,
+      delta: ChatCompletionsDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-    ) => ({
-      id: streamId,
-      object: "chat.completion.chunk",
-      created: creationTime,
-      model,
-      choices: [{ index: 0, delta, finish_reason }],
-      ...(usage ? { usage } : {}),
-    });
+    ) =>
+      ({
+        id: streamId,
+        object: "chat.completion.chunk",
+        created: creationTime,
+        model,
+        choices: [
+          {
+            index: 0,
+            message: delta,
+            finish_reason: finish_reason ?? null,
+          } satisfies ChatCompletionsChoiceDelta,
+        ],
+        service_tier: "auto",
+        ...(usage ? { usage } : { usage: null }),
+      }) satisfies ChatCompletionsChunk;
 
     super({
       transform(part, controller) {
@@ -438,7 +449,7 @@ export class SSETransformStream extends TransformStream {
   }
 }
 
-export const toChatCompletionsMessage = (
+export const toChatCompletionsAssistantMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
 ): ChatCompletionsAssistantMessage => {
   const message: ChatCompletionsAssistantMessage = {

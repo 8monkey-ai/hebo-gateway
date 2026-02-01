@@ -69,7 +69,7 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
   refusal: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
-  // FUTURE: these are extensions to the core, separate out from Core
+  // FUTURE: Are these extensions to the core, or just not documented by OpenAI?
   reasoning: z.string().optional(),
   reasoning_content: z.string().optional(),
 });
@@ -228,9 +228,46 @@ export const ChatCompletionsSchema = z.object({
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
-export type ChatCompletionsToolCallDelta = {
-  id: string;
-  index: number;
-  type: "function";
-  function: { name: string; arguments: string };
-};
+export const ChatCompletionsToolCallDeltaSchema = z.object({
+  id: z.string(),
+  index: z.int().nonnegative(),
+  type: z.literal("function"),
+  function: z.object({
+    name: z.string(),
+    arguments: z.string(),
+  }),
+});
+export type ChatCompletionsToolCallDelta = z.infer<typeof ChatCompletionsToolCallDeltaSchema>;
+
+export const ChatCompletionsDeltaSchema = z.object({
+  // FUTURE: which ones are really optional in the real schema here?
+  content: z.string().optional(),
+  role: z.string().optional(),
+  refusal: z.string().optional(),
+  tool_calls: z.array(ChatCompletionsToolCallDeltaSchema).optional(),
+  // FUTURE: Are these extensions to the core, or just not documented by OpenAI?
+  reasoning: z.string().optional(),
+  reasoning_content: z.string().optional(),
+});
+export type ChatCompletionsDelta = z.infer<typeof ChatCompletionsDeltaSchema>;
+
+export const ChatCompletionsChoiceDeltaSchema = z.object({
+  index: z.int().nonnegative(),
+  message: ChatCompletionsDeltaSchema,
+  finish_reason: ChatCompletionsFinishReasonSchema.nullable(),
+  // FUTURE: model this out
+  logprobs: z.any().optional(),
+});
+export type ChatCompletionsChoiceDelta = z.infer<typeof ChatCompletionsChoiceDeltaSchema>;
+
+export const ChatCompletionsChunkSchema = z.object({
+  choices: z.array(ChatCompletionsChoiceDeltaSchema),
+  created: z.int().nonnegative(),
+  id: z.string(),
+  model: z.string(),
+  object: z.literal("chat.completion.chunk"),
+  service_tier: z.enum(["auto", "default", "flex", "priority"]),
+  system_fingerprint: z.string().optional(),
+  usage: ChatCompletionsUsageSchema.nullable(),
+});
+export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
