@@ -5,7 +5,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
 import { claudeReasoningMiddleware } from "./middleware";
 
-test("anthropicReasoningMiddleware > matching patterns", () => {
+test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
     "anthropic/claude-sonnet-3.7",
     "anthropic/claude-opus-4.5",
@@ -33,7 +33,7 @@ test("anthropicReasoningMiddleware > matching patterns", () => {
   }
 });
 
-test("anthropicReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
+test("claudeReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
   const params = {
     prompt: [],
     maxOutputTokens: 10000,
@@ -65,7 +65,7 @@ test("anthropicReasoningMiddleware > should transform reasoning_effort string to
   });
 });
 
-test("anthropicReasoningMiddleware > should respect Anthropic minimum budget of 1024", async () => {
+test("claudeReasoningMiddleware > should respect Anthropic minimum budget of 1024", async () => {
   const params = {
     prompt: [],
     maxOutputTokens: 2000,
@@ -97,7 +97,7 @@ test("anthropicReasoningMiddleware > should respect Anthropic minimum budget of 
   });
 });
 
-test("anthropicReasoningMiddleware > should transform reasoning object to thinking budget", async () => {
+test("claudeReasoningMiddleware > should transform reasoning object to thinking budget", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -130,7 +130,7 @@ test("anthropicReasoningMiddleware > should transform reasoning object to thinki
   });
 });
 
-test("anthropicReasoningMiddleware > should handle disabled reasoning", async () => {
+test("claudeReasoningMiddleware > should handle disabled reasoning", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -161,7 +161,7 @@ test("anthropicReasoningMiddleware > should handle disabled reasoning", async ()
   });
 });
 
-test("anthropicReasoningMiddleware > should use 64k as default fallback for maxOutputTokens", async () => {
+test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutputTokens", async () => {
   const params = {
     prompt: [],
     providerOptions: {
