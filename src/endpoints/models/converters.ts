@@ -11,9 +11,9 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
     }
   }
 
-  const model: Model = {
+  const model = {
     id,
-    object: "model",
+    object: "model" as const,
     created: createdTimestamp,
     owned_by: providers?.[0] || "system",
     architecture: {
@@ -41,14 +41,24 @@ export function toModels(models: ModelCatalog): ModelList {
     data: Object.entries(models).map(([id, catalogModel]) => toModel(id, catalogModel!)),
   };
 }
-export function createModelsResponse(models: ModelCatalog): Response {
+export function createModelsResponse(models: ModelCatalog, headers?: HeadersInit): Response {
   return new Response(JSON.stringify(toModels(models)), {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
   });
 }
 
-export function createModelResponse(id: string, catalogModel: CatalogModel): Response {
+export function createModelResponse(
+  id: string,
+  catalogModel: CatalogModel,
+  headers?: HeadersInit,
+): Response {
   return new Response(JSON.stringify(toModel(id, catalogModel)), {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
   });
 }

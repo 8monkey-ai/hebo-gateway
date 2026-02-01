@@ -15,7 +15,6 @@ import type {
 import { jsonSchema, tool } from "ai";
 
 import type {
-  ChatCompletionsInputs,
   ChatCompletionsToolCall,
   ChatCompletionsTool,
   ChatCompletionsToolChoice,
@@ -25,10 +24,11 @@ import type {
   ChatCompletionsUserMessage,
   ChatCompletionsAssistantMessage,
   ChatCompletionsToolMessage,
-  ChatCompletions,
   ChatCompletionsFinishReason,
   ChatCompletionsUsage,
   ChatCompletionsChoice,
+  ChatCompletionsInputs,
+  ChatCompletions,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
@@ -67,7 +67,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
     providerOptions: {
-      unhandled: rest,
+      unknown: rest,
     },
   };
 }
@@ -285,15 +285,19 @@ export function toChatCompletions(
       } satisfies ChatCompletionsChoice,
     ],
     usage: result.usage && toChatCompletionsUsage(result.usage),
-    providerMetadata: result.providerMetadata,
+    provider_metadata: result.providerMetadata,
   };
 }
 export function createChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
+  headers?: HeadersInit,
 ): Response {
   return new Response(JSON.stringify(toChatCompletions(result, model)), {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
   });
 }
 
@@ -310,12 +314,14 @@ export function toChatCompletionsStream(
 export function createChatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
+  headers?: HeadersInit,
 ): Response {
   return new Response(toChatCompletionsStream(result, model), {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      ...headers,
     },
   });
 }

@@ -18,7 +18,7 @@ const expectedEmbeddingResponse = (count: number) => ({
     prompt_tokens: count * 10,
     total_tokens: count * 10,
   },
-  providerMetadata: {
+  provider_metadata: {
     provider: {
       key: "value",
     },

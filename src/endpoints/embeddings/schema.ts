@@ -8,8 +8,15 @@ export const EmbeddingsInputsSchema = z.object({
 });
 export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 
-export const EmbeddingsBodySchema = z.extend(EmbeddingsInputsSchema, {
+export const EmbeddingsBodyCoreSchema = z.object({
   model: z.string(),
+  ...EmbeddingsInputsSchema.shape,
+});
+export type EmbeddingsCoreBody = z.infer<typeof EmbeddingsBodyCoreSchema>;
+
+export const EmbeddingsBodySchema = z.looseObject({
+  model: z.string(),
+  ...EmbeddingsInputsSchema.shape,
 });
 export type EmbeddingsBody = z.infer<typeof EmbeddingsBodySchema>;
 
@@ -26,11 +33,16 @@ export const EmbeddingsUsageSchema = z.object({
 });
 export type EmbeddingsUsage = z.infer<typeof EmbeddingsUsageSchema>;
 
-export const EmbeddingsSchema = z.object({
+export const EmbeddingsCoreSchema = z.object({
   object: z.literal("list"),
   data: z.array(EmbeddingsDataSchema),
   model: z.string(),
   usage: EmbeddingsUsageSchema,
-  providerMetadata: z.optional(z.any()),
+});
+export type EmbeddingsCore = z.infer<typeof EmbeddingsCoreSchema>;
+
+export const EmbeddingsSchema = z.object({
+  ...EmbeddingsCoreSchema.shape,
+  provider_metadata: z.optional(z.any()),
 });
 export type Embeddings = z.infer<typeof EmbeddingsSchema>;

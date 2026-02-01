@@ -123,7 +123,7 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
 });
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
-const ChatCompletionsCoreInputsSchema = z.object({
+const ChatCompletionsInputsCoreSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z.optional(z.array(ChatCompletionsToolSchema)),
   tool_choice: z.optional(ChatCompletionsToolChoiceSchema),
@@ -131,21 +131,26 @@ const ChatCompletionsCoreInputsSchema = z.object({
   max_tokens: z.optional(z.number()),
   max_completion_tokens: z.optional(z.number()),
 });
+export type ChatCompletionsInputsCore = z.infer<typeof ChatCompletionsInputsCoreSchema>;
 
-const ChatCompletionsExtensionInputsSchema = z.object({
+const ChatCompletionsInputsSchema = z.object({
+  ...ChatCompletionsInputsCoreSchema.shape,
   reasoning: z.optional(ChatCompletionsReasoningConfigSchema),
   reasoning_effort: z.optional(ChatCompletionsReasoningEffortSchema),
 });
-
-export const ChatCompletionsInputsSchema = z.extend(
-  ChatCompletionsCoreInputsSchema,
-  ChatCompletionsExtensionInputsSchema.shape,
-);
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
-export const ChatCompletionsBodySchema = z.extend(ChatCompletionsInputsSchema, {
+export const ChatCompletionsBodyCoreSchema = z.object({
   model: z.string(),
   stream: z.optional(z.boolean()),
+  ...ChatCompletionsInputsCoreSchema.shape,
+});
+export type ChatCompletionsBodyCore = z.infer<typeof ChatCompletionsBodyCoreSchema>;
+
+export const ChatCompletionsBodySchema = z.looseObject({
+  model: z.string(),
+  stream: z.optional(z.boolean()),
+  ...ChatCompletionsInputsSchema.shape,
 });
 export type ChatCompletionsBody = z.infer<typeof ChatCompletionsBodySchema>;
 
@@ -182,7 +187,7 @@ export const ChatCompletionsUsageSchema = z.object({
 });
 export type ChatCompletionsUsage = z.infer<typeof ChatCompletionsUsageSchema>;
 
-export const ChatCompletionsSchema = z.object({
+export const ChatCompletionsCoreSchema = z.object({
   id: z.string(),
   object: z.literal("chat.completion"),
   created: z.number(),
@@ -190,7 +195,12 @@ export const ChatCompletionsSchema = z.object({
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: z.optional(ChatCompletionsUsageSchema),
   system_fingerprint: z.optional(z.string()),
-  providerMetadata: z.optional(z.any()),
+});
+export type ChatCompletionsCore = z.infer<typeof ChatCompletionsCoreSchema>;
+
+export const ChatCompletionsSchema = z.object({
+  ...ChatCompletionsCoreSchema.shape,
+  provider_metadata: z.optional(z.any()),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 

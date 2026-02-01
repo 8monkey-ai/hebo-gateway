@@ -33,7 +33,7 @@ type MiddlewareFor<K extends Kind> = K extends "embedding"
 type TransformOptsFor<K extends Kind> = Parameters<
   NonNullable<MiddlewareFor<K>["transformParams"]>
 >[0];
-function createNormalizedProviderMiddleware<K extends Kind>(
+function forwardParamsForMiddleware<K extends Kind>(
   _kind: K,
   providerName: ProviderId,
 ): MiddlewareFor<K> {
@@ -49,7 +49,7 @@ function createNormalizedProviderMiddleware<K extends Kind>(
       for (const key in providerOptions) {
         if (key === providerName) continue;
         Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
-        if (key === "unhandled") delete providerOptions[key];
+        if (key === "unknown") delete providerOptions[key];
       }
 
       return params;
@@ -57,14 +57,12 @@ function createNormalizedProviderMiddleware<K extends Kind>(
   } as MiddlewareFor<K>;
 }
 
-export function createNormalizedProviderEmbeddingMiddleware(
-  providerName: ProviderId,
-): EmbeddingModelMiddleware {
-  return createNormalizedProviderMiddleware("embedding", providerName);
+export function forwardParamsMiddleware(providerName: ProviderId): LanguageModelMiddleware {
+  return forwardParamsForMiddleware("language", providerName);
 }
 
-export function createNormalizedProviderLanguageMiddleware(
+export function forwardParamsEmbeddingMiddleware(
   providerName: ProviderId,
-): LanguageModelMiddleware {
-  return createNormalizedProviderMiddleware("language", providerName);
+): EmbeddingModelMiddleware {
+  return forwardParamsForMiddleware("embedding", providerName);
 }
