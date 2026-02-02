@@ -67,7 +67,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     temperature,
     max_tokens,
     max_completion_tokens,
-    reasoning_effort,
     frequency_penalty,
     presence_penalty,
     seed,
@@ -75,10 +74,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     top_p,
     ...rest
   } = params;
-
-  if (reasoning_effort) {
-    rest.reasoning = { effort: reasoning_effort };
-  }
 
   return {
     messages: convertToModelMessages(messages),
