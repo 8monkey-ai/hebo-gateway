@@ -1,22 +1,21 @@
-import type { GatewayConfig, Endpoint } from "../../types";
+import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
-import { parseConfig } from "../../config";
+import { withLifecycle } from "../../lifecycle";
 import { createErrorResponse } from "../../utils/errors";
-import { withHooks } from "../../utils/hooks";
 import { createModelsResponse, createModelResponse } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
-  const { models, hooks } = parseConfig(config);
-
   // eslint-disable-next-line require-await
-  const handler = async (req: Request): Promise<Response> => {
-    if (req.method !== "GET") {
+  const handler = async (ctx: GatewayContext): Promise<Response> => {
+    const request = ctx.request;
+
+    if (!request || request.method !== "GET") {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
-    const rawId = req.url.split("/models/", 2)[1]?.split("?", 1)[0];
+    const rawId = request.url.split("/models/", 2)[1]?.split("?", 1)[0];
     if (!rawId) {
-      return createModelsResponse(models);
+      return createModelsResponse(ctx.models);
     }
 
     let modelId = rawId;
@@ -26,7 +25,7 @@ export const models = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", "Invalid model ID", 400);
     }
 
-    const model = models[modelId];
+    const model = ctx.models[modelId];
     if (!model) {
       return createErrorResponse("NOT_FOUND", `Model '${modelId}' not found`, 404);
     }
@@ -34,5 +33,5 @@ export const models = (config: GatewayConfig): Endpoint => {
     return createModelResponse(modelId, model);
   };
 
-  return { handler: withHooks(hooks, handler) };
+  return { handler: withLifecycle(handler, config) };
 };

@@ -1,6 +1,7 @@
-import type { GatewayHooks, RequestPatch } from "../types";
+import type { GatewayConfig, GatewayContext, RequestPatch } from "./types";
 
-import { createErrorResponse } from "./errors";
+import { parseConfig } from "./config";
+import { createErrorResponse } from "./utils/errors";
 
 const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   if (!patch.headers && patch.body === undefined) return request;
@@ -21,30 +22,39 @@ const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   return new Request(request, init);
 };
 
-export const withHooks = (
-  hooks: GatewayHooks | undefined,
-  run: (request: Request) => Promise<Response>,
+export const withLifecycle = (
+  run: (ctx: GatewayContext) => Promise<Response>,
+  config: GatewayConfig,
 ) => {
-  const handler = async (request: Request): Promise<Response> => {
+  const parsedConfig = parseConfig(config);
+
+  const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
+    const context: GatewayContext = {
+      request,
+      state: state ?? {},
+      providers: parsedConfig.providers,
+      models: parsedConfig.models,
+    };
+
     let beforeResult;
     try {
-      beforeResult = await hooks?.before?.({ request });
+      beforeResult = await parsedConfig.hooks?.before?.(context);
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
     if (beforeResult instanceof Response) return beforeResult;
 
-    const nextRequest = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
+    context.request = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
 
-    const response = await run(nextRequest);
+    context.response = await run(context);
 
     let after;
     try {
-      after = await hooks?.after?.({ response });
+      after = await parsedConfig.hooks?.after?.(context);
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
-    return after ?? response;
+    return after ?? context.response;
   };
 
   return handler;
