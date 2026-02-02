@@ -267,8 +267,8 @@ Out-of-the-box model presets:
   Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`) 
   GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`) 
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
