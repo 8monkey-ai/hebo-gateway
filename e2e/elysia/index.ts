@@ -21,12 +21,12 @@ const gw = gateway({
     voyage: withCanonicalIdsForVoyage(createVoyage()),
     cohere: withCanonicalIdsForCohere(createCohere()),
   },
+  models: defineModelCatalog(gptOss["all"], voyage["all"], llama["all"], embed["all"]),
   hooks: {
     resolveProvider: async (ctx: HookContext) => {
       console.log(ctx.state.auth.userId);
     },
   },
-  models: defineModelCatalog(gptOss["all"], voyage["all"], llama["all"], embed["all"]),
 });
 
 const app = new Elysia()
