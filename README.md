@@ -34,7 +34,7 @@ Start by creating a gateway instance with at least one provider and a few models
 import { createGroq } from "@ai-sdk/groq";
 import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
-import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
+import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/openai";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
