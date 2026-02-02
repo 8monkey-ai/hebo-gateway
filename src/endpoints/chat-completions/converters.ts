@@ -1,4 +1,4 @@
-import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -14,7 +14,6 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
-  ProviderMetadata,
 } from "ai";
 
 import { jsonSchema, JsonToSseTransformStream, tool } from "ai";
@@ -376,13 +375,13 @@ export class ChatCompletionsStream extends TransformStream<
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
-    let lastProviderMetadata: ProviderMetadata;
+    let lastProviderMetadata: SharedV3ProviderMetadata;
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-      provider_metadata?: ProviderMetadata,
+      provider_metadata?: SharedV3ProviderMetadata,
     ): ChatCompletionsChunk => ({
       id: streamId,
       object: "chat.completion.chunk",
