@@ -1,33 +1,31 @@
 import { embedMany, wrapEmbeddingModel } from "ai";
 import * as z from "zod/mini";
 
-import type { GatewayConfig, Endpoint } from "../../types";
+import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
-import { parseConfig } from "../../config";
+import { withLifecycle } from "../../lifecycle";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
-import { withHooks } from "../../utils/hooks";
 import { convertToEmbedCallOptions, createEmbeddingsResponse } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
-  const { providers, models, hooks } = parseConfig(config);
+  const hooks = config.hooks;
 
-  const handler = async (req: Request): Promise<Response> => {
-    if (req.method !== "POST") {
+  const handler = async (ctx: GatewayContext): Promise<Response> => {
+    if (!ctx.request || ctx.request.method !== "POST") {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
     let body;
     try {
-      body = await req.json();
+      body = await ctx.request.json();
     } catch {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
-
     if (!parsed.success) {
       return createErrorResponse(
         "UNPROCESSABLE_ENTITY",
@@ -36,32 +34,33 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
         z.prettifyError(parsed.error),
       );
     }
+    ctx.body = parsed.data;
 
-    const { model: modelId, ...inputs } = parsed.data;
+    let inputs;
+    ({ model: ctx.modelId, ...inputs } = parsed.data);
 
-    let resolvedModelId;
     try {
-      resolvedModelId = (await hooks?.resolveModelId?.({ body: parsed.data, modelId })) ?? modelId;
+      ctx.resolvedModelId = (await hooks?.resolveModelId?.(ctx)) ?? ctx.modelId;
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
-    let provider;
+    ctx.operation = "embeddings";
     try {
-      const args = {
-        providers,
-        models,
-        body: parsed.data,
-        modelId: resolvedModelId,
-        operation: "embeddings" as const,
-      };
-      const override = await hooks?.resolveProvider?.(args);
-      provider = override ?? resolveProvider(args);
+      const override = await hooks?.resolveProvider?.(ctx);
+      ctx.provider =
+        override ??
+        resolveProvider({
+          providers: ctx.providers,
+          models: ctx.models,
+          modelId: ctx.resolvedModelId,
+          operation: ctx.operation,
+        });
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
-    const embeddingModel = provider.embeddingModel(resolvedModelId);
+    const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
 
     let embedOptions;
     try {
@@ -72,7 +71,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
       model: embeddingModel,
-      middleware: modelMiddlewareMatcher.forEmbedding(resolvedModelId, embeddingModel.provider),
+      middleware: modelMiddlewareMatcher.forEmbedding(ctx.resolvedModelId, embeddingModel.provider),
     });
 
     let result;
@@ -85,8 +84,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return createEmbeddingsResponse(result, modelId);
+    return createEmbeddingsResponse(result, ctx.modelId);
   };
 
-  return { handler: withHooks(hooks, handler) };
+  return { handler: withLifecycle(handler, config) };
 };

@@ -20,50 +20,85 @@ export type RequestPatch = {
 };
 
 /**
+ * Per-request context shared across handlers and hooks.
+ */
+export type GatewayContext = {
+  /**
+   * Mutable bag for passing data between hooks.
+   */
+  state: Record<string, unknown>;
+  /**
+   * Provider registry from config, when available.
+   */
+  providers: ProviderRegistry;
+  /**
+   * Model catalog from config, when available.
+   */
+  models: ModelCatalog;
+  /**
+   * Incoming request for the lifecycle.
+   */
+  request?: Request;
+  /**
+   * Parsed body from the request, when available.
+   */
+  body?: ChatCompletionsBody | EmbeddingsBody;
+  /**
+   * Incoming model ID, when available.
+   */
+  modelId?: ModelId;
+  /**
+   * Resolved model ID, when available.
+   */
+  resolvedModelId?: ModelId;
+  /**
+   * Operation type, when available.
+   */
+  operation?: "text" | "embeddings";
+  /**
+   * Resolved provider instance, when available.
+   */
+  provider?: ProviderV3;
+  /**
+   * Response returned by the handler, when available.
+   */
+  response?: Response;
+};
+
+/**
+ * Hook context: all fields readonly except `state`.
+ */
+export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
+  state: GatewayContext["state"];
+};
+
+/**
  * Hooks to plugin to the gateway lifecycle.
  */
 export type GatewayHooks = {
   /**
    * Runs before any endpoint handler logic.
-   * @param ctx.request Incoming request.
    * @returns Optional RequestPatch to merge into headers / override body.
    * Returning a Response stops execution of the endpoint.
    */
-  before?: (ctx: {
-    request: Request;
-  }) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
+  before?: (
+    ctx: HookContext,
+  ) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
-   * @param ctx.body The parsed body object with all call parameters.
-   * @param ctx.modelId Incoming model ID.
    * @returns Canonical model ID or undefined to keep original.
    */
-  resolveModelId?: (ctx: {
-    body: ChatCompletionsBody | EmbeddingsBody;
-    modelId: ModelId;
-  }) => ModelId | void | Promise<ModelId | void>;
+  resolveModelId?: (ctx: HookContext) => ModelId | void | Promise<ModelId | void>;
   /**
    * Picks a provider instance for the request.
-   * @param ctx.providers ProviderRegistry from config.
-   * @param ctx.models ModelCatalog from config.
-   * @param ctx.body The parsed body object with all call parameters.
-   * @param ctx.modelId Resolved model ID.
-   * @param ctx.operation Operation type ("text" | "embeddings").
    * @returns ProviderV3 to override, or undefined to use default.
    */
-  resolveProvider?: (ctx: {
-    providers: ProviderRegistry;
-    models: ModelCatalog;
-    body: ChatCompletionsBody | EmbeddingsBody;
-    modelId: ModelId;
-    operation: "text" | "embeddings";
-  }) => ProviderV3 | void | Promise<ProviderV3 | void>;
+  resolveProvider?: (ctx: HookContext) => ProviderV3 | void | Promise<ProviderV3 | void>;
   /**
    * Runs after the endpoint handler.
-   * @param ctx.response Response returned by the handler.
    * @returns Response to replace, or undefined to keep original.
    */
-  after?: (ctx: { response: Response }) => void | Response | Promise<void | Response>;
+  after?: (ctx: HookContext) => void | Response | Promise<void | Response>;
 };
 
 /**
@@ -94,7 +129,7 @@ export type GatewayConfigParsed = GatewayConfig & {
 };
 
 export interface Endpoint {
-  handler: (request: Request) => Promise<Response>;
+  handler: (request: Request, state?: Record<string, unknown>) => Promise<Response>;
 }
 
 export interface HeboGateway<Routes extends Record<string, Endpoint>> extends Endpoint {

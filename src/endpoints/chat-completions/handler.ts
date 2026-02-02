@@ -1,13 +1,12 @@
 import { generateText, streamText, wrapLanguageModel } from "ai";
 import * as z from "zod/mini";
 
-import type { GatewayConfig, Endpoint } from "../../types";
+import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
-import { parseConfig } from "../../config";
+import { withLifecycle } from "../../lifecycle";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
-import { withHooks } from "../../utils/hooks";
 import {
   convertToTextCallOptions,
   toChatCompletionsResponse,
@@ -16,22 +15,21 @@ import {
 import { ChatCompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
-  const { providers, models, hooks } = parseConfig(config);
+  const hooks = config.hooks;
 
-  const handler = async (req: Request): Promise<Response> => {
-    if (req.method !== "POST") {
+  const handler = async (ctx: GatewayContext): Promise<Response> => {
+    if (!ctx.request || ctx.request.method !== "POST") {
       return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
     }
 
     let body;
     try {
-      body = await req.json();
+      body = await ctx.request.json();
     } catch {
       return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
     }
 
     const parsed = ChatCompletionsBodySchema.safeParse(body);
-
     if (!parsed.success) {
       return createErrorResponse(
         "UNPROCESSABLE_ENTITY",
@@ -40,32 +38,33 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         z.prettifyError(parsed.error),
       );
     }
+    ctx.body = parsed.data;
 
-    const { model: modelId, stream, ...inputs } = parsed.data;
+    let stream, inputs;
+    ({ model: ctx.modelId, stream, ...inputs } = parsed.data);
 
-    let resolvedModelId;
     try {
-      resolvedModelId = (await hooks?.resolveModelId?.({ body: parsed.data, modelId })) ?? modelId;
+      ctx.resolvedModelId = (await hooks?.resolveModelId?.(ctx)) ?? ctx.modelId;
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
-    let provider;
+    ctx.operation = "text";
     try {
-      const args = {
-        providers,
-        models,
-        body: parsed.data,
-        modelId: resolvedModelId,
-        operation: "text" as const,
-      };
-      const override = await hooks?.resolveProvider?.(args);
-      provider = override ?? resolveProvider(args);
+      const override = await hooks?.resolveProvider?.(ctx);
+      ctx.provider =
+        override ??
+        resolveProvider({
+          providers: ctx.providers,
+          models: ctx.models,
+          modelId: ctx.resolvedModelId,
+          operation: ctx.operation,
+        });
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
-    const languageModel = provider.languageModel(resolvedModelId);
+    const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
 
     let textOptions;
     try {
@@ -76,7 +75,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
-      middleware: modelMiddlewareMatcher.for(resolvedModelId, languageModel.provider),
+      middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
     if (stream) {
@@ -90,7 +89,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
       }
 
-      return toChatCompletionsStreamResponse(result, modelId);
+      return toChatCompletionsStreamResponse(result, ctx.modelId);
     }
 
     let result;
@@ -103,8 +102,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
 
-    return toChatCompletionsResponse(result, modelId);
+    return toChatCompletionsResponse(result, ctx.modelId);
   };
 
-  return { handler: withHooks(hooks, handler) };
+  return { handler: withLifecycle(handler, config) };
 };
