@@ -1,5 +1,5 @@
 import type { JSONObject } from "@ai-sdk/provider";
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
+import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
 import type { EmbedManyResult } from "ai";
 
 import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
@@ -8,7 +8,7 @@ import { mergeResponseInit } from "../../utils/response";
 
 export type EmbedCallOptions = {
   values: string[];
-  providerOptions: ProviderOptions;
+  providerOptions: SharedV3ProviderOptions;
 };
 
 export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOptions {

@@ -158,7 +158,6 @@
     "@ai-sdk/groq": "^3.0.19",
     "@ai-sdk/openai": "^3.0.23",
     "@ai-sdk/provider": "^3.0.6",
-    "@ai-sdk/provider-utils": "^4.0.13",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@tanstack/react-router": "^1.157.16",
     "@tanstack/react-start": "^1.157.16",

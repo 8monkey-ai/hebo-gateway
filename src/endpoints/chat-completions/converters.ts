@@ -1,4 +1,4 @@
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
+import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -56,7 +56,7 @@ export type TextCallOptions = {
   seed?: number;
   stopSequences?: string[];
   topP?: number;
-  providerOptions: ProviderOptions;
+  providerOptions: SharedV3ProviderOptions;
 };
 
 // --- Request Flow ---
