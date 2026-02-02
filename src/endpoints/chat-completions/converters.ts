@@ -34,10 +34,12 @@ import type {
   ChatCompletionsChoice,
   ChatCompletionsInputs,
   ChatCompletions,
-  ChatCompletionsDeltaAssistantMessageDelta,
+  ChatCompletionsAssistantMessageDelta,
   ChatCompletionsChoiceDelta,
   ChatCompletionsChunk,
   ChatCompletionsToolCallDelta,
+  ChatCompletionsReasoningEffort,
+  ChatCompletionsReasoningConfig,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
@@ -67,6 +69,8 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     temperature,
     max_tokens,
     max_completion_tokens,
+    reasoning_effort,
+    reasoning,
     frequency_penalty,
     presence_penalty,
     seed,
@@ -87,7 +91,10 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     stopSequences: stop ? (Array.isArray(stop) ? stop : [stop]) : undefined,
     topP: top_p,
     providerOptions: {
-      unknown: rest,
+      unknown: {
+        ...rest,
+        ...parseReasoningOptions(reasoning_effort, reasoning),
+      },
     },
   };
 }
@@ -285,6 +292,19 @@ function parseToolOutput(content: string) {
   }
 }
 
+function parseReasoningOptions(
+  reasoning_effort: ChatCompletionsReasoningEffort | undefined,
+  reasoning: ChatCompletionsReasoningConfig | undefined,
+) {
+  const reasoningOptions: Record<string, any> = {};
+  if (reasoning) reasoningOptions["reasoning"] = reasoning;
+  if (reasoning_effort !== undefined) {
+    (reasoningOptions["reasoning"] ??= {})["effort"] = reasoning_effort;
+    reasoningOptions["reasoningEffort"] = reasoning_effort;
+  }
+  return reasoningOptions;
+}
+
 // --- Response Flow ---
 
 export function toChatCompletions(
@@ -359,7 +379,7 @@ export class ChatCompletionsStream extends TransformStream<
     let lastProviderMetadata: ProviderMetadata;
 
     const createChunk = (
-      delta: ChatCompletionsDeltaAssistantMessageDelta,
+      delta: ChatCompletionsAssistantMessageDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
       provider_metadata?: ProviderMetadata,

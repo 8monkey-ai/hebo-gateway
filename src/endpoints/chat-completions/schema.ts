@@ -134,7 +134,6 @@ export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReaso
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
-  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   tools: z
     .array(
       // FUTURE: Missing CustomTool
@@ -150,6 +149,7 @@ const ChatCompletionsInputsSchema = z.object({
   seed: z.int().optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
+  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   // Extensions
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
 });
@@ -219,7 +219,7 @@ export const ChatCompletionsAssistantMessageDeltaSchema =
   ChatCompletionsAssistantMessageSchema.partial().extend({
     tool_calls: z.array(ChatCompletionsToolCallDeltaSchema).optional(),
   });
-export type ChatCompletionsDeltaAssistantMessageDelta = z.infer<
+export type ChatCompletionsAssistantMessageDelta = z.infer<
   typeof ChatCompletionsAssistantMessageDeltaSchema
 >;
 
