@@ -1,5 +1,4 @@
-import type { JSONObject } from "@ai-sdk/provider";
-import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type { JSONObject, SharedV3ProviderOptions } from "@ai-sdk/provider";
 import type { EmbedManyResult } from "ai";
 
 import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
