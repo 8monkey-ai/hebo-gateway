@@ -250,16 +250,16 @@ Presets come in two forms:
 
 Out-of-the-box model presets:
 
-- **Claude** — `@hebo-ai/gateway/models/claude`  
+- **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
   Family: `claude` (`v4.5`, `v4.x`, `latest`, `all`)
 
-- **Gemini** — `@hebo-ai/gateway/models/gemini`  
+- **Google** — `@hebo-ai/gateway/models/google`  
   Family: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `latest`, `preview`, `all`)
 
-- **GPT-OSS** — `@hebo-ai/gateway/models/gpt-oss`  
+- **OpenAI** — `@hebo-ai/gateway/models/openai`  
   Family: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
 
-- **Llama** — `@hebo-ai/gateway/models/llama`  
+- **Meta** — `@hebo-ai/gateway/models/meta`  
   Family: `llama` (`v3.1`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
