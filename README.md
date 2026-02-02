@@ -449,22 +449,6 @@ Most SDKs handle these fields out-of-the-box.
 
 ## Advanced Usage
 
-### Selective Route Mounting
-
-If you want to have more flexibility, for example for custom rate limit checks per route, you can also choose to only mount individual routes from the gateway's `routes` property.
-
-```ts
-const gw = gateway({
-  /// ...
-});
-
-const app = new Elysia()
-  .mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler)
-  .listen(3000);
-
-console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
-```
-
 ### Passing Framework State to Hooks
 
 You can pass per-request info from your framework into the gateway via the second `state` argument on the handler, then read it in hooks through `ctx.state`.
@@ -504,6 +488,22 @@ const app = new Elysia()
   }))
   .all(`${basepath}`, ({ request, auth }) => gw.handler(request, { auth }))
   .listen(3000);
+```
+
+### Selective Route Mounting
+
+If you want to have more flexibility, for example for custom rate limit checks per route, you can also choose to only mount individual routes from the gateway's `routes` property.
+
+```ts
+const gw = gateway({
+  /// ...
+});
+
+const app = new Elysia()
+  .mount("/v1/gateway/chat", gw.routes["/chat/completions"].handler)
+  .listen(3000);
+
+console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 ```
 
 ### Low-level Schemas & Converters
