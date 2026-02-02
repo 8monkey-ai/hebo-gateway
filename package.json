@@ -70,30 +70,30 @@
       "import": "./dist/middleware/common.js",
       "dev-source": "./src/middleware/common.ts"
     },
-    "./models/claude": {
-      "types": "./dist/models/claude/index.d.ts",
-      "import": "./dist/models/claude/index.js",
-      "dev-source": "./src/models/claude/index.ts"
+    "./models/anthropic": {
+      "types": "./dist/models/anthropic/index.d.ts",
+      "import": "./dist/models/anthropic/index.js",
+      "dev-source": "./src/models/anthropic/index.ts"
     },
     "./models/cohere": {
       "types": "./dist/models/cohere/index.d.ts",
       "import": "./dist/models/cohere/index.js",
       "dev-source": "./src/models/cohere/index.ts"
     },
-    "./models/gemini": {
-      "types": "./dist/models/gemini/index.d.ts",
-      "import": "./dist/models/gemini/index.js",
-      "dev-source": "./src/models/gemini/index.ts"
+    "./models/google": {
+      "types": "./dist/models/google/index.d.ts",
+      "import": "./dist/models/google/index.js",
+      "dev-source": "./src/models/google/index.ts"
     },
-    "./models/gpt-oss": {
-      "types": "./dist/models/gpt-oss/index.d.ts",
-      "import": "./dist/models/gpt-oss/index.js",
-      "dev-source": "./src/models/gpt-oss/index.ts"
+    "./models/openai": {
+      "types": "./dist/models/openai/index.d.ts",
+      "import": "./dist/models/openai/index.js",
+      "dev-source": "./src/models/openai/index.ts"
     },
-    "./models/llama": {
-      "types": "./dist/models/llama/index.d.ts",
-      "import": "./dist/models/llama/index.js",
-      "dev-source": "./src/models/llama/index.ts"
+    "./models/meta": {
+      "types": "./dist/models/meta/index.d.ts",
+      "import": "./dist/models/meta/index.js",
+      "dev-source": "./src/models/meta/index.ts"
     },
     "./models/voyage": {
       "types": "./dist/models/voyage/index.d.ts",
