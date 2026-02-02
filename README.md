@@ -436,6 +436,11 @@ Normalization rules:
   - `high`: 80%
   - `xhigh`: 95%
 
+Reasoning output is surfaced as extension to the `completion` object.
+
+- When present, it is returned on the assistant message as `reasoning_content`. Reasoning token counts (when available) are returned on `usage.completion_tokens_details.reasoning_tokens`.
+- For stream responses, reasoning text is sent incrementally as `reasoning_content` part (separate from normal text `content` deltas). Token counts land in the final `usage` object on the terminating chunk.
+
 ## Advanced Usage
 
 ### Selective Route Mounting
