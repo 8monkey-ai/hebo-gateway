@@ -16,20 +16,20 @@ const LLAMA_3_BASE = {
 export const llama31_8b = presetFor<CanonicalModelId, CatalogModel>()(
   "meta/llama-3.1-8b" as const,
   {
+    ...LLAMA_3_BASE,
     name: "Llama 3.1 8B",
     created: "2024-07-23",
     knowledge: "2023-12",
-    ...LLAMA_3_BASE,
   } satisfies CatalogModel,
 );
 
 export const llama33_70b = presetFor<CanonicalModelId, CatalogModel>()(
   "meta/llama-3.3-70b" as const,
   {
+    ...LLAMA_3_BASE,
     name: "Llama 3.3 70B",
     created: "2024-12-06",
     knowledge: "2023-12",
-    ...LLAMA_3_BASE,
   } satisfies CatalogModel,
 );
 
@@ -46,20 +46,20 @@ const LLAMA_4_BASE = {
 export const llama4Scout = presetFor<CanonicalModelId, CatalogModel>()(
   "meta/llama-4-scout" as const,
   {
+    ...LLAMA_4_BASE,
     name: "Llama 4 Scout",
     created: "2025-08-05",
     knowledge: "2024-06",
-    ...LLAMA_4_BASE,
   } satisfies CatalogModel,
 );
 
 export const llama4Maverick = presetFor<CanonicalModelId, CatalogModel>()(
   "meta/llama-4-maverick" as const,
   {
+    ...LLAMA_4_BASE,
     name: "Llama 4 Maverick",
     created: "2025-08-05",
     knowledge: "2024-06",
-    ...LLAMA_4_BASE,
   } satisfies CatalogModel,
 );
 

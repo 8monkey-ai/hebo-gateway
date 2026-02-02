@@ -16,35 +16,38 @@ const CLAUDE_BASE = {
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-haiku-4.5" as const,
   {
+    ...CLAUDE_BASE,
     name: "Claude Haiku 4.5",
     created: "2025-10-15",
     knowledge: "2025-02",
-    ...CLAUDE_BASE,
   } satisfies DeepPartial<CatalogModel>,
 );
 
 export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-4.5" as const,
   {
+    ...CLAUDE_BASE,
     name: "Claude Sonnet 4.5",
     created: "2025-09-29",
     knowledge: "2025-07",
-    ...CLAUDE_BASE,
   } satisfies DeepPartial<CatalogModel>,
 );
 
 export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-4.5" as const,
   {
+    ...CLAUDE_BASE,
     name: "Claude Opus 4.5",
     created: "2025-11-24",
     knowledge: "2025-05",
-    ...CLAUDE_BASE,
   } satisfies DeepPartial<CatalogModel>,
 );
 
 const claudeAtomic = {
   "v4.5": [claudeHaiku45, claudeSonnet45, claudeOpus45],
+  haiku: [claudeHaiku45],
+  sonnet: [claudeSonnet45],
+  opus: [claudeOpus45],
 } as const;
 
 const claudeGroups = {

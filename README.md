@@ -251,19 +251,22 @@ Presets come in two forms:
 Out-of-the-box model presets:
 
 - **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Family: `claude` (`v4.5`, `v4.x`, `latest`, `all`)
+  Family: `claude` (`v4.5`, `v4.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+
+- **Amazon** — `@hebo-ai/gateway/models/amazon`  
+  Family: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Family: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `latest`, `preview`, `all`)
+  Family: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  Family: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
+  Families: `gptOss` (`v1`, `v1.x`, `latest`, `all`) and `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`) and `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
   Family: `llama` (`v3.1`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Family: `cohere` (`v4`, `v4.x`, `latest`, `all`)
+  Families: `command` (`A`, `R`, `latest`, `all`) and `embed` (`v4`, `v3`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
   Family: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
