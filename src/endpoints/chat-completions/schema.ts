@@ -68,8 +68,7 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
   name: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
-  // FUTURE: Are these extensions to the core, or just not documented by OpenAI?
-  reasoning: z.string().optional(),
+  // FUTURE: Split out extensions into Core vs non-Core
   reasoning_content: z.string().optional(),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
@@ -135,6 +134,7 @@ export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReaso
 
 const ChatCompletionsInputsCoreSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
+  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   tools: z
     .array(
       // FUTURE: Missing CustomTool
@@ -156,7 +156,6 @@ export type ChatCompletionsInputsCore = z.infer<typeof ChatCompletionsInputsCore
 const ChatCompletionsInputsSchema = z.object({
   ...ChatCompletionsInputsCoreSchema.shape,
   reasoning: ChatCompletionsReasoningConfigSchema.optional(),
-  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
@@ -232,21 +231,19 @@ export const ChatCompletionsToolCallDeltaSchema = z.object({
 });
 export type ChatCompletionsToolCallDelta = z.infer<typeof ChatCompletionsToolCallDeltaSchema>;
 
-export const ChatCompletionsDeltaSchema = z.object({
-  // FUTURE: which ones are really optional in the real schema here?
-  content: z.string().optional(),
-  role: z.string().optional(),
-  refusal: z.string().optional(),
-  tool_calls: z.array(ChatCompletionsToolCallDeltaSchema).optional(),
-  // FUTURE: Are these extensions to the core, or just not documented by OpenAI?
-  reasoning: z.string().optional(),
+export const ChatCompletionsAssistantMessageDeltaSchema = z.object({
+  ...ChatCompletionsAssistantMessageSchema.shape,
+  tool_calls: z.array(ChatCompletionsToolCallDeltaSchema.partial()).optional(),
+  // FUTURE: Split out extensions into Core vs non-Core
   reasoning_content: z.string().optional(),
 });
-export type ChatCompletionsDelta = z.infer<typeof ChatCompletionsDeltaSchema>;
+export type ChatCompletionsDeltaAssistantMessageDelta = z.infer<
+  typeof ChatCompletionsAssistantMessageDeltaSchema
+>;
 
 export const ChatCompletionsChoiceDeltaSchema = z.object({
   index: z.int().nonnegative(),
-  delta: ChatCompletionsDeltaSchema,
+  delta: ChatCompletionsAssistantMessageDeltaSchema.partial(),
   finish_reason: ChatCompletionsFinishReasonSchema.nullable(),
   // FUTURE: model this out
   logprobs: z.any().optional(),
@@ -260,6 +257,7 @@ export const ChatCompletionsChunkSchema = z.object({
   model: z.string(),
   object: z.literal("chat.completion.chunk"),
   usage: ChatCompletionsUsageSchema.nullable(),
+  // FUTURE: Split out extensions into Core vs non-Core
   provider_metadata: z.any().optional(),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;

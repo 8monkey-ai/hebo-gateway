@@ -34,7 +34,7 @@ import type {
   ChatCompletionsChoice,
   ChatCompletionsInputs,
   ChatCompletions,
-  ChatCompletionsDelta,
+  ChatCompletionsDeltaAssistantMessageDelta,
   ChatCompletionsChoiceDelta,
   ChatCompletionsChunk,
   ChatCompletionsToolCallDelta,
@@ -364,7 +364,7 @@ export class ChatCompletionsStream extends TransformStream<
     let lastProviderMetadata: ProviderMetadata;
 
     const createChunk = (
-      delta: ChatCompletionsDelta,
+      delta: ChatCompletionsDeltaAssistantMessageDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
       provider_metadata?: ProviderMetadata,
