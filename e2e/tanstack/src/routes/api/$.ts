@@ -2,7 +2,7 @@ import { groq } from "@ai-sdk/groq";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { defineModelCatalog, gateway } from "#/";
-import { gptOss } from "#/models/gpt-oss";
+import { gptOss } from "#/models/openai";
 import { withCanonicalIdsForGroq } from "#/providers/groq";
 
 const gw = gateway({

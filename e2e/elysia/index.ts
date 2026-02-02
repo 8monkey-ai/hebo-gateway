@@ -4,9 +4,9 @@ import { Elysia } from "elysia";
 import { createVoyage } from "voyage-ai-provider";
 
 import { defineModelCatalog, gateway } from "#/";
-import { cohere } from "#/models/cohere";
-import { gptOss } from "#/models/gpt-oss";
-import { llama } from "#/models/llama";
+import { embed } from "#/models/cohere";
+import { llama } from "#/models/meta";
+import { gptOss } from "#/models/openai";
 import { voyage } from "#/models/voyage";
 import { withCanonicalIdsForCohere } from "#/providers/cohere";
 import { withCanonicalIdsForGroq } from "#/providers/groq";
@@ -18,7 +18,7 @@ const gw = gateway({
     voyage: withCanonicalIdsForVoyage(createVoyage()),
     cohere: withCanonicalIdsForCohere(createCohere()),
   },
-  models: defineModelCatalog(gptOss["all"], voyage["all"], llama["all"], cohere["all"]),
+  models: defineModelCatalog(gptOss["all"], voyage["all"], llama["all"], embed["all"]),
 });
 
 const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
