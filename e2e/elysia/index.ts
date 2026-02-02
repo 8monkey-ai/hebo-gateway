@@ -3,7 +3,7 @@ import { createGroq } from "@ai-sdk/groq";
 import { Elysia } from "elysia";
 import { createVoyage } from "voyage-ai-provider";
 
-import { defineModelCatalog, gateway, HookContext } from "#/";
+import { defineModelCatalog, gateway, type HookContext } from "#/";
 import { embed } from "#/models/cohere";
 import { llama } from "#/models/meta";
 import { gptOss } from "#/models/openai";
