@@ -13,7 +13,8 @@
     "max-classes-per-file": "off",
     "max-lines": "off",
     "anchor-has-content": "off",
-    "max-dependencies": "off"
+    "max-dependencies": "off",
+    "no-inline-comments": "off",
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "e2e/**"]
 }
