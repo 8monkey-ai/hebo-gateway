@@ -1,39 +1,33 @@
 import * as z from "zod";
 
-export const ModelCoreSchema = z.object({
+export const ModelSchema = z.looseObject({
+  // Core
   id: z.string(),
   object: z.literal("model"),
   created: z.int().nonnegative(),
   owned_by: z.string(),
-});
-export type ModelCore = z.infer<typeof ModelCoreSchema>;
-
-export const ModelSchema = z.looseObject({
-  ...ModelCoreSchema.shape,
-  name: z.string().optional(),
-  knowledge: z.string().optional(),
-  context: z.int().nonnegative().optional(),
+  // Extensions
+  name: z.string().optional().meta({ extension: true }),
+  knowledge: z.string().optional().meta({ extension: true }),
+  context: z.int().nonnegative().optional().meta({ extension: true }),
   architecture: z
     .object({
       modality: z.string().optional(),
       input_modalities: z.array(z.string()).readonly().optional(),
       output_modalities: z.array(z.string()).readonly().optional(),
     })
-    .optional(),
-  endpoints: z.array(
-    z.object({
-      tag: z.string(),
-    }),
-  ),
-  capabilities: z.array(z.string()).readonly().optional(),
+    .optional()
+    .meta({ extension: true }),
+  endpoints: z
+    .array(
+      z.object({
+        tag: z.string(),
+      }),
+    )
+    .meta({ extension: true }),
+  capabilities: z.array(z.string()).readonly().optional().meta({ extension: true }),
 });
 export type Model = z.infer<typeof ModelSchema>;
-
-export const ModelListCoreSchema = z.object({
-  object: z.literal("list"),
-  data: z.array(ModelCoreSchema),
-});
-export type ModelListCore = z.infer<typeof ModelListCoreSchema>;
 
 export const ModelListSchema = z.object({
   object: z.literal("list"),

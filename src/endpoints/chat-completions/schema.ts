@@ -68,8 +68,8 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
   name: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
-  // FUTURE: Split out extensions into Core vs non-Core
-  reasoning_content: z.string().optional(),
+  // Extensions
+  reasoning_content: z.string().optional().meta({ extension: true }),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
 
@@ -132,7 +132,7 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
 });
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
-const ChatCompletionsInputsCoreSchema = z.object({
+const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   tools: z
@@ -150,21 +150,10 @@ const ChatCompletionsInputsCoreSchema = z.object({
   seed: z.int().optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
-});
-export type ChatCompletionsInputsCore = z.infer<typeof ChatCompletionsInputsCoreSchema>;
-
-const ChatCompletionsInputsSchema = z.object({
-  ...ChatCompletionsInputsCoreSchema.shape,
-  reasoning: ChatCompletionsReasoningConfigSchema.optional(),
+  // Extensions
+  reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
-
-export const ChatCompletionsBodyCoreSchema = z.object({
-  model: z.string(),
-  stream: z.boolean().optional(),
-  ...ChatCompletionsInputsCoreSchema.shape,
-});
-export type ChatCompletionsBodyCore = z.infer<typeof ChatCompletionsBodyCoreSchema>;
 
 export const ChatCompletionsBodySchema = z.looseObject({
   model: z.string(),
@@ -209,19 +198,15 @@ export const ChatCompletionsUsageSchema = z.object({
 });
 export type ChatCompletionsUsage = z.infer<typeof ChatCompletionsUsageSchema>;
 
-export const ChatCompletionsCoreSchema = z.object({
+export const ChatCompletionsSchema = z.object({
   id: z.string(),
   object: z.literal("chat.completion"),
   created: z.int().nonnegative(),
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
-});
-export type ChatCompletionsCore = z.infer<typeof ChatCompletionsCoreSchema>;
-
-export const ChatCompletionsSchema = z.object({
-  ...ChatCompletionsCoreSchema.shape,
-  provider_metadata: z.any().optional(),
+  // Extensions
+  provider_metadata: z.any().optional().meta({ extension: true }),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
@@ -234,8 +219,6 @@ export type ChatCompletionsToolCallDelta = z.infer<typeof ChatCompletionsToolCal
 export const ChatCompletionsAssistantMessageDeltaSchema = z.object({
   ...ChatCompletionsAssistantMessageSchema.shape,
   tool_calls: z.array(ChatCompletionsToolCallDeltaSchema.partial()).optional(),
-  // FUTURE: Split out extensions into Core vs non-Core
-  reasoning_content: z.string().optional(),
 });
 export type ChatCompletionsDeltaAssistantMessageDelta = z.infer<
   typeof ChatCompletionsAssistantMessageDeltaSchema
@@ -257,7 +240,7 @@ export const ChatCompletionsChunkSchema = z.object({
   model: z.string(),
   object: z.literal("chat.completion.chunk"),
   usage: ChatCompletionsUsageSchema.nullable(),
-  // FUTURE: Split out extensions into Core vs non-Core
-  provider_metadata: z.any().optional(),
+  // Extensions
+  provider_metadata: z.any().optional().meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;

@@ -1,7 +1,7 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 
-import type { ChatCompletionsBodyCore } from "./endpoints/chat-completions/schema";
-import type { EmbeddingsBodyCore } from "./endpoints/embeddings/schema";
+import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
+import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderRegistry } from "./providers/types";
 
@@ -39,7 +39,7 @@ export type GatewayHooks = {
    * @returns Canonical model ID or undefined to keep original.
    */
   resolveModelId?: (ctx: {
-    body: ChatCompletionsBodyCore | EmbeddingsBodyCore;
+    body: ChatCompletionsBody | EmbeddingsBody;
     modelId: ModelId;
   }) => ModelId | void | Promise<ModelId | void>;
   /**
@@ -54,7 +54,7 @@ export type GatewayHooks = {
   resolveProvider?: (ctx: {
     providers: ProviderRegistry;
     models: ModelCatalog;
-    body: ChatCompletionsBodyCore | EmbeddingsBodyCore;
+    body: ChatCompletionsBody | EmbeddingsBody;
     modelId: ModelId;
     operation: "text" | "embeddings";
   }) => ProviderV3 | void | Promise<ProviderV3 | void>;
