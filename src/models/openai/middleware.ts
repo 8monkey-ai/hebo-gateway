@@ -1,4 +1,6 @@
-import type { EmbeddingModelMiddleware } from "ai";
+import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
+
+import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
@@ -20,6 +22,34 @@ export const openAIEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
+export const openAIReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
+    if (!reasoning) return params;
+
+    const target = (params.providerOptions!["openai"] ??= {});
+
+    if (!reasoning.enabled) {
+      target["reasoningEffort"] = "none";
+    } else if (reasoning.effort) {
+      target["reasoningEffort"] = reasoning.effort;
+    }
+
+    delete unknown["reasoning"];
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
   embedding: openAIEmbeddingModelMiddleware,
+});
+
+modelMiddlewareMatcher.useForModel("openai/gpt-*", {
+  language: openAIReasoningMiddleware,
 });

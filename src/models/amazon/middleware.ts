@@ -1,4 +1,9 @@
-import type { EmbeddingModelMiddleware } from "ai";
+import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
+
+import type {
+  ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningEffort,
+} from "../../endpoints/chat-completions/schema";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
@@ -20,6 +25,56 @@ export const novaEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
+export const novaReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
+    if (!reasoning) return params;
+
+    const target = (params.providerOptions!["nova"] ??= {});
+
+    if (!reasoning.enabled) {
+      target["reasoningConfig"] = { type: "disabled" };
+    } else if (reasoning.effort) {
+      target["reasoningConfig"] = {
+        type: "enabled",
+        maxReasoningEffort: mapNovaEffort(reasoning.effort),
+      };
+    }
+
+    delete unknown["reasoning"];
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForModel("amazon/nova-*embeddings*", {
   embedding: novaEmbeddingModelMiddleware,
 });
+
+modelMiddlewareMatcher.useForModel("amazon/nova-2-*", {
+  language: novaReasoningMiddleware,
+});
+
+function mapNovaEffort(
+  effort: ChatCompletionsReasoningEffort,
+): "low" | "medium" | "high" | undefined {
+  switch (effort) {
+    case "minimal":
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+      return "high";
+    case "none":
+      return undefined;
+    default:
+      return undefined;
+  }
+}

@@ -295,13 +295,21 @@ function parseReasoningOptions(
   reasoning_effort: ChatCompletionsReasoningEffort | undefined,
   reasoning: ChatCompletionsReasoningConfig | undefined,
 ) {
-  const reasoningOptions: Record<string, any> = {};
-  if (reasoning) reasoningOptions["reasoning"] = reasoning;
-  if (reasoning_effort !== undefined) {
-    (reasoningOptions["reasoning"] ??= {})["effort"] = reasoning_effort;
-    reasoningOptions["reasoningEffort"] = reasoning_effort;
-  }
-  return reasoningOptions;
+  const effort =
+    reasoning?.effort ?? reasoning_effort ?? (reasoning?.enabled === true ? "medium" : undefined);
+
+  if (reasoning === undefined && effort === undefined) return {};
+
+  const normalizedReasoning = {
+    ...reasoning,
+    ...(effort === undefined ? {} : { effort }),
+    ...(effort === undefined ? {} : { enabled: effort !== "none" }),
+  };
+
+  return {
+    reasoning: normalizedReasoning,
+    ...(effort === undefined ? {} : { reasoning_effort: effort }),
+  };
 }
 
 // --- Response Flow ---

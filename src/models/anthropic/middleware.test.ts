@@ -39,7 +39,7 @@ test("claudeReasoningMiddleware > should transform reasoning_effort string to th
     maxOutputTokens: 10000,
     providerOptions: {
       unknown: {
-        reasoning: { effort: "high" },
+        reasoning: { enabled: true, effort: "high" },
       },
     },
   };
@@ -71,7 +71,7 @@ test("claudeReasoningMiddleware > should respect Anthropic minimum budget of 102
     maxOutputTokens: 2000,
     providerOptions: {
       unknown: {
-        reasoning: { effort: "minimal" },
+        reasoning: { enabled: true, effort: "minimal" },
       },
     },
   };
@@ -103,6 +103,7 @@ test("claudeReasoningMiddleware > should transform reasoning object to thinking 
     providerOptions: {
       unknown: {
         reasoning: {
+          enabled: true,
           effort: "medium",
           max_tokens: 2000,
         },
@@ -168,6 +169,7 @@ test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutp
       unknown: {
         reasoning: {
           // 0.5 * 64000 = 32000
+          enabled: true,
           effort: "medium",
         },
       },
