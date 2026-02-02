@@ -251,26 +251,28 @@ Presets come in two forms:
 Out-of-the-box model presets:
 
 - **Amazon** — `@hebo-ai/gateway/models/amazon`  
-  Family: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
+  Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
 - **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Family: `claude` (`v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+  Claude: `claude` (`v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Families: `command` (`A`, `R`, `latest`, `all`) and `embed` (`v4`, `v3`, `latest`, `all`)
+  Command: `command` (`A`, `R`, `latest`, `all`) 
+  Embed: `embed` (`v4`, `v3`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Family: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
-  Family: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+  Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  Families: `gptOss` (`v1`, `v1.x`, `latest`, `all`) and `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`) 
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
-  Family: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
+  Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";
