@@ -473,7 +473,10 @@ You can pass per-request info from your framework into the gateway via the secon
 import { Elysia } from "elysia";
 import { gateway } from "@hebo-ai/gateway";
 
+const basePath = "/v1/gateway";
+
 const gw = gateway({
+  basePath,
   providers: {
     // ...
   },
@@ -482,7 +485,7 @@ const gw = gateway({
   },
   hooks: {
     resolveProvider: async (ctx) => {
-      // Route based on userId
+      // Select provider based on userId
       const user = ctx.state.auth.userId;
       if (user.startsWith("vip:")) {
         return ctx.providers["openai"];
@@ -499,7 +502,7 @@ const app = new Elysia()
       userId: headers["x-user-id"],
     },
   }))
-  .mount("/v1/gateway", (req, { auth }) => gw.handler(req, { auth }))
+  .all(`${basepath}`, ({ request, auth }) => gw.handler(request, { auth }))
   .listen(3000);
 ```
 
