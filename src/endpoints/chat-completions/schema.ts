@@ -210,23 +210,27 @@ export const ChatCompletionsSchema = z.object({
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
-export const ChatCompletionsToolCallDeltaSchema = z.object({
-  index: z.int().nonnegative(),
-  ...ChatCompletionsToolCallSchema.shape,
-});
+export const ChatCompletionsToolCallDeltaSchema = z
+  .object({
+    index: z.int().nonnegative(),
+    ...ChatCompletionsToolCallSchema.shape,
+  })
+  .partial();
 export type ChatCompletionsToolCallDelta = z.infer<typeof ChatCompletionsToolCallDeltaSchema>;
 
-export const ChatCompletionsAssistantMessageDeltaSchema = z.object({
-  ...ChatCompletionsAssistantMessageSchema.shape,
-  tool_calls: z.array(ChatCompletionsToolCallDeltaSchema.partial()).optional(),
-});
+export const ChatCompletionsAssistantMessageDeltaSchema = z
+  .object({
+    ...ChatCompletionsAssistantMessageSchema.shape,
+    tool_calls: z.array(ChatCompletionsToolCallDeltaSchema).optional(),
+  })
+  .partial();
 export type ChatCompletionsDeltaAssistantMessageDelta = z.infer<
   typeof ChatCompletionsAssistantMessageDeltaSchema
 >;
 
 export const ChatCompletionsChoiceDeltaSchema = z.object({
   index: z.int().nonnegative(),
-  delta: ChatCompletionsAssistantMessageDeltaSchema.partial(),
+  delta: ChatCompletionsAssistantMessageDeltaSchema,
   finish_reason: ChatCompletionsFinishReasonSchema.nullable(),
   // FUTURE: model this out
   logprobs: z.any().optional(),
@@ -234,11 +238,11 @@ export const ChatCompletionsChoiceDeltaSchema = z.object({
 export type ChatCompletionsChoiceDelta = z.infer<typeof ChatCompletionsChoiceDeltaSchema>;
 
 export const ChatCompletionsChunkSchema = z.object({
-  choices: z.array(ChatCompletionsChoiceDeltaSchema),
-  created: z.int().nonnegative(),
   id: z.string(),
-  model: z.string(),
   object: z.literal("chat.completion.chunk"),
+  created: z.int().nonnegative(),
+  model: z.string(),
+  choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
   // Extensions
   provider_metadata: z.any().optional().meta({ extension: true }),

@@ -381,7 +381,7 @@ export class ChatCompletionsStream extends TransformStream<
         } satisfies ChatCompletionsChoiceDelta,
       ],
       ...(usage ? { usage } : { usage: null }),
-      ...(provider_metadata !== undefined ? { provider_metadata } : {}),
+      ...(provider_metadata === undefined ? {} : { provider_metadata }),
     });
 
     super({
