@@ -410,6 +410,10 @@ const gw = gateway({
 });
 ```
 
+Hook contexts are **readonly for core fields**. Use return values to override request / response and return modelId / provider.
+
+To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
+
 ## OpenAI Extensions
 
 ### Reasoning
@@ -459,6 +463,44 @@ const app = new Elysia()
   .listen(3000);
 
 console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
+```
+
+### Passing Framework State to Hooks
+
+You can pass per-request info from your framework into the gateway via the second `state` argument on the handler, then read it in hooks through `ctx.state`.
+
+```ts
+import { Elysia } from "elysia";
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  providers: {
+    // ...
+  },
+  models: {
+    // ...
+  },
+  hooks: {
+    resolveProvider: async (ctx) => {
+      // Route based on userId
+      const user = ctx.state.auth.userId;
+      if (user.startsWith("vip:")) {
+        return ctx.providers["openai"];
+      } else {
+        return ctx.providers["groq"];
+      }
+    },
+  },
+});
+
+const app = new Elysia()
+  .derive(({ headers }) => ({
+    auth: {
+      userId: headers["x-user-id"],
+    },
+  }))
+  .mount("/v1/gateway", (req, { auth }) => gw.handler(req, { auth }))
+  .listen(3000);
 ```
 
 ### Low-level Schemas & Converters
