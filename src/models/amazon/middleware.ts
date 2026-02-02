@@ -8,7 +8,7 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Convert `dimensions` (OpenAI) to `embeddingDimension` (Nova)
-export const novaEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
+export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
@@ -24,6 +24,19 @@ export const novaEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
     return params;
   },
 };
+
+function mapNovaEffort(effort: ChatCompletionsReasoningEffort) {
+  switch (effort) {
+    case "minimal":
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+      return "high";
+  }
+}
 
 export const novaReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
@@ -53,28 +66,9 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel("amazon/nova-*embeddings*", {
-  embedding: novaEmbeddingModelMiddleware,
+  embedding: novaDimensionsMiddleware,
 });
 
 modelMiddlewareMatcher.useForModel("amazon/nova-2-*", {
   language: novaReasoningMiddleware,
 });
-
-function mapNovaEffort(
-  effort: ChatCompletionsReasoningEffort,
-): "low" | "medium" | "high" | undefined {
-  switch (effort) {
-    case "minimal":
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-    case "xhigh":
-      return "high";
-    case "none":
-      return undefined;
-    default:
-      return undefined;
-  }
-}

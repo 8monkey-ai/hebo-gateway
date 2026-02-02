@@ -6,7 +6,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Cohere)
-export const cohereEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
+export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
@@ -57,7 +57,7 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: cohereEmbeddingModelMiddleware });
+modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: cohereDimensionsMiddleware });
 
 modelMiddlewareMatcher.useForModel("cohere/command-a-reasoning", {
   language: cohereReasoningMiddleware,

@@ -9,7 +9,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
-export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
+export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
@@ -26,14 +26,34 @@ export const geminiEmbeddingModelMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-type ThinkingConfig = {
-  includeThoughts: boolean;
-  thinkingBudget?: number;
-};
+export function mapGemini3ProEffort(effort: ChatCompletionsReasoningEffort) {
+  switch (effort) {
+    case "minimal":
+    case "low":
+      return "low";
+    case "medium":
+    case "high":
+    case "xhigh":
+      return "high";
+  }
+}
 
-const GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 65536;
+export function mapGemini3FlashEffort(effort: ChatCompletionsReasoningEffort) {
+  switch (effort) {
+    case "minimal":
+      return "minimal";
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+      return "high";
+  }
+}
 
-function createGeminiReasoningEffortMiddleware(config: {
+export const GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 65536;
+export function createGeminiReasoningEffortMiddleware(config: {
   mapEffort: (effort: ChatCompletionsReasoningEffort) => ChatCompletionsReasoningEffort | undefined;
 }): LanguageModelMiddleware {
   return {
@@ -49,14 +69,14 @@ function createGeminiReasoningEffortMiddleware(config: {
       const target = (params.providerOptions!["gemini"] ??= {});
 
       if (!reasoning.enabled) {
-        target["thinkingConfig"] = { includeThoughts: false } satisfies ThinkingConfig;
+        target["thinkingConfig"] = { includeThoughts: false };
       } else if (reasoning.max_tokens) {
         target["thinkingConfig"] = {
           includeThoughts: true,
           thinkingBudget: reasoning.max_tokens,
-        } satisfies ThinkingConfig;
+        };
       } else if (reasoning.effort) {
-        target["thinkingConfig"] = { includeThoughts: true } satisfies ThinkingConfig;
+        target["thinkingConfig"] = { includeThoughts: true };
         const mapped = config.mapEffort(reasoning.effort);
         if (mapped) target["reasoningEffort"] = mapped;
       }
@@ -68,7 +88,7 @@ function createGeminiReasoningEffortMiddleware(config: {
   };
 }
 
-function createGeminiReasoningBudgetMiddleware(): LanguageModelMiddleware {
+export function createGeminiReasoningBudgetMiddleware(): LanguageModelMiddleware {
   return {
     specificationVersion: "v3",
     // eslint-disable-next-line require-await
@@ -82,12 +102,12 @@ function createGeminiReasoningBudgetMiddleware(): LanguageModelMiddleware {
       const target = (params.providerOptions!["gemini"] ??= {});
 
       if (!reasoning.enabled) {
-        target["thinkingConfig"] = { includeThoughts: false } satisfies ThinkingConfig;
+        target["thinkingConfig"] = { includeThoughts: false };
       } else if (reasoning.max_tokens) {
         target["thinkingConfig"] = {
           includeThoughts: true,
           thinkingBudget: reasoning.max_tokens,
-        } satisfies ThinkingConfig;
+        };
       } else if (reasoning.effort) {
         target["thinkingConfig"] = {
           includeThoughts: true,
@@ -95,7 +115,7 @@ function createGeminiReasoningBudgetMiddleware(): LanguageModelMiddleware {
             reasoning.effort,
             params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
           ),
-        } satisfies ThinkingConfig;
+        };
       }
 
       delete unknown["reasoning"];
@@ -105,34 +125,8 @@ function createGeminiReasoningBudgetMiddleware(): LanguageModelMiddleware {
   };
 }
 
-function mapGemini3ProEffort(effort: ChatCompletionsReasoningEffort) {
-  switch (effort) {
-    case "minimal":
-    case "low":
-      return "low";
-    case "medium":
-    case "high":
-    case "xhigh":
-      return "high";
-  }
-}
-
-function mapGemini3FlashEffort(effort: ChatCompletionsReasoningEffort) {
-  switch (effort) {
-    case "minimal":
-      return "minimal";
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-    case "xhigh":
-      return "high";
-  }
-}
-
 modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
-  embedding: geminiEmbeddingModelMiddleware,
+  embedding: geminiDimensionsMiddleware,
 });
 
 modelMiddlewareMatcher.useForModel("google/gemini-3-pro*", {
