@@ -23,6 +23,66 @@ export const llama31_8b = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const llama31_70b = presetFor<CanonicalModelId, CatalogModel>()(
+  "meta/llama-3.1-70b" as const,
+  {
+    ...LLAMA_3_BASE,
+    name: "Llama 3.1 70B",
+    created: "2024-07-23",
+    knowledge: "2023-12",
+  } satisfies CatalogModel,
+);
+
+export const llama31_405b = presetFor<CanonicalModelId, CatalogModel>()(
+  "meta/llama-3.1-405b" as const,
+  {
+    ...LLAMA_3_BASE,
+    name: "Llama 3.1 405B",
+    created: "2024-07-23",
+    knowledge: "2023-12",
+  } satisfies CatalogModel,
+);
+
+export const llama32_1b = presetFor<CanonicalModelId, CatalogModel>()(
+  "meta/llama-3.2-1b" as const,
+  {
+    ...LLAMA_3_BASE,
+    name: "Llama 3.2 1B",
+    created: "2024-09-25",
+    knowledge: "2023-12",
+  } satisfies CatalogModel,
+);
+
+export const llama32_3b = presetFor<CanonicalModelId, CatalogModel>()(
+  "meta/llama-3.2-3b" as const,
+  {
+    ...LLAMA_3_BASE,
+    name: "Llama 3.2 3B",
+    created: "2024-09-25",
+    knowledge: "2023-12",
+  } satisfies CatalogModel,
+);
+
+export const llama32_11b = presetFor<CanonicalModelId, CatalogModel>()(
+  "meta/llama-3.2-11b" as const,
+  {
+    ...LLAMA_3_BASE,
+    name: "Llama 3.2 11B",
+    created: "2024-09-25",
+    knowledge: "2023-12",
+  } satisfies CatalogModel,
+);
+
+export const llama32_90b = presetFor<CanonicalModelId, CatalogModel>()(
+  "meta/llama-3.2-90b" as const,
+  {
+    ...LLAMA_3_BASE,
+    name: "Llama 3.2 90B",
+    created: "2024-09-25",
+    knowledge: "2023-12",
+  } satisfies CatalogModel,
+);
+
 export const llama33_70b = presetFor<CanonicalModelId, CatalogModel>()(
   "meta/llama-3.3-70b" as const,
   {
@@ -38,9 +98,9 @@ const LLAMA_4_BASE = {
     input: ["text", "image", "file"] as const,
     output: ["text"] as const,
   },
-  capabilities: ["attachments", "reasoning", "tool_call", "temperature"] as const,
+  capabilities: ["attachments", "tool_call", "temperature"] as const,
   context: 1000000,
-  providers: ["groq"] as const,
+  providers: ["groq", "vertex", "bedrock"] as const,
 } satisfies DeepPartial<CatalogModel>;
 
 export const llama4Scout = presetFor<CanonicalModelId, CatalogModel>()(
@@ -64,13 +124,14 @@ export const llama4Maverick = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const llamaAtomic = {
-  "v3.1": [llama31_8b],
+  "v3.1": [llama31_8b, llama31_70b, llama31_405b],
+  "v3.2": [llama32_1b, llama32_3b, llama32_11b, llama32_90b],
   "v3.3": [llama33_70b],
   v4: [llama4Scout, llama4Maverick],
 } as const;
 
 const llamaGroups = {
-  "v3.x": [...llamaAtomic["v3.1"], ...llamaAtomic["v3.3"]],
+  "v3.x": [...llamaAtomic["v3.1"], ...llamaAtomic["v3.2"], ...llamaAtomic["v3.3"]],
   "v4.x": [...llamaAtomic["v4"]],
 } as const;
 
