@@ -210,20 +210,15 @@ export const ChatCompletionsSchema = z.object({
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
-export const ChatCompletionsToolCallDeltaSchema = z
-  .object({
-    index: z.int().nonnegative(),
-    ...ChatCompletionsToolCallSchema.shape,
-  })
-  .partial();
+export const ChatCompletionsToolCallDeltaSchema = ChatCompletionsToolCallSchema.partial().extend({
+  index: z.int().nonnegative(),
+});
 export type ChatCompletionsToolCallDelta = z.infer<typeof ChatCompletionsToolCallDeltaSchema>;
 
-export const ChatCompletionsAssistantMessageDeltaSchema = z
-  .object({
-    ...ChatCompletionsAssistantMessageSchema.shape,
+export const ChatCompletionsAssistantMessageDeltaSchema =
+  ChatCompletionsAssistantMessageSchema.partial().extend({
     tool_calls: z.array(ChatCompletionsToolCallDeltaSchema).optional(),
-  })
-  .partial();
+  });
 export type ChatCompletionsDeltaAssistantMessageDelta = z.infer<
   typeof ChatCompletionsAssistantMessageDeltaSchema
 >;

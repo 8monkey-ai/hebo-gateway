@@ -24,6 +24,7 @@ export const ModelSchema = z.looseObject({
         tag: z.string(),
       }),
     )
+    .optional()
     .meta({ extension: true }),
   capabilities: z.array(z.string()).readonly().optional().meta({ extension: true }),
 });
