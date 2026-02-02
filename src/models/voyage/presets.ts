@@ -14,94 +14,94 @@ const VOYAGE_BASE = {
 export const voyage2Code = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-2-code" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 2 Code",
     created: "2024-01-23",
     context: 16000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage2Finance = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-2-finance" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 2 Finance",
     created: "2024-06-03",
     context: 32000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage2Law = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-2-law" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 2 Law",
     created: "2024-04-15",
     context: 16000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage3Code = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-3-code" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 3 Code",
     created: "2024-12-04",
     context: 32000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage3Large = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-3-large" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 3 Large",
     created: "2025-01-07",
     context: 32000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage35 = presetFor<CanonicalModelId, CatalogModel>()("voyage/voyage-3.5" as const, {
+  ...VOYAGE_BASE,
   name: "Voyage 3.5",
   created: "2025-05-20",
   context: 32000,
-  ...VOYAGE_BASE,
 } satisfies CatalogModel);
 
 export const voyage35Lite = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-3.5-lite" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 3.5 Lite",
     created: "2025-05-20",
     context: 32000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage4Lite = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-4-lite" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 4 Lite",
     created: "2026-01-15",
     context: 32000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 
 export const voyage4 = presetFor<CanonicalModelId, CatalogModel>()("voyage/voyage-4" as const, {
+  ...VOYAGE_BASE,
   name: "Voyage 4",
   created: "2026-01-15",
   context: 32000,
-  ...VOYAGE_BASE,
 } satisfies CatalogModel);
 
 export const voyage4Large = presetFor<CanonicalModelId, CatalogModel>()(
   "voyage/voyage-4-large" as const,
   {
+    ...VOYAGE_BASE,
     name: "Voyage 4 Large",
     created: "2026-01-15",
     context: 32000,
-    ...VOYAGE_BASE,
   } satisfies CatalogModel,
 );
 

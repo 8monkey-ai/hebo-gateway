@@ -34,7 +34,7 @@ Start by creating a gateway instance with at least one provider and a few models
 import { createGroq } from "@ai-sdk/groq";
 import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
-import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/gpt-oss";
+import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/openai";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
@@ -253,28 +253,34 @@ Presets come in two forms:
 
 Out-of-the-box model presets:
 
-- **Claude** — `@hebo-ai/gateway/models/claude`  
-  Family: `claude` (`v4.5`, `v4.x`, `latest`, `all`)
+- **Amazon** — `@hebo-ai/gateway/models/amazon`  
+  Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
-- **Gemini** — `@hebo-ai/gateway/models/gemini`  
-  Family: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `latest`, `preview`, `all`)
-
-- **GPT-OSS** — `@hebo-ai/gateway/models/gpt-oss`  
-  Family: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
-
-- **Llama** — `@hebo-ai/gateway/models/llama`  
-  Family: `llama` (`v3.1`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+- **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
+  Claude: `claude` (`v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Family: `cohere` (`v4`, `v4.x`, `latest`, `all`)
+  Command: `command` (`A`, `R`, `latest`, `all`) 
+  Embed: `embed` (`v4`, `v3`, `latest`, `all`)
+
+- **Google** — `@hebo-ai/gateway/models/google`  
+  Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+
+- **Meta** — `@hebo-ai/gateway/models/meta`  
+  Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+
+- **OpenAI** — `@hebo-ai/gateway/models/openai`  
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`) 
+  Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
-  Family: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
+  Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";
-import { gptOss20b } from "@hebo-ai/gateway/models/gpt-oss";
-import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/claude";
+import { gptOss20b } from "@hebo-ai/gateway/models/openai";
+import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/anthropic";
 
 // Individual preset
 const models = defineModelCatalog(
