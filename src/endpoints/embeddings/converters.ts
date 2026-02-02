@@ -1,11 +1,13 @@
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
+import type { JSONObject, SharedV3ProviderOptions } from "@ai-sdk/provider";
 import type { EmbedManyResult } from "ai";
 
-import type { EmbeddingsInputs, Embeddings, EmbeddingsData, EmbeddingsUsage } from "./schema";
+import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
+
+import { mergeResponseInit } from "../../utils/response";
 
 export type EmbedCallOptions = {
   values: string[];
-  providerOptions: ProviderOptions;
+  providerOptions: SharedV3ProviderOptions;
 };
 
 export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOptions {
@@ -14,7 +16,7 @@ export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOp
   return {
     values: Array.isArray(input) ? input : [input],
     providerOptions: {
-      unhandled: rest,
+      unknown: rest as JSONObject,
     },
   };
 }
@@ -27,8 +29,8 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
   }));
 
   const usage: EmbeddingsUsage = {
-    prompt_tokens: embedManyResult.usage?.tokens || 0,
-    total_tokens: embedManyResult.usage?.tokens || 0,
+    prompt_tokens: embedManyResult.usage.tokens,
+    total_tokens: embedManyResult.usage.tokens,
   };
 
   return {
@@ -36,15 +38,17 @@ export function toEmbeddings(embedManyResult: EmbedManyResult, modelId: string):
     data,
     model: modelId,
     usage,
-    providerMetadata: embedManyResult.providerMetadata,
+    provider_metadata: embedManyResult.providerMetadata,
   };
 }
 
 export function createEmbeddingsResponse(
   embedManyResult: EmbedManyResult,
   modelId: string,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(JSON.stringify(toEmbeddings(embedManyResult, modelId)), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify(toEmbeddings(embedManyResult, modelId)),
+    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
+  );
 }

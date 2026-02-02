@@ -353,10 +353,14 @@ const gw = gateway({
     },
     /**
      * Maps a user-provided model ID or alias to a canonical ID.
+     * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.modelId Incoming model ID.
      * @returns Canonical model ID or undefined to keep original.
      */
-    resolveModelId: async (ctx: { modelId: ModelId }): Promise<ModelId | void> => {
+    resolveModelId?: (ctx: {
+      body: ChatCompletionsBody | EmbeddingsBody;
+      modelId: ModelId;
+    }) => ModelId | void | Promise<ModelId | void> {
       // Example Use Cases:
       // - Resolve modelAlias to modelId
       return undefined;
@@ -365,6 +369,7 @@ const gw = gateway({
      * Picks a provider instance for the request.
      * @param ctx.providers ProviderRegistry from config.
      * @param ctx.models ModelCatalog from config.
+     * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.modelId Resolved model ID.
      * @param ctx.operation Operation type ("text" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
@@ -373,6 +378,7 @@ const gw = gateway({
       providers: ProviderRegistry;
       models: ModelCatalog;
       modelId: ModelId;
+      body: ChatCompletionsBody | EmbeddingsBody;
       operation: "text" | "embeddings";
     }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
@@ -394,6 +400,32 @@ const gw = gateway({
   },
 });
 ```
+
+## OpenAI Extensions
+
+### Reasoning
+
+In addition to the official `reasoning_effort` parameter, the chat completions endpoint accepts a `reasoning` object for more fine-grained control of the budget. It's treated as provider-agnostic input and normalized before hitting the upstream model.
+
+```json
+{
+  "model": "anthropic/claude-4-sonnet",
+  "messages": [{ "role": "user", "content": "Explain the tradeoffs." }],
+  "reasoning": { "effort": "medium" }
+}
+```
+
+Normalization rules:
+
+- `enabled` -> fall-back to model default if none provided
+- `max_tokens`: fall-back to model default if model supports
+- `effort` -> budget = percentage of `max_tokens`
+  - `none`: 0%
+  - `minimal`: 10%
+  - `low`: 20%
+  - `medium`: 50% (default)
+  - `high`: 80%
+  - `xhigh`: 95%
 
 ## Advanced Usage
 
@@ -418,14 +450,15 @@ console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 We also provide full schemas, helper functions and types to convert between **OpenAI <> Vercel AI SDK** for advanced use cases like creating your own endpoint. They are available via deep-imports and completely tree-shakeable.
 
 ```ts
-import { streamText } from "ai";
+import { streamText, wrapLanguageModel } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import * as z from "zod";
 import {
   ChatCompletionsBodySchema,
   convertToTextCallOptions,
-  createChatCompletionsStreamResponse,
+  toChatCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
+import { forwardParamsMiddleware } from "@hebo-ai/gateway/middleware/common";
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -443,14 +476,17 @@ export async function handler(req: Request): Promise<Response> {
   const textOptions = convertToTextCallOptions(inputs);
 
   const result = await streamText({
-    model: groq(model),
+    model: wrapLanguageModel({
+      model: groq(model),
+      middleware: forwardParamsMiddleware("groq"),
+    }),
     ...textOptions
   });
 
-  return createChatCompletionsStreamResponse(result, model);
+  return toChatCompletionsStreamResponse(result, model);
 }
 ```
 
 Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
 
-Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `.toJSONSchema()` function. This can be useful, for example, to create OpenAPI documentation.
+Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `z.toJSONSchema(...)` function. This can be useful, for example, to create OpenAPI documentation.

@@ -65,6 +65,11 @@
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
     },
+    "./middleware/common": {
+      "types": "./dist/middleware/common.d.ts",
+      "import": "./dist/middleware/common.js",
+      "dev-source": "./src/middleware/common.ts"
+    },
     "./models/claude": {
       "types": "./dist/models/claude/index.d.ts",
       "import": "./dist/models/claude/index.js",
@@ -176,7 +181,6 @@
     "@ai-sdk/google-vertex": "^4.0.37",
     "@ai-sdk/groq": "^3.0.19",
     "@ai-sdk/openai": "^3.0.23",
-    "@ai-sdk/provider": "^3.0.6",
     "ai": "^6.0.62",
     "typescript": "^5.9.3",
     "voyage-ai-provider": "^3.0.0"

@@ -1,4 +1,4 @@
-import type { ProviderOptions } from "@ai-sdk/provider-utils";
+import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -10,12 +10,15 @@ import type {
   UserContent,
   LanguageModelUsage,
   Output,
+  TextStreamPart,
+  AssistantModelMessage,
+  ToolModelMessage,
+  UserModelMessage,
 } from "ai";
 
-import { jsonSchema, tool } from "ai";
+import { jsonSchema, JsonToSseTransformStream, tool } from "ai";
 
 import type {
-  ChatCompletionsInputs,
   ChatCompletionsToolCall,
   ChatCompletionsTool,
   ChatCompletionsToolChoice,
@@ -25,13 +28,21 @@ import type {
   ChatCompletionsUserMessage,
   ChatCompletionsAssistantMessage,
   ChatCompletionsToolMessage,
-  ChatCompletions,
   ChatCompletionsFinishReason,
   ChatCompletionsUsage,
   ChatCompletionsChoice,
+  ChatCompletionsInputs,
+  ChatCompletions,
+  ChatCompletionsAssistantMessageDelta,
+  ChatCompletionsChoiceDelta,
+  ChatCompletionsChunk,
+  ChatCompletionsToolCallDelta,
+  ChatCompletionsReasoningEffort,
+  ChatCompletionsReasoningConfig,
 } from "./schema";
 
 import { OpenAIError } from "../../utils/errors";
+import { mergeResponseInit } from "../../utils/response";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -39,7 +50,12 @@ export type TextCallOptions = {
   toolChoice?: ToolChoice<ToolSet>;
   temperature?: number;
   maxOutputTokens?: number;
-  providerOptions: ProviderOptions;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  seed?: number;
+  stopSequences?: string[];
+  topP?: number;
+  providerOptions: SharedV3ProviderOptions;
 };
 
 // --- Request Flow ---
@@ -49,30 +65,40 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     messages,
     tools,
     tool_choice,
-    temperature = 1,
+    temperature,
     max_tokens,
     max_completion_tokens,
     reasoning_effort,
+    reasoning,
+    frequency_penalty,
+    presence_penalty,
+    seed,
+    stop,
+    top_p,
     ...rest
   } = params;
 
-  if (reasoning_effort) {
-    rest.reasoning = { effort: reasoning_effort };
-  }
-
   return {
-    messages: fromChatCompletionsMessages(messages),
-    tools: fromChatCompletionsTools(tools),
-    toolChoice: fromChatCompletionsToolChoice(tool_choice),
+    messages: convertToModelMessages(messages),
+    tools: convertToToolSet(tools),
+    toolChoice: convertToToolChoice(tool_choice),
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
+    frequencyPenalty: frequency_penalty,
+    presencePenalty: presence_penalty,
+    seed,
+    stopSequences: stop ? (Array.isArray(stop) ? stop : [stop]) : undefined,
+    topP: top_p,
     providerOptions: {
-      unhandled: rest,
+      unknown: {
+        ...rest,
+        ...parseReasoningOptions(reasoning_effort, reasoning),
+      },
     },
   };
 }
 
-export function fromChatCompletionsMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
+export function convertToModelMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -105,7 +131,9 @@ function indexToolMessages(messages: ChatCompletionsMessage[]) {
   return map;
 }
 
-export function fromChatCompletionsUserMessage(message: ChatCompletionsUserMessage): ModelMessage {
+export function fromChatCompletionsUserMessage(
+  message: ChatCompletionsUserMessage,
+): UserModelMessage {
   return {
     role: "user",
     content: Array.isArray(message.content)
@@ -116,7 +144,7 @@ export function fromChatCompletionsUserMessage(message: ChatCompletionsUserMessa
 
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
-): ModelMessage {
+): AssistantModelMessage {
   const { tool_calls, role, content } = message;
 
   if (!tool_calls || tool_calls.length === 0) {
@@ -143,7 +171,7 @@ export function fromChatCompletionsAssistantMessage(
 export function fromChatCompletionsToolResultMessage(
   message: ChatCompletionsAssistantMessage,
   toolById: Map<string, ChatCompletionsToolMessage>,
-): ModelMessage | undefined {
+): ToolModelMessage | undefined {
   const toolCalls = message.tool_calls ?? [];
   if (toolCalls.length === 0) return undefined;
 
@@ -205,7 +233,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
       };
     }
     if (part.type === "file") {
-      const { data, media_type } = part.file;
+      let { data, media_type, filename } = part.file;
       return media_type.startsWith("image/")
         ? {
             type: "image" as const,
@@ -215,6 +243,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         : {
             type: "file" as const,
             data: Buffer.from(data, "base64"),
+            filename,
             mediaType: media_type,
           };
     }
@@ -222,9 +251,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
   });
 }
 
-export const fromChatCompletionsTools = (
-  tools: ChatCompletionsTool[] | undefined,
-): ToolSet | undefined => {
+export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
   if (!tools) {
     return;
   }
@@ -239,7 +266,7 @@ export const fromChatCompletionsTools = (
   return toolSet;
 };
 
-export const fromChatCompletionsToolChoice = (
+export const convertToToolChoice = (
   toolChoice: ChatCompletionsToolChoice | undefined,
 ): ToolChoice<ToolSet> | undefined => {
   if (!toolChoice) {
@@ -264,6 +291,19 @@ function parseToolOutput(content: string) {
   }
 }
 
+function parseReasoningOptions(
+  reasoning_effort: ChatCompletionsReasoningEffort | undefined,
+  reasoning: ChatCompletionsReasoningConfig | undefined,
+) {
+  const reasoningOptions: Record<string, any> = {};
+  if (reasoning) reasoningOptions["reasoning"] = reasoning;
+  if (reasoning_effort !== undefined) {
+    (reasoningOptions["reasoning"] ??= {})["effort"] = reasoning_effort;
+    reasoningOptions["reasoningEffort"] = reasoning_effort;
+  }
+  return reasoningOptions;
+}
+
 // --- Response Flow ---
 
 export function toChatCompletions(
@@ -280,21 +320,23 @@ export function toChatCompletions(
     choices: [
       {
         index: 0,
-        message: toChatCompletionsMessage(result),
+        message: toChatCompletionsAssistantMessage(result),
         finish_reason,
       } satisfies ChatCompletionsChoice,
     ],
-    usage: result.usage && toChatCompletionsUsage(result.usage),
-    providerMetadata: result.providerMetadata,
+    usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
+    provider_metadata: result.providerMetadata,
   };
 }
-export function createChatCompletionsResponse(
+export function toChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(JSON.stringify(toChatCompletions(result, model)), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify(toChatCompletions(result, model)),
+    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
+  );
 }
 
 export function toChatCompletionsStream(
@@ -303,44 +345,65 @@ export function toChatCompletionsStream(
 ): ReadableStream<Uint8Array> {
   return result.fullStream
     .pipeThrough(new ChatCompletionsStream(model))
-    .pipeThrough(new SSETransformStream())
+    .pipeThrough(new JsonToSseTransformStream())
     .pipeThrough(new TextEncoderStream());
 }
 
-export function createChatCompletionsStreamResponse(
+export function toChatCompletionsStreamResponse(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
+  responseInit?: ResponseInit,
 ): Response {
-  return new Response(toChatCompletionsStream(result, model), {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+  return new Response(
+    toChatCompletionsStream(result, model),
+    mergeResponseInit(
+      {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+      responseInit,
+    ),
+  );
 }
 
-export class ChatCompletionsStream extends TransformStream {
+export class ChatCompletionsStream extends TransformStream<
+  TextStreamPart<ToolSet>,
+  ChatCompletionsChunk | OpenAIError
+> {
   constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
+    let lastProviderMetadata: SharedV3ProviderMetadata;
 
     const createChunk = (
-      delta: unknown,
+      delta: ChatCompletionsAssistantMessageDelta,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-    ) => ({
+      provider_metadata?: SharedV3ProviderMetadata,
+    ): ChatCompletionsChunk => ({
       id: streamId,
       object: "chat.completion.chunk",
       created: creationTime,
       model,
-      choices: [{ index: 0, delta, finish_reason }],
-      ...(usage ? { usage } : {}),
+      choices: [
+        {
+          index: 0,
+          delta,
+          finish_reason: finish_reason ?? null,
+        } satisfies ChatCompletionsChoiceDelta,
+      ],
+      ...(usage ? { usage } : { usage: null }),
+      ...(provider_metadata === undefined ? {} : { provider_metadata }),
     });
 
     super({
       transform(part, controller) {
+        if ("providerMetadata" in part && part.providerMetadata !== undefined) {
+          lastProviderMetadata = part.providerMetadata;
+        }
+
         switch (part.type) {
           case "text-delta": {
             controller.enqueue(createChunk({ role: "assistant", content: part.text }));
@@ -359,7 +422,7 @@ export class ChatCompletionsStream extends TransformStream {
                   {
                     ...toChatCompletionsToolCall(part.toolCallId, part.toolName, part.input),
                     index: toolCallIndexCounter++,
-                  },
+                  } satisfies ChatCompletionsToolCallDelta,
                 ],
               }),
             );
@@ -372,6 +435,7 @@ export class ChatCompletionsStream extends TransformStream {
                 {},
                 toChatCompletionsFinishReason(part.finishReason),
                 toChatCompletionsUsage(part.totalUsage),
+                lastProviderMetadata,
               ),
             );
             break;
@@ -396,20 +460,7 @@ export class ChatCompletionsStream extends TransformStream {
   }
 }
 
-export class SSETransformStream extends TransformStream {
-  constructor() {
-    super({
-      transform(chunk, controller) {
-        controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
-      },
-      flush(controller) {
-        controller.enqueue("data: [DONE]\n\n");
-      },
-    });
-  }
-}
-
-export const toChatCompletionsMessage = (
+export const toChatCompletionsAssistantMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
 ): ChatCompletionsAssistantMessage => {
   const message: ChatCompletionsAssistantMessage = {
@@ -437,20 +488,29 @@ export const toChatCompletionsMessage = (
   return message;
 };
 
-export function toChatCompletionsUsage(
-  usage: LanguageModelUsage | undefined,
-): ChatCompletionsUsage | undefined {
-  if (!usage) return undefined;
+export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
   return {
-    prompt_tokens: usage.inputTokens ?? 0,
-    completion_tokens: usage.outputTokens ?? 0,
-    total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
-    completion_tokens_details: {
-      reasoning_tokens: usage.outputTokenDetails.reasoningTokens ?? 0,
-    },
-    prompt_tokens_details: {
-      cached_tokens: usage.inputTokenDetails.cacheReadTokens ?? 0,
-    },
+    ...(usage.inputTokens !== undefined && {
+      prompt_tokens: usage.inputTokens,
+    }),
+    ...(usage.outputTokens !== undefined && {
+      completion_tokens: usage.outputTokens,
+    }),
+    ...((usage.totalTokens !== undefined ||
+      usage.inputTokens !== undefined ||
+      usage.outputTokens !== undefined) && {
+      total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
+    }),
+    ...(usage.outputTokenDetails?.reasoningTokens !== undefined && {
+      completion_tokens_details: {
+        reasoning_tokens: usage.outputTokenDetails.reasoningTokens,
+      },
+    }),
+    ...(usage.inputTokenDetails?.cacheReadTokens !== undefined && {
+      prompt_tokens_details: {
+        cached_tokens: usage.inputTokenDetails.cacheReadTokens,
+      },
+    }),
   };
 }
 
