@@ -270,8 +270,8 @@ Out-of-the-box model presets:
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";
-import { gptOss20b } from "@hebo-ai/gateway/models/gpt-oss";
-import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/claude";
+import { gptOss20b } from "@hebo-ai/gateway/models/openai";
+import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/anthropic";
 
 // Individual preset
 const models = defineModelCatalog(
