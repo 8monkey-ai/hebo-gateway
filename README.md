@@ -21,7 +21,7 @@ Hebo Gateway is an open-source, embeddable AI gateway framework built to live in
 ## Installation
 
 ```bash
-bun add @hebo-ai/gateway ai @ai-sdk/groq
+bun add @hebo-ai/gateway
 ```
 
 ## Quickstart
@@ -60,6 +60,8 @@ export const gw = gateway({
   ),
 });
 ```
+
+Note: don't forget to install the Groq provider package too: `@ai-sdk/groq`.
 
 ### Mount Route Handlers
 
