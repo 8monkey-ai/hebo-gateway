@@ -75,15 +75,9 @@ class ModelMiddlewareMatcher {
 
   for(modelId: ModelId, providerId: ProviderId): LanguageModelMiddleware[] {
     const out: LanguageModelMiddleware[] = [];
-    for (const s of this.model.match(modelId)) {
-      console.log(modelId);
-      out.push(...s.language);
-    }
+    for (const s of this.model.match(modelId)) out.push(...s.language);
     out.push(forwardParamsMiddleware(extractProviderNamespace(providerId)));
-    for (const s of this.provider.match(providerId)) {
-      console.log(modelId);
-      out.push(...s.language);
-    }
+    for (const s of this.provider.match(providerId)) out.push(...s.language);
     return out;
   }
 

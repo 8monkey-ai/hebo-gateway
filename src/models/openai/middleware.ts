@@ -5,7 +5,7 @@ import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-comple
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
-export const openaAIDimensionsMiddleware: EmbeddingModelMiddleware = {
+export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
@@ -49,7 +49,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
-  embedding: openaAIDimensionsMiddleware,
+  embedding: openAIDimensionsMiddleware,
 });
 
 modelMiddlewareMatcher.useForModel("openai/gpt-*", {
