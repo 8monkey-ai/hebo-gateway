@@ -64,6 +64,9 @@ export const gw = gateway({
 > [!NOTE]
 > Don't forget to install the Groq provider package too: `@ai-sdk/groq`.
 
+> [!TIP]
+> Why `withCanonicalIdsForX`? In most cases you want your gateway to route using model IDs that are consistent across providers (e.g. `openai/gpt-oss-20b` rather than `openai.gpt-oss-20b-v1:0`). We call that `Canonical IDs` - they are what enable routing, fallbacks, and policy rules. Without this wrapper, providers only understands their native IDs, which would make cross-provider routing impossible.
+
 ### Mount Route Handlers
 
 Hebo Gateway plugs into your favorite web framework. Simply mount the gateway’s `handler` under a prefix, and keep using your existing lifecycle hooks for authentication, logging, observability, and more.
@@ -109,6 +112,229 @@ const { text } = await generateText({
 
 console.log(text);
 ```
+
+
+## Configuration Reference
+
+### Providers
+
+Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For Hebo to be able to route a model across different providers, the names need to be canonicalized to a common form, for example 'openai/gpt-4.1-mini' instead of 'gpt-4.1-mini'.
+
+We currently provide out-of-the-box canonical providers for: `Bedrock`, `Anthropic`, `Cohere`, `Vertex`, `Groq`, `OpenAI`, and `Voyage`. Import the helper from the matching package path:
+
+```ts
+// pattern: @hebo-ai/gateway/providers/<provider>
+import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
+```
+
+If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
+
+```ts
+import { createAzure } from "@ai-sdk/openai";
+import {
+  gateway,
+  withCanonicalIds,
+} from "@hebo-ai/gateway";
+
+const azure = withCanonicalIds(
+  createAzure({
+    resourceName: process.env["AZURE_RESOURCE_NAME"],
+    apiKey: process.env["AZURE_API_KEY"]
+  }), {
+  mapping: {
+    "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
+    "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
+  }},
+);
+
+const gw = gateway({
+  providers: {
+    azure,
+  },
+  models: {
+    // ...your models pointing at canonical IDs above
+  },
+});
+```
+
+### Models
+
+Register models to tell the gateway what's  available, under which canonical ID and what capabilities each one has.
+
+#### Model Presets
+
+To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
+
+Presets come in two forms:
+
+- Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
+- Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, `vX` (e.g. `claude["v4.5"]`).
+
+
+```ts
+import { defineModelCatalog } from "@hebo-ai/gateway";
+import { gptOss20b } from "@hebo-ai/gateway/models/openai";
+import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/anthropic";
+
+// Individual preset
+const models = defineModelCatalog(
+  gptOss20b({ providers: ["groq"] }),
+  claudeSonnet45({ providers: ["bedrock"] }),
+);
+
+// Family preset (pick a group and apply the same override to each)
+const modelsFromFamily = defineModelCatalog(
+  claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
+);
+```
+
+Out-of-the-box model presets:
+
+- **Amazon** — `@hebo-ai/gateway/models/amazon`  
+  Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
+
+- **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
+  Claude: `claude` (`v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+
+- **Cohere** — `@hebo-ai/gateway/models/cohere`  
+  Command: `command` (`A`, `R`, `latest`, `all`)
+  Embed: `embed` (`v4`, `v3`, `latest`, `all`)
+
+- **Google** — `@hebo-ai/gateway/models/google`  
+  Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+
+- **Meta** — `@hebo-ai/gateway/models/meta`  
+  Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+
+- **OpenAI** — `@hebo-ai/gateway/models/openai`  
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
+  Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
+
+- **Voyage** — `@hebo-ai/gateway/models/voyage`  
+  Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
+
+#### User-defined Models
+
+As the ecosystem is moving faster than anyone can keep-up with, you can always register your own model entries by following the `CatalogModel` type.
+
+```ts
+const gw = gateway({
+  providers: {
+    // ...
+  },
+  models: {
+    "openai/gpt-5.2": {
+      name: "GPT 5.2",
+      created: "2025-12-11",
+      knowledge: "2025-08",
+      modalities: {
+        input: ["text", "image", "pdf", "file"],
+        output: ["text"],
+      },
+      context: 400000,
+      capabilities: [
+        "attachments",
+        "reasoning",
+        "tool_call",
+        "structured_output",
+        "temperature",
+      ],
+      providers: ["openai"],
+      // Additional properties are merged into the model object
+      additionalProperties: {
+        customProperty: "customValue",
+      }
+    },
+    // ...
+  },
+});
+```
+
+> [!NOTE]
+> The only mandatory property is the `providers` array, everything else is optional metadata.
+
+### Hooks
+
+Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality, like your actual routing logic. All hooks are available as async and non-async.
+
+```ts
+const gw = gateway({
+  providers: {
+    // ...
+  },
+  models: {
+    // ...
+  },
+  hooks: {
+    /**
+     * Runs before any endpoint handler logic.
+     * @param ctx.request Incoming request.
+     * @returns Optional RequestPatch to merge into headers / override body.
+     * Returning a Response stops execution of the endpoint.
+     */
+    before: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
+      // Example Use Cases:
+      // - Transform request body
+      // - Verify authentication
+      // - Enforce rate limits
+      // - Observability integration
+      return undefined;
+    },
+    /**
+     * Maps a user-provided model ID or alias to a canonical ID.
+     * @param ctx.body The parsed body object with all call parameters.
+     * @param ctx.modelId Incoming model ID.
+     * @returns Canonical model ID or undefined to keep original.
+     */
+    resolveModelId?: (ctx: {
+      body: ChatCompletionsBody | EmbeddingsBody;
+      modelId: ModelId;
+    }) => ModelId | void | Promise<ModelId | void> {
+      // Example Use Cases:
+      // - Resolve modelAlias to modelId
+      return undefined;
+    },
+    /**
+     * Picks a provider instance for the request.
+     * @param ctx.providers ProviderRegistry from config.
+     * @param ctx.models ModelCatalog from config.
+     * @param ctx.body The parsed body object with all call parameters.
+     * @param ctx.modelId Resolved model ID.
+     * @param ctx.operation Operation type ("text" | "embeddings").
+     * @returns ProviderV3 to override, or undefined to use default.
+     */
+    resolveProvider: async (ctx: {
+      providers: ProviderRegistry;
+      models: ModelCatalog;
+      body: ChatCompletionsBody | EmbeddingsBody;
+      modelId: ModelId;
+      operation: "text" | "embeddings";
+    }): Promise<ProviderV3 | void> => {
+      // Example Use Cases:
+      // - Routing logic between providers
+      // - Bring-your-own-key authentication
+      return undefined;
+    },
+    /**
+     * Runs after the endpoint handler.
+     * @param ctx.response Response returned by the handler.
+     * @returns Response to replace, or undefined to keep original.
+     */
+    after: async (ctx: { response: Response }): Promise<Response | void> => {
+      // Example Use Cases:
+      // - Transform response
+      // - Response logging
+      return undefined;
+    },
+  },
+});
+```
+
+The `ctx` object is **readonly for core fields**. Use return values to override request / response and provide modelId / provider instances.
+
+> [!TIP]
+> To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
 
 ## Framework Support
 
@@ -191,229 +417,6 @@ export const Route = createFileRoute("/api/$")({
   },
 });
 ```
-
-## Configuration Reference
-
-### Providers
-
-Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For Hebo to be able to route a model across different providers, the names need to be canonicalized to a common form, for example 'openai/gpt-4.1-mini' instead of 'gpt-4.1-mini'.
-
-Out-of-the-box canonical providers:
-
-- Amazon Bedrock (`withCanonicalIdsForBedrock`): `@hebo-ai/gateway/providers/bedrock`
-- Anthropic (`withCanonicalIdsForAnthropic`): `@hebo-ai/gateway/providers/anthropic`
-- Cohere (`withCanonicalIdsForCohere`): `@hebo-ai/gateway/providers/cohere`
-- Google Vertex AI (`withCanonicalIdsForVertex`): `@hebo-ai/gateway/providers/vertex`
-- Groq (`withCanonicalIdsForGroq`): `@hebo-ai/gateway/providers/groq`
-- OpenAI (`withCanonicalIdsForOpenAI`): `@hebo-ai/gateway/providers/openai`
-- Voyage (`withCanonicalIdsForVoyage`): `@hebo-ai/gateway/providers/voyage`
-
-If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
-
-```ts
-import { createAzure } from "@ai-sdk/openai";
-import {
-  gateway,
-  withCanonicalIds,
-} from "@hebo-ai/gateway";
-
-const azure = withCanonicalIds(
-  createAzure({
-    resourceName: process.env["AZURE_RESOURCE_NAME"],
-    apiKey: process.env["AZURE_API_KEY"]
-  }), {
-  mapping: {
-    "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
-    "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
-  }},
-);
-
-const gw = gateway({
-  providers: {
-    azure,
-  },
-  models: {
-    // ...your models pointing at canonical IDs above
-  },
-});
-```
-
-### Models
-
-Registering models tells Hebo Gateway which models are available, under which canonical ID and what capabilities they have.
-
-#### Model Presets
-
-To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
-
-Presets come in two forms:
-
-- Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
-- Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, and versioned arrays (for example `claude["v4.5"]`).
-
-Out-of-the-box model presets:
-
-- **Amazon** — `@hebo-ai/gateway/models/amazon`  
-  Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
-
-- **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
-
-- **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Command: `command` (`A`, `R`, `latest`, `all`)
-  Embed: `embed` (`v4`, `v3`, `latest`, `all`)
-
-- **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
-
-- **Meta** — `@hebo-ai/gateway/models/meta`  
-  Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
-
-- **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
-  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
-  Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
-
-- **Voyage** — `@hebo-ai/gateway/models/voyage`  
-  Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
-
-```ts
-import { defineModelCatalog } from "@hebo-ai/gateway";
-import { gptOss20b } from "@hebo-ai/gateway/models/openai";
-import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/anthropic";
-
-// Individual preset
-const models = defineModelCatalog(
-  gptOss20b({ providers: ["groq"] }),
-  claudeSonnet45({ providers: ["bedrock"] }),
-);
-
-// Family preset (pick a group and apply the same override to each)
-const modelsFromFamily = defineModelCatalog(
-  claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
-);
-```
-
-#### User-defined Models
-
-As the ecosystem is moving faster than anyone can keep-up with, you can always register your own model entries by following the `CatalogModel` type.
-
-```ts
-const gw = gateway({
-  providers: {
-    // ...
-  },
-  models: {
-    "openai/gpt-5.2": {
-      name: "GPT 5.2",
-      created: "2025-12-11",
-      knowledge: "2025-08",
-      modalities: {
-        input: ["text", "image", "pdf", "file"],
-        output: ["text"],
-      },
-      context: 400000,
-      capabilities: [
-        "attachments",
-        "reasoning",
-        "tool_call",
-        "structured_output",
-        "temperature",
-      ],
-      providers: ["openai"],
-      // Additional properties are merged into the model object
-      additionalProperties: {
-        customProperty: "customValue",
-      }
-    },
-    // ...
-  },
-});
-```
-
-> [!NOTE]
-> The only mandatory property is the `providers` array, everything else is optional metadata.
-
-### Hooks
-
-Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality. All hooks are available as async and non-async.
-
-```ts
-const gw = gateway({
-  providers: {
-    // ...
-  },
-  models: {
-    // ...
-  },
-  hooks: {
-    /**
-     * Runs before any endpoint handler logic.
-     * @param ctx.request Incoming request.
-     * @returns Optional RequestPatch to merge into headers / override body.
-     * Returning a Response stops execution of the endpoint.
-     */
-    before: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
-      // Example Use Cases:
-      // - Transform request body
-      // - Verify authentication
-      // - Enforce rate limits
-      // - Observability integration
-      return undefined;
-    },
-    /**
-     * Maps a user-provided model ID or alias to a canonical ID.
-     * @param ctx.body The parsed body object with all call parameters.
-     * @param ctx.modelId Incoming model ID.
-     * @returns Canonical model ID or undefined to keep original.
-     */
-    resolveModelId?: (ctx: {
-      body: ChatCompletionsBody | EmbeddingsBody;
-      modelId: ModelId;
-    }) => ModelId | void | Promise<ModelId | void> {
-      // Example Use Cases:
-      // - Resolve modelAlias to modelId
-      return undefined;
-    },
-    /**
-     * Picks a provider instance for the request.
-     * @param ctx.providers ProviderRegistry from config.
-     * @param ctx.models ModelCatalog from config.
-     * @param ctx.body The parsed body object with all call parameters.
-     * @param ctx.modelId Resolved model ID.
-     * @param ctx.operation Operation type ("text" | "embeddings").
-     * @returns ProviderV3 to override, or undefined to use default.
-     */
-    resolveProvider: async (ctx: {
-      providers: ProviderRegistry;
-      models: ModelCatalog;
-      modelId: ModelId;
-      body: ChatCompletionsBody | EmbeddingsBody;
-      operation: "text" | "embeddings";
-    }): Promise<ProviderV3 | void> => {
-      // Example Use Cases:
-      // - Routing logic between providers
-      // - Bring-your-own-key authentication
-      return undefined;
-    },
-    /**
-     * Runs after the endpoint handler.
-     * @param ctx.response Response returned by the handler.
-     * @returns Response to replace, or undefined to keep original.
-     */
-    after: async (ctx: { response: Response }): Promise<Response | void> => {
-      // Example Use Cases:
-      // - Transform response
-      // - Response logging
-      return undefined;
-    },
-  },
-});
-```
-
-Hook contexts are **readonly for core fields**. Use return values to override request / response and return modelId / provider.
-
-To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
 
 ## OpenAI Extensions
 
@@ -554,4 +557,5 @@ export async function handler(req: Request): Promise<Response> {
 
 Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
 
-Since Zod v4.3 you can also generate a JSON Schema from any zod object by calling the `z.toJSONSchema(...)` function. This can be useful, for example, to create OpenAPI documentation.
+> [!TIP]
+> Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
