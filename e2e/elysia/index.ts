@@ -35,7 +35,7 @@ const app = new Elysia()
       userId: "dummy",
     },
   }))
-  .all(`${basePath}/*`, ({ request, auth }) => gw.handler(request, { auth }))
+  .all(`${basePath}/*`, (ctx) => gw.handler(ctx.request, { auth: ctx.auth }), { parse: "none" })
   .listen(3000);
 
 console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
