@@ -17,7 +17,7 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
     id,
     object: "model" as const,
     created: createdTimestamp,
-    owned_by: providers?.[0] || "system",
+    owned_by: id.split("/")[0] || "system",
     architecture: {
       input_modalities: modalities?.input || [],
       modality:
