@@ -127,12 +127,10 @@ export type GatewayConfig = {
   advanced?: {
     /**
      * Disable built-in default settings middleware.
-     * - true: disable all defaults
      */
     disableDefaultSettings?: boolean;
     /**
-     * Disable forwarding unknown providerOptions into provider-specific namespaces.
-     * - true: disable for all
+     * Disable forwarding unknown parameters to providers.
      */
     disableForwardParams?: boolean;
   };
