@@ -303,7 +303,7 @@ function parseReasoningOptions(
   return {
     reasoning: {
       ...reasoning,
-      ...(effort && { effort, enabled: effort != "none" }),
+      ...(effort && { effort, enabled: effort !== "none" }),
     },
     ...(effort && { reasoning_effort: effort }),
   };
