@@ -40,7 +40,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
     ctx.body = parsed.data;
 
-    let stream, inputs;
+    let inputs, stream;
     ({ model: ctx.modelId, stream, ...inputs } = parsed.data);
 
     try {

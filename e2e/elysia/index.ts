@@ -1,13 +1,18 @@
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createCohere } from "@ai-sdk/cohere";
 import { createGroq } from "@ai-sdk/groq";
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { Elysia } from "elysia";
 import { createVoyage } from "voyage-ai-provider";
 
 import { defineModelCatalog, gateway, type HookContext } from "#/";
+import { nova } from "#/models/amazon";
+import { claude } from "#/models/anthropic";
 import { embed } from "#/models/cohere";
 import { llama } from "#/models/meta";
 import { gptOss } from "#/models/openai";
 import { voyage } from "#/models/voyage";
+import { withCanonicalIdsForBedrock } from "#/providers/bedrock";
 import { withCanonicalIdsForCohere } from "#/providers/cohere";
 import { withCanonicalIdsForGroq } from "#/providers/groq";
 import { withCanonicalIdsForVoyage } from "#/providers/voyage";
@@ -20,8 +25,21 @@ const gw = gateway({
     groq: withCanonicalIdsForGroq(createGroq()),
     voyage: withCanonicalIdsForVoyage(createVoyage()),
     cohere: withCanonicalIdsForCohere(createCohere()),
+    bedrock: withCanonicalIdsForBedrock(
+      createAmazonBedrock({
+        region: "us-east-1",
+        credentialProvider: fromNodeProviderChain(),
+      }),
+    ),
   },
-  models: defineModelCatalog(gptOss["all"], voyage["all"], llama["all"], embed["all"]),
+  models: defineModelCatalog(
+    gptOss["all"],
+    voyage["all"],
+    llama["all"],
+    embed["all"],
+    claude["all"],
+    nova["all"],
+  ),
   hooks: {
     resolveProvider: async (ctx: HookContext) => {
       console.log(ctx.state.auth.userId);
