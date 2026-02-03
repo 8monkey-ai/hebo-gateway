@@ -36,7 +36,7 @@ const MAPPING = {
   "cohere/embed-english-v3.0": "cohere.embed-english-v3",
   "cohere/embed-multilingual-v3.0": "cohere.embed-multilingual-v3",
   "cohere/command-r": "cohere.command-r-v1:0",
-  "cohere/command-r-plus": "cohere.command-r-plus-v1:0 ",
+  "cohere/command-r-plus": "cohere.command-r-plus-v1:0",
   "meta/llama-3.3-70b": "meta.llama3-3-70b-instruct-v1:0",
   "meta/llama-3.1-8b": "meta.llama3-1-8b-instruct-v1:0",
   "openai/gpt-oss-20b": "openai.gpt-oss-20b-1:0",
