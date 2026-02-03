@@ -4,10 +4,7 @@ import * as z from "zod/mini";
 import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
 import { withLifecycle } from "../../lifecycle";
-import {
-  defaultSettingsEmbeddingsMiddleware,
-  forwardParamsEmbeddingMiddleware,
-} from "../../middleware/common";
+import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
@@ -74,12 +71,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     const middleware = [];
-    if (config.advanced?.disableDefaultSettings !== true)
-      middleware.push(defaultSettingsEmbeddingsMiddleware);
     for (const m of modelMiddlewareMatcher.forEmbeddingModel(ctx.resolvedModelId))
       middleware.push(m);
-    if (config.advanced?.disableForwardParams !== true)
-      middleware.push(forwardParamsEmbeddingMiddleware(embeddingModel.provider));
+    middleware.push(forwardParamsEmbeddingMiddleware(embeddingModel.provider));
     for (const m of modelMiddlewareMatcher.forEmbeddingProvider(embeddingModel.provider))
       middleware.push(m);
 

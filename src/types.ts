@@ -121,19 +121,6 @@ export type GatewayConfig = {
    * Optional lifecycle hooks for routing, auth, and response shaping.
    */
   hooks?: GatewayHooks;
-  /**
-   * Advanced settings.
-   */
-  advanced?: {
-    /**
-     * Disable built-in default settings middleware.
-     */
-    disableDefaultSettings?: boolean;
-    /**
-     * Disable forwarding unknown parameters to providers.
-     */
-    disableForwardParams?: boolean;
-  };
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");

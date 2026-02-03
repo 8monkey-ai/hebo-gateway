@@ -1,7 +1,6 @@
 import type { JSONObject } from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../endpoints/chat-completions/schema";
 import type { ProviderId } from "../providers/types";
 
 function snakeToCamel(key: string): string {
@@ -73,33 +72,3 @@ export function forwardParamsMiddleware(provider: string): LanguageModelMiddlewa
 export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
   return forwardParamsForMiddleware("embedding", extractProviderNamespace(provider));
 }
-
-export const defaultSettingsMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // eslint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig | undefined;
-    if (!reasoning || reasoning.enabled === false) return params;
-    if (reasoning.effort || reasoning.max_tokens) return params;
-
-    reasoning.effort = "medium";
-    return params;
-  },
-};
-
-export const defaultSettingsEmbeddingsMiddleware: EmbeddingModelMiddleware = {
-  specificationVersion: "v3",
-  // eslint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
-    const dimensions = unknown["dimensions"] as number | undefined;
-    if (!dimensions) unknown["dimensions"] = 1024;
-
-    return params;
-  },
-};
