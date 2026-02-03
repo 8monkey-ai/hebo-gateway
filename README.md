@@ -486,7 +486,7 @@ const app = new Elysia()
       userId: headers["x-user-id"],
     },
   }))
-  .all(`${basepath}`, ({ request, auth }) => gw.handler(request, { auth }))
+  .all(`${basePath}/*`, ({ request, auth }) => gw.handler(request, { auth }))
   .listen(3000);
 ```
 
