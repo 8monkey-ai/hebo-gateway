@@ -41,6 +41,7 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoning.max_tokens) {
       target["thinking"] = { type: "enabled", tokenBudget: reasoning.max_tokens };
     } else if (reasoning.effort) {
+      // FUTURE: Issue warning that reasoning.max_tokens was computed
       target["thinking"] = {
         type: "enabled",
         tokenBudget: calculateReasoningBudgetFromEffort(

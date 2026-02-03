@@ -21,6 +21,7 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoning.max_tokens) {
       target["thinking"] = { type: "enabled", budgetTokens: reasoning.max_tokens };
     } else if (reasoning.effort) {
+      // FUTURE: Issue warning that reasoning.max_tokens was computed
       target["thinking"] = {
         type: "enabled",
         budgetTokens: calculateReasoningBudgetFromEffort(

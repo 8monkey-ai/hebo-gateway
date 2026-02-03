@@ -76,6 +76,7 @@ export function createGeminiReasoningEffortMiddleware(config: {
           thinkingBudget: reasoning.max_tokens,
         };
       } else if (reasoning.effort) {
+        // FUTURE: Issue warning if mapEffort modified value
         target["thinkingConfig"] = { includeThoughts: true };
         const mapped = config.mapEffort(reasoning.effort);
         if (mapped) target["reasoningEffort"] = mapped;
@@ -109,6 +110,7 @@ export function createGeminiReasoningBudgetMiddleware(): LanguageModelMiddleware
           thinkingBudget: reasoning.max_tokens,
         };
       } else if (reasoning.effort) {
+        // FUTURE: Issue warning that reasoning.max_tokens was computed
         target["thinkingConfig"] = {
           includeThoughts: true,
           thinkingBudget: calculateReasoningBudgetFromEffort(

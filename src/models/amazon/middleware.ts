@@ -53,6 +53,7 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["reasoningConfig"] = { type: "disabled" };
     } else if (reasoning.effort) {
+      // FUTURE: Issue if mapNovaEffort modified value
       target["reasoningConfig"] = {
         type: "enabled",
         maxReasoningEffort: mapNovaEffort(reasoning.effort),
