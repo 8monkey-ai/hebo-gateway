@@ -48,7 +48,7 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["nova"] ??= {});
+    const target = (params.providerOptions!["amazon"] ??= {});
 
     if (!reasoning.enabled) {
       target["reasoningConfig"] = { type: "disabled" };
@@ -58,6 +58,8 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
         type: "enabled",
         maxReasoningEffort: mapNovaEffort(reasoning.effort),
       };
+    } else {
+      target["reasoningConfig"] = { type: "enabled" };
     }
 
     delete unknown["reasoning"];

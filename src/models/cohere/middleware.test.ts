@@ -63,3 +63,34 @@ test("cohereReasoningMiddleware > should disable reasoning when requested", asyn
     },
   });
 });
+
+test("cohereReasoningMiddleware > should default reasoning budget when enabled without effort", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 4000,
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true },
+      },
+    },
+  };
+
+  const result = await cohereReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 4000,
+    providerOptions: {
+      cohere: {
+        thinking: {
+          type: "enabled",
+        },
+      },
+      unknown: {},
+    },
+  });
+});

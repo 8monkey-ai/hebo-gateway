@@ -30,6 +30,8 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
           1024,
         ),
       };
+    } else {
+      target["thinking"] = { type: "enabled" };
     }
 
     if (unknown) {

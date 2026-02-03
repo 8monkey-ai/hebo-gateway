@@ -56,3 +56,28 @@ test("openAIReasoningMiddleware > should disable reasoning when requested", asyn
     },
   });
 });
+
+test("openAIReasoningMiddleware > should default reasoning effort when enabled without effort", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true },
+      },
+    },
+  };
+
+  const result = await openAIReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      openai: {},
+      unknown: {},
+    },
+  });
+});

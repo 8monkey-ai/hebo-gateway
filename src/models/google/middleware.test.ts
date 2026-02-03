@@ -4,12 +4,7 @@ import { expect, test } from "bun:test";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import {
-  createGeminiReasoningBudgetMiddleware,
-  createGeminiReasoningEffortMiddleware,
-  mapGemini3FlashEffort,
-  mapGemini3ProEffort,
-} from "./middleware";
+import { geminiReasoningMiddleware } from "./middleware";
 
 test("geminiReasoningMiddleware > matching patterns", () => {
   const matching = [
@@ -44,11 +39,7 @@ test("geminiReasoningMiddleware > should enable thinking for Gemini 3 Flash effo
     },
   };
 
-  const gemini3Flash = createGeminiReasoningEffortMiddleware({
-    mapEffort: mapGemini3FlashEffort,
-  });
-
-  const result = await gemini3Flash.transformParams!({
+  const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
@@ -58,11 +49,11 @@ test("geminiReasoningMiddleware > should enable thinking for Gemini 3 Flash effo
     prompt: [],
     maxOutputTokens: 2000,
     providerOptions: {
-      gemini: {
+      google: {
         thinkingConfig: {
           includeThoughts: true,
+          thinkingLevel: "medium",
         },
-        reasoningEffort: "medium",
       },
       unknown: {},
     },
@@ -79,11 +70,7 @@ test("geminiReasoningMiddleware > should map effort for Gemini 3 Pro", async () 
     },
   };
 
-  const gemini3Pro = createGeminiReasoningEffortMiddleware({
-    mapEffort: mapGemini3ProEffort,
-  });
-
-  const result = await gemini3Pro.transformParams!({
+  const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "google/gemini-3-pro-preview" }),
@@ -92,11 +79,11 @@ test("geminiReasoningMiddleware > should map effort for Gemini 3 Pro", async () 
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      gemini: {
+      google: {
         thinkingConfig: {
           includeThoughts: true,
+          thinkingLevel: "low",
         },
-        reasoningEffort: "low",
       },
       unknown: {},
     },
@@ -113,9 +100,7 @@ test("geminiReasoningMiddleware > should use budget for Gemini 2", async () => {
     },
   };
 
-  const gemini2 = createGeminiReasoningBudgetMiddleware();
-
-  const result = await gemini2.transformParams!({
+  const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
@@ -124,7 +109,7 @@ test("geminiReasoningMiddleware > should use budget for Gemini 2", async () => {
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      gemini: {
+      google: {
         thinkingConfig: {
           includeThoughts: true,
           thinkingBudget: calculateReasoningBudgetFromEffort("medium", 65536),
@@ -145,11 +130,7 @@ test("geminiReasoningMiddleware > should handle disabled reasoning", async () =>
     },
   };
 
-  const gemini3Flash = createGeminiReasoningEffortMiddleware({
-    mapEffort: mapGemini3FlashEffort,
-  });
-
-  const result = await gemini3Flash.transformParams!({
+  const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
@@ -158,9 +139,38 @@ test("geminiReasoningMiddleware > should handle disabled reasoning", async () =>
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      gemini: {
+      google: {
         thinkingConfig: {
           includeThoughts: false,
+        },
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("geminiReasoningMiddleware > should default reasoning effort for Gemini 3 Flash", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true },
+      },
+    },
+  };
+
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          includeThoughts: true,
         },
       },
       unknown: {},

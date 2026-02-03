@@ -22,7 +22,7 @@ test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", 
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      nova: {
+      amazon: {
         reasoningConfig: {
           type: "enabled",
           maxReasoningEffort: "low",
@@ -52,9 +52,38 @@ test("novaReasoningMiddleware > should disable reasoning when requested", async 
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      nova: {
+      amazon: {
         reasoningConfig: {
           type: "disabled",
+        },
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("novaReasoningMiddleware > should default reasoning effort when enabled without effort", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true },
+      },
+    },
+  };
+
+  const result = await novaReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      amazon: {
+        reasoningConfig: {
+          type: "enabled",
         },
       },
       unknown: {},

@@ -50,6 +50,8 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
           1024,
         ),
       };
+    } else {
+      target["thinking"] = { type: "enabled" };
     }
 
     delete unknown["reasoning"];

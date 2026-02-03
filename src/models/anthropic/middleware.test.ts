@@ -162,6 +162,39 @@ test("claudeReasoningMiddleware > should handle disabled reasoning", async () =>
   });
 });
 
+test("claudeReasoningMiddleware > should default reasoning budget when enabled without effort", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "enabled",
+        },
+      },
+      unknown: {},
+    },
+  });
+});
+
 test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutputTokens", async () => {
   const params = {
     prompt: [],
