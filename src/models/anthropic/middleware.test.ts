@@ -23,12 +23,12 @@ test("claudeReasoningMiddleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.for(id, "anthropic");
+    const middleware = modelMiddlewareMatcher.forModel(id);
     expect(middleware).toContain(claudeReasoningMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.for(id, "anthropic");
+    const middleware = modelMiddlewareMatcher.forModel(id);
     expect(middleware).not.toContain(claudeReasoningMiddleware);
   }
 });

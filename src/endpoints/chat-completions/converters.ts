@@ -295,20 +295,17 @@ function parseReasoningOptions(
   reasoning_effort: ChatCompletionsReasoningEffort | undefined,
   reasoning: ChatCompletionsReasoningConfig | undefined,
 ) {
-  const effort =
-    reasoning?.effort ?? reasoning_effort ?? (reasoning?.enabled === true ? "medium" : undefined);
+  if (reasoning?.enabled === false) return { reasoning: { enabled: false } };
 
+  const effort = reasoning?.effort ?? reasoning_effort;
   if (reasoning === undefined && effort === undefined) return {};
 
-  const normalizedReasoning = {
-    ...reasoning,
-    ...(effort === undefined ? {} : { effort }),
-    ...(effort === undefined ? {} : { enabled: effort !== "none" }),
-  };
-
   return {
-    reasoning: normalizedReasoning,
-    ...(effort === undefined ? {} : { reasoning_effort: effort }),
+    reasoning: {
+      ...reasoning,
+      ...(effort && { effort, enabled: effort != "none" }),
+    },
+    ...(effort && { reasoning_effort: effort }),
   };
 }
 

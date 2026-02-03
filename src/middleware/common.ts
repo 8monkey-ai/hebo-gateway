@@ -1,6 +1,7 @@
 import type { JSONObject } from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
+import type { ChatCompletionsReasoningConfig } from "../endpoints/chat-completions/schema";
 import type { ProviderId } from "../providers/types";
 
 function snakeToCamel(key: string): string {
@@ -57,12 +58,48 @@ function forwardParamsForMiddleware<K extends Kind>(
   } as MiddlewareFor<K>;
 }
 
-export function forwardParamsMiddleware(providerName: ProviderId): LanguageModelMiddleware {
-  return forwardParamsForMiddleware("language", providerName);
+export function extractProviderNamespace(id: string): string {
+  const firstDot = id.indexOf(".");
+  const head = firstDot === -1 ? id : id.slice(0, firstDot);
+
+  const dash = head.indexOf("-");
+  return dash === -1 ? head : head.slice(dash + 1);
 }
 
-export function forwardParamsEmbeddingMiddleware(
-  providerName: ProviderId,
-): EmbeddingModelMiddleware {
-  return forwardParamsForMiddleware("embedding", providerName);
+export function forwardParamsMiddleware(provider: string): LanguageModelMiddleware {
+  return forwardParamsForMiddleware("language", extractProviderNamespace(provider));
 }
+
+export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
+  return forwardParamsForMiddleware("embedding", extractProviderNamespace(provider));
+}
+
+export const defaultSettingsMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig | undefined;
+    if (!reasoning || reasoning.enabled === false) return params;
+    if (reasoning.effort || reasoning.max_tokens) return params;
+
+    reasoning.effort = "medium";
+    return params;
+  },
+};
+
+export const defaultSettingsEmbeddingsMiddleware: EmbeddingModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const dimensions = unknown["dimensions"] as number | undefined;
+    if (!dimensions) unknown["dimensions"] = 1024;
+
+    return params;
+  },
+};

@@ -1,7 +1,49 @@
 import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
-import { openAIReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { CANONICAL_MODEL_IDS } from "../../models/types";
+import { openAIDimensionsMiddleware, openAIReasoningMiddleware } from "./middleware";
+
+test("openAI middleware > matching patterns", () => {
+  const languageMatching = [
+    "openai/gpt-5",
+    "openai/gpt-5.2-chat",
+    "openai/gpt-oss-20b",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  const languageNonMatching = [
+    "openai/text-embedding-3-small",
+    "anthropic/claude-sonnet-3.7",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of languageMatching) {
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).toContain(openAIReasoningMiddleware);
+  }
+
+  for (const id of languageNonMatching) {
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).not.toContain(openAIReasoningMiddleware);
+  }
+
+  const embeddingMatching = [
+    "openai/text-embedding-3-small",
+    "openai/text-embedding-3-large",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  const embeddingNonMatching = ["openai/gpt-5"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of embeddingMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).toContain(openAIDimensionsMiddleware);
+  }
+
+  for (const id of embeddingNonMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).not.toContain(openAIDimensionsMiddleware);
+  }
+});
 
 test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider options", async () => {
   const params = {

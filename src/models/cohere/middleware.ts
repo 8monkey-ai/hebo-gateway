@@ -9,12 +9,21 @@ import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    let dimensions = unknown["dimensions"] as number;
-    if (!dimensions) dimensions = 1024;
+    const modelId = model?.modelId ?? "";
+    if (
+      modelId.includes("cohere/embed-english-light") ||
+      modelId.includes("cohere/embed-multilingual-light")
+    ) {
+      delete unknown["dimensions"];
+      return params;
+    }
+
+    const dimensions = unknown["dimensions"] as number;
+    if (!dimensions) return params;
 
     (params.providerOptions!["cohere"] ??= {})["outputDimension"] = dimensions;
     delete unknown["dimensions"];

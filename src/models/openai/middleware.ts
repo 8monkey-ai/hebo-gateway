@@ -12,8 +12,8 @@ export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    let dimensions = unknown["dimensions"] as number;
-    if (!dimensions) dimensions = 1024;
+    const dimensions = unknown["dimensions"] as number;
+    if (!dimensions) return params;
 
     (params.providerOptions!["openai"] ??= {})["dimensions"] = dimensions;
     delete unknown["dimensions"];

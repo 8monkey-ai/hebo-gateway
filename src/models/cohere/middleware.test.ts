@@ -1,7 +1,49 @@
 import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
-import { cohereReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { CANONICAL_MODEL_IDS } from "../../models/types";
+import { cohereDimensionsMiddleware, cohereReasoningMiddleware } from "./middleware";
+
+test("cohere middleware > matching patterns", () => {
+  const languageMatching = [
+    "cohere/command-a-reasoning",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  const languageNonMatching = [
+    "cohere/command-a",
+    "cohere/command-r-plus",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of languageMatching) {
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).toContain(cohereReasoningMiddleware);
+  }
+
+  for (const id of languageNonMatching) {
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).not.toContain(cohereReasoningMiddleware);
+  }
+
+  const embeddingMatching = [
+    "cohere/embed-v4.0",
+    "cohere/embed-english-v3.0",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  const embeddingNonMatching = [
+    "cohere/command-a",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of embeddingMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).toContain(cohereDimensionsMiddleware);
+  }
+
+  for (const id of embeddingNonMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).not.toContain(cohereDimensionsMiddleware);
+  }
+});
 
 test("cohereReasoningMiddleware > should map effort to thinking budget", async () => {
   const params = {

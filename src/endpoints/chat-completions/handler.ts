@@ -4,6 +4,7 @@ import * as z from "zod/mini";
 import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
 import { withLifecycle } from "../../lifecycle";
+import { defaultSettingsMiddleware, forwardParamsMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
@@ -73,9 +74,17 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
+    const middleware = [];
+    if (config.advanced?.disableDefaultSettings !== true)
+      middleware.push(defaultSettingsMiddleware);
+    for (const m of modelMiddlewareMatcher.forModel(ctx.resolvedModelId)) middleware.push(m);
+    if (config.advanced?.disableForwardParams !== true)
+      middleware.push(forwardParamsMiddleware(languageModel.provider));
+    for (const m of modelMiddlewareMatcher.forProvider(languageModel.provider)) middleware.push(m);
+
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
-      middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
+      middleware,
     });
 
     if (stream) {

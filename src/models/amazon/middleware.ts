@@ -15,8 +15,8 @@ export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    let dimensions = unknown["dimensions"] as number;
-    if (!dimensions) dimensions = 1024;
+    const dimensions = unknown["dimensions"] as number;
+    if (!dimensions) return params;
 
     (params.providerOptions!["nova"] ??= {})["embeddingDimension"] = dimensions;
     delete unknown["dimensions"];
@@ -52,6 +52,8 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
 
     if (!reasoning.enabled) {
       target["reasoningConfig"] = { type: "disabled" };
+    } else if (reasoning.max_tokens) {
+      target["reasoningConfig"] = { type: "enabled", maxReasoningEffort: reasoning.max_tokens };
     } else if (reasoning.effort) {
       // FUTURE: Issue if mapNovaEffort modified value
       target["reasoningConfig"] = {

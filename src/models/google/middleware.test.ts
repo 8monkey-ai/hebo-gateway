@@ -4,7 +4,7 @@ import { expect, test } from "bun:test";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { geminiReasoningMiddleware } from "./middleware";
+import { geminiDimensionsMiddleware, geminiReasoningMiddleware } from "./middleware";
 
 test("geminiReasoningMiddleware > matching patterns", () => {
   const matching = [
@@ -18,13 +18,31 @@ test("geminiReasoningMiddleware > matching patterns", () => {
   const nonMatching = ["google/gemini-1.5-pro", "google/gemini-1.5-flash"];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.for(id, "google");
-    expect(middleware.length).toBe(2);
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).toContain(geminiReasoningMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.for(id, "google");
-    expect(middleware.length).toBe(1);
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).not.toContain(geminiReasoningMiddleware);
+  }
+});
+
+test("geminiDimensionsMiddleware > matching patterns", () => {
+  const matching = ["google/gemini-embedding-001"];
+  const nonMatching = [
+    "google/gemini-3-flash-preview",
+    "google/embedding-001",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of matching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).toContain(geminiDimensionsMiddleware);
+  }
+
+  for (const id of nonMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).not.toContain(geminiDimensionsMiddleware);
   }
 });
 

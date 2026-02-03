@@ -10,8 +10,8 @@ export const voyageDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    let dimensions = unknown["dimensions"] as number;
-    if (!dimensions) dimensions = 1024;
+    const dimensions = unknown["dimensions"] as number;
+    if (!dimensions) return params;
 
     (params.providerOptions!["voyage"] ??= {})["outputDimension"] = dimensions;
     delete unknown["dimensions"];

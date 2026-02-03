@@ -1,7 +1,48 @@
 import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
-import { novaReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { CANONICAL_MODEL_IDS } from "../../models/types";
+import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware";
+
+test("nova middleware > matching patterns", () => {
+  const languageMatching = ["amazon/nova-2-lite"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  const languageNonMatching = [
+    "amazon/nova-micro",
+    "amazon/nova-lite",
+    "amazon/nova-pro",
+    "amazon/nova-premier",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of languageMatching) {
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).toContain(novaReasoningMiddleware);
+  }
+
+  for (const id of languageNonMatching) {
+    const middleware = modelMiddlewareMatcher.forModel(id);
+    expect(middleware).not.toContain(novaReasoningMiddleware);
+  }
+
+  const embeddingMatching = [
+    "amazon/nova-2-multimodal-embeddings",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  const embeddingNonMatching = [
+    "amazon/nova-2-lite",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of embeddingMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).toContain(novaDimensionsMiddleware);
+  }
+
+  for (const id of embeddingNonMatching) {
+    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    expect(middleware).not.toContain(novaDimensionsMiddleware);
+  }
+});
 
 test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", async () => {
   const params = {
