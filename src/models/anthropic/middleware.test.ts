@@ -217,3 +217,47 @@ test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutp
 
   expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);
 });
+
+test("claudeReasoningMiddleware > should cap default maxOutputTokens for Opus 4.1", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "medium",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.1" }),
+  });
+
+  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(16000);
+});
+
+test("claudeReasoningMiddleware > should clamp max_tokens for Opus 4", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          max_tokens: 50000,
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4" }),
+  });
+
+  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);
+});
