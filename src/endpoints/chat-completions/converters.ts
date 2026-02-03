@@ -295,18 +295,30 @@ function parseReasoningOptions(
   reasoning_effort: ChatCompletionsReasoningEffort | undefined,
   reasoning: ChatCompletionsReasoningConfig | undefined,
 ) {
-  if (reasoning?.enabled === false) return { reasoning: { enabled: false } };
-
   const effort = reasoning?.effort ?? reasoning_effort;
-  if (reasoning === undefined && effort === undefined) return {};
+  const max_tokens = reasoning?.max_tokens;
 
-  return {
-    reasoning: {
-      ...reasoning,
-      ...(effort && { effort, enabled: effort !== "none" }),
-    },
-    ...(effort && { reasoning_effort: effort }),
-  };
+  if (reasoning?.enabled === false || effort === "none") {
+    return { reasoning: { enabled: false }, reasoning_effort: "none" };
+  }
+  if (!reasoning && effort === undefined) return {};
+
+  const out: any = { reasoning: {} };
+
+  if (effort) {
+    out.reasoning.enabled = true;
+    out.reasoning.effort = effort;
+    out.reasoning_effort = effort;
+  }
+  if (max_tokens) {
+    out.reasoning.enabled = true;
+    out.reasoning.max_tokens = max_tokens;
+  }
+  if (out.reasoning.enabled) {
+    out.reasoning.exclude = reasoning?.exclude;
+  }
+
+  return out;
 }
 
 // --- Response Flow ---
