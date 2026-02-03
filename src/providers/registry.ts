@@ -46,6 +46,7 @@ export type CanonicalIdsOptions = {
     /** @default false */
     normalizeDelimiters?: boolean | readonly string[];
     prefix?: string;
+    template?: Record<string, string | undefined>;
     postfix?: string;
     /** @default "/" */
     namespaceSeparator?: "/" | "." | ":";
@@ -61,6 +62,7 @@ export const withCanonicalIds = (
     options: {
       stripNamespace = true,
       normalizeDelimiters = false,
+      template,
       prefix,
       postfix,
       namespaceSeparator = "/",
@@ -87,10 +89,13 @@ export const withCanonicalIds = (
     return out;
   };
 
-  const applyPrefix = (v: string) => (prefix && !v.startsWith(prefix) ? `${prefix}${v}` : v);
+  const applyTemplate = (input: string) => {
+    if (!template) return input;
+    return Object.entries(template).reduce((out, [k, v]) => out.replace(`{${k}}`, v ?? ""), input);
+  };
 
   const applyFallbackAffixes = (v: string) => {
-    let out = applyPrefix(v);
+    let out = prefix && !v.startsWith(prefix) ? `${prefix}${v}` : v;
     if (postfix && !out.endsWith(postfix)) out = `${out}${postfix}`;
     return out;
   };
@@ -121,7 +126,7 @@ export const withCanonicalIds = (
       if (v === undefined) continue;
       // This is lazy so that provider is only create once called
       Object.defineProperty(out, k, {
-        get: () => fn(applyPrefix(v)),
+        get: () => fn(applyTemplate(v)),
       });
     }
 
