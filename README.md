@@ -260,7 +260,7 @@ Out-of-the-box model presets:
   Claude: `claude` (`v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Command: `command` (`A`, `R`, `latest`, `all`) 
+  Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
@@ -271,7 +271,7 @@ Out-of-the-box model presets:
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
   GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
-  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`) 
+  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
@@ -331,7 +331,8 @@ const gw = gateway({
 });
 ```
 
-Note: the only mandatory property is the `providers` array, everything else is optional metadata.
+> [!NOTE]
+> The only mandatory property is the `providers` array, everything else is optional metadata.
 
 ### Hooks
 
@@ -486,9 +487,12 @@ const app = new Elysia()
       userId: headers["x-user-id"],
     },
   }))
-  .all(`${basePath}/*`, ({ request, auth }) => gw.handler(request, { auth }))
+  .all(`${basePath}/*`, ({ request, auth }) => gw.handler(request, { auth }), { parse: 'none' })
   .listen(3000);
 ```
+
+> [!NOTE]
+> The `parse: 'none'` hook is required to prevent Elysia from consuming the body.
 
 ### Selective Route Mounting
 
