@@ -81,7 +81,7 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
         thinkingBudget: reasoning.max_tokens,
       };
     } else if (model.modelId.includes("gemini-2") && reasoning.effort) {
-      // FUTURE: Issue warning that reasoning.max_tokens was computed
+      // FUTURE: warn that reasoning.max_tokens was computed
       target["thinkingConfig"] = {
         includeThoughts: true,
         thinkingBudget: calculateReasoningBudgetFromEffort(
@@ -90,12 +90,13 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
         ),
       };
     } else if (model.modelId.includes("gemini-3") && reasoning.effort) {
-      // FUTURE: Issue warning if mapGeminiReasoningEffort modified value
+      // FUTURE: warn if mapGeminiReasoningEffort modified value
       target["thinkingConfig"] = {
         includeThoughts: true,
         thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, model.modelId),
       };
     } else {
+      // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
       target["thinkingConfig"] = { includeThoughts: true };
     }
 

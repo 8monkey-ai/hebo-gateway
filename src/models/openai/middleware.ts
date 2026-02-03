@@ -39,7 +39,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoning.effort) {
       target["reasoningEffort"] = reasoning.effort;
     }
-    // FUTURE: Issue warning that reasoning.max_tokens was ignored
+    // FUTURE: warn that reasoning.max_tokens (not supported) was ignored
 
     delete unknown["reasoning"];
 

@@ -53,16 +53,15 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["reasoningConfig"] = { type: "disabled" };
     } else if (reasoning.effort) {
-      // FUTURE: Issue if mapNovaEffort modified value
+      // FUTURE: warn if mapNovaEffort modified the effort
       target["reasoningConfig"] = {
         type: "enabled",
         maxReasoningEffort: mapNovaEffort(reasoning.effort),
       };
     } else {
+      // FUTURE: warn if reasoning.max_tokens (unsupported) was ignored
       target["reasoningConfig"] = { type: "enabled" };
     }
-
-    // FUTURE: warning if unsupported reasoning.max_tokens is set
 
     delete unknown["reasoning"];
 

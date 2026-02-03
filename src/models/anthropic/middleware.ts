@@ -11,7 +11,9 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
-    const reasoning = unknown?.["reasoning"] as ChatCompletionsReasoningConfig | undefined;
+    if (!unknown) return params;
+
+    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {});
@@ -21,7 +23,7 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoning.max_tokens) {
       target["thinking"] = { type: "enabled", budgetTokens: reasoning.max_tokens };
     } else if (reasoning.effort) {
-      // FUTURE: Issue warning that reasoning.max_tokens was computed
+      // FUTURE: warn that reasoning.max_tokens was computed
       target["thinking"] = {
         type: "enabled",
         budgetTokens: calculateReasoningBudgetFromEffort(
@@ -34,9 +36,8 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       target["thinking"] = { type: "enabled" };
     }
 
-    if (unknown) {
-      delete unknown["reasoning"];
-    }
+    delete unknown["reasoning"];
+
     return params;
   },
 };

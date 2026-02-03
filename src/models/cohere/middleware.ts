@@ -13,7 +13,7 @@ export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const modelId = model?.modelId ?? "";
+    const modelId = model.modelId;
     if (
       modelId.includes("cohere/embed-english-light") ||
       modelId.includes("cohere/embed-multilingual-light")
@@ -50,7 +50,7 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoning.max_tokens) {
       target["thinking"] = { type: "enabled", tokenBudget: reasoning.max_tokens };
     } else if (reasoning.effort) {
-      // FUTURE: Issue warning that reasoning.max_tokens was computed
+      // FUTURE: warn that reasoning.max_tokens was computed
       target["thinking"] = {
         type: "enabled",
         tokenBudget: calculateReasoningBudgetFromEffort(
