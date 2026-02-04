@@ -72,6 +72,17 @@ export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
   state: GatewayContext["state"];
 };
 
+type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
+  Required<Pick<HookContext, K>>;
+export type BeforeHookContext = RequiredHookContext<"request">;
+export type ResolveModelHookContext = RequiredHookContext<"request" | "body" | "modelId">;
+export type ResolveProviderHookContext = RequiredHookContext<
+  "request" | "body" | "modelId" | "resolvedModelId" | "operation"
+>;
+export type AfterHookContext = RequiredHookContext<
+  "request" | "response" | "provider" | "resolvedModelId" | "operation"
+>;
+
 /**
  * Hooks to plugin to the gateway lifecycle.
  */
@@ -82,23 +93,25 @@ export type GatewayHooks = {
    * Returning a Response stops execution of the endpoint.
    */
   before?: (
-    ctx: HookContext,
+    ctx: BeforeHookContext,
   ) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @returns Canonical model ID or undefined to keep original.
    */
-  resolveModelId?: (ctx: HookContext) => ModelId | void | Promise<ModelId | void>;
+  resolveModelId?: (ctx: ResolveModelHookContext) => ModelId | void | Promise<ModelId | void>;
   /**
    * Picks a provider instance for the request.
    * @returns ProviderV3 to override, or undefined to use default.
    */
-  resolveProvider?: (ctx: HookContext) => ProviderV3 | void | Promise<ProviderV3 | void>;
+  resolveProvider?: (
+    ctx: ResolveProviderHookContext,
+  ) => ProviderV3 | void | Promise<ProviderV3 | void>;
   /**
    * Runs after the endpoint handler.
    * @returns Response to replace, or undefined to keep original.
    */
-  after?: (ctx: HookContext) => void | Response | Promise<void | Response>;
+  after?: (ctx: AfterHookContext) => void | Response | Promise<void | Response>;
 };
 
 /**
