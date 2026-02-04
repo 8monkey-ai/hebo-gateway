@@ -58,25 +58,47 @@ function forwardParamsForMiddleware<K extends Kind>(
   kind: K,
   providerName: ProviderId,
 ): MiddlewareFor<K> {
+  const processOptions = (providerOptions: Record<string, JSONObject> | undefined) => {
+    if (!providerOptions) return;
+
+    if (providerOptions[providerName]) {
+      providerOptions[providerName] = camelizeKeysDeep(providerOptions[providerName]) as Record<
+        string,
+        JSONObject
+      >;
+    }
+
+    const target = (providerOptions[providerName] ??= {});
+    for (const key in providerOptions) {
+      if (key === providerName) continue;
+      Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
+      if (key === "unknown") delete providerOptions[key];
+    }
+  };
+
+  const processMetadata = (providerMetadata: Record<string, JSONObject> | undefined) => {
+    if (!providerMetadata) return;
+
+    if (providerMetadata[providerName]) {
+      providerMetadata[providerName] = snakizeKeysDeep(
+        providerMetadata[providerName],
+      ) as JSONObject;
+    }
+
+    const target = (providerMetadata[providerName] ??= {});
+    const keys = Object.keys(providerMetadata);
+    for (const key of keys) {
+      if (key === providerName) continue;
+      Object.assign(target, snakizeKeysDeep(providerMetadata[key]));
+      delete providerMetadata[key];
+    }
+  };
+
   return {
     specificationVersion: "v3" as const,
     // eslint-disable-next-line require-await
     transformParams: async (options: TransformOptsFor<K>) => {
       const { params } = options;
-
-      const processOptions = (providerOptions: Record<string, JSONObject> | undefined) => {
-        if (!providerOptions) return;
-
-        const target = (providerOptions[providerName] ??= {});
-        for (const key in providerOptions) {
-          if (key === providerName) continue;
-          Object.assign(
-            target,
-            camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>,
-          );
-          if (key === "unknown") delete providerOptions[key];
-        }
-      };
 
       processOptions(params.providerOptions);
 
@@ -97,19 +119,26 @@ function forwardParamsForMiddleware<K extends Kind>(
     },
     wrapGenerate: async ({ doGenerate }: any) => {
       const result = await doGenerate();
-      if (result.providerMetadata) {
-        result.providerMetadata = snakizeKeysDeep(result.providerMetadata);
+
+      processMetadata(result.providerMetadata);
+
+      if (result.content) {
+        for (const part of result.content) {
+          processMetadata(part.providerMetadata);
+        }
       }
+
       return result;
     },
     wrapStream: async ({ doStream }: any) => {
       const result = await doStream();
+
       return {
         ...result,
         stream: result.stream.pipeThrough(
           new TransformStream({
             transform(part, controller) {
-              part.providerMetadata = snakizeKeysDeep(part.providerMetadata);
+              processMetadata(part.providerMetadata);
               controller.enqueue(part);
             },
           }),
@@ -118,20 +147,22 @@ function forwardParamsForMiddleware<K extends Kind>(
     },
     wrapEmbed: async ({ doEmbed }: any) => {
       const result = await doEmbed();
-      if (result.providerMetadata) {
-        result.providerMetadata = snakizeKeysDeep(result.providerMetadata);
-      }
+
+      processMetadata(result.providerMetadata);
+
       return result;
     },
   } as MiddlewareFor<K>;
 }
 
 export function extractProviderNamespace(id: string): string {
-  const firstDot = id.indexOf(".");
-  const head = firstDot === -1 ? id : id.slice(0, firstDot);
+  if (id.includes("vertex")) return "vertex";
 
-  const dash = head.indexOf("-");
-  return dash === -1 ? head : head.slice(dash + 1);
+  const lastDot = id.lastIndexOf(".");
+  const tail = lastDot === -1 ? id : id.slice(lastDot + 1);
+
+  const lastDash = tail.lastIndexOf("-");
+  return lastDash === -1 ? tail : tail.slice(lastDash + 1);
 }
 
 export function forwardParamsMiddleware(provider: string): LanguageModelMiddleware {

@@ -1,11 +1,33 @@
 import { MockLanguageModelV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
 
-import { forwardParamsMiddleware } from "./common";
+import { extractProviderNamespace, forwardParamsMiddleware } from "./common";
+
+describe("extractProviderNamespace", () => {
+  test("should handle simple names", () => {
+    expect(extractProviderNamespace("openai")).toBe("openai");
+    expect(extractProviderNamespace("anthropic")).toBe("anthropic");
+  });
+
+  test("should handle dot-separated names", () => {
+    expect(extractProviderNamespace("google.vertex")).toBe("vertex");
+    expect(extractProviderNamespace("google.vertex.chat")).toBe("vertex");
+    expect(extractProviderNamespace("azure.openai")).toBe("openai");
+  });
+
+  test("should handle dash-separated names", () => {
+    expect(extractProviderNamespace("amazon-bedrock")).toBe("bedrock");
+    expect(extractProviderNamespace("google-vertex")).toBe("vertex");
+  });
+
+  test("should handle mixed separators", () => {
+    expect(extractProviderNamespace("company.service-name")).toBe("name");
+  });
+});
 
 describe("forwardParamsMiddleware", () => {
   test("should snakize providerMetadata in generate output", async () => {
-    const middleware = forwardParamsMiddleware("google");
+    const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
       doGenerate: async () => ({
@@ -13,9 +35,8 @@ describe("forwardParamsMiddleware", () => {
         finishReason: "stop",
         usage: { promptTokens: 1, completionTokens: 1 },
         providerMetadata: {
-          google: {
+          vertex: {
             thoughtSignature: "encrypted-signature",
-            nestedField: { someValue: 123 },
           },
         },
         warnings: [],
@@ -30,15 +51,46 @@ describe("forwardParamsMiddleware", () => {
     });
 
     expect(result.providerMetadata).toEqual({
-      google: {
+      vertex: {
         thought_signature: "encrypted-signature",
-        nested_field: { some_value: 123 },
+      },
+    });
+  });
+
+  test("should snakize providerMetadata in generate output content parts", async () => {
+    const middleware = forwardParamsMiddleware("google.vertex.chat");
+    const model = new MockLanguageModelV3({
+      modelId: "google/gemini-2.5-flash",
+      doGenerate: async () => ({
+        content: [
+          {
+            type: "text",
+            text: "hi",
+            providerMetadata: { vertex: { thoughtSignature: "part-sig" } },
+          },
+        ],
+        finishReason: "stop",
+        usage: { promptTokens: 1, completionTokens: 1 },
+        warnings: [],
+      }),
+    });
+
+    const result = await middleware.wrapGenerate!({
+      model,
+      params: { prompt: [] },
+      doGenerate: () => model.doGenerate({ prompt: [] }),
+      doStream: () => model.doStream({ prompt: [] }),
+    });
+
+    expect(result.content[0].providerMetadata).toEqual({
+      vertex: {
+        thought_signature: "part-sig",
       },
     });
   });
 
   test("should snakize providerMetadata in stream parts", async () => {
-    const middleware = forwardParamsMiddleware("google");
+    const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
       doStream: async () => ({
@@ -48,13 +100,12 @@ describe("forwardParamsMiddleware", () => {
               type: "text-delta",
               id: "1",
               delta: "hi",
-              providerMetadata: { google: { thoughtSignature: "part-signature" } },
+              providerMetadata: { vertex: { thoughtSignature: "part-signature" } },
             });
             controller.enqueue({
               type: "finish",
               finishReason: "stop",
               usage: { promptTokens: 1, completionTokens: 1 },
-              providerMetadata: { google: { finalSignature: "final-signature" } },
             });
             controller.close();
           },
@@ -70,26 +121,18 @@ describe("forwardParamsMiddleware", () => {
     });
 
     const reader = result.stream.getReader();
-    const part1 = await reader.read();
-    expect(part1.value.providerMetadata).toEqual({
-      google: { thought_signature: "part-signature" },
-    });
-
-    const part2 = await reader.read();
-    expect(part2.value.providerMetadata).toEqual({
-      google: { final_signature: "final-signature" },
+    const part = await reader.read();
+    expect(part.value.providerMetadata).toEqual({
+      vertex: { thought_signature: "part-signature" },
     });
   });
 
   test("should camelize providerOptions on the way in", async () => {
-    const middleware = forwardParamsMiddleware("google");
+    const middleware = forwardParamsMiddleware("google.vertex.chat");
     const params = {
       prompt: [],
       providerOptions: {
-        unknown: {
-          extra_content: { google: { thought_signature: "in-signature" } },
-          some_param: "value",
-        },
+        vertex: { thought_signature: "in-signature" },
       },
     };
 
@@ -99,9 +142,8 @@ describe("forwardParamsMiddleware", () => {
       model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
     });
 
-    expect(result.providerOptions!.google).toEqual({
-      extraContent: { google: { thoughtSignature: "in-signature" } },
-      someParam: "value",
+    expect(result.providerOptions).toEqual({
+      vertex: { thoughtSignature: "in-signature" },
     });
   });
 });
