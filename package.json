@@ -1,7 +1,7 @@
 {
   "name": "@hebo-ai/gateway",
   "version": "0.2.1",
-  "description": "Hebo Gateway - Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more.",
+  "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI-compatible /chat/completions, /embeddings & /models.",
   "keywords": [
     "ai",
     "ai-gateway",
