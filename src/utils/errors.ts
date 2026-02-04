@@ -44,11 +44,12 @@ export class GatewayError extends Error {
   readonly code: string;
   readonly param?: string;
 
-  constructor(message: string, code: string, status: number, param?: string) {
+  constructor(message: string, code: string, status: number, param?: string, cause?: unknown) {
     super(message);
     this.status = status;
     this.code = code;
     this.param = param;
+    this.cause = cause;
   }
 }
 
@@ -82,13 +83,16 @@ function normalizeAiSdkCallError(error: APICallError): GatewayError {
   else if (status >= 500) code = "UPSTREAM_ERROR";
   else code = "UPSTREAM_INVALID_REQUEST";
 
-  return new GatewayError(error.message, code, status);
+  return new GatewayError(error.message, code, status, undefined, error.cause);
 }
 
 function normalizeAiSdkError(error: unknown): GatewayError | undefined {
   if (APICallError.isInstance(error)) {
     return normalizeAiSdkCallError(error);
   }
+
+  const cause =
+    error instanceof Error && "cause" in error ? (error as { cause?: unknown }).cause : undefined;
 
   if (
     InvalidResponseDataError.isInstance(error) ||
@@ -108,7 +112,7 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     UIMessageStreamError.isInstance(error) ||
     RetryError.isInstance(error)
   ) {
-    return new GatewayError(error.message, "UPSTREAM_ERROR", 502);
+    return new GatewayError(error.message, "UPSTREAM_ERROR", 502, undefined, cause);
   }
 
   if (
@@ -127,15 +131,15 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     NoSuchModelError.isInstance(error) ||
     TooManyEmbeddingValuesForCallError.isInstance(error)
   ) {
-    return new GatewayError(error.message, "UPSTREAM_INVALID_REQUEST", 422);
+    return new GatewayError(error.message, "UPSTREAM_INVALID_REQUEST", 422, undefined, cause);
   }
 
   if (LoadSettingError.isInstance(error) || LoadAPIKeyError.isInstance(error)) {
-    return new GatewayError(error.message, "INTERNAL_SERVER_ERROR", 500);
+    return new GatewayError(error.message, "INTERNAL_SERVER_ERROR", 500, undefined, cause);
   }
 
   if (AISDKError.isInstance(error)) {
-    return new GatewayError(error.message, "INTERNAL_SERVER_ERROR", 500);
+    return new GatewayError(error.message, "INTERNAL_SERVER_ERROR", 500, undefined, cause);
   }
 
   return undefined;
@@ -165,6 +169,31 @@ function normalizeError(error: unknown) {
   return { code, status, param, type, message, rawMessage };
 }
 
+export function logError(
+  meta: {
+    code: string;
+    status: number;
+    param?: string;
+    rawMessage: string;
+  },
+  error: unknown,
+) {
+  const suffix = meta.param && ` param=${meta.param}`;
+  const message = `[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}${suffix ?? ""}`;
+
+  if (meta.status < 422) {
+    logger.warn(message);
+    return;
+  }
+
+  const diagnostics = error instanceof Error && {
+    stack: error.stack,
+    cause: error.cause,
+  };
+
+  logger.error(message, diagnostics);
+}
+
 export function createError(error: unknown): OpenAIError {
   const meta = normalizeError(error);
   logError(meta, error);
@@ -181,24 +210,4 @@ export function createErrorResponse(error: unknown): Response {
       headers: { "Content-Type": "application/json" },
     },
   );
-}
-
-export function logError(
-  meta: {
-    code: string;
-    status: number;
-    param?: string;
-    rawMessage: string;
-  },
-  error: unknown,
-) {
-  const suffix = meta.param ? ` param=${meta.param}` : "";
-  if (meta.status < 500) {
-    logger.warn(`[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}${suffix}`);
-  } else {
-    logger.error(
-      `[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}${suffix}`,
-      error instanceof Error ? { stack: error.stack } : undefined,
-    );
-  }
 }

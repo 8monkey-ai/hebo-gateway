@@ -40,7 +40,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       throw new GatewayError(
         "Validation error",
         "UNPROCESSABLE_ENTITY",
-        422,
+        400,
         z.prettifyError(parsed.error),
       );
     }
