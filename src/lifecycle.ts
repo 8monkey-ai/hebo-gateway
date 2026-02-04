@@ -46,19 +46,23 @@ export const withLifecycle = (
     try {
       beforeResult = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
     } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+      return createErrorResponse(error);
     }
     if (beforeResult instanceof Response) return beforeResult;
 
     context.request = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
 
-    context.response = await run(context);
+    try {
+      context.response = await run(context);
+    } catch (error) {
+      return createErrorResponse(error);
+    }
 
     let after;
     try {
       after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
     } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
+      return createErrorResponse(error);
     }
     return after ?? context.response;
   };

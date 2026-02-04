@@ -42,7 +42,7 @@ import type {
   ChatCompletionsReasoningConfig,
 } from "./schema";
 
-import { OpenAIError } from "../../utils/errors";
+import { GatewayError, OpenAIError, logError, normalizeError } from "../../utils/errors";
 import { mergeResponseInit } from "../../utils/response";
 
 export type TextCallOptions = {
@@ -210,17 +210,17 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         const base64Data = parts[1];
 
         if (!metadata || !base64Data) {
-          throw new OpenAIError("Invalid data URL: missing metadata or data");
+          throw new GatewayError("Invalid data URL: missing metadata or data", "BAD_REQUEST", 400);
         }
 
         const mimeTypePart = metadata.split(":")[1];
         if (!mimeTypePart) {
-          throw new OpenAIError("Invalid data URL: missing MIME type part");
+          throw new GatewayError("Invalid data URL: missing MIME type part", "BAD_REQUEST", 400);
         }
 
         const mimeType = mimeTypePart.split(";")[0];
         if (!mimeType) {
-          throw new OpenAIError("Invalid data URL: missing MIME type");
+          throw new GatewayError("Invalid data URL: missing MIME type", "BAD_REQUEST", 400);
         }
 
         return mimeType.startsWith("image/")
@@ -489,15 +489,9 @@ export class ChatCompletionsStream extends TransformStream<
 
           case "error": {
             const error = part.error;
-            const msg = error instanceof Error ? error.message : String(error);
-            const e = error as { code?: string; status?: number };
-            controller.enqueue(
-              new OpenAIError(
-                msg,
-                e.status && e.status < 500 ? "invalid_request_error" : "server_error",
-                e.code,
-              ),
-            );
+            const meta = normalizeError(error);
+            logError(meta, error);
+            controller.enqueue(new OpenAIError(meta.message, meta.type, meta.code, meta.param));
             break;
           }
         }

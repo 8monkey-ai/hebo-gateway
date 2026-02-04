@@ -1,7 +1,7 @@
 import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
 import { withLifecycle } from "../../lifecycle";
-import { createErrorResponse } from "../../utils/errors";
+import { GatewayError } from "../../utils/errors";
 import { createModelsResponse, createModelResponse } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
@@ -10,7 +10,7 @@ export const models = (config: GatewayConfig): Endpoint => {
     const request = ctx.request;
 
     if (!request || request.method !== "GET") {
-      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
+      throw new GatewayError("Method Not Allowed", "METHOD_NOT_ALLOWED", 405);
     }
 
     const rawId = request.url.split("/models/", 2)[1]?.split("?", 1)[0];
@@ -22,12 +22,12 @@ export const models = (config: GatewayConfig): Endpoint => {
     try {
       modelId = decodeURIComponent(rawId);
     } catch {
-      return createErrorResponse("BAD_REQUEST", "Invalid model ID", 400);
+      throw new GatewayError(`Invalid model ID: '${modelId}'`, "BAD_REQUEST", 400, "model");
     }
 
     const model = ctx.models[modelId];
     if (!model) {
-      return createErrorResponse("NOT_FOUND", `Model '${modelId}' not found`, 404);
+      throw new GatewayError(`Model not found: '${modelId}'`, "NOT_FOUND", 404, modelId);
     }
 
     return createModelResponse(modelId, model);

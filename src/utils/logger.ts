@@ -10,8 +10,9 @@ export type Logger = {
   error: LogFn;
 };
 
-export const getDefaultLogLevel = (): "debug" | "info" =>
-  typeof process !== "undefined" && process.env?.NODE_ENV === "production" ? "info" : "debug";
+import { isProduction } from "./env";
+
+export const getDefaultLogLevel = (): "debug" | "info" => (isProduction() ? "info" : "debug");
 
 export type LogLevel = ReturnType<typeof getDefaultLogLevel> | "warn" | "error" | "silent";
 
@@ -81,5 +82,7 @@ export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) 
   if (g[KEY_EXTERNAL]) return;
   logger = wrapLogger(g[KEY] ?? defaultLogger, g[KEY_CONFIG]);
   const current = getLoggerConfig();
-  logger.info(`[logger] default logger configured: level=${current.level} disabled=${current.disabled}`);
+  logger.info(
+    `[logger] default logger configured: level=${current.level} disabled=${current.disabled}`,
+  );
 }

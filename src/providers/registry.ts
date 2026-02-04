@@ -5,6 +5,7 @@ import { customProvider } from "ai";
 import type { ModelCatalog, ModelId } from "../models/types";
 import type { ProviderRegistry } from "./types";
 
+import { GatewayError } from "../utils/errors";
 import { logger } from "../utils/logger";
 
 export const resolveProvider = (args: {
@@ -18,23 +19,31 @@ export const resolveProvider = (args: {
   const catalogModel = models[modelId];
 
   if (!catalogModel) {
-    throw new Error(`Model '${modelId}' not found in catalog`);
+    throw new GatewayError(`Model '${modelId}' not found in catalog`, "MODEL_NOT_FOUND", 422);
   }
 
   if (catalogModel.modalities && !catalogModel.modalities.output.includes(operation)) {
-    throw new Error(`Model '${modelId}' does not support '${operation}' output`);
+    throw new GatewayError(
+      `Model '${modelId}' does not support '${operation}' output`,
+      "MODEL_UNSUPPORTED_OPERATION",
+      422,
+    );
   }
 
   // FUTURE: implement fallback logic [e.g. runtime config invalid]
   const resolvedProviderId = catalogModel.providers[0];
 
   if (!resolvedProviderId) {
-    throw new Error(`No providers configured for model '${modelId}'`);
+    throw new GatewayError(`No providers configured for model '${modelId}'`, "NO_PROVIDERS", 422);
   }
 
   const provider = providers[resolvedProviderId];
   if (!provider) {
-    throw new Error(`Provider '${resolvedProviderId}' not configured`);
+    throw new GatewayError(
+      `Provider '${resolvedProviderId}' not configured`,
+      "PROVIDER_NOT_CONFIGURED",
+      422,
+    );
   }
 
   return provider;

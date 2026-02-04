@@ -13,7 +13,7 @@ import { withLifecycle } from "../../lifecycle";
 import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { createErrorResponse } from "../../utils/errors";
+import { GatewayError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
 import { convertToEmbedCallOptions, createEmbeddingsResponse } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
@@ -22,66 +22,58 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext): Promise<Response> => {
+    // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
-      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
+      throw new GatewayError("Method Not Allowed", "METHOD_NOT_ALLOWED", 405);
     }
 
+    // Parse + validate input.
     let body;
     try {
       body = await ctx.request.json();
     } catch {
-      return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
+      throw new GatewayError("Invalid JSON", "BAD_REQUEST", 400, "body");
     }
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
     if (!parsed.success) {
-      return createErrorResponse(
-        "UNPROCESSABLE_ENTITY",
+      throw new GatewayError(
         "Validation error",
+        "UNPROCESSABLE_ENTITY",
         422,
         z.prettifyError(parsed.error),
       );
     }
     ctx.body = parsed.data;
 
+    // Resolve model + provider (hooks may override defaults).
     let inputs;
     ({ model: ctx.modelId, ...inputs } = parsed.data);
 
-    try {
-      ctx.resolvedModelId =
-        (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
+    ctx.resolvedModelId =
+      (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
 
     ctx.operation = "embeddings";
-    try {
-      const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
-      ctx.provider =
-        override ??
-        resolveProvider({
-          providers: ctx.providers,
-          models: ctx.models,
-          modelId: ctx.resolvedModelId,
-          operation: ctx.operation,
-        });
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
+    const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
+    ctx.provider =
+      override ??
+      resolveProvider({
+        providers: ctx.providers,
+        models: ctx.models,
+        modelId: ctx.resolvedModelId,
+        operation: ctx.operation,
+      });
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     logger.debug(
       `[embeddings] provider resolved: ${ctx.resolvedModelId} -> ${embeddingModel.provider}`,
     );
 
-    let embedOptions;
-    try {
-      embedOptions = convertToEmbedCallOptions(inputs);
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
+    // Convert inputs to AI SDK call options.
+    const embedOptions = convertToEmbedCallOptions(inputs);
 
+    // Build middleware chain (model -> forward params -> provider).
     const middleware = [];
     for (const m of modelMiddlewareMatcher.forEmbeddingModel(ctx.resolvedModelId))
       middleware.push(m);
@@ -94,15 +86,11 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       middleware,
     });
 
-    let result;
-    try {
-      result = await embedMany({
-        model: embeddingModelWithMiddleware,
-        ...embedOptions,
-      });
-    } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
-    }
+    // Execute request.
+    const result = await embedMany({
+      model: embeddingModelWithMiddleware,
+      ...embedOptions,
+    });
 
     return createEmbeddingsResponse(result, ctx.modelId);
   };
