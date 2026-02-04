@@ -1,5 +1,6 @@
 import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
 
+import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
@@ -7,11 +8,12 @@ import { logger } from "./utils/logger";
 
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
+  const parsedConfig = parseConfig(config);
 
   const routes = {
-    ["/chat/completions"]: chatCompletions(config),
-    ["/embeddings"]: embeddings(config),
-    ["/models"]: models(config),
+    ["/chat/completions"]: chatCompletions(parsedConfig),
+    ["/embeddings"]: embeddings(parsedConfig),
+    ["/models"]: models(parsedConfig),
   } as const satisfies Record<string, Endpoint>;
 
   const routeEntries = Object.entries(routes);

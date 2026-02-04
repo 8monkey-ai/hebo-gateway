@@ -1,5 +1,5 @@
 import { kParsed, type GatewayConfig, type GatewayConfigParsed } from "./types";
-import { logger, setLogger } from "./utils/logger";
+import { logger, setLogger, setLoggerConfig } from "./utils/logger";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // If it has been parsed before, just return
@@ -9,9 +9,13 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const parsedProviders = {} as typeof providers;
   const models = config.models ?? {};
 
-  if (config.logger) {
-    setLogger(config.logger);
-    logger.info(`[config] logger configured: custom`);
+  const logging = config.logging;
+  if (logging?.logger) {
+    setLogger(logging.logger);
+  }
+
+  if (logging?.level || logging?.disabled !== undefined) {
+    setLoggerConfig({ level: logging.level, disabled: logging.disabled });
   }
 
   // Strip providers that are not configured
@@ -37,7 +41,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
     for (const p of model!.providers) {
       if (p in parsedProviders) kept.push(p);
-      else logger.warn(`[config] model provider removed: ${id} -> ${p} (not configured)`);
+      else logger.warn(`[config] provider removed from model: ${id} -> ${p} (not configured)`);
     }
 
     if (kept.length > 0) parsedModels[id] = { ...model!, providers: kept };
@@ -49,7 +53,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
   return {
     ...config,
-    logger,
+    logging: config.logging,
     providers: parsedProviders,
     models: parsedModels,
     [kParsed]: true,

@@ -44,6 +44,9 @@ const gw = gateway({
       console.log(ctx.state.auth.userId);
     },
   },
+  logging: {
+    level: "debug",
+  },
 });
 
 const app = new Elysia()
