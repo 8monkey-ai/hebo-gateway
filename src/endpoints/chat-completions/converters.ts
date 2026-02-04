@@ -145,25 +145,21 @@ export function fromChatCompletionsUserMessage(
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
 ): AssistantModelMessage {
-  const { tool_calls, role, content } = message;
+  const { tool_calls, role, content, extra_content } = message;
 
   if (!tool_calls || tool_calls.length === 0) {
     return {
       role: role,
       content: content ?? "",
+      ...(extra_content ? { providerOptions: extra_content } : {}),
     };
   }
 
   return {
     role: role,
     content: tool_calls.map((tc: ChatCompletionsToolCall) => {
-      const { id, function: fn } = tc;
-      return {
-        type: "tool-call",
-        toolCallId: id,
-        toolName: fn.name,
-        input: parseToolOutput(fn.arguments).value,
-      };
+      const { id, function: fn, extra_content: part_extra_content } = tc;
+      return Object.assign({type:`tool-call`,toolCallId:id,toolName:fn.name,input:parseToolOutput(fn.arguments).value}, part_extra_content?{providerOptions:part_extra_content}:{});
     }),
   };
 }
@@ -407,12 +403,15 @@ export class ChatCompletionsStream extends TransformStream<
       choices: [
         {
           index: 0,
-          delta,
+          delta: {
+            ...delta,
+            ...(provider_metadata ? { extra_content: provider_metadata } : {}),
+          },
           finish_reason: finish_reason ?? null,
         } satisfies ChatCompletionsChoiceDelta,
       ],
-      ...(usage ? { usage } : { usage: null }),
-      ...(provider_metadata === undefined ? {} : { provider_metadata }),
+      usage: usage ?? null,
+      ...(provider_metadata ? { provider_metadata } : {}),
     });
 
     super({
@@ -437,7 +436,12 @@ export class ChatCompletionsStream extends TransformStream<
               createChunk({
                 tool_calls: [
                   {
-                    ...toChatCompletionsToolCall(part.toolCallId, part.toolName, part.input),
+                    ...toChatCompletionsToolCall(
+                      part.toolCallId,
+                      part.toolName,
+                      part.input,
+                      part.providerMetadata,
+                    ),
                     index: toolCallIndexCounter++,
                   } satisfies ChatCompletionsToolCallDelta,
                 ],
@@ -487,13 +491,21 @@ export const toChatCompletionsAssistantMessage = (
 
   if (result.toolCalls && result.toolCalls.length > 0) {
     message.tool_calls = result.toolCalls.map((toolCall) =>
-      toChatCompletionsToolCall(toolCall.toolCallId, toolCall.toolName, toolCall.input),
+      toChatCompletionsToolCall(
+        toolCall.toolCallId,
+        toolCall.toolName,
+        toolCall.input,
+        toolCall.providerMetadata,
+      ),
     );
   }
 
   for (const part of result.content) {
     if (part.type === "text") {
       message.content = part.text;
+      if (part.providerMetadata) {
+        message.extra_content = part.providerMetadata;
+      }
       break;
     }
   }
@@ -535,6 +547,7 @@ export function toChatCompletionsToolCall(
   id: string,
   name: string,
   args: unknown,
+  providerMetadata?: SharedV3ProviderMetadata,
 ): ChatCompletionsToolCall {
   return {
     id,
@@ -543,6 +556,7 @@ export function toChatCompletionsToolCall(
       name,
       arguments: typeof args === "string" ? args : JSON.stringify(args),
     },
+    ...(providerMetadata ? { extra_content: providerMetadata } : {}),
   };
 }
 

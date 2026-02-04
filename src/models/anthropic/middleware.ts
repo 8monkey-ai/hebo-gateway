@@ -31,7 +31,10 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["thinking"] = { type: "disabled" };
     } else if (reasoning.max_tokens) {
-      target["thinking"] = { type: "enabled", budgetTokens: reasoning.max_tokens };
+      target["thinking"] = {
+        type: "enabled",
+        budgetTokens: Math.min(reasoning.max_tokens, getMaxOutputTokens(model.modelId)),
+      };
     } else if (reasoning.effort) {
       // FUTURE: warn that reasoning.max_tokens was computed
       target["thinking"] = {

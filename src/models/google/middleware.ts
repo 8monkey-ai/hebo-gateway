@@ -85,7 +85,11 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
           params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
         ),
       };
-    } else if (model.modelId.includes("gemini-3") && reasoning.effort) {
+    } else if (
+      model.modelId.includes("gemini-3") &&
+      reasoning.effort &&
+      reasoning.effort !== "none"
+    ) {
       // FUTURE: warn if mapGeminiReasoningEffort modified value
       target["thinkingConfig"] = {
         thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, model.modelId),

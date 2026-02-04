@@ -7,6 +7,10 @@ function snakeToCamel(key: string): string {
   return key.replaceAll(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
+function camelToSnake(key: string): string {
+  return key.replaceAll(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
 function camelizeKeysDeep(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
 
@@ -22,9 +26,25 @@ function camelizeKeysDeep(value: unknown): unknown {
   return out;
 }
 
+function snakizeKeysDeep(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+
+  if (Array.isArray(value)) {
+    return value.map((v) => snakizeKeysDeep(v));
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (v === undefined || v === null) continue;
+    out[camelToSnake(k)] = snakizeKeysDeep(v);
+  }
+  return out;
+}
+
 /**
  * Converts snake_case params in providerOptions to camelCase
  * and moves all of them into providerOptions[providerName].
+ * Also snakizes providerMetadata in the output for OpenAI compatibility.
  */
 type Kind = "embedding" | "language";
 type MiddlewareFor<K extends Kind> = K extends "embedding"
@@ -33,8 +53,9 @@ type MiddlewareFor<K extends Kind> = K extends "embedding"
 type TransformOptsFor<K extends Kind> = Parameters<
   NonNullable<MiddlewareFor<K>["transformParams"]>
 >[0];
+
 function forwardParamsForMiddleware<K extends Kind>(
-  _kind: K,
+  kind: K,
   providerName: ProviderId,
 ): MiddlewareFor<K> {
   return {
@@ -42,17 +63,65 @@ function forwardParamsForMiddleware<K extends Kind>(
     // eslint-disable-next-line require-await
     transformParams: async (options: TransformOptsFor<K>) => {
       const { params } = options;
-      const providerOptions = params.providerOptions;
-      if (!providerOptions) return params;
 
-      const target = (providerOptions[providerName] ??= {});
-      for (const key in providerOptions) {
-        if (key === providerName) continue;
-        Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
-        if (key === "unknown") delete providerOptions[key];
+      const processOptions = (providerOptions: Record<string, JSONObject> | undefined) => {
+        if (!providerOptions) return;
+
+        const target = (providerOptions[providerName] ??= {});
+        for (const key in providerOptions) {
+          if (key === providerName) continue;
+          Object.assign(
+            target,
+            camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>,
+          );
+          if (key === "unknown") delete providerOptions[key];
+        }
+      };
+
+      processOptions(params.providerOptions);
+
+      if (kind === "language") {
+        for (const message of params.prompt) {
+          if (message.providerOptions) {
+            processOptions(message.providerOptions);
+          }
+          if (message.content) {
+            for (const part of message.content) {
+              processOptions(part.providerOptions);
+            }
+          }
+        }
       }
 
       return params;
+    },
+    wrapGenerate: async ({ doGenerate }: any) => {
+      const result = await doGenerate();
+      if (result.providerMetadata) {
+        result.providerMetadata = snakizeKeysDeep(result.providerMetadata);
+      }
+      return result;
+    },
+    wrapStream: async ({ doStream }: any) => {
+      const result = await doStream();
+      return {
+        ...result,
+        stream: result.stream.pipeThrough(
+          new TransformStream({
+            transform(part, controller) {
+              part.providerMetadata = snakizeKeysDeep(part.providerMetadata);
+              controller.enqueue(part);
+            },
+          }),
+        ),
+      };
+    },
+    wrapEmbed: async ({ doEmbed }: any) => {
+      const result = await doEmbed();
+      if (result.providerMetadata) {
+        result.providerMetadata = snakizeKeysDeep(result.providerMetadata);
+      }
+      return result;
     },
   } as MiddlewareFor<K>;
 }
