@@ -198,6 +198,7 @@ Out-of-the-box model presets:
   Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
 
+
 - **Google** — `@hebo-ai/gateway/models/google`  
   Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
 
@@ -450,6 +451,43 @@ Reasoning output is surfaced as extension to the `completion` object.
 Most SDKs handle these fields out-of-the-box.
 
 ## Advanced Usage
+
+### Logger Settings
+
+You can configure logging via the `logging` field in the gateway config. By default, the logger uses `console` and sets the level to `debug` in non-production and `info` in production.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  logging: {
+    level: "debug", // "debug" | "info" | "warn" | "error" | "silent"
+    disabled: false,
+    // Optional: bring your own logger
+    // logger: customLogger,
+  },
+});
+```
+
+If you provide a custom logger, it must implement `debug`, `info`, `warn`, and `error` methods.
+
+Example with **pino**:
+
+```ts
+import pino from "pino";
+import { gateway } from "@hebo-ai/gateway";
+
+const pinoLogger = pino({ level: "debug" });
+
+const gw = gateway({
+  // ...
+  logging: {
+    logger: pinoLogger,
+    level: "debug",
+  },
+});
+```
 
 ### Passing Framework State to Hooks
 
