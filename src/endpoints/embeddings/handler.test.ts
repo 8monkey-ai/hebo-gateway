@@ -56,7 +56,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  test("should return 400 if model does not support embeddings", async () => {
+  test("should return 422 if model does not support embeddings", async () => {
     const request = postJson(baseUrl, {
       model: "gpt-oss-20b",
       input: "hello world",
@@ -67,7 +67,7 @@ describe("Embeddings Handler", () => {
 
     expect(data).toEqual({
       error: {
-        code: "BAD_REQUEST",
+        code: "MODEL_UNSUPPORTED_OPERATION",
         message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
         type: "invalid_request_error",
       },

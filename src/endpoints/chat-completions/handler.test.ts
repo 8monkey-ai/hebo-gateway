@@ -112,6 +112,7 @@ describe("Chat Completions Handler", () => {
       error: {
         code: "BAD_REQUEST",
         message: "Invalid JSON",
+        param: "body",
         type: "invalid_request_error",
       },
     });
@@ -131,7 +132,7 @@ describe("Chat Completions Handler", () => {
     });
   });
 
-  test("should return 400 for non-existent model", async () => {
+  test("should return 422 for non-existent model", async () => {
     const request = postJson(baseUrl, {
       model: "non-existent",
       messages: [{ role: "user", content: "hi" }],
@@ -140,7 +141,7 @@ describe("Chat Completions Handler", () => {
     const data = await parseResponse(res);
     expect(data).toEqual({
       error: {
-        code: "BAD_REQUEST",
+        code: "MODEL_NOT_FOUND",
         message: "Model 'non-existent' not found in catalog",
         type: "invalid_request_error",
       },
