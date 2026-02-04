@@ -14,6 +14,7 @@ import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
+import { logger } from "../../utils/logger";
 import { convertToEmbedCallOptions, createEmbeddingsResponse } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
 
@@ -52,6 +53,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
+    logger.debug(`[embeddings] model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
 
     ctx.operation = "embeddings";
     try {
@@ -69,6 +71,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
+    logger.debug(
+      `[embeddings] provider resolved: ${ctx.resolvedModelId} -> ${embeddingModel.provider}`,
+    );
 
     let embedOptions;
     try {

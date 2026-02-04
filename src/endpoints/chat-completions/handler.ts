@@ -14,6 +14,7 @@ import { forwardParamsMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
+import { logger } from "../../utils/logger";
 import {
   convertToTextCallOptions,
   toChatCompletionsResponse,
@@ -56,6 +57,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
+    logger.debug(`[chat] model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
 
     ctx.operation = "text";
     try {
@@ -73,6 +75,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
+    logger.debug(`[chat] provider resolved: ${ctx.resolvedModelId} -> ${languageModel.provider}`);
 
     let textOptions;
     try {

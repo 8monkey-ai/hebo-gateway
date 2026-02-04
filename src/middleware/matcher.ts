@@ -3,6 +3,8 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 
+import { logger } from "../utils/logger";
+
 type MiddlewareEntry = {
   language?: LanguageModelMiddleware | LanguageModelMiddleware[];
   embedding?: EmbeddingModelMiddleware | EmbeddingModelMiddleware[];
@@ -37,10 +39,18 @@ class SimpleMatcher {
 
   match(key: string): Stored[] {
     const cached = this.cache.get(key);
-    if (cached) return cached;
+    if (cached) {
+      logger.debug(`[middleware] cache hit: ${key} (${cached.length})`);
+      return cached;
+    }
 
     const out: Stored[] = [];
-    for (const r of this.rules) if (r.test(key)) out.push(r.stored);
+    const matched: string[] = [];
+    for (const r of this.rules) {
+      if (!r.test(key)) continue;
+      out.push(r.stored);
+      matched.push(r.pattern);
+    }
 
     if (this.cache.size >= SimpleMatcher.MAX_CACHE) {
       let n = Math.ceil(SimpleMatcher.MAX_CACHE * 0.2);
@@ -48,9 +58,12 @@ class SimpleMatcher {
         this.cache.delete(key);
         if (--n === 0) break;
       }
+      logger.info(`[middleware] cache evicted: ${n} entries`);
     }
 
     this.cache.set(key, out);
+    const matchedSummary = matched.length > 0 ? matched.join(",") : "none";
+    logger.debug(`[middleware] rules matched: ${key} (${out.length}) [${matchedSummary}]`);
     return out;
   }
 }

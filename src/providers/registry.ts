@@ -5,6 +5,8 @@ import { customProvider } from "ai";
 import type { ModelCatalog, ModelId } from "../models/types";
 import type { ProviderRegistry } from "./types";
 
+import { logger } from "../utils/logger";
+
 export const resolveProvider = (args: {
   providers: ProviderRegistry;
   models: ModelCatalog;
@@ -111,8 +113,16 @@ export const withCanonicalIds = (
     ? ({
         ...provider,
         specificationVersion: "v3",
-        languageModel: (id: string) => languageModel(applyFallbackAffixes(normalizeId(id))),
-        embeddingModel: (id: string) => embeddingModel(applyFallbackAffixes(normalizeId(id))),
+        languageModel: (id: string) => {
+          const mapped = applyFallbackAffixes(normalizeId(id));
+          logger.debug(`[canonical] language id mapped: ${id} -> ${mapped}`);
+          return languageModel(mapped);
+        },
+        embeddingModel: (id: string) => {
+          const mapped = applyFallbackAffixes(normalizeId(id));
+          logger.debug(`[canonical] embedding id mapped: ${id} -> ${mapped}`);
+          return embeddingModel(mapped);
+        },
       } satisfies ProviderV3)
     : provider;
 
@@ -126,7 +136,11 @@ export const withCanonicalIds = (
       if (v === undefined) continue;
       // This is lazy so that provider is only create once called
       Object.defineProperty(out, k, {
-        get: () => fn(applyTemplate(v)),
+        get: () => {
+          const mapped = applyTemplate(v);
+          logger.debug(`[canonical] mapped id: ${k} -> ${mapped}`);
+          return fn(mapped);
+        },
       });
     }
 

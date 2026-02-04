@@ -3,6 +3,7 @@ import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
+import { logger } from "./utils/logger";
 
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
@@ -23,10 +24,12 @@ export function gateway(config: GatewayConfig) {
 
     for (const [route, endpoint] of routeEntries) {
       if (pathname === route || pathname.startsWith(route + "/")) {
+        logger.debug(`[gateway] route match: ${route}`);
         return endpoint.handler(req, state);
       }
     }
 
+    logger.warn(`[gateway] route not found: ${pathname}`);
     return Promise.resolve(new Response("Not Found", { status: 404 }));
   };
 
