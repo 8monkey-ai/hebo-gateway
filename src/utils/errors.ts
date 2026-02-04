@@ -1,3 +1,14 @@
+import * as z from "zod";
+
+export const OpenAIErrorSchema = z.object({
+  error: z.object({
+    message: z.string(),
+    type: z.string(),
+    code: z.string().optional().nullable(),
+    param: z.string().optional().nullable(),
+  }),
+});
+
 export class OpenAIError {
   readonly error;
 
