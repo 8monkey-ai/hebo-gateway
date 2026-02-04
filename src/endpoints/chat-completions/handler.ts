@@ -1,7 +1,13 @@
 import { generateText, streamText, wrapLanguageModel } from "ai";
 import * as z from "zod/mini";
 
-import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
+import type {
+  GatewayConfig,
+  Endpoint,
+  GatewayContext,
+  ResolveProviderHookContext,
+  ResolveModelHookContext,
+} from "../../types";
 
 import { withLifecycle } from "../../lifecycle";
 import { forwardParamsMiddleware } from "../../middleware/common";
@@ -45,14 +51,15 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ({ model: ctx.modelId, stream, ...inputs } = parsed.data);
 
     try {
-      ctx.resolvedModelId = (await hooks?.resolveModelId?.(ctx)) ?? ctx.modelId;
+      ctx.resolvedModelId =
+        (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     } catch (error) {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
     ctx.operation = "text";
     try {
-      const override = await hooks?.resolveProvider?.(ctx);
+      const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
       ctx.provider =
         override ??
         resolveProvider({

@@ -1,4 +1,10 @@
-import type { GatewayConfig, GatewayContext, RequestPatch } from "./types";
+import type {
+  AfterHookContext,
+  BeforeHookContext,
+  GatewayConfig,
+  GatewayContext,
+  RequestPatch,
+} from "./types";
 
 import { parseConfig } from "./config";
 import { createErrorResponse } from "./utils/errors";
@@ -38,7 +44,7 @@ export const withLifecycle = (
 
     let beforeResult;
     try {
-      beforeResult = await parsedConfig.hooks?.before?.(context);
+      beforeResult = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
@@ -50,7 +56,7 @@ export const withLifecycle = (
 
     let after;
     try {
-      after = await parsedConfig.hooks?.after?.(context);
+      after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
     } catch (error) {
       return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
     }
