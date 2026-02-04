@@ -1,7 +1,10 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
+    "paths": {
+      "@hebo-ai/gateway": ["../../src/"],
+      "@hebo-ai/gateway/*": ["../../src/*"]
+    },
     "plugins": [
       {
         "name": "next"

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@hebo-ai/gateway": ["../../src/"],
+      "@hebo-ai/gateway/*": ["../../src/*"]
+    },
+
+    "strict": true,
+
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx"
+  }
+}

@@ -2,20 +2,19 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createCohere } from "@ai-sdk/cohere";
 import { createGroq } from "@ai-sdk/groq";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
+import { defineModelCatalog, gateway, type HookContext } from "@hebo-ai/gateway";
+import { nova } from "@hebo-ai/gateway/models/amazon";
+import { claude } from "@hebo-ai/gateway/models/anthropic";
+import { embed } from "@hebo-ai/gateway/models/cohere";
+import { llama } from "@hebo-ai/gateway/models/meta";
+import { gptOss } from "@hebo-ai/gateway/models/openai";
+import { voyage } from "@hebo-ai/gateway/models/voyage";
+import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
+import { withCanonicalIdsForCohere } from "@hebo-ai/gateway/providers/cohere";
+import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
+import { withCanonicalIdsForVoyage } from "@hebo-ai/gateway/providers/voyage";
 import { Elysia } from "elysia";
 import { createVoyage } from "voyage-ai-provider";
-
-import { defineModelCatalog, gateway, type HookContext } from "#/";
-import { nova } from "#/models/amazon";
-import { claude } from "#/models/anthropic";
-import { embed } from "#/models/cohere";
-import { llama } from "#/models/meta";
-import { gptOss } from "#/models/openai";
-import { voyage } from "#/models/voyage";
-import { withCanonicalIdsForBedrock } from "#/providers/bedrock";
-import { withCanonicalIdsForCohere } from "#/providers/cohere";
-import { withCanonicalIdsForGroq } from "#/providers/groq";
-import { withCanonicalIdsForVoyage } from "#/providers/voyage";
 
 const basePath = "/v1/gateway";
 
