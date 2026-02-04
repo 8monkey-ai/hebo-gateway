@@ -93,12 +93,8 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     }
     // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
 
-    if (reasoning.enabled) {
-      ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] =
-        !reasoning.exclude;
-    } else if (reasoning.enabled === false) {
-      ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] = false;
-    }
+    ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] =
+      reasoning.enabled ? !reasoning.exclude : false;
 
     delete unknown["reasoning"];
 
