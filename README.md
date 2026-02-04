@@ -113,7 +113,6 @@ const { text } = await generateText({
 console.log(text);
 ```
 
-
 ## Configuration Reference
 
 ### Providers
@@ -159,7 +158,7 @@ const gw = gateway({
 
 ### Models
 
-Register models to tell the gateway what's  available, under which canonical ID and what capabilities each one has.
+Register models to tell the gateway what's available, under which canonical ID and what capabilities each one has.
 
 #### Model Presets
 
@@ -169,7 +168,6 @@ Presets come in two forms:
 
 - Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, `vX` (e.g. `claude["v4.5"]`).
-
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";

@@ -73,17 +73,13 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
 
     const target = (params.providerOptions!["google"] ??= {});
 
-    if (reasoning.enabled === false) {
-      target["thinkingConfig"] = { includeThoughts: false };
-    } else if (model.modelId.includes("gemini-2") && reasoning.max_tokens) {
+    if (model.modelId.includes("gemini-2") && reasoning.max_tokens) {
       target["thinkingConfig"] = {
-        includeThoughts: true,
         thinkingBudget: reasoning.max_tokens,
       };
     } else if (model.modelId.includes("gemini-2") && reasoning.effort) {
       // FUTURE: warn that reasoning.max_tokens was computed
       target["thinkingConfig"] = {
-        includeThoughts: true,
         thinkingBudget: calculateReasoningBudgetFromEffort(
           reasoning.effort,
           params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
@@ -92,12 +88,16 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     } else if (model.modelId.includes("gemini-3") && reasoning.effort) {
       // FUTURE: warn if mapGeminiReasoningEffort modified value
       target["thinkingConfig"] = {
-        includeThoughts: true,
         thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, model.modelId),
       };
-    } else {
-      // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
-      target["thinkingConfig"] = { includeThoughts: true };
+    }
+    // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
+
+    if (reasoning.enabled) {
+      ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] =
+        !reasoning.exclude;
+    } else if (reasoning.enabled === false) {
+      ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] = false;
     }
 
     delete unknown["reasoning"];
