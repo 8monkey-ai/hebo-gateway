@@ -54,11 +54,11 @@ class SimpleMatcher {
 
     if (this.cache.size >= SimpleMatcher.MAX_CACHE) {
       let n = Math.ceil(SimpleMatcher.MAX_CACHE * 0.2);
+      logger.info(`[middleware] cache evictions: ${n} entries`);
       for (const key of this.cache.keys()) {
         this.cache.delete(key);
         if (--n === 0) break;
       }
-      logger.info(`[middleware] cache evicted: ${n} entries`);
     }
 
     this.cache.set(key, out);
