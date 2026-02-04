@@ -57,12 +57,18 @@ function forwardParamsForMiddleware<K extends Kind>(
   } as MiddlewareFor<K>;
 }
 
-export function forwardParamsMiddleware(providerName: ProviderId): LanguageModelMiddleware {
-  return forwardParamsForMiddleware("language", providerName);
+export function extractProviderNamespace(id: string): string {
+  const firstDot = id.indexOf(".");
+  const head = firstDot === -1 ? id : id.slice(0, firstDot);
+
+  const dash = head.indexOf("-");
+  return dash === -1 ? head : head.slice(dash + 1);
 }
 
-export function forwardParamsEmbeddingMiddleware(
-  providerName: ProviderId,
-): EmbeddingModelMiddleware {
-  return forwardParamsForMiddleware("embedding", providerName);
+export function forwardParamsMiddleware(provider: string): LanguageModelMiddleware {
+  return forwardParamsForMiddleware("language", extractProviderNamespace(provider));
+}
+
+export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
+  return forwardParamsForMiddleware("embedding", extractProviderNamespace(provider));
 }

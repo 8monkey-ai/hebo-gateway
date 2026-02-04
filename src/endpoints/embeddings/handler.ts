@@ -4,6 +4,7 @@ import * as z from "zod/mini";
 import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
 import { withLifecycle } from "../../lifecycle";
+import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { createErrorResponse } from "../../utils/errors";
@@ -69,9 +70,16 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       return createErrorResponse("BAD_REQUEST", error, 400);
     }
 
+    const middleware = [];
+    for (const m of modelMiddlewareMatcher.forEmbeddingModel(ctx.resolvedModelId))
+      middleware.push(m);
+    middleware.push(forwardParamsEmbeddingMiddleware(embeddingModel.provider));
+    for (const m of modelMiddlewareMatcher.forEmbeddingProvider(embeddingModel.provider))
+      middleware.push(m);
+
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
       model: embeddingModel,
-      middleware: modelMiddlewareMatcher.forEmbedding(ctx.resolvedModelId, embeddingModel.provider),
+      middleware,
     });
 
     let result;

@@ -3,8 +3,6 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 
-import { forwardParamsMiddleware, forwardParamsEmbeddingMiddleware } from "./common";
-
 type MiddlewareEntry = {
   language?: LanguageModelMiddleware | LanguageModelMiddleware[];
   embedding?: EmbeddingModelMiddleware | EmbeddingModelMiddleware[];
@@ -73,18 +71,26 @@ class ModelMiddlewareMatcher {
     }
   }
 
-  for(modelId: ModelId, providerId: ProviderId): LanguageModelMiddleware[] {
+  forModel(modelId: ModelId): LanguageModelMiddleware[] {
     const out: LanguageModelMiddleware[] = [];
     for (const s of this.model.match(modelId)) out.push(...s.language);
-    out.push(forwardParamsMiddleware(extractProviderNamespace(providerId)));
+    return out;
+  }
+
+  forProvider(providerId: ProviderId): LanguageModelMiddleware[] {
+    const out: LanguageModelMiddleware[] = [];
     for (const s of this.provider.match(providerId)) out.push(...s.language);
     return out;
   }
 
-  forEmbedding(modelId: ModelId, providerId: ProviderId): EmbeddingModelMiddleware[] {
+  forEmbeddingModel(modelId: ModelId): EmbeddingModelMiddleware[] {
     const out: EmbeddingModelMiddleware[] = [];
     for (const s of this.model.match(modelId)) out.push(...s.embedding);
-    out.push(forwardParamsEmbeddingMiddleware(extractProviderNamespace(providerId)));
+    return out;
+  }
+
+  forEmbeddingProvider(providerId: ProviderId): EmbeddingModelMiddleware[] {
+    const out: EmbeddingModelMiddleware[] = [];
     for (const s of this.provider.match(providerId)) out.push(...s.embedding);
     return out;
   }
@@ -106,12 +112,4 @@ function compilePattern(pattern: string): (key: string) => boolean {
   );
 
   return (key) => re.test(key);
-}
-
-export function extractProviderNamespace(id: string): string {
-  const firstDot = id.indexOf(".");
-  const head = firstDot === -1 ? id : id.slice(0, firstDot);
-
-  const dash = head.indexOf("-");
-  return dash === -1 ? head : head.slice(dash + 1);
 }

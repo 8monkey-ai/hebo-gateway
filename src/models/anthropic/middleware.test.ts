@@ -23,12 +23,12 @@ test("claudeReasoningMiddleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.for(id, "anthropic");
+    const middleware = modelMiddlewareMatcher.forModel(id);
     expect(middleware).toContain(claudeReasoningMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.for(id, "anthropic");
+    const middleware = modelMiddlewareMatcher.forModel(id);
     expect(middleware).not.toContain(claudeReasoningMiddleware);
   }
 });
@@ -39,7 +39,7 @@ test("claudeReasoningMiddleware > should transform reasoning_effort string to th
     maxOutputTokens: 10000,
     providerOptions: {
       unknown: {
-        reasoning: { effort: "high" },
+        reasoning: { enabled: true, effort: "high" },
       },
     },
   };
@@ -71,7 +71,7 @@ test("claudeReasoningMiddleware > should respect Anthropic minimum budget of 102
     maxOutputTokens: 2000,
     providerOptions: {
       unknown: {
-        reasoning: { effort: "minimal" },
+        reasoning: { enabled: true, effort: "minimal" },
       },
     },
   };
@@ -103,6 +103,7 @@ test("claudeReasoningMiddleware > should transform reasoning object to thinking 
     providerOptions: {
       unknown: {
         reasoning: {
+          enabled: true,
           effort: "medium",
           max_tokens: 2000,
         },
@@ -161,6 +162,39 @@ test("claudeReasoningMiddleware > should handle disabled reasoning", async () =>
   });
 });
 
+test("claudeReasoningMiddleware > should default reasoning budget when enabled without effort", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "enabled",
+        },
+      },
+      unknown: {},
+    },
+  });
+});
+
 test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutputTokens", async () => {
   const params = {
     prompt: [],
@@ -168,6 +202,7 @@ test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutp
       unknown: {
         reasoning: {
           // 0.5 * 64000 = 32000
+          enabled: true,
           effort: "medium",
         },
       },
@@ -178,6 +213,50 @@ test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutp
     type: "generate",
     params,
     model: new MockLanguageModelV3(),
+  });
+
+  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);
+});
+
+test("claudeReasoningMiddleware > should cap default maxOutputTokens for Opus 4.1", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "medium",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.1" }),
+  });
+
+  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(16000);
+});
+
+test("claudeReasoningMiddleware > should clamp max_tokens for Opus 4", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          max_tokens: 50000,
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4" }),
   });
 
   expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);
