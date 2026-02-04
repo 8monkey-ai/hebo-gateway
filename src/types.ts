@@ -4,6 +4,7 @@ import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
 import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderRegistry } from "./providers/types";
+import type { Logger } from "./utils/logger";
 
 /**
  * Request overrides returned from the `before` hook.
@@ -134,6 +135,10 @@ export type GatewayConfig = {
    * Optional lifecycle hooks for routing, auth, and response shaping.
    */
   hooks?: GatewayHooks;
+  /**
+   * Optional logger compatible with Pino-style logging.
+   */
+  logger?: Logger;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");

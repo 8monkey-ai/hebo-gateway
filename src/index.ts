@@ -1,5 +1,6 @@
 export * from "./gateway";
 export type * from "./types";
+export * from "./utils/logger";
 
 export * from "./middleware/common";
 export * from "./middleware/matcher";
