@@ -1,5 +1,5 @@
 export type LogFn = {
-  (obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void;
+  (obj: Record<string, unknown> | Error, msg?: string, ...args: unknown[]): void;
   (msg: string, ...args: unknown[]): void;
 };
 
