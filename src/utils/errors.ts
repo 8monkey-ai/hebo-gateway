@@ -1,4 +1,39 @@
-import { AISDKError, APICallError } from "ai";
+import {
+  AISDKError,
+  APICallError,
+  DownloadError,
+  EmptyResponseBodyError,
+  InvalidArgumentError,
+  InvalidDataContentError,
+  InvalidMessageRoleError,
+  InvalidPromptError,
+  InvalidResponseDataError,
+  InvalidStreamPartError,
+  InvalidToolApprovalError,
+  InvalidToolInputError,
+  JSONParseError,
+  LoadAPIKeyError,
+  LoadSettingError,
+  MessageConversionError,
+  MissingToolResultsError,
+  NoContentGeneratedError,
+  NoImageGeneratedError,
+  NoObjectGeneratedError,
+  NoOutputGeneratedError,
+  NoSpeechGeneratedError,
+  NoSuchModelError,
+  NoSuchToolError,
+  NoTranscriptGeneratedError,
+  NoVideoGeneratedError,
+  RetryError,
+  ToolCallNotFoundForApprovalError,
+  ToolCallRepairError,
+  TooManyEmbeddingValuesForCallError,
+  TypeValidationError,
+  UIMessageStreamError,
+  UnsupportedModelVersionError,
+  UnsupportedFunctionalityError,
+} from "ai";
 import * as z from "zod";
 
 import { isProduction } from "./env";
@@ -44,26 +79,81 @@ function normalizeAiSdkCallError(error: APICallError): GatewayError {
 
   let code: string;
   if (status === 429) code = "RATE_LIMITED";
-  else if (status >= 500) code = "UPSTREAM_SERVER_ERROR";
+  else if (status >= 500) code = "UPSTREAM_ERROR";
   else code = "UPSTREAM_INVALID_REQUEST";
 
   return new GatewayError(error.message, code, status);
 }
 
-export function normalizeError(error: unknown) {
+function normalizeAiSdkError(error: unknown): GatewayError | undefined {
+  if (APICallError.isInstance(error)) {
+    return normalizeAiSdkCallError(error);
+  }
+
+  if (
+    InvalidResponseDataError.isInstance(error) ||
+    TypeValidationError.isInstance(error) ||
+    JSONParseError.isInstance(error) ||
+    EmptyResponseBodyError.isInstance(error) ||
+    NoContentGeneratedError.isInstance(error) ||
+    NoOutputGeneratedError.isInstance(error) ||
+    NoImageGeneratedError.isInstance(error) ||
+    NoObjectGeneratedError.isInstance(error) ||
+    NoSpeechGeneratedError.isInstance(error) ||
+    NoTranscriptGeneratedError.isInstance(error) ||
+    NoVideoGeneratedError.isInstance(error) ||
+    DownloadError.isInstance(error) ||
+    InvalidStreamPartError.isInstance(error) ||
+    ToolCallRepairError.isInstance(error) ||
+    UIMessageStreamError.isInstance(error) ||
+    RetryError.isInstance(error)
+  ) {
+    return new GatewayError(error.message, "UPSTREAM_ERROR", 502);
+  }
+
+  if (
+    InvalidArgumentError.isInstance(error) ||
+    InvalidPromptError.isInstance(error) ||
+    InvalidMessageRoleError.isInstance(error) ||
+    InvalidDataContentError.isInstance(error) ||
+    MessageConversionError.isInstance(error) ||
+    InvalidToolInputError.isInstance(error) ||
+    InvalidToolApprovalError.isInstance(error) ||
+    ToolCallNotFoundForApprovalError.isInstance(error) ||
+    MissingToolResultsError.isInstance(error) ||
+    NoSuchToolError.isInstance(error) ||
+    UnsupportedModelVersionError.isInstance(error) ||
+    UnsupportedFunctionalityError.isInstance(error) ||
+    NoSuchModelError.isInstance(error) ||
+    TooManyEmbeddingValuesForCallError.isInstance(error)
+  ) {
+    return new GatewayError(error.message, "UPSTREAM_INVALID_REQUEST", 422);
+  }
+
+  if (LoadSettingError.isInstance(error) || LoadAPIKeyError.isInstance(error)) {
+    return new GatewayError(error.message, "INTERNAL_SERVER_ERROR", 500);
+  }
+
+  if (AISDKError.isInstance(error)) {
+    return new GatewayError(error.message, "INTERNAL_SERVER_ERROR", 500);
+  }
+
+  return undefined;
+}
+
+function normalizeError(error: unknown) {
   const rawMessage = error instanceof Error ? error.message : String(error);
 
   let code: string;
   let status: number;
   let param: string | undefined;
 
+  const normalized = normalizeAiSdkError(error);
+
   if (error instanceof GatewayError) {
     ({ code, status, param } = error);
-  } else if (APICallError.isInstance(error)) {
-    ({ code, status } = normalizeAiSdkCallError(error));
-  } else if (AISDKError.isInstance(error)) {
-    code = "GATEWAY_INVALID_REQUEST";
-    status = 422;
+  } else if (normalized) {
+    ({ code, status, param } = normalized);
   } else {
     code = "INTERNAL_SERVER_ERROR";
     status = 500;
@@ -73,6 +163,12 @@ export function normalizeError(error: unknown) {
   const message = status >= 500 && isProduction() ? "Internal Server Error" : rawMessage;
 
   return { code, status, param, type, message, rawMessage };
+}
+
+export function createError(error: unknown): OpenAIError {
+  const meta = normalizeError(error);
+  logError(meta, error);
+  return new OpenAIError(meta.message, meta.type, meta.code, meta.param);
 }
 
 export function createErrorResponse(error: unknown): Response {
