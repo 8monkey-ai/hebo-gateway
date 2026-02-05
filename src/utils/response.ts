@@ -1,22 +1,13 @@
 export const mergeResponseInit = (
-  baseInit?: ResponseInit,
-  overrideInit?: ResponseInit,
+  defaultHeaders?: HeadersInit,
+  responseInit?: ResponseInit,
 ): ResponseInit => {
-  const headers = new Headers(baseInit?.headers);
-
-  const overrideHeaders = overrideInit?.headers;
+  const headers = new Headers(defaultHeaders);
+  const overrideHeaders = responseInit?.headers;
   if (overrideHeaders) {
-    new Headers(overrideHeaders).forEach((value, key) => {
-      headers.set(key, value);
-    });
+    new Headers(overrideHeaders).forEach((value, key) => headers.set(key, value));
   }
-
-  const merged: ResponseInit = {};
-  if (baseInit) Object.assign(merged, baseInit);
-  if (overrideInit) Object.assign(merged, overrideInit);
-  merged.headers = headers;
-
-  return merged;
+  return responseInit ? { ...responseInit, headers } : { headers };
 };
 
 export const toResponse = (
@@ -33,15 +24,13 @@ export const toResponse = (
   }
 
   const init = mergeResponseInit(
-    {
-      headers: isStream
-        ? {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          }
-        : { "Content-Type": "application/json" },
-    },
+    isStream
+      ? {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        }
+      : { "Content-Type": "application/json" },
     responseInit,
   );
 

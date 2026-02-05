@@ -19,7 +19,7 @@ export function gateway(config: GatewayConfig) {
   const routeEntries = Object.entries(routes);
 
   const handler = (req: Request, state?: Record<string, unknown>): Promise<Response> => {
-    const start = Date.now();
+    const start = performance.now();
 
     let pathname = new URL(req.url).pathname;
     if (basePath && pathname.startsWith(basePath)) {
@@ -36,7 +36,9 @@ export function gateway(config: GatewayConfig) {
     logger.warn(
       {
         req: getRequestMeta(req),
-        res: Object.assign(getResponseMeta(response), { durationMs: Date.now() - start }),
+        res: Object.assign(getResponseMeta(response), {
+          durationMs: Math.round((performance.now() - start) * 100) / 100,
+        }),
       },
       "[gateway] route not found",
     );
