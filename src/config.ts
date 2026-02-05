@@ -5,13 +5,24 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   if (kParsed in config) return config as GatewayConfigParsed;
 
   const providers = config.providers ?? {};
+  const parsedProviders = {} as typeof providers;
   const models = config.models ?? {};
 
-  if (Object.keys(providers).length === 0) {
+  // Strip providers that are not configured
+  for (const id in providers) {
+    const provider = providers[id];
+    if (provider === undefined) {
+      console.warn(`[providers] ${id}: provider "${id}" removed (undefined)`);
+      continue;
+    }
+    parsedProviders[id] = provider;
+  }
+
+  if (Object.keys(parsedProviders).length === 0) {
     throw new Error("Gateway config error: no providers configured (config.providers is empty).");
   }
 
-  // Strip out providers from models that are not configured
+  // Strip providers that are not configured from models
   const parsedModels = {} as typeof models;
   for (const id in models) {
     const model = models[id!];
@@ -19,7 +30,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     const kept: string[] = [];
 
     for (const p of model!.providers) {
-      if (p in providers) kept.push(p);
+      if (p in parsedProviders) kept.push(p);
       else console.warn(`[models] ${id}: provider "${p}" removed (not configured)`);
     }
 
@@ -30,5 +41,5 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     throw new Error("Gateway config error: no models configured (config.models is empty).");
   }
 
-  return { ...config, providers, models: parsedModels, [kParsed]: true };
+  return { ...config, providers: parsedProviders, models: parsedModels, [kParsed]: true };
 };

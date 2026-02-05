@@ -160,6 +160,7 @@ test("geminiReasoningMiddleware > should handle disabled reasoning", async () =>
       google: {
         thinkingConfig: {
           includeThoughts: false,
+          thinkingLevel: "none",
         },
       },
       unknown: {},
