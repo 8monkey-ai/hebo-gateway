@@ -489,7 +489,6 @@ export class ChatCompletionsStream extends TransformStream<
 
           case "error": {
             const error = part.error;
-            // FUTURE: logging
             controller.enqueue(toOpenAIError(error));
             break;
           }
