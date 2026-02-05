@@ -184,4 +184,32 @@ describe("forwardParamsMiddleware", () => {
     });
     expect(result.providerOptions!.unknown).toBeUndefined();
   });
+
+  test("should merge all providerOptions into target providerName", async () => {
+    const middleware = forwardParamsMiddleware("anthropic.messages");
+    const params = {
+      prompt: [],
+      providerOptions: {
+        unknown: { some_option: "value1" },
+        openai: { other_option: "value2" },
+        anthropic: { existing_option: "value3" },
+      },
+    };
+
+    const result = await middleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV3({ modelId: "anthropic/claude-3-5-sonnet" }),
+    });
+
+    expect(result.providerOptions).toEqual({
+      anthropic: {
+        someOption: "value1",
+        otherOption: "value2",
+        existingOption: "value3",
+      },
+    });
+    expect(result.providerOptions!.unknown).toBeUndefined();
+    expect(result.providerOptions!.openai).toBeUndefined();
+  });
 });

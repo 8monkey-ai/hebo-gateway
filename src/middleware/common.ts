@@ -68,11 +68,17 @@ function snakizeKeysDeep(value: unknown): unknown {
 }
 
 function processOptions(providerOptions: Record<string, JSONObject>, providerName: ProviderId) {
-  providerOptions[providerName] = camelizeKeysDeep({
-    ...providerOptions[providerName],
-    ...providerOptions["unknown"],
-  }) as JSONObject;
-  delete providerOptions["unknown"];
+  const merged: Record<string, unknown> = {};
+
+  for (const ns of Object.keys(providerOptions)) {
+    const options = providerOptions[ns] as Record<string, unknown>;
+    for (const key in options) {
+      merged[key] = options[key];
+    }
+    delete providerOptions[ns];
+  }
+
+  providerOptions[providerName] = camelizeKeysDeep(merged) as JSONObject;
 }
 
 function processMetadata(providerMetadata: Record<string, JSONObject>) {

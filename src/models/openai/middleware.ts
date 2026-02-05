@@ -53,8 +53,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
     const isGptOss = model.modelId.includes("gpt-oss");
 
     if (isGptOss) {
-      target["reasoningEffort"] =
-        reasoning.enabled === false ? "low" : mapGptOssReasoningEffort(reasoning.effort);
+      target["reasoningEffort"] = mapGptOssReasoningEffort(reasoning.effort);
     } else if (reasoning.enabled === false) {
       target["reasoningEffort"] = "none";
     } else if (reasoning.effort) {
