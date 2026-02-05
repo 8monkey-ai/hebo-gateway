@@ -18,10 +18,9 @@ import { logger } from "../../utils/logger";
 import {
   convertToTextCallOptions,
   toChatCompletionsResponse,
-  toChatCompletionsStream,
+  toChatCompletionsStreamResponse,
 } from "./converters";
 import { ChatCompletionsBodySchema } from "./schema";
-import { mergeResponseInit } from "../../utils/response";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -42,7 +41,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const parsed = ChatCompletionsBodySchema.safeParse(body);
     if (!parsed.success) {
-      throw new GatewayError(z.prettifyError(parsed.error), 400, "UNPROCESSABLE_ENTITY");
+      throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
 
@@ -84,67 +83,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Execute request (streaming vs. non-streaming).
     if (stream) {
-      const abortController = new AbortController();
-      const requestSignal = ctx.request.signal;
-
-      if (requestSignal.aborted) {
-        abortController.abort(requestSignal.reason);
-      } else {
-        requestSignal.addEventListener(
-          "abort",
-          () => abortController.abort(requestSignal.reason),
-          { once: true },
-        );
-      }
-
-      const effectiveAbortSignal =
-        typeof AbortSignal !== "undefined" && "any" in AbortSignal
-          ? AbortSignal.any([requestSignal, abortController.signal])
-          : abortController.signal;
-
       const result = streamText({
         model: languageModelWithMiddleware,
-        abortSignal: effectiveAbortSignal,
+        abortSignal: ctx.request.signal,
         ...textOptions,
       });
 
-      const stream = toChatCompletionsStream(result, ctx.modelId);
-      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-
-      const wrapped = new ReadableStream<Uint8Array>({
-        start(controller) {
-          reader = stream.getReader();
-          const pump = (): void => {
-            reader!
-              .read()
-              .then(({ done, value }) => {
-                if (done) {
-                  controller.close();
-                  return;
-                }
-                controller.enqueue(value);
-                pump();
-              })
-              .catch((err) => controller.error(err));
-          };
-          pump();
-        },
-        cancel(reason) {
-          abortController.abort(reason);
-          return reader?.cancel(reason);
-        },
-      });
-
-      return new Response(
-        wrapped,
-        mergeResponseInit(
-          {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-        ),
-      );
+      return toChatCompletionsStreamResponse(result, ctx.modelId);
     }
 
     const result = await generateText({

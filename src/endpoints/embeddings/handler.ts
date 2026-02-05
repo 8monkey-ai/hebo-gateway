@@ -37,7 +37,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
     if (!parsed.success) {
-      throw new GatewayError(z.prettifyError(parsed.error), 400, "UNPROCESSABLE_ENTITY");
+      throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
 
