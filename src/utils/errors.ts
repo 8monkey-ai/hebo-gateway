@@ -160,15 +160,16 @@ function normalizeError(error: unknown) {
   let status: number;
   let param: string | undefined;
 
-  const normalized = normalizeAiSdkError(error);
-
   if (error instanceof GatewayError) {
     ({ code, status, param } = error);
-  } else if (normalized) {
-    ({ code, status, param } = normalized);
   } else {
-    status = 500;
-    code = STATUS_CODE(status);
+    const normalized = normalizeAiSdkError(error);
+    if (normalized) {
+      ({ code, status, param } = normalized);
+    } else {
+      status = 500;
+      code = STATUS_CODE(status);
+    }
   }
 
   const type = status < 500 ? "invalid_request_error" : "server_error";
