@@ -1,11 +1,11 @@
 export const mergeResponseInit = (
-  defaultHeaders?: HeadersInit,
+  defaultHeaders: HeadersInit,
   responseInit?: ResponseInit,
 ): ResponseInit => {
   const headers = new Headers(defaultHeaders);
-  const overrideHeaders = responseInit?.headers;
-  if (overrideHeaders) {
-    new Headers(overrideHeaders).forEach((value, key) => headers.set(key, value));
+  const override = responseInit?.headers;
+  if (override) {
+    new Headers(override).forEach((value, key) => headers.set(key, value));
   }
   return responseInit ? { ...responseInit, headers } : { headers };
 };
