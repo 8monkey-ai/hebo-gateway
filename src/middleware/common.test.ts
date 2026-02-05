@@ -4,24 +4,38 @@ import { describe, expect, test } from "bun:test";
 import { extractProviderNamespace, forwardParamsMiddleware } from "./common";
 
 describe("extractProviderNamespace", () => {
-  test("should handle simple names", () => {
-    expect(extractProviderNamespace("openai")).toBe("openai");
-    expect(extractProviderNamespace("anthropic")).toBe("anthropic");
-  });
-
-  test("should handle dot-separated names", () => {
-    expect(extractProviderNamespace("google.vertex")).toBe("vertex");
+  test("should handle Google Vertex AI (google.vertex -> vertex)", () => {
     expect(extractProviderNamespace("google.vertex.chat")).toBe("vertex");
-    expect(extractProviderNamespace("azure.openai")).toBe("openai");
+    expect(extractProviderNamespace("google.vertex.embedding")).toBe("vertex");
+    expect(extractProviderNamespace("google.vertex.image")).toBe("vertex");
+    expect(extractProviderNamespace("google.vertex.video")).toBe("vertex");
   });
 
-  test("should handle dash-separated names", () => {
+  test("should handle Google Generative AI (google.others -> google)", () => {
+    expect(extractProviderNamespace("google.generative-ai.chat")).toBe("google");
+    expect(extractProviderNamespace("google.generative-ai.embedding")).toBe("google");
+    expect(extractProviderNamespace("google.generative-ai.image")).toBe("google");
+    expect(extractProviderNamespace("google.generative-ai.video")).toBe("google");
+  });
+
+  test("should handle Amazon Bedrock special case", () => {
     expect(extractProviderNamespace("amazon-bedrock")).toBe("bedrock");
-    expect(extractProviderNamespace("google-vertex")).toBe("vertex");
   });
 
-  test("should handle mixed separators", () => {
-    expect(extractProviderNamespace("company.service-name")).toBe("name");
+  test("should handle OpenAI (default to first component)", () => {
+    expect(extractProviderNamespace("openai.chat")).toBe("openai");
+    expect(extractProviderNamespace("openai.embedding")).toBe("openai");
+  });
+
+  test("should handle Anthropic and its infrastructure variants", () => {
+    expect(extractProviderNamespace("anthropic.messages")).toBe("anthropic");
+    expect(extractProviderNamespace("vertex.anthropic.messages")).toBe("vertex");
+    expect(extractProviderNamespace("bedrock.anthropic.messages")).toBe("bedrock");
+  });
+
+  test("should handle Azure (default to first component)", () => {
+    expect(extractProviderNamespace("azure.chat")).toBe("azure");
+    expect(extractProviderNamespace("azure.embedding")).toBe("azure");
   });
 });
 
@@ -30,6 +44,7 @@ describe("forwardParamsMiddleware", () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
+      // eslint-disable-next-line @typescript-eslint/require-await
       doGenerate: async () => ({
         content: [{ type: "text", text: "hi" }],
         finishReason: "stop",
@@ -61,6 +76,7 @@ describe("forwardParamsMiddleware", () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
+      // eslint-disable-next-line @typescript-eslint/require-await
       doGenerate: async () => ({
         content: [
           {
@@ -93,6 +109,7 @@ describe("forwardParamsMiddleware", () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
+      // eslint-disable-next-line @typescript-eslint/require-await
       doStream: async () => ({
         stream: new ReadableStream({
           start(controller) {

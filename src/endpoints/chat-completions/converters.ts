@@ -4,6 +4,7 @@ import type {
   StreamTextResult,
   FinishReason,
   ToolChoice,
+  ToolCallPart,
   ToolResultPart,
   ToolSet,
   ModelMessage,
@@ -147,19 +148,31 @@ export function fromChatCompletionsAssistantMessage(
 ): AssistantModelMessage {
   const { tool_calls, role, content, extra_content } = message;
 
-  if (!tool_calls || tool_calls.length === 0) {
-    return {
+  if (!tool_calls?.length) {
+    const out: AssistantModelMessage = {
       role: role,
       content: content ?? "",
-      ...(extra_content ? { providerOptions: extra_content } : {}),
     };
+    if (extra_content) {
+      out.providerOptions = extra_content;
+    }
+    return out;
   }
 
   return {
     role: role,
     content: tool_calls.map((tc: ChatCompletionsToolCall) => {
-      const { id, function: fn, extra_content: part_extra_content } = tc;
-      return Object.assign({type:`tool-call`,toolCallId:id,toolName:fn.name,input:parseToolOutput(fn.arguments).value}, part_extra_content?{providerOptions:part_extra_content}:{});
+      const { id, function: fn, extra_content } = tc;
+      const out: ToolCallPart = {
+        type: "tool-call",
+        toolCallId: id,
+        toolName: fn.name,
+        input: parseToolOutput(fn.arguments).value,
+      };
+      if (extra_content) {
+        out.providerOptions = extra_content;
+      }
+      return out;
     }),
   };
 }
@@ -388,46 +401,46 @@ export class ChatCompletionsStream extends TransformStream<
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
-    let lastProviderMetadata: SharedV3ProviderMetadata;
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
+      provider_metadata?: SharedV3ProviderMetadata,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-      provider_metadata?: SharedV3ProviderMetadata,
-    ): ChatCompletionsChunk => ({
-      id: streamId,
-      object: "chat.completion.chunk",
-      created: creationTime,
-      model,
-      choices: [
-        {
-          index: 0,
-          delta: {
-            ...delta,
-            ...(provider_metadata ? { extra_content: provider_metadata } : {}),
-          },
-          finish_reason: finish_reason ?? null,
-        } satisfies ChatCompletionsChoiceDelta,
-      ],
-      usage: usage ?? null,
-      ...(provider_metadata ? { provider_metadata } : {}),
-    });
+    ): ChatCompletionsChunk => {
+      if (provider_metadata) {
+        delta.extra_content = provider_metadata;
+      }
+      return {
+        id: streamId,
+        object: "chat.completion.chunk",
+        created: creationTime,
+        model,
+        choices: [
+          {
+            index: 0,
+            delta,
+            finish_reason: finish_reason ?? null,
+          } satisfies ChatCompletionsChoiceDelta,
+        ],
+        usage: usage ?? null,
+      };
+    };
 
     super({
       transform(part, controller) {
-        if ("providerMetadata" in part && part.providerMetadata !== undefined) {
-          lastProviderMetadata = part.providerMetadata;
-        }
-
         switch (part.type) {
           case "text-delta": {
-            controller.enqueue(createChunk({ role: "assistant", content: part.text }));
+            controller.enqueue(
+              createChunk({ role: "assistant", content: part.text }, part.providerMetadata),
+            );
             break;
           }
 
           case "reasoning-delta": {
-            controller.enqueue(createChunk({ reasoning_content: part.text }));
+            controller.enqueue(
+              createChunk({ reasoning_content: part.text }, part.providerMetadata),
+            );
             break;
           }
 
@@ -450,13 +463,25 @@ export class ChatCompletionsStream extends TransformStream<
             break;
           }
 
+          case "finish-step": {
+            controller.enqueue(
+              createChunk(
+                {},
+                part.providerMetadata,
+                toChatCompletionsFinishReason(part.finishReason),
+                toChatCompletionsUsage(part.usage),
+              ),
+            );
+            break;
+          }
+
           case "finish": {
             controller.enqueue(
               createChunk(
                 {},
+                undefined,
                 toChatCompletionsFinishReason(part.finishReason),
                 toChatCompletionsUsage(part.totalUsage),
-                lastProviderMetadata,
               ),
             );
             break;
@@ -549,15 +574,20 @@ export function toChatCompletionsToolCall(
   args: unknown,
   providerMetadata?: SharedV3ProviderMetadata,
 ): ChatCompletionsToolCall {
-  return {
+  const out: ChatCompletionsToolCall = {
     id,
     type: "function",
     function: {
       name,
       arguments: typeof args === "string" ? args : JSON.stringify(args),
     },
-    ...(providerMetadata ? { extra_content: providerMetadata } : {}),
   };
+
+  if (providerMetadata) {
+    out.extra_content = providerMetadata;
+  }
+
+  return out;
 }
 
 export const toChatCompletionsFinishReason = (

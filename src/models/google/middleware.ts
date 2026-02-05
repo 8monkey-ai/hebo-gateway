@@ -32,6 +32,7 @@ export function mapGeminiReasoningEffort(
 ): ChatCompletionsReasoningEffort | undefined {
   if (modelId.includes("gemini-3-pro")) {
     switch (effort) {
+      case "none":
       case "minimal":
       case "low":
         return "low";
@@ -44,6 +45,7 @@ export function mapGeminiReasoningEffort(
 
   if (modelId.includes("gemini-3-flash")) {
     switch (effort) {
+      case "none":
       case "minimal":
         return "minimal";
       case "low":
@@ -85,11 +87,7 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
           params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
         ),
       };
-    } else if (
-      model.modelId.includes("gemini-3") &&
-      reasoning.effort &&
-      reasoning.effort !== "none"
-    ) {
+    } else if (model.modelId.includes("gemini-3") && reasoning.effort) {
       // FUTURE: warn if mapGeminiReasoningEffort modified value
       target["thinkingConfig"] = {
         thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, model.modelId),

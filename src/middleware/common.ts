@@ -4,11 +4,37 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ProviderId } from "../providers/types";
 
 function snakeToCamel(key: string): string {
-  return key.replaceAll(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+  if (key.indexOf("_") === -1) return key;
+
+  let out = "";
+
+  for (let i = 0; i < key.length; i++) {
+    const c = key[i]!;
+
+    if (c === "_" && i + 1 < key.length) {
+      const next = key[i + 1]!;
+      if (next >= "a" && next <= "z") {
+        out += next.toUpperCase();
+        i++;
+        continue;
+      }
+    }
+
+    out += c;
+  }
+
+  return out;
 }
 
 function camelToSnake(key: string): string {
-  return key.replaceAll(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  if (!/[A-Z]/.test(key)) return key;
+
+  let out = "";
+  for (let i = 0; i < key.length; i++) {
+    const c = key[i]!;
+    out += c >= "A" && c <= "Z" ? "_" + c.toLowerCase() : c;
+  }
+  return out;
 }
 
 function camelizeKeysDeep(value: unknown): unknown {
@@ -41,75 +67,48 @@ function snakizeKeysDeep(value: unknown): unknown {
   return out;
 }
 
+function processOptions(providerOptions: Record<string, JSONObject>, providerName: ProviderId) {
+  if (providerOptions[providerName]) {
+    providerOptions[providerName] = camelizeKeysDeep(providerOptions[providerName]) as Record<
+      string,
+      JSONObject
+    >;
+  }
+
+  const target = (providerOptions[providerName] ??= {});
+  for (const key in providerOptions) {
+    if (key === providerName) continue;
+    Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
+    if (key === "unknown") delete providerOptions[key];
+  }
+}
+
+function processMetadata(providerMetadata: Record<string, JSONObject>) {
+  for (const key in providerMetadata) {
+    providerMetadata[key] = snakizeKeysDeep(providerMetadata[key]) as JSONObject;
+  }
+}
+
 /**
  * Converts snake_case params in providerOptions to camelCase
  * and moves all of them into providerOptions[providerName].
- * Also snakizes providerMetadata in the output for OpenAI compatibility.
+ * Also snakizes values in providerMetadata for OpenAI compatibility.
  */
-type Kind = "embedding" | "language";
-type MiddlewareFor<K extends Kind> = K extends "embedding"
-  ? EmbeddingModelMiddleware
-  : LanguageModelMiddleware;
-type TransformOptsFor<K extends Kind> = Parameters<
-  NonNullable<MiddlewareFor<K>["transformParams"]>
->[0];
-
-function forwardParamsForMiddleware<K extends Kind>(
-  kind: K,
-  providerName: ProviderId,
-): MiddlewareFor<K> {
-  const processOptions = (providerOptions: Record<string, JSONObject> | undefined) => {
-    if (!providerOptions) return;
-
-    if (providerOptions[providerName]) {
-      providerOptions[providerName] = camelizeKeysDeep(providerOptions[providerName]) as Record<
-        string,
-        JSONObject
-      >;
-    }
-
-    const target = (providerOptions[providerName] ??= {});
-    for (const key in providerOptions) {
-      if (key === providerName) continue;
-      Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
-      if (key === "unknown") delete providerOptions[key];
-    }
-  };
-
-  const processMetadata = (providerMetadata: Record<string, JSONObject> | undefined) => {
-    if (!providerMetadata) return;
-
-    if (providerMetadata[providerName]) {
-      providerMetadata[providerName] = snakizeKeysDeep(
-        providerMetadata[providerName],
-      ) as JSONObject;
-    }
-
-    const target = (providerMetadata[providerName] ??= {});
-    const keys = Object.keys(providerMetadata);
-    for (const key of keys) {
-      if (key === providerName) continue;
-      Object.assign(target, snakizeKeysDeep(providerMetadata[key]));
-      delete providerMetadata[key];
-    }
-  };
-
+export function forwardLanguageParams(providerName: ProviderId): LanguageModelMiddleware {
   return {
-    specificationVersion: "v3" as const,
+    specificationVersion: "v3",
     // eslint-disable-next-line require-await
-    transformParams: async (options: TransformOptsFor<K>) => {
-      const { params } = options;
+    transformParams: async ({ params }) => {
+      if (params.providerOptions) processOptions(params.providerOptions, providerName);
 
-      processOptions(params.providerOptions);
-
-      if (kind === "language") {
-        for (const message of params.prompt) {
-          if (message.providerOptions) {
-            processOptions(message.providerOptions);
-          }
-          if (message.content) {
-            for (const part of message.content) {
-              processOptions(part.providerOptions);
+      for (const message of params.prompt) {
+        if (message.providerOptions) {
+          processOptions(message.providerOptions, providerName);
+        }
+        if (message.content && Array.isArray(message.content)) {
+          for (const part of message.content) {
+            if ("providerOptions" in part && part.providerOptions) {
+              processOptions(part.providerOptions as Record<string, JSONObject>, providerName);
             }
           }
         }
@@ -117,58 +116,63 @@ function forwardParamsForMiddleware<K extends Kind>(
 
       return params;
     },
-    wrapGenerate: async ({ doGenerate }: any) => {
+    wrapGenerate: async ({ doGenerate }) => {
       const result = await doGenerate();
-
-      processMetadata(result.providerMetadata);
-
-      if (result.content) {
-        for (const part of result.content) {
-          processMetadata(part.providerMetadata);
-        }
-      }
-
+      if (result.providerMetadata) processMetadata(result.providerMetadata);
+      result.content?.forEach((part) => {
+        if (part.providerMetadata) processMetadata(part.providerMetadata);
+      });
       return result;
     },
-    wrapStream: async ({ doStream }: any) => {
+    wrapStream: async ({ doStream }) => {
       const result = await doStream();
-
-      return {
-        ...result,
-        stream: result.stream.pipeThrough(
-          new TransformStream({
-            transform(part, controller) {
+      result.stream = result.stream.pipeThrough(
+        new TransformStream({
+          transform(part, controller) {
+            if ("providerMetadata" in part && part.providerMetadata) {
               processMetadata(part.providerMetadata);
-              controller.enqueue(part);
-            },
-          }),
-        ),
-      };
-    },
-    wrapEmbed: async ({ doEmbed }: any) => {
-      const result = await doEmbed();
-
-      processMetadata(result.providerMetadata);
-
+            }
+            controller.enqueue(part);
+          },
+        }),
+      );
       return result;
     },
-  } as MiddlewareFor<K>;
+  };
+}
+
+export function forwardEmbeddingParams(providerName: ProviderId): EmbeddingModelMiddleware {
+  return {
+    specificationVersion: "v3",
+    // eslint-disable-next-line require-await
+    transformParams: async ({ params }) => {
+      if (params.providerOptions) processOptions(params.providerOptions, providerName);
+      return params;
+    },
+    wrapEmbed: async ({ doEmbed }) => {
+      const result = await doEmbed();
+      if (result.providerMetadata) processMetadata(result.providerMetadata);
+      return result;
+    },
+  };
 }
 
 export function extractProviderNamespace(id: string): string {
-  if (id.includes("vertex")) return "vertex";
+  if (id === "amazon-bedrock") return "bedrock";
 
-  const lastDot = id.lastIndexOf(".");
-  const tail = lastDot === -1 ? id : id.slice(lastDot + 1);
+  const parts = id.split(".");
+  const first = parts[0]!;
+  if (first === "google") {
+    return parts[1] === "vertex" ? "vertex" : "google";
+  }
 
-  const lastDash = tail.lastIndexOf("-");
-  return lastDash === -1 ? tail : tail.slice(lastDash + 1);
+  return first;
 }
 
 export function forwardParamsMiddleware(provider: string): LanguageModelMiddleware {
-  return forwardParamsForMiddleware("language", extractProviderNamespace(provider));
+  return forwardLanguageParams(extractProviderNamespace(provider));
 }
 
 export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
-  return forwardParamsForMiddleware("embedding", extractProviderNamespace(provider));
+  return forwardEmbeddingParams(extractProviderNamespace(provider));
 }
