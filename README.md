@@ -198,7 +198,6 @@ Out-of-the-box model presets:
   Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
 
-
 - **Google** — `@hebo-ai/gateway/models/google`  
   Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
 

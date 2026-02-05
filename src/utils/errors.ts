@@ -70,29 +70,19 @@ export class OpenAIError {
   }
 }
 
-function normalizeAiSdkCallError(error: APICallError): GatewayError {
-  let status = error.statusCode ?? (error.isRetryable ? 502 : 422);
-  if (error.isRetryable) {
-    if (status >= 400 && status < 500 && status !== 429) status = 502;
-  } else {
-    if (status >= 500) status = 422;
-  }
-
-  let code: string;
-  if (status === 429) code = "RATE_LIMITED";
-  else if (status >= 500) code = "UPSTREAM_ERROR";
-  else code = "UPSTREAM_INVALID_REQUEST";
-
-  return new GatewayError(error.message, code, status, undefined, error.cause);
-}
-
 function normalizeAiSdkError(error: unknown): GatewayError | undefined {
-  if (APICallError.isInstance(error)) {
-    return normalizeAiSdkCallError(error);
-  }
-
   const cause =
     error instanceof Error && "cause" in error ? (error as { cause?: unknown }).cause : undefined;
+
+  if (APICallError.isInstance(error)) {
+    let status = error.statusCode ?? (error.isRetryable ? 502 : 422);
+
+    let code: string;
+    if (status >= 500) code = "UPSTREAM_SERVER_ERROR";
+    else code = "UPSTREAM_BAD_REQUEST";
+
+    return new GatewayError(error.message, code, status, undefined, cause);
+  }
 
   if (
     InvalidResponseDataError.isInstance(error) ||
@@ -112,7 +102,7 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     UIMessageStreamError.isInstance(error) ||
     RetryError.isInstance(error)
   ) {
-    return new GatewayError(error.message, "UPSTREAM_ERROR", 502, undefined, cause);
+    return new GatewayError(error.message, "UPSTREAM_SERVER_ERROR", 502, undefined, cause);
   }
 
   if (
@@ -131,7 +121,7 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     NoSuchModelError.isInstance(error) ||
     TooManyEmbeddingValuesForCallError.isInstance(error)
   ) {
-    return new GatewayError(error.message, "UPSTREAM_INVALID_REQUEST", 422, undefined, cause);
+    return new GatewayError(error.message, "UPSTREAM_BAD_REQUEST", 422, undefined, cause);
   }
 
   if (LoadSettingError.isInstance(error) || LoadAPIKeyError.isInstance(error)) {
@@ -164,7 +154,10 @@ function normalizeError(error: unknown) {
   }
 
   const type = status < 500 ? "invalid_request_error" : "server_error";
-  const message = status >= 500 && isProduction() ? "Internal Server Error" : rawMessage;
+  const message =
+    !code.includes("UPSTREAM") && status >= 500 && isProduction()
+      ? "Internal Server Error"
+      : rawMessage;
 
   return { code, status, param, type, message, rawMessage };
 }
@@ -181,8 +174,7 @@ export function logError(
   const suffix = meta.param && ` param=${meta.param}`;
   const message = `[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}${suffix ?? ""}`;
 
-  if (meta.status < 422) {
-    logger.warn(message);
+  if (!meta.code.includes("UPSTREAM") && meta.status < 422) {
     return;
   }
 
@@ -191,7 +183,11 @@ export function logError(
     cause: error.cause,
   };
 
-  logger.error(message, diagnostics);
+  if (meta.code.includes("UPSTREAM") || meta.status >= 500) {
+    logger.error(message, diagnostics);
+  } else {
+    logger.warn(message, diagnostics);
+  }
 }
 
 export function createError(error: unknown): OpenAIError {
