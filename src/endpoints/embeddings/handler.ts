@@ -24,7 +24,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
   const handler = async (ctx: GatewayContext): Promise<Response> => {
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
-      throw new GatewayError("Method Not Allowed", "METHOD_NOT_ALLOWED", 405);
+      throw new GatewayError("Method Not Allowed", 405);
     }
 
     // Parse + validate input.
@@ -32,17 +32,12 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     try {
       body = await ctx.request.json();
     } catch {
-      throw new GatewayError("Invalid JSON", "BAD_REQUEST", 400, "body");
+      throw new GatewayError("Invalid JSON", 400);
     }
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
     if (!parsed.success) {
-      throw new GatewayError(
-        "Validation error",
-        "UNPROCESSABLE_ENTITY",
-        400,
-        z.prettifyError(parsed.error),
-      );
+      throw new GatewayError(z.prettifyError(parsed.error), 400, "UNPROCESSABLE_ENTITY");
     }
     ctx.body = parsed.data;
 

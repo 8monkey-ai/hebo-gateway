@@ -19,14 +19,14 @@ export const resolveProvider = (args: {
   const catalogModel = models[modelId];
 
   if (!catalogModel) {
-    throw new GatewayError(`Model '${modelId}' not found in catalog`, "MODEL_NOT_FOUND", 422);
+    throw new GatewayError(`Model '${modelId}' not found in catalog`, 422, "MODEL_NOT_FOUND");
   }
 
   if (catalogModel.modalities && !catalogModel.modalities.output.includes(operation)) {
     throw new GatewayError(
       `Model '${modelId}' does not support '${operation}' output`,
-      "MODEL_UNSUPPORTED_OPERATION",
       422,
+      "MODEL_UNSUPPORTED_OPERATION",
     );
   }
 
@@ -34,15 +34,15 @@ export const resolveProvider = (args: {
   const resolvedProviderId = catalogModel.providers[0];
 
   if (!resolvedProviderId) {
-    throw new GatewayError(`No providers configured for model '${modelId}'`, "NO_PROVIDERS", 422);
+    throw new GatewayError(`No providers configured for model '${modelId}'`, 422, "NO_PROVIDERS");
   }
 
   const provider = providers[resolvedProviderId];
   if (!provider) {
     throw new GatewayError(
       `Provider '${resolvedProviderId}' not configured`,
-      "PROVIDER_NOT_CONFIGURED",
       422,
+      "PROVIDER_NOT_CONFIGURED",
     );
   }
 

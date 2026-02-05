@@ -64,14 +64,14 @@ export const STATUS_CODE = (status: number) => {
 export class GatewayError extends Error {
   readonly status: number;
   readonly code: string;
-  readonly param?: string;
 
-  constructor(message: string, code: string, status: number, param?: string, cause?: unknown) {
-    super(message);
+  constructor(error: string | Error, status: number, code?: string, cause?: unknown) {
+    const msg = typeof error === "string" ? error : error.message;
+    super(msg);
     this.status = status;
-    this.code = code;
-    this.param = param;
-    this.cause = cause;
+    this.code = code ?? STATUS_CODE(status);
+    this.cause =
+      cause ?? (typeof error === "string" ? undefined : (error as { cause?: unknown }).cause);
   }
 }
 
@@ -87,19 +87,16 @@ export const OpenAIErrorSchema = z.object({
 export class OpenAIError {
   readonly error;
 
-  constructor(message: string, type: string = "server_error", code?: string, param?: string) {
-    this.error = { message, type, code, param };
+  constructor(message: string, type: string = "server_error", code?: string) {
+    this.error = { message, type, code, param: "" };
   }
 }
 
 function normalizeAiSdkError(error: unknown): GatewayError | undefined {
-  const cause =
-    error instanceof Error && "cause" in error ? (error as { cause?: unknown }).cause : undefined;
-
   if (APICallError.isInstance(error)) {
     const status = error.statusCode ?? (error.isRetryable ? 502 : 422);
     const code = `UPSTREAM_${STATUS_CODE(status)}`;
-    return new GatewayError(error.message, code, status, undefined, cause);
+    return new GatewayError(error, status, code);
   }
 
   if (
@@ -120,7 +117,7 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     UIMessageStreamError.isInstance(error) ||
     RetryError.isInstance(error)
   ) {
-    return new GatewayError(error.message, `UPSTREAM_${STATUS_CODE(502)}`, 502, undefined, cause);
+    return new GatewayError(error, 502, `UPSTREAM_${STATUS_CODE(502)}`);
   }
 
   if (
@@ -139,15 +136,15 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     NoSuchModelError.isInstance(error) ||
     TooManyEmbeddingValuesForCallError.isInstance(error)
   ) {
-    return new GatewayError(error.message, `UPSTREAM_${STATUS_CODE(422)}`, 422, undefined, cause);
+    return new GatewayError(error, 422, `UPSTREAM_${STATUS_CODE(422)}`);
   }
 
   if (LoadSettingError.isInstance(error) || LoadAPIKeyError.isInstance(error)) {
-    return new GatewayError(error.message, `${STATUS_CODE(500)}`, 500, undefined, cause);
+    return new GatewayError(error, 500);
   }
 
   if (AISDKError.isInstance(error)) {
-    return new GatewayError(error.message, `${STATUS_CODE(500)}`, 500, undefined, cause);
+    return new GatewayError(error, 500);
   }
 
   return undefined;
@@ -158,14 +155,14 @@ function normalizeError(error: unknown) {
 
   let code: string;
   let status: number;
-  let param: string | undefined;
+  let param = "";
 
   if (error instanceof GatewayError) {
-    ({ code, status, param } = error);
+    ({ code, status } = error);
   } else {
     const normalized = normalizeAiSdkError(error);
     if (normalized) {
-      ({ code, status, param } = normalized);
+      ({ code, status } = normalized);
     } else {
       status = 500;
       code = STATUS_CODE(status);
@@ -183,13 +180,11 @@ export function logError(
   meta: {
     code: string;
     status: number;
-    param?: string;
     rawMessage: string;
   },
   error: unknown,
 ) {
-  const suffix = meta.param && ` param=${meta.param}`;
-  const message = `[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}${suffix ?? ""}`;
+  const message = `[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}`;
 
   if (!meta.code.includes("UPSTREAM") && meta.status < 422) {
     return;
@@ -210,17 +205,14 @@ export function logError(
 export function createError(error: unknown): OpenAIError {
   const meta = normalizeError(error);
   logError(meta, error);
-  return new OpenAIError(meta.message, meta.type, meta.code, meta.param);
+  return new OpenAIError(meta.message, meta.type, meta.code);
 }
 
 export function createErrorResponse(error: unknown): Response {
   const meta = normalizeError(error);
   logError(meta, error);
-  return new Response(
-    JSON.stringify(new OpenAIError(meta.message, meta.type, meta.code, meta.param)),
-    {
-      status: meta.status,
-      headers: { "Content-Type": "application/json" },
-    },
-  );
+  return new Response(JSON.stringify(new OpenAIError(meta.message, meta.type, meta.code)), {
+    status: meta.status,
+    headers: { "Content-Type": "application/json" },
+  });
 }

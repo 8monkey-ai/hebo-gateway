@@ -10,7 +10,7 @@ export const models = (config: GatewayConfig): Endpoint => {
     const request = ctx.request;
 
     if (!request || request.method !== "GET") {
-      throw new GatewayError("Method Not Allowed", "METHOD_NOT_ALLOWED", 405);
+      throw new GatewayError("Method Not Allowed", 405);
     }
 
     const rawId = request.url.split("/models/", 2)[1]?.split("?", 1)[0];
@@ -22,12 +22,12 @@ export const models = (config: GatewayConfig): Endpoint => {
     try {
       modelId = decodeURIComponent(rawId);
     } catch {
-      throw new GatewayError(`Invalid model ID: '${modelId}'`, "BAD_REQUEST", 400, "model");
+      throw new GatewayError(`Invalid model ID: '${modelId}'`, 400);
     }
 
     const model = ctx.models[modelId];
     if (!model) {
-      throw new GatewayError(`Model not found: '${modelId}'`, "NOT_FOUND", 404, modelId);
+      throw new GatewayError(`Model not found: '${modelId}'`, 404);
     }
 
     return createModelResponse(modelId, model);

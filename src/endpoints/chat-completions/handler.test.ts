@@ -96,6 +96,7 @@ describe("Chat Completions Handler", () => {
       error: {
         code: "METHOD_NOT_ALLOWED",
         message: "Method Not Allowed",
+        param: "",
         type: "invalid_request_error",
       },
     });
@@ -112,7 +113,7 @@ describe("Chat Completions Handler", () => {
       error: {
         code: "BAD_REQUEST",
         message: "Invalid JSON",
-        param: "body",
+        param: "",
         type: "invalid_request_error",
       },
     });
@@ -125,8 +126,8 @@ describe("Chat Completions Handler", () => {
     expect(data).toEqual({
       error: {
         code: "UNPROCESSABLE_ENTITY",
-        message: "Validation error",
-        param: expect.stringContaining("✖ Invalid input"),
+        message: expect.stringContaining("Validation error: ✖ Invalid input"),
+        param: "",
         type: "invalid_request_error",
       },
     });
@@ -143,6 +144,7 @@ describe("Chat Completions Handler", () => {
       error: {
         code: "MODEL_NOT_FOUND",
         message: "Model 'non-existent' not found in catalog",
+        param: "",
         type: "invalid_request_error",
       },
     });

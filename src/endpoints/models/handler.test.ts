@@ -115,6 +115,7 @@ describe("Models Handler", () => {
       error: {
         code: "METHOD_NOT_ALLOWED",
         message: "Method Not Allowed",
+        param: "",
         type: "invalid_request_error",
       },
     });

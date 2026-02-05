@@ -69,6 +69,7 @@ describe("Embeddings Handler", () => {
       error: {
         code: "MODEL_UNSUPPORTED_OPERATION",
         message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
+        param: "",
         type: "invalid_request_error",
       },
     });
@@ -109,8 +110,8 @@ describe("Embeddings Handler", () => {
     expect(data).toEqual({
       error: {
         code: "UNPROCESSABLE_ENTITY",
-        message: "Validation error",
-        param: "✖ Invalid input\n  → at input",
+        message: "Validation error: ✖ Invalid input\n  → at input",
+        param: "",
         type: "invalid_request_error",
       },
     });
@@ -126,6 +127,7 @@ describe("Embeddings Handler", () => {
       error: {
         code: "METHOD_NOT_ALLOWED",
         message: "Method Not Allowed",
+        param: "",
         type: "invalid_request_error",
       },
     });

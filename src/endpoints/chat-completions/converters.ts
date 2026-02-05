@@ -210,17 +210,17 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         const base64Data = parts[1];
 
         if (!metadata || !base64Data) {
-          throw new GatewayError("Invalid data URL: missing metadata or data", "BAD_REQUEST", 400);
+          throw new GatewayError("Invalid data URL: missing metadata or data", 400);
         }
 
         const mimeTypePart = metadata.split(":")[1];
         if (!mimeTypePart) {
-          throw new GatewayError("Invalid data URL: missing MIME type part", "BAD_REQUEST", 400);
+          throw new GatewayError("Invalid data URL: missing MIME type part", 400);
         }
 
         const mimeType = mimeTypePart.split(";")[0];
         if (!mimeType) {
-          throw new GatewayError("Invalid data URL: missing MIME type", "BAD_REQUEST", 400);
+          throw new GatewayError("Invalid data URL: missing MIME type", 400);
         }
 
         return mimeType.startsWith("image/")
