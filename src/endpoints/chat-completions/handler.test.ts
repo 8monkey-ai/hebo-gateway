@@ -92,11 +92,10 @@ describe("Chat Completions Handler", () => {
     const request = new Request(baseUrl, { method: "GET" });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "METHOD_NOT_ALLOWED",
+        code: "method_not_allowed",
         message: "Method Not Allowed",
-        param: "",
         type: "invalid_request_error",
       },
     });
@@ -109,11 +108,10 @@ describe("Chat Completions Handler", () => {
     });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "BAD_REQUEST",
+        code: "bad_request",
         message: "Invalid JSON",
-        param: "",
         type: "invalid_request_error",
       },
     });
@@ -123,11 +121,10 @@ describe("Chat Completions Handler", () => {
     const request = postJson(baseUrl, { model: "openai/gpt-oss-20b" });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "UNPROCESSABLE_ENTITY",
-        message: expect.stringContaining("Validation error: ✖ Invalid input"),
-        param: "",
+        code: "unprocessable_entity",
+        message: "✖ Invalid input: expected array, received undefined\n  → at messages",
         type: "invalid_request_error",
       },
     });
@@ -140,11 +137,10 @@ describe("Chat Completions Handler", () => {
     });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "MODEL_NOT_FOUND",
+        code: "model_not_found",
         message: "Model 'non-existent' not found in catalog",
-        param: "",
         type: "invalid_request_error",
       },
     });

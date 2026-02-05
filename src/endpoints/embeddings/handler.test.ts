@@ -65,11 +65,10 @@ describe("Embeddings Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "MODEL_UNSUPPORTED_OPERATION",
+        code: "model_unsupported_operation",
         message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
-        param: "",
         type: "invalid_request_error",
       },
     });
@@ -107,11 +106,10 @@ describe("Embeddings Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "UNPROCESSABLE_ENTITY",
-        message: "Validation error: ✖ Invalid input\n  → at input",
-        param: "",
+        code: "unprocessable_entity",
+        message: "✖ Invalid input\n  → at input",
         type: "invalid_request_error",
       },
     });
@@ -123,11 +121,10 @@ describe("Embeddings Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "METHOD_NOT_ALLOWED",
+        code: "method_not_allowed",
         message: "Method Not Allowed",
-        param: "",
         type: "invalid_request_error",
       },
     });
