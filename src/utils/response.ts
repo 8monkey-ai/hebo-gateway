@@ -47,3 +47,28 @@ export const toResponse = (
 
   return new Response(body, init);
 };
+
+export type StreamResponseHooks = {
+  onComplete?: (stats: { streamBytes: number }) => void;
+  onError?: (error: unknown) => void;
+};
+
+export const wrapStreamResponse = (response: Response, hooks: StreamResponseHooks): Response => {
+  let streamBytes = 0;
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      streamBytes += chunk.byteLength;
+      controller.enqueue(chunk);
+    },
+    flush() {
+      hooks.onComplete?.({ streamBytes });
+    },
+  });
+
+  response.body?.pipeTo(writable).catch((error) => {
+    hooks.onError?.(error);
+    hooks.onComplete?.({ streamBytes });
+  });
+
+  return new Response(readable, response);
+};

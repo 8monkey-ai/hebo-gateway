@@ -36,7 +36,7 @@ export function gateway(config: GatewayConfig) {
     logger.warn(
       {
         req: getRequestMeta(req),
-        res: getResponseMeta(response, Date.now() - start),
+        res: Object.assign(getResponseMeta(response), { durationMs: Date.now() - start }),
       },
       "[gateway] route not found",
     );

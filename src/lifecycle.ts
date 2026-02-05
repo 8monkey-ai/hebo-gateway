@@ -1,34 +1,10 @@
-import type {
-  AfterHookContext,
-  BeforeHookContext,
-  GatewayConfig,
-  GatewayContext,
-  RequestPatch,
-} from "./types";
+import type { AfterHookContext, BeforeHookContext, GatewayConfig, GatewayContext } from "./types";
 
 import { parseConfig } from "./config";
 import { createOpenAIErrorResponse } from "./utils/errors";
 import { getRequestMeta, getResponseMeta, logger } from "./utils/logger";
-import { toResponse } from "./utils/response";
-
-const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
-  if (!patch.headers && patch.body === undefined) return request;
-
-  if (!patch.headers) {
-    // eslint-disable-next-line no-invalid-fetch-options
-    return new Request(request, { body: patch.body });
-  }
-
-  const headers = new Headers(request.headers);
-  for (const [key, value] of new Headers(patch.headers)) {
-    headers.set(key, value);
-  }
-
-  const init: RequestInit = { headers };
-  if (patch.body !== undefined) init.body = patch.body;
-
-  return new Request(request, init);
-};
+import { maybeApplyRequestPatch } from "./utils/request";
+import { toResponse, wrapStreamResponse } from "./utils/response";
 
 export const withLifecycle = (
   run: (ctx: GatewayContext) => Promise<ReadableStream | object | string>,
@@ -37,7 +13,33 @@ export const withLifecycle = (
   const parsedConfig = parseConfig(config);
 
   const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
-    const start = Date.now();
+    const start = performance.now();
+
+    const finalize = (response: Response, result?: string | ReadableStream, error?: unknown) => {
+      const req = getRequestMeta(request);
+      const durationMs = Math.round((performance.now() - start) * 100) / 100;
+
+      const log = (streamBytes?: number, err: unknown = error) => {
+        const res = getResponseMeta(response);
+        res["durationMs"] = durationMs;
+        res["streamBytes"] = streamBytes || 0;
+
+        const msg = err != null ? "[gateway] request failed" : "[gateway] request completed";
+
+        logger.info({ req, res }, msg);
+      };
+
+      if (!(result instanceof ReadableStream)) {
+        log(typeof result === "string" ? result.length : undefined);
+        return response;
+      }
+
+      return wrapStreamResponse(response, {
+        onComplete: ({ streamBytes }) => log(streamBytes),
+        // FUTURE log errors
+        // onError: (err) => log(undefined, err),
+      });
+    };
 
     const context: GatewayContext = {
       request,
@@ -46,31 +48,22 @@ export const withLifecycle = (
       models: parsedConfig.models,
     };
 
-    let response, error;
-
     try {
       const before = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
-      if (before instanceof Response) return (response = before);
+      if (before instanceof Response) return finalize(before);
+
       context.request = before ? maybeApplyRequestPatch(request, before) : request;
 
-      const result = await run(context);
+      const raw = await run(context);
+      const result = raw instanceof ReadableStream ? raw : JSON.stringify(raw);
       context.response = toResponse(result);
 
       const after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
-      return (response = after ?? context.response);
-    } catch (e) {
-      return (response = createOpenAIErrorResponse((error = e)));
-    } finally {
-      const req = getRequestMeta(request);
-      const res = getResponseMeta(response, Date.now() - start);
+      const response = after ?? context.response;
 
-      if (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        logger.error(err, { req, res }, "[gateway] request failed");
-      } else {
-        // FUTURE: if response is a stream, it needs to be wrapped for error logging
-        logger.info({ req, res }, "[gateway] request completed");
-      }
+      return finalize(response, result);
+    } catch (e) {
+      return finalize(createOpenAIErrorResponse(e), undefined, e);
     }
   };
 

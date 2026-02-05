@@ -91,7 +91,7 @@ export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) 
 
 const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
 
-export const getRequestMeta = (request?: Request) => {
+export const getRequestMeta = (request?: Request): Record<string, unknown> => {
   if (!request) return {};
 
   let path = request.url;
@@ -119,13 +119,13 @@ export const getRequestMeta = (request?: Request) => {
   };
 };
 
-export const getResponseMeta = (response?: Response, durationMs?: number) => {
+export const getResponseMeta = (response?: Response): Record<string, unknown> => {
   if (!response) return {};
 
   const headers = response.headers;
   return {
     status: response.status,
-    durationMs,
+    statusText: response.statusText,
     contentType: getHeader(headers, "content-type"),
     contentLength: getHeader(headers, "content-length"),
   };
