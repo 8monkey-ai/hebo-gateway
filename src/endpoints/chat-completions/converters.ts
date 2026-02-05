@@ -42,7 +42,7 @@ import type {
   ChatCompletionsReasoningConfig,
 } from "./schema";
 
-import { GatewayError, OpenAIError, createError } from "../../utils/errors";
+import { GatewayError, OpenAIError, toOpenAIError } from "../../utils/errors";
 import { mergeResponseInit } from "../../utils/response";
 
 export type TextCallOptions = {
@@ -489,7 +489,7 @@ export class ChatCompletionsStream extends TransformStream<
 
           case "error": {
             const error = part.error;
-            controller.enqueue(createError(error));
+            controller.enqueue(toOpenAIError(error));
             break;
           }
         }

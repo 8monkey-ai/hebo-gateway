@@ -89,26 +89,11 @@ export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) 
   );
 }
 
-export type RequestMeta = {
-  method: string;
-  path: string;
-  query?: string;
-  requestId?: string;
-  contentType?: string;
-  contentLength?: string;
-  userAgent?: string;
-};
-
-export type ResponseMeta = {
-  status: number;
-  durationMs?: number;
-  contentType?: string;
-  contentLength?: string;
-};
-
 const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
 
-export const getRequestMeta = (request: Request): RequestMeta => {
+export const getRequestMeta = (request?: Request) => {
+  if (!request) return {};
+
   let path = request.url;
   let query: string | undefined;
   try {
@@ -134,7 +119,9 @@ export const getRequestMeta = (request: Request): RequestMeta => {
   };
 };
 
-export const getResponseMeta = (response: Response, durationMs?: number): ResponseMeta => {
+export const getResponseMeta = (response?: Response, durationMs?: number) => {
+  if (!response) return {};
+
   const headers = response.headers;
   return {
     status: response.status,

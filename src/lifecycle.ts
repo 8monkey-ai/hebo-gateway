@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 import { parseConfig } from "./config";
-import { createErrorResponse } from "./utils/errors";
+import { createOpenAIErrorResponse } from "./utils/errors";
 import { getRequestMeta, getResponseMeta, logger } from "./utils/logger";
 
 const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
@@ -45,7 +45,7 @@ export const withLifecycle = (
       models: parsedConfig.models,
     };
 
-    let response: Response;
+    let response, error;
 
     try {
       const before = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
@@ -55,16 +55,20 @@ export const withLifecycle = (
       context.response = await run(context);
 
       const after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
-      response = after ?? context.response;
-    } catch (error) {
-      return createErrorResponse(error, request, Date.now() - start);
+      return (response = after ?? context.response);
+    } catch (e) {
+      return (response = createOpenAIErrorResponse((error = e)));
+    } finally {
+      const req = getRequestMeta(request);
+      const res = getResponseMeta(response, Date.now() - start);
+
+      if (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error(err, { req, res }, "[gateway] request failed");
+      } else {
+        logger.info({ req, res }, "[gateway] request completed");
+      }
     }
-
-    const requestMeta = getRequestMeta(request);
-    const responseMeta = getResponseMeta(response, Date.now() - start);
-    logger.info({ request: requestMeta, response: responseMeta }, "[gateway] request completed");
-
-    return response;
   };
 
   return handler;
