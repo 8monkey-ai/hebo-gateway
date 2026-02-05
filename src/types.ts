@@ -28,11 +28,11 @@ export type GatewayContext = {
    */
   state: Record<string, unknown>;
   /**
-   * Provider registry from config, when available.
+   * Provider registry from config.
    */
   providers: ProviderRegistry;
   /**
-   * Model catalog from config, when available.
+   * Model catalog from config.
    */
   models: ModelCatalog;
   /**
@@ -40,27 +40,27 @@ export type GatewayContext = {
    */
   request?: Request;
   /**
-   * Parsed body from the request, when available.
+   * Parsed body from the request.
    */
   body?: ChatCompletionsBody | EmbeddingsBody;
   /**
-   * Incoming model ID, when available.
+   * Incoming model ID.
    */
   modelId?: ModelId;
   /**
-   * Resolved model ID, when available.
+   * Resolved model ID.
    */
   resolvedModelId?: ModelId;
   /**
-   * Operation type, when available.
+   * Operation type.
    */
   operation?: "text" | "embeddings";
   /**
-   * Resolved provider instance, when available.
+   * Resolved provider instance.
    */
   provider?: ProviderV3;
   /**
-   * Response returned by the handler, when available.
+   * Response returned by the handler.
    */
   response?: Response;
 };
