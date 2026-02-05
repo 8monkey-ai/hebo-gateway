@@ -66,6 +66,7 @@ export const withLifecycle = (
         const err = error instanceof Error ? error : new Error(String(error));
         logger.error(err, { req, res }, "[gateway] request failed");
       } else {
+        // FUTURE: if response is a stream, it needs to be wrapped for error logging
         logger.info({ req, res }, "[gateway] request completed");
       }
     }
