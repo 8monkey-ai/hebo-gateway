@@ -3,7 +3,7 @@ import type { EmbedManyResult } from "ai";
 
 import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
 
-import { mergeResponseInit } from "../../utils/response";
+import { toResponse } from "../../utils/response";
 
 export type EmbedCallOptions = {
   values: string[];
@@ -47,8 +47,5 @@ export function createEmbeddingsResponse(
   modelId: string,
   responseInit?: ResponseInit,
 ): Response {
-  return new Response(
-    JSON.stringify(toEmbeddings(embedManyResult, modelId)),
-    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
-  );
+  return toResponse(toEmbeddings(embedManyResult, modelId), responseInit);
 }

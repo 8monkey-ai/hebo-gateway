@@ -43,7 +43,7 @@ import type {
 } from "./schema";
 
 import { GatewayError, OpenAIError, toOpenAIError } from "../../utils/errors";
-import { mergeResponseInit } from "../../utils/response";
+import { toResponse } from "../../utils/response";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -359,10 +359,7 @@ export function toChatCompletionsResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return new Response(
-    JSON.stringify(toChatCompletions(result, model)),
-    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
-  );
+  return toResponse(toChatCompletions(result, model), responseInit);
 }
 
 export function toChatCompletionsStream(
@@ -380,17 +377,7 @@ export function toChatCompletionsStreamResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return new Response(
-    toChatCompletionsStream(result, model),
-    mergeResponseInit(
-      {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-      responseInit,
-    ),
-  );
+  return toResponse(toChatCompletionsStream(result, model), responseInit);
 }
 
 export class ChatCompletionsStream extends TransformStream<

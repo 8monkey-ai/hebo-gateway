@@ -38,6 +38,7 @@ import {
 import * as z from "zod";
 
 import { isProduction } from "./env";
+import { toResponse } from "./response";
 
 export const STATUS_CODES = {
   400: "BAD_REQUEST",
@@ -182,15 +183,10 @@ export function toOpenAIError(error: unknown): OpenAIError {
   return new OpenAIError(meta.message, meta.type, meta.code);
 }
 
-export function createOpenAIErrorResponse(error: unknown) {
+export function createOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
   const meta = getErrorMeta(error);
-  const response = new Response(
-    JSON.stringify(new OpenAIError(meta.message, meta.type, meta.code)),
-    {
-      status: meta.status,
-      statusText: meta.code,
-      headers: { "Content-Type": "application/json" },
-    },
+  return toResponse(
+    new OpenAIError(meta.message, meta.type, meta.code),
+    Object.assign({}, responseInit, { status: meta.status, statusText: meta.code }),
   );
-  return response;
 }

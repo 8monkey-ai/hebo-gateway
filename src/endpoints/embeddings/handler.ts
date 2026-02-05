@@ -15,13 +15,13 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { GatewayError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
-import { convertToEmbedCallOptions, createEmbeddingsResponse } from "./converters";
+import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
-  const handler = async (ctx: GatewayContext): Promise<Response> => {
+  const handler = async (ctx: GatewayContext) => {
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
@@ -87,7 +87,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       ...embedOptions,
     });
 
-    return createEmbeddingsResponse(result, ctx.modelId);
+    return toEmbeddings(result, ctx.modelId);
   };
 
   return { handler: withLifecycle(handler, config) };

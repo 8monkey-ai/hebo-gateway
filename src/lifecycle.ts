@@ -9,6 +9,7 @@ import type {
 import { parseConfig } from "./config";
 import { createOpenAIErrorResponse } from "./utils/errors";
 import { getRequestMeta, getResponseMeta, logger } from "./utils/logger";
+import { toResponse } from "./utils/response";
 
 const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   if (!patch.headers && patch.body === undefined) return request;
@@ -30,7 +31,7 @@ const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
 };
 
 export const withLifecycle = (
-  run: (ctx: GatewayContext) => Promise<Response>,
+  run: (ctx: GatewayContext) => Promise<ReadableStream | object | string>,
   config: GatewayConfig,
 ) => {
   const parsedConfig = parseConfig(config);
@@ -52,7 +53,8 @@ export const withLifecycle = (
       if (before instanceof Response) return (response = before);
       context.request = before ? maybeApplyRequestPatch(request, before) : request;
 
-      context.response = await run(context);
+      const result = await run(context);
+      context.response = toResponse(result);
 
       const after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
       return (response = after ?? context.response);

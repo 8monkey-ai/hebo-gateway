@@ -15,17 +15,13 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { GatewayError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
-import {
-  convertToTextCallOptions,
-  toChatCompletionsResponse,
-  toChatCompletionsStreamResponse,
-} from "./converters";
+import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { ChatCompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
-  const handler = async (ctx: GatewayContext): Promise<Response> => {
+  const handler = async (ctx: GatewayContext) => {
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
@@ -91,7 +87,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         ...textOptions,
       });
 
-      return toChatCompletionsStreamResponse(result, ctx.modelId);
+      return toChatCompletionsStream(result, ctx.modelId);
     }
 
     const result = await generateText({
@@ -100,7 +96,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       ...textOptions,
     });
 
-    return toChatCompletionsResponse(result, ctx.modelId);
+    return toChatCompletions(result, ctx.modelId);
   };
 
   return { handler: withLifecycle(handler, config) };
