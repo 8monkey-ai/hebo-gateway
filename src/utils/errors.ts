@@ -22,6 +22,7 @@ import {
   NoOutputGeneratedError,
   NoSpeechGeneratedError,
   NoSuchModelError,
+  NoSuchProviderError,
   NoSuchToolError,
   NoTranscriptGeneratedError,
   NoVideoGeneratedError,
@@ -133,7 +134,8 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     UnsupportedModelVersionError.isInstance(error) ||
     UnsupportedFunctionalityError.isInstance(error) ||
     TooManyEmbeddingValuesForCallError.isInstance(error) ||
-    NoSuchModelError.isInstance(error)
+    NoSuchModelError.isInstance(error) ||
+    NoSuchProviderError.isInstance(error)
   ) {
     return new GatewayError(error, 422, `UPSTREAM_${STATUS_CODE(422)}`);
   }
