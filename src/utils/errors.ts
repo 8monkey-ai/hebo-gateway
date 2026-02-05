@@ -75,52 +75,52 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     error instanceof Error && "cause" in error ? (error as { cause?: unknown }).cause : undefined;
 
   if (APICallError.isInstance(error)) {
-    let status = error.statusCode ?? (error.isRetryable ? 502 : 422);
-
-    let code: string;
-    if (status >= 500) code = "UPSTREAM_SERVER_ERROR";
-    else code = "UPSTREAM_BAD_REQUEST";
-
+    const status = error.statusCode ?? (error.isRetryable ? 502 : 422);
+    const code = status >= 500 ? "UPSTREAM_SERVER_ERROR" : "UPSTREAM_BAD_REQUEST";
     return new GatewayError(error.message, code, status, undefined, cause);
   }
 
-  if (
-    InvalidResponseDataError.isInstance(error) ||
-    TypeValidationError.isInstance(error) ||
-    JSONParseError.isInstance(error) ||
-    EmptyResponseBodyError.isInstance(error) ||
-    NoContentGeneratedError.isInstance(error) ||
-    NoOutputGeneratedError.isInstance(error) ||
-    NoImageGeneratedError.isInstance(error) ||
-    NoObjectGeneratedError.isInstance(error) ||
-    NoSpeechGeneratedError.isInstance(error) ||
-    NoTranscriptGeneratedError.isInstance(error) ||
-    NoVideoGeneratedError.isInstance(error) ||
-    DownloadError.isInstance(error) ||
-    InvalidStreamPartError.isInstance(error) ||
-    ToolCallRepairError.isInstance(error) ||
-    UIMessageStreamError.isInstance(error) ||
-    RetryError.isInstance(error)
-  ) {
+  const isUpstreamBroken = [
+    InvalidResponseDataError,
+    TypeValidationError,
+    JSONParseError,
+    EmptyResponseBodyError,
+    NoContentGeneratedError,
+    NoOutputGeneratedError,
+    NoImageGeneratedError,
+    NoObjectGeneratedError,
+    NoSpeechGeneratedError,
+    NoTranscriptGeneratedError,
+    NoVideoGeneratedError,
+    DownloadError,
+    InvalidStreamPartError,
+    ToolCallRepairError,
+    UIMessageStreamError,
+    RetryError,
+  ].some((err) => err.isInstance(error));
+
+  if (isUpstreamBroken) {
     return new GatewayError(error.message, "UPSTREAM_SERVER_ERROR", 502, undefined, cause);
   }
 
-  if (
-    InvalidArgumentError.isInstance(error) ||
-    InvalidPromptError.isInstance(error) ||
-    InvalidMessageRoleError.isInstance(error) ||
-    InvalidDataContentError.isInstance(error) ||
-    MessageConversionError.isInstance(error) ||
-    InvalidToolInputError.isInstance(error) ||
-    InvalidToolApprovalError.isInstance(error) ||
-    ToolCallNotFoundForApprovalError.isInstance(error) ||
-    MissingToolResultsError.isInstance(error) ||
-    NoSuchToolError.isInstance(error) ||
-    UnsupportedModelVersionError.isInstance(error) ||
-    UnsupportedFunctionalityError.isInstance(error) ||
-    NoSuchModelError.isInstance(error) ||
-    TooManyEmbeddingValuesForCallError.isInstance(error)
-  ) {
+  const isUpstreamInvalid = [
+    InvalidArgumentError,
+    InvalidPromptError,
+    InvalidMessageRoleError,
+    InvalidDataContentError,
+    MessageConversionError,
+    InvalidToolInputError,
+    InvalidToolApprovalError,
+    ToolCallNotFoundForApprovalError,
+    MissingToolResultsError,
+    NoSuchToolError,
+    UnsupportedModelVersionError,
+    UnsupportedFunctionalityError,
+    NoSuchModelError,
+    TooManyEmbeddingValuesForCallError,
+  ].some((err) => err.isInstance(error));
+
+  if (isUpstreamInvalid) {
     return new GatewayError(error.message, "UPSTREAM_BAD_REQUEST", 422, undefined, cause);
   }
 
@@ -154,10 +154,8 @@ function normalizeError(error: unknown) {
   }
 
   const type = status < 500 ? "invalid_request_error" : "server_error";
-  const message =
-    !code.includes("UPSTREAM") && status >= 500 && isProduction()
-      ? "Internal Server Error"
-      : rawMessage;
+  const shouldMask = !code.includes("UPSTREAM") && status >= 500 && isProduction();
+  const message = shouldMask ? "Internal Server Error" : rawMessage;
 
   return { code, status, param, type, message, rawMessage };
 }
