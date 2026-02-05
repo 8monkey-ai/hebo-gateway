@@ -1,6 +1,9 @@
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
+import type {
+  ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningEffort,
+} from "../../endpoints/chat-completions/schema";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
@@ -22,10 +25,24 @@ export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
+function mapGptOssReasoningEffort(
+  effort?: ChatCompletionsReasoningEffort,
+): "low" | "medium" | "high" {
+  switch (effort) {
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+      return "high";
+    default:
+      return "low";
+  }
+}
+
 export const openAIReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
@@ -33,12 +50,17 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning) return params;
 
     const target = (params.providerOptions!["openai"] ??= {});
+    const isGptOss = model.modelId.includes("gpt-oss");
 
-    if (!reasoning.enabled) {
+    if (isGptOss) {
+      target["reasoningEffort"] =
+        reasoning.enabled === false ? "low" : mapGptOssReasoningEffort(reasoning.effort);
+    } else if (reasoning.enabled === false) {
       target["reasoningEffort"] = "none";
     } else if (reasoning.effort) {
       target["reasoningEffort"] = reasoning.effort;
     }
+
     // FUTURE: warn that reasoning.max_tokens (not supported) was ignored
 
     delete unknown["reasoning"];

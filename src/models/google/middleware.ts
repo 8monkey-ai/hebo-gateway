@@ -62,6 +62,7 @@ export function mapGeminiReasoningEffort(
 }
 
 export const GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 65536;
+export const GEMINI_2_5_PRO_MIN_THINKING_BUDGET = 128;
 
 export const geminiReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
@@ -74,26 +75,26 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning) return params;
 
     const target = (params.providerOptions!["google"] ??= {});
+    const modelId = model.modelId;
 
-    if (model.modelId.includes("gemini-2") && reasoning.max_tokens) {
+    if (modelId.includes("gemini-2")) {
+      const is25Pro = modelId.includes("gemini-2.5-pro");
+
       target["thinkingConfig"] = {
-        thinkingBudget: reasoning.max_tokens,
+        thinkingBudget:
+          reasoning.max_tokens ??
+          calculateReasoningBudgetFromEffort(
+            reasoning.effort ?? "none",
+            params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
+            is25Pro ? GEMINI_2_5_PRO_MIN_THINKING_BUDGET : 0,
+          ),
       };
-    } else if (model.modelId.includes("gemini-2") && reasoning.effort) {
-      // FUTURE: warn that reasoning.max_tokens was computed
+    } else if (modelId.includes("gemini-3") && reasoning.effort) {
       target["thinkingConfig"] = {
-        thinkingBudget: calculateReasoningBudgetFromEffort(
-          reasoning.effort,
-          params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
-        ),
+        thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, modelId),
       };
-    } else if (model.modelId.includes("gemini-3") && reasoning.effort) {
-      // FUTURE: warn if mapGeminiReasoningEffort modified value
-      target["thinkingConfig"] = {
-        thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, model.modelId),
-      };
+      // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
     }
-    // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
 
     ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] =
       reasoning.enabled ? !reasoning.exclude : false;

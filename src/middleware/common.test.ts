@@ -163,4 +163,25 @@ describe("forwardParamsMiddleware", () => {
       vertex: { thoughtSignature: "in-signature" },
     });
   });
+
+  test("should merge unknown.reasoning_effort into openai.reasoningEffort for gpt-5", async () => {
+    const middleware = forwardParamsMiddleware("openai.chat");
+    const params = {
+      prompt: [],
+      providerOptions: {
+        unknown: { reasoning_effort: "low" },
+      },
+    };
+
+    const result = await middleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+    });
+
+    expect(result.providerOptions).toEqual({
+      openai: { reasoningEffort: "low" },
+    });
+    expect(result.providerOptions!.unknown).toBeUndefined();
+  });
 });

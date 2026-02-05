@@ -58,7 +58,7 @@ test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
   });
 
   expect(result).toEqual({
@@ -72,7 +72,7 @@ test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider
   });
 });
 
-test("openAIReasoningMiddleware > should disable reasoning when requested", async () => {
+test("openAIReasoningMiddleware > should disable reasoning when requested (standard model)", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -85,7 +85,7 @@ test("openAIReasoningMiddleware > should disable reasoning when requested", asyn
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
   });
 
   expect(result).toEqual({
@@ -97,6 +97,38 @@ test("openAIReasoningMiddleware > should disable reasoning when requested", asyn
       unknown: {},
     },
   });
+});
+
+test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", async () => {
+  const cases = [
+    { reasoning: { enabled: false }, expected: "low" },
+    { reasoning: { enabled: true }, expected: "low" },
+    { reasoning: { enabled: true, effort: "none" }, expected: "low" },
+    { reasoning: { enabled: true, effort: "minimal" }, expected: "low" },
+    { reasoning: { enabled: true, effort: "low" }, expected: "low" },
+    { reasoning: { enabled: true, effort: "medium" }, expected: "medium" },
+    { reasoning: { enabled: true, effort: "high" }, expected: "high" },
+    { reasoning: { enabled: true, effort: "xhigh" }, expected: "high" },
+  ] as const;
+
+  await Promise.all(
+    cases.map(async ({ reasoning, expected }) => {
+      const params = {
+        prompt: [],
+        providerOptions: {
+          unknown: { reasoning },
+        },
+      };
+
+      const result = await openAIReasoningMiddleware.transformParams!({
+        type: "generate",
+        params,
+        model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+      });
+
+      expect(result.providerOptions.openai.reasoningEffort).toBe(expected);
+    }),
+  );
 });
 
 test("openAIReasoningMiddleware > should default reasoning effort when enabled without effort", async () => {
@@ -112,7 +144,7 @@ test("openAIReasoningMiddleware > should default reasoning effort when enabled w
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
   });
 
   expect(result).toEqual({
