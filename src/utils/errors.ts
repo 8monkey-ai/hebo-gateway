@@ -100,22 +100,22 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
   }
 
   if (
+    JSONParseError.isInstance(error) ||
     InvalidResponseDataError.isInstance(error) ||
     TypeValidationError.isInstance(error) ||
-    JSONParseError.isInstance(error) ||
     EmptyResponseBodyError.isInstance(error) ||
     NoContentGeneratedError.isInstance(error) ||
     NoOutputGeneratedError.isInstance(error) ||
+    InvalidStreamPartError.isInstance(error) ||
+    UIMessageStreamError.isInstance(error) ||
+    RetryError.isInstance(error) ||
+    DownloadError.isInstance(error) ||
+    ToolCallRepairError.isInstance(error) ||
     NoImageGeneratedError.isInstance(error) ||
     NoObjectGeneratedError.isInstance(error) ||
     NoSpeechGeneratedError.isInstance(error) ||
     NoTranscriptGeneratedError.isInstance(error) ||
-    NoVideoGeneratedError.isInstance(error) ||
-    DownloadError.isInstance(error) ||
-    InvalidStreamPartError.isInstance(error) ||
-    ToolCallRepairError.isInstance(error) ||
-    UIMessageStreamError.isInstance(error) ||
-    RetryError.isInstance(error)
+    NoVideoGeneratedError.isInstance(error)
   ) {
     return new GatewayError(error, 502, `UPSTREAM_${STATUS_CODE(502)}`);
   }
@@ -133,8 +133,8 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
     NoSuchToolError.isInstance(error) ||
     UnsupportedModelVersionError.isInstance(error) ||
     UnsupportedFunctionalityError.isInstance(error) ||
-    NoSuchModelError.isInstance(error) ||
-    TooManyEmbeddingValuesForCallError.isInstance(error)
+    TooManyEmbeddingValuesForCallError.isInstance(error) ||
+    NoSuchModelError.isInstance(error)
   ) {
     return new GatewayError(error, 422, `UPSTREAM_${STATUS_CODE(422)}`);
   }
