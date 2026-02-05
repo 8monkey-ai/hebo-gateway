@@ -150,7 +150,7 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
   return undefined;
 }
 
-function normalizeError(error: unknown) {
+function getErrorMeta(error: unknown) {
   const rawMessage = error instanceof Error ? error.message : String(error);
 
   let code: string;
@@ -177,40 +177,35 @@ function normalizeError(error: unknown) {
 }
 
 export function logError(
+  error: unknown,
   meta: {
     code: string;
     status: number;
     rawMessage: string;
   },
-  error: unknown,
 ) {
-  const message = `[error] response: ${meta.code} (${meta.status}) ${meta.rawMessage}`;
-
   if (!meta.code.includes("UPSTREAM") && meta.status < 422) {
     return;
   }
 
-  const diagnostics = error instanceof Error && {
-    stack: error.stack,
-    cause: error.cause,
-  };
+  const realError = error instanceof Error ? error : new Error(String(error));
 
   if (meta.code.includes("UPSTREAM") || meta.status >= 500) {
-    logger.error(message, diagnostics);
+    logger.error(realError, meta.rawMessage);
   } else {
-    logger.warn(message, diagnostics);
+    logger.warn(realError, meta.rawMessage);
   }
 }
 
 export function createError(error: unknown): OpenAIError {
-  const meta = normalizeError(error);
-  logError(meta, error);
+  const meta = getErrorMeta(error);
+  logError(error, meta);
   return new OpenAIError(meta.message, meta.type, meta.code);
 }
 
 export function createErrorResponse(error: unknown): Response {
-  const meta = normalizeError(error);
-  logError(meta, error);
+  const meta = getErrorMeta(error);
+  logError(error, meta);
   return new Response(JSON.stringify(new OpenAIError(meta.message, meta.type, meta.code)), {
     status: meta.status,
     headers: { "Content-Type": "application/json" },
