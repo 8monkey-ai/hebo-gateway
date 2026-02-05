@@ -8,6 +8,7 @@ import type {
 
 import { parseConfig } from "./config";
 import { createErrorResponse } from "./utils/errors";
+import { getRequestMeta, getResponseMeta, logger } from "./utils/logger";
 
 const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   if (!patch.headers && patch.body === undefined) return request;
@@ -35,6 +36,8 @@ export const withLifecycle = (
   const parsedConfig = parseConfig(config);
 
   const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
+    const start = Date.now();
+
     const context: GatewayContext = {
       request,
       state: state ?? {},
@@ -42,29 +45,26 @@ export const withLifecycle = (
       models: parsedConfig.models,
     };
 
-    let beforeResult;
-    try {
-      beforeResult = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
-    } catch (error) {
-      return createErrorResponse(error);
-    }
-    if (beforeResult instanceof Response) return beforeResult;
-
-    context.request = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
+    let response: Response;
 
     try {
+      const before = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
+      if (before instanceof Response) return (response = before);
+      context.request = before ? maybeApplyRequestPatch(request, before) : request;
+
       context.response = await run(context);
+
+      const after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
+      response = after ?? context.response;
     } catch (error) {
-      return createErrorResponse(error);
+      return createErrorResponse(error, request, Date.now() - start);
     }
 
-    let after;
-    try {
-      after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
-    } catch (error) {
-      return createErrorResponse(error);
-    }
-    return after ?? context.response;
+    const requestMeta = getRequestMeta(request);
+    const responseMeta = getResponseMeta(response, Date.now() - start);
+    logger.info({ request: requestMeta, response: responseMeta }, "[gateway] request completed");
+
+    return response;
   };
 
   return handler;

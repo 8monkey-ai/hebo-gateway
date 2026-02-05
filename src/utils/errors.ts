@@ -37,7 +37,7 @@ import {
 import * as z from "zod";
 
 import { isProduction } from "./env";
-import { logger } from "./logger";
+import { getRequestMeta, getResponseMeta, logger } from "./logger";
 
 export const STATUS_CODES = {
   400: "BAD_REQUEST",
@@ -183,17 +183,20 @@ export function logError(
     status: number;
     rawMessage: string;
   },
+  context?: Record<string, unknown>,
 ) {
   if (!meta.code.includes("UPSTREAM") && meta.status < 422) {
     return;
   }
 
-  const realError = error instanceof Error ? error : new Error(String(error));
+  const err = error instanceof Error ? error : new Error(String(error));
 
-  if (meta.code.includes("UPSTREAM") || meta.status >= 500) {
-    logger.error(realError, meta.rawMessage);
+  const log = meta.code.includes("UPSTREAM") || meta.status >= 500 ? logger.error : logger.warn;
+
+  if (context) {
+    log(err, context, `[error] ${meta.rawMessage}`);
   } else {
-    logger.warn(realError, meta.rawMessage);
+    log(err, `[error] ${meta.rawMessage}`);
   }
 }
 
@@ -203,11 +206,22 @@ export function createError(error: unknown): OpenAIError {
   return new OpenAIError(meta.message, meta.type, meta.code);
 }
 
-export function createErrorResponse(error: unknown): Response {
+export function createErrorResponse(
+  error: unknown,
+  request: Request,
+  durationMs: number,
+): Response {
   const meta = getErrorMeta(error);
-  logError(error, meta);
-  return new Response(JSON.stringify(new OpenAIError(meta.message, meta.type, meta.code)), {
-    status: meta.status,
-    headers: { "Content-Type": "application/json" },
-  });
+
+  const response = new Response(
+    JSON.stringify(new OpenAIError(meta.message, meta.type, meta.code)),
+    { status: meta.status, headers: { "Content-Type": "application/json" } },
+  );
+
+  const requestMeta = getRequestMeta(request);
+  const responseMeta = getResponseMeta(response, durationMs);
+
+  logError(error, meta, { req: requestMeta, res: responseMeta });
+
+  return response;
 }

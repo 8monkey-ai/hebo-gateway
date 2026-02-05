@@ -1,6 +1,8 @@
 export type LogFn = {
-  (obj: Record<string, unknown> | Error, msg?: string, ...args: unknown[]): void;
-  (msg: string, ...args: unknown[]): void;
+  (msg: string): void;
+  (obj: Record<string, unknown>, msg?: string): void;
+  (err: Error, msg?: string): void;
+  (err: Error, obj?: Record<string, unknown>, msg?: string): void;
 };
 
 export type Logger = {
@@ -86,3 +88,58 @@ export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) 
     `[logger] default logger configured: level=${current.level} disabled=${current.disabled}`,
   );
 }
+
+export type RequestMeta = {
+  method: string;
+  path: string;
+  query?: string;
+  requestId?: string;
+  contentType?: string;
+  contentLength?: string;
+  userAgent?: string;
+};
+
+export type ResponseMeta = {
+  status: number;
+  durationMs?: number;
+  contentType?: string;
+  contentLength?: string;
+};
+
+const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
+
+export const getRequestMeta = (request: Request): RequestMeta => {
+  let path = request.url;
+  let query: string | undefined;
+  try {
+    const url = new URL(request.url);
+    path = url.pathname;
+    query = url.search || undefined;
+  } catch {
+    path = request.url;
+  }
+
+  const headers = request.headers;
+  return {
+    method: request.method,
+    path,
+    query,
+    requestId:
+      getHeader(headers, "x-request-id") ??
+      getHeader(headers, "x-correlation-id") ??
+      getHeader(headers, "x-trace-id"),
+    contentType: getHeader(headers, "content-type"),
+    contentLength: getHeader(headers, "content-length"),
+    userAgent: getHeader(headers, "user-agent"),
+  };
+};
+
+export const getResponseMeta = (response: Response, durationMs?: number): ResponseMeta => {
+  const headers = response.headers;
+  return {
+    status: response.status,
+    durationMs,
+    contentType: getHeader(headers, "content-type"),
+    contentLength: getHeader(headers, "content-length"),
+  };
+};
