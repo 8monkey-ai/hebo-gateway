@@ -32,7 +32,6 @@ export const prepareRequestHeaders = (request: Request) => {
   if (existingRequestId) return;
 
   const requestId =
-    existingRequestId ??
     request.headers.get("x-correlation-id") ??
     request.headers.get("x-trace-id") ??
     crypto.randomUUID();

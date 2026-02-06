@@ -11,7 +11,7 @@ const withLogger = async (context: GatewayContext) => {
 
   let body: ArrayBuffer | undefined;
   let requestBytes = 0;
-  if (context.request.body && context.request.method === "GET") {
+  if (context.request.body && context.request.method !== "GET") {
     body = await context.request.arrayBuffer();
     requestBytes = body.byteLength;
     // eslint-disable-next-line no-invalid-fetch-options
@@ -38,7 +38,13 @@ const withLogger = async (context: GatewayContext) => {
 
     const msg = `[gateway] request ${kind}`;
 
-    logger.info(meta, msg);
+    if (kind === "errored") {
+      logger.error(meta, msg);
+    } else if (kind === "cancelled") {
+      logger.warn(meta, msg);
+    } else {
+      logger.info(meta, msg);
+    }
   };
 
   const logError = (error: unknown) => {
