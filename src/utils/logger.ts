@@ -109,7 +109,6 @@ export const getRequestMeta = (request?: Request): Record<string, unknown> => {
     method: request.method,
     path,
     query,
-    requestId: getHeader(headers, "x-request-id"),
     contentType: getHeader(headers, "content-type"),
     contentLength: getHeader(headers, "content-length"),
     userAgent: getHeader(headers, "user-agent"),
