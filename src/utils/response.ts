@@ -14,7 +14,7 @@ export const toResponse = (
   result: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer> | object | string,
   responseInit?: ResponseInit,
 ): Response => {
-  let body: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>;
+  let body: BodyInit;
 
   const isStream = result instanceof ReadableStream;
   if (isStream || result instanceof Uint8Array) {

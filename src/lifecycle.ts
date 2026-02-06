@@ -27,11 +27,11 @@ export const withLifecycle = (
         err: unknown = error,
       ) => {
         const res = getResponseMeta(response);
-        res["durationMs"] = ((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
+        res["durationMs"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
         res["ttfbMs"] = stats?.firstByteAt
-          ? (stats.firstByteAt - start).toFixed(2)
+          ? +(stats.firstByteAt - start).toFixed(2)
           : res["durationMs"];
-        res["bytes"] = stats?.bytes ?? 0;
+        res["bytes"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
         const msg = err ? "[gateway] request failed" : "[gateway] request completed";
 
