@@ -183,7 +183,7 @@ export function toOpenAIError(error: unknown): OpenAIError {
   return new OpenAIError(meta.message, meta.type, meta.code);
 }
 
-export function createOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
+export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
   const meta = getErrorMeta(error);
   return toResponse(
     new OpenAIError(meta.message, meta.type, meta.code),

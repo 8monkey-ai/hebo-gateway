@@ -1,6 +1,6 @@
 import type { RequestPatch } from "../types";
 
-import pkg from "../../package.json" assert { type: "json" };
+import pkg from "../../package.json" with { type: "json" };
 
 const GATEWAY_VERSION = pkg.version;
 

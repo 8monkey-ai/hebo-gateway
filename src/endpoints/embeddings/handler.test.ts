@@ -108,9 +108,10 @@ describe("Embeddings Handler", () => {
 
     expect(data).toMatchObject({
       error: {
-        code: "unprocessable_entity",
+        code: "bad_request",
         message: "✖ Invalid input\n  → at input",
         type: "invalid_request_error",
+        param: "",
       },
     });
   });

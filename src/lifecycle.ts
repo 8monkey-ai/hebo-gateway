@@ -1,7 +1,7 @@
 import type { AfterHookContext, BeforeHookContext, GatewayConfig, GatewayContext } from "./types";
 
 import { parseConfig } from "./config";
-import { createOpenAIErrorResponse } from "./utils/errors";
+import { toOpenAIErrorResponse } from "./utils/errors";
 import { getRequestMeta, getResponseMeta, logger } from "./utils/logger";
 import { maybeApplyRequestPatch } from "./utils/request";
 import { toResponse, wrapStreamResponse } from "./utils/response";
@@ -111,7 +111,7 @@ export const withLifecycle = (
 
       return finalize(response);
     } catch (e) {
-      return finalize(createOpenAIErrorResponse(e), e);
+      return finalize(toOpenAIErrorResponse(e), e);
     }
   };
 

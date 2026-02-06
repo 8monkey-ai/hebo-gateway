@@ -117,15 +117,16 @@ describe("Chat Completions Handler", () => {
     });
   });
 
-  test("should return 422 for validation errors (missing messages)", async () => {
+  test("should return 400 for validation errors (missing messages)", async () => {
     const request = postJson(baseUrl, { model: "openai/gpt-oss-20b" });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
-        code: "unprocessable_entity",
+        code: "bad_request",
         message: "✖ Invalid input: expected array, received undefined\n  → at messages",
         type: "invalid_request_error",
+        param: "",
       },
     });
   });
