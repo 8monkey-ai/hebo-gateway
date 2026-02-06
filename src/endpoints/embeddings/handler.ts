@@ -1,6 +1,8 @@
 import { embedMany, wrapEmbeddingModel } from "ai";
 import * as z from "zod/mini";
 
+import { prepareForwardHeaders } from "#/utils/request";
+
 import type {
   GatewayConfig,
   Endpoint,
@@ -84,6 +86,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     // Execute request.
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
+      headers: prepareForwardHeaders(ctx.request),
+      abortSignal: ctx.request.signal,
       ...embedOptions,
     });
 

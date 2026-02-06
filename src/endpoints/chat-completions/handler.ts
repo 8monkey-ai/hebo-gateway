@@ -15,6 +15,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { GatewayError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
+import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { ChatCompletionsBodySchema } from "./schema";
 
@@ -81,6 +82,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     if (stream) {
       const result = streamText({
         model: languageModelWithMiddleware,
+        headers: prepareForwardHeaders(ctx.request),
         abortSignal: ctx.request.signal,
         onError: ({ error }) => {
           logger.error({
@@ -96,6 +98,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const result = await generateText({
       model: languageModelWithMiddleware,
+      headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
       ...textOptions,
     });
