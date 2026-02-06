@@ -28,10 +28,7 @@ export const withLifecycle = (
     const finalize = (response: Response, error?: unknown) => {
       const req = getRequestMeta(request);
 
-      const log = (
-        stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
-        err: unknown = error,
-      ) => {
+      const logAccess = (stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number }) => {
         const res = getResponseMeta(response);
         res["durationMs"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
         res["ttfbMs"] = stats?.firstByteAt
@@ -40,20 +37,29 @@ export const withLifecycle = (
         res["bytesIn"] = requestBytes;
         res["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
-        const msg = err ? "[gateway] request failed" : "[gateway] request completed";
+        const msg =
+          response.status >= 400 ? "[gateway] request failed" : "[gateway] request completed";
 
         logger.info({ req, res }, msg);
       };
 
+      const logError = (err: unknown) => {
+        logger.error(
+          err instanceof Error ? err : new Error(String(err)),
+          "[gateway] request failed",
+        );
+      };
+
+      if (error) logError(error);
+
       if (!(response.body instanceof ReadableStream)) {
-        log();
+        logAccess();
         return response;
       }
 
       return wrapStreamResponse(response, {
-        onComplete: (params) => log(params),
-        // FUTURE log errors
-        // onError: (err) => log(undefined, err),
+        onComplete: (params) => logAccess(params),
+        onError: (err) => logError(err),
       });
     };
 
