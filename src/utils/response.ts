@@ -60,7 +60,11 @@ export type StreamResponseHooks = {
   onError?: (error: unknown) => void;
 };
 
-export const wrapStreamResponse = (response: Response, hooks: StreamResponseHooks): Response => {
+export const wrapStreamResponse = (
+  response: Response,
+  hooks: StreamResponseHooks,
+  signal?: AbortSignal,
+): Response => {
   const stats = {
     bytes: 0,
     didFirstByte: false,
@@ -87,7 +91,7 @@ export const wrapStreamResponse = (response: Response, hooks: StreamResponseHook
     },
   });
 
-  response.body?.pipeTo(writable).catch((reason) => {
+  response.body?.pipeTo(writable, signal ? { signal } : undefined).catch((reason) => {
     if (reason !== undefined) hooks.onError?.(reason);
     hooks.onComplete?.(
       {

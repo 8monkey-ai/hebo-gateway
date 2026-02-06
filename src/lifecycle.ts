@@ -59,10 +59,14 @@ export const withLifecycle = (
         return response;
       }
 
-      return wrapStreamResponse(response, {
-        onComplete: (params, aborted) => logAccess(params, aborted),
-        onError: (err) => logError(err),
-      });
+      return wrapStreamResponse(
+        response,
+        {
+          onComplete: (params, aborted) => logAccess(params, aborted),
+          onError: (err) => logError(err),
+        },
+        request.signal,
+      );
     };
 
     // The actual lifecycle logic
