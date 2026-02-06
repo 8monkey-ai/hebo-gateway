@@ -157,13 +157,9 @@ export function forwardEmbeddingParams(providerName: ProviderId): EmbeddingModel
 
 export function extractProviderNamespace(id: string): string {
   if (id === "amazon-bedrock") return "bedrock";
-
-  const parts = id.split(".");
-  const first = parts[0]!;
-  if (first === "google") {
-    return parts[1] === "vertex" ? "vertex" : "google";
-  }
-
+  const [first, second] = id.split(".");
+  // FUTURE: map vertex to google once AI SDK support per-message level provider options
+  if (first === "vertex" || second === "vertex") return "vertex";
   return first;
 }
 
