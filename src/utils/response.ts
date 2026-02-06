@@ -54,19 +54,19 @@ export const toResponse = (
   return new Response(body, init);
 };
 
-type StreamEndKind = "completed" | "cancelled" | "errored";
+type InstrumentStreamEndKind = "completed" | "cancelled" | "errored";
 
-export type StreamResponseHooks = {
+export type InstrumentStreamResponseHooks = {
   onComplete?: (
-    kind: StreamEndKind,
+    kind: InstrumentStreamEndKind,
     stats: { bytes: number; firstByteAt?: number; lastByteAt: number },
   ) => void;
   onError?: (error: unknown) => void;
 };
 
-export const wrapStreamResponse = (
+export const instrumentStreamResponse = (
   response: Response,
-  hooks: StreamResponseHooks,
+  hooks: InstrumentStreamResponseHooks,
   signal?: AbortSignal,
 ): Response => {
   const src = response.body;
@@ -75,7 +75,7 @@ export const wrapStreamResponse = (
   const stats = { bytes: 0, didFirstByte: false, firstByteAt: undefined as number | undefined };
   let done = false;
 
-  const finish = (kind: StreamEndKind, reason?: unknown) => {
+  const finish = (kind: InstrumentStreamEndKind, reason?: unknown) => {
     if (done) return;
     done = true;
 

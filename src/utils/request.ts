@@ -16,6 +16,34 @@ export const prepareForwardHeaders = (request: Request): Record<string, string> 
   };
 };
 
+export const prepareRequestBody = async (request: Request) => {
+  let requestBytes = 0;
+  let body: ArrayBuffer | undefined;
+  if (request.body) {
+    body = await request.arrayBuffer();
+    requestBytes = body.byteLength;
+  }
+
+  return { body, requestBytes };
+};
+
+export const prepareRequestHeaders = (request: Request) => {
+  const existingRequestId = request.headers.get("x-request-id");
+  if (existingRequestId) return;
+
+  const requestId =
+    existingRequestId ??
+    request.headers.get("x-correlation-id") ??
+    request.headers.get("x-trace-id") ??
+    crypto.randomUUID();
+
+  let headers: Headers | undefined;
+  headers = new Headers(request.headers);
+  headers.set("x-request-id", requestId);
+
+  return headers;
+};
+
 export const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
   if (!patch.headers && patch.body === undefined) return request;
 
