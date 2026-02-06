@@ -53,7 +53,10 @@ export const toResponse = (
 };
 
 export type StreamResponseHooks = {
-  onComplete?: (stats: { bytes: number; firstByteAt?: number; lastByteAt: number }) => void;
+  onComplete?: (
+    stats: { bytes: number; firstByteAt?: number; lastByteAt: number },
+    aborted: boolean,
+  ) => void;
   onError?: (error: unknown) => void;
 };
 
@@ -73,21 +76,27 @@ export const wrapStreamResponse = (response: Response, hooks: StreamResponseHook
       controller.enqueue(chunk);
     },
     flush() {
-      hooks.onComplete?.({
-        bytes: stats.bytes,
-        firstByteAt: stats.firstByteAt,
-        lastByteAt: performance.now(),
-      });
+      hooks.onComplete?.(
+        {
+          bytes: stats.bytes,
+          firstByteAt: stats.firstByteAt,
+          lastByteAt: performance.now(),
+        },
+        false,
+      );
     },
   });
 
-  response.body?.pipeTo(writable).catch((error) => {
-    hooks.onError?.(error);
-    hooks.onComplete?.({
-      bytes: stats.bytes,
-      firstByteAt: stats.firstByteAt,
-      lastByteAt: performance.now(),
-    });
+  response.body?.pipeTo(writable).catch((reason) => {
+    if (reason !== undefined) hooks.onError?.(reason);
+    hooks.onComplete?.(
+      {
+        bytes: stats.bytes,
+        firstByteAt: stats.firstByteAt,
+        lastByteAt: performance.now(),
+      },
+      true,
+    );
   });
 
   return new Response(readable, response);
