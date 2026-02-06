@@ -4,7 +4,37 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ProviderId } from "../providers/types";
 
 function snakeToCamel(key: string): string {
-  return key.replaceAll(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+  if (key.indexOf("_") === -1) return key;
+
+  let out = "";
+
+  for (let i = 0; i < key.length; i++) {
+    const c = key[i]!;
+
+    if (c === "_" && i + 1 < key.length) {
+      const next = key[i + 1]!;
+      if (next >= "a" && next <= "z") {
+        out += next.toUpperCase();
+        i++;
+        continue;
+      }
+    }
+
+    out += c;
+  }
+
+  return out;
+}
+
+function camelToSnake(key: string): string {
+  if (!/[A-Z]/.test(key)) return key;
+
+  let out = "";
+  for (let i = 0; i < key.length; i++) {
+    const c = key[i]!;
+    out += c >= "A" && c <= "Z" ? "_" + c.toLowerCase() : c;
+  }
+  return out;
 }
 
 function camelizeKeysDeep(value: unknown): unknown {
@@ -22,53 +52,128 @@ function camelizeKeysDeep(value: unknown): unknown {
   return out;
 }
 
+function snakizeKeysDeep(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+
+  if (Array.isArray(value)) {
+    return value.map((v) => snakizeKeysDeep(v));
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (v === undefined || v === null) continue;
+    out[camelToSnake(k)] = snakizeKeysDeep(v);
+  }
+  return out;
+}
+
+function processOptions(providerOptions: Record<string, JSONObject>, providerName: ProviderId) {
+  if (providerOptions[providerName]) {
+    providerOptions[providerName] = camelizeKeysDeep(providerOptions[providerName]) as Record<
+      string,
+      JSONObject
+    >;
+  }
+  const target = (providerOptions[providerName] ??= {});
+
+  for (const key in providerOptions) {
+    if (key === providerName) continue;
+
+    const source = camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>;
+    for (const k in source) {
+      target[k] = source[k] as JSONObject;
+    }
+
+    if (key === "unknown") delete providerOptions[key];
+  }
+}
+
+function processMetadata(providerMetadata: Record<string, JSONObject>) {
+  for (const key in providerMetadata) {
+    providerMetadata[key] = snakizeKeysDeep(providerMetadata[key]) as JSONObject;
+  }
+}
+
 /**
  * Converts snake_case params in providerOptions to camelCase
  * and moves all of them into providerOptions[providerName].
+ * Also snakizes values in providerMetadata for OpenAI compatibility.
  */
-type Kind = "embedding" | "language";
-type MiddlewareFor<K extends Kind> = K extends "embedding"
-  ? EmbeddingModelMiddleware
-  : LanguageModelMiddleware;
-type TransformOptsFor<K extends Kind> = Parameters<
-  NonNullable<MiddlewareFor<K>["transformParams"]>
->[0];
-function forwardParamsForMiddleware<K extends Kind>(
-  _kind: K,
-  providerName: ProviderId,
-): MiddlewareFor<K> {
+export function forwardLanguageParams(providerName: ProviderId): LanguageModelMiddleware {
   return {
-    specificationVersion: "v3" as const,
+    specificationVersion: "v3",
     // eslint-disable-next-line require-await
-    transformParams: async (options: TransformOptsFor<K>) => {
-      const { params } = options;
-      const providerOptions = params.providerOptions;
-      if (!providerOptions) return params;
+    transformParams: async ({ params }) => {
+      if (params.providerOptions) processOptions(params.providerOptions, providerName);
 
-      const target = (providerOptions[providerName] ??= {});
-      for (const key in providerOptions) {
-        if (key === providerName) continue;
-        Object.assign(target, camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>);
-        if (key === "unknown") delete providerOptions[key];
+      for (const message of params.prompt) {
+        if (message.providerOptions) {
+          processOptions(message.providerOptions, providerName);
+        }
+        if (message.content && Array.isArray(message.content)) {
+          for (const part of message.content) {
+            if ("providerOptions" in part && part.providerOptions) {
+              processOptions(part.providerOptions as Record<string, JSONObject>, providerName);
+            }
+          }
+        }
       }
 
       return params;
     },
-  } as MiddlewareFor<K>;
+    wrapGenerate: async ({ doGenerate }) => {
+      const result = await doGenerate();
+      if (result.providerMetadata) processMetadata(result.providerMetadata);
+      result.content?.forEach((part) => {
+        if (part.providerMetadata) processMetadata(part.providerMetadata);
+      });
+      return result;
+    },
+    wrapStream: async ({ doStream }) => {
+      const result = await doStream();
+      result.stream = result.stream.pipeThrough(
+        new TransformStream({
+          transform(part, controller) {
+            if ("providerMetadata" in part && part.providerMetadata) {
+              processMetadata(part.providerMetadata);
+            }
+            controller.enqueue(part);
+          },
+        }),
+      );
+      return result;
+    },
+  };
+}
+
+export function forwardEmbeddingParams(providerName: ProviderId): EmbeddingModelMiddleware {
+  return {
+    specificationVersion: "v3",
+    // eslint-disable-next-line require-await
+    transformParams: async ({ params }) => {
+      if (params.providerOptions) processOptions(params.providerOptions, providerName);
+      return params;
+    },
+    wrapEmbed: async ({ doEmbed }) => {
+      const result = await doEmbed();
+      if (result.providerMetadata) processMetadata(result.providerMetadata);
+      return result;
+    },
+  };
 }
 
 export function extractProviderNamespace(id: string): string {
-  const firstDot = id.indexOf(".");
-  const head = firstDot === -1 ? id : id.slice(0, firstDot);
-
-  const dash = head.indexOf("-");
-  return dash === -1 ? head : head.slice(dash + 1);
+  if (id === "amazon-bedrock") return "bedrock";
+  const [first, second] = id.split(".");
+  // FUTURE: map vertex to google once AI SDK support per-message level provider options
+  if (first === "vertex" || second === "vertex") return "vertex";
+  return first!;
 }
 
 export function forwardParamsMiddleware(provider: string): LanguageModelMiddleware {
-  return forwardParamsForMiddleware("language", extractProviderNamespace(provider));
+  return forwardLanguageParams(extractProviderNamespace(provider));
 }
 
 export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
-  return forwardParamsForMiddleware("embedding", extractProviderNamespace(provider));
+  return forwardEmbeddingParams(extractProviderNamespace(provider));
 }

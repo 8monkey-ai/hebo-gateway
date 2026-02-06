@@ -8,7 +8,8 @@ export function calculateReasoningBudgetFromEffort(
   let percentage = 0;
   switch (effort) {
     case "none":
-      return 0;
+      percentage = 0;
+      break;
     case "minimal":
       percentage = 0.1;
       break;

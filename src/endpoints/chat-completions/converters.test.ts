@@ -1,8 +1,59 @@
+import type { GenerateTextResult, ToolSet, Output } from "ai";
+
 import { describe, expect, test } from "bun:test";
 
-import { convertToTextCallOptions } from "./converters";
+import { convertToTextCallOptions, toChatCompletionsAssistantMessage } from "./converters";
 
 describe("Chat Completions Converters", () => {
+  describe("toChatCompletionsAssistantMessage", () => {
+    test("should pass through providerMetadata to extra_content", () => {
+      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
+        content: [
+          {
+            type: "text",
+            text: "hello",
+            providerMetadata: {
+              vertex: {
+                thought_signature: "signature-abc",
+              },
+            },
+          } as any,
+        ],
+        toolCalls: [],
+      };
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.extra_content).toEqual({
+        vertex: {
+          thought_signature: "signature-abc",
+        },
+      });
+    });
+
+    test("should pass through providerMetadata to tool calls", () => {
+      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
+        content: [],
+        toolCalls: [
+          {
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+            providerMetadata: {
+              vertex: { thought_signature: "tool-signature" },
+            },
+          },
+        ],
+      };
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.tool_calls![0].extra_content).toEqual({
+        vertex: { thought_signature: "tool-signature" },
+      });
+    });
+  });
+
   describe("convertToTextCallOptions", () => {
     test("should use max_completion_tokens when present", () => {
       const result = convertToTextCallOptions({

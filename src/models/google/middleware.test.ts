@@ -160,7 +160,7 @@ test("geminiReasoningMiddleware > should handle disabled reasoning", async () =>
       google: {
         thinkingConfig: {
           includeThoughts: false,
-          thinkingLevel: "none",
+          thinkingLevel: "minimal",
         },
       },
       unknown: {},
@@ -195,4 +195,44 @@ test("geminiReasoningMiddleware > should default reasoning effort for Gemini 3 F
       unknown: {},
     },
   });
+});
+
+test("geminiReasoningMiddleware > Gemini 2.5 Pro should have minimum budget even if reasoning is disabled", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: false },
+      },
+    },
+  };
+
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
+  });
+
+  expect(result.providerOptions?.google?.thinkingConfig?.thinkingBudget).toBe(128);
+  expect(result.providerOptions?.google?.thinkingConfig?.includeThoughts).toBe(false);
+});
+
+test("geminiReasoningMiddleware > Gemini 2.0 Flash should NOT have forced minimum budget", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: false, effort: "none" },
+      },
+    },
+  };
+
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "google/gemini-2.0-flash" }),
+  });
+
+  expect(result.providerOptions?.google?.thinkingConfig?.thinkingBudget).toBe(0);
+  expect(result.providerOptions?.google?.thinkingConfig?.includeThoughts).toBe(false);
 });
