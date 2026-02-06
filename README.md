@@ -8,7 +8,7 @@ Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey wo
 
 Hebo Gateway is an open-source, embeddable AI gateway framework built to live inside your app. It gives you full control over providers, models, routing, and the request lifecycle.
 
-Intro blog post: Yet Another AI Gateway? (https://hebo.ai/blog/260127-hebo-gateway/)
+Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/260127-hebo-gateway/) (`https://hebo.ai/blog/260127-hebo-gateway/`)
 
 ## Features
 
