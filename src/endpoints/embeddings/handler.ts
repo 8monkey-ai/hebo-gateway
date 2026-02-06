@@ -1,8 +1,6 @@
 import { embedMany, wrapEmbeddingModel } from "ai";
 import * as z from "zod/mini";
 
-import { prepareForwardHeaders } from "#/utils/request";
-
 import type {
   GatewayConfig,
   Endpoint,
@@ -17,6 +15,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { GatewayError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
+import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
 
