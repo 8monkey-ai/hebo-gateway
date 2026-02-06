@@ -2,7 +2,7 @@ import type { AfterHookContext, BeforeHookContext, GatewayConfig, GatewayContext
 
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./utils/errors";
-import { getRequestMeta, getResponseMeta, logger } from "./utils/logger";
+import { getAIMeta, getRequestMeta, getResponseMeta, logger } from "./utils/logger";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { toResponse, instrumentStreamResponse } from "./utils/response";
 
@@ -27,13 +27,18 @@ const withLogger = async (context: GatewayContext) => {
     const responseTime = stats?.firstByteAt && +(stats.firstByteAt - start).toFixed(2);
 
     const meta: Record<string, unknown> = {
-      req: getRequestMeta(context.request),
-      res: getResponseMeta(response),
       requestId: context.request.headers.get("x-request-id"),
-      totalDuration,
-      responseTime: responseTime ?? totalDuration,
-      bytesIn: requestBytes,
-      bytesOut: stats?.bytes ?? Number(response.headers.get("content-length")),
+      ai: getAIMeta(context),
+      request: getRequestMeta(context.request),
+      response: getResponseMeta(response),
+      timings: {
+        totalDuration,
+        responseTime: responseTime ?? totalDuration,
+      },
+      bytes: {
+        in: requestBytes,
+        out: stats?.bytes ?? Number(response.headers.get("content-length")),
+      },
     };
 
     const msg = `[gateway] request ${kind}`;

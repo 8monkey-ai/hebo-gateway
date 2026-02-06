@@ -36,8 +36,7 @@ export const prepareRequestHeaders = (request: Request) => {
     request.headers.get("x-trace-id") ??
     crypto.randomUUID();
 
-  let headers: Headers | undefined;
-  headers = new Headers(request.headers);
+  const headers = new Headers(request.headers);
   headers.set("x-request-id", requestId);
 
   return headers;

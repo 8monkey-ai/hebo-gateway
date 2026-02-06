@@ -1,3 +1,7 @@
+import type { GatewayContext } from "../types";
+
+import { isProduction } from "./env";
+
 export type LogFn = {
   (msg: string): void;
   (obj: Record<string, unknown>, msg?: string): void;
@@ -11,8 +15,6 @@ export type Logger = {
   warn: LogFn;
   error: LogFn;
 };
-
-import { isProduction } from "./env";
 
 export const getDefaultLogLevel = (): "debug" | "info" => (isProduction() ? "info" : "debug");
 
@@ -112,6 +114,16 @@ export const getRequestMeta = (request?: Request): Record<string, unknown> => {
     contentType: getHeader(headers, "content-type"),
     contentLength: getHeader(headers, "content-length"),
     userAgent: getHeader(headers, "user-agent"),
+  };
+};
+
+export const getAIMeta = (context?: Partial<GatewayContext>): Record<string, unknown> => {
+  if (!context) return {};
+
+  return {
+    modelId: context.modelId,
+    resolvedModelId: context.resolvedModelId,
+    resolvedProviderId: context.resolvedProviderId,
   };
 };
 

@@ -62,6 +62,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       });
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
+    ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(
       `[embeddings] provider resolved: ${ctx.resolvedModelId} -> ${embeddingModel.provider}`,
     );

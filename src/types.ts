@@ -3,7 +3,7 @@ import type { ProviderV3 } from "@ai-sdk/provider";
 import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
 import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { ModelCatalog, ModelId } from "./models/types";
-import type { ProviderRegistry } from "./providers/types";
+import type { ProviderId, ProviderRegistry } from "./providers/types";
 import type { Logger, LogLevel } from "./utils/logger";
 
 /**
@@ -60,6 +60,10 @@ export type GatewayContext = {
    * Resolved provider instance.
    */
   provider?: ProviderV3;
+  /**
+   * Resolved provider ID.
+   */
+  resolvedProviderId?: ProviderId;
   /**
    * Response returned by the handler.
    */
