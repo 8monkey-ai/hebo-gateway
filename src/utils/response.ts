@@ -27,7 +27,11 @@ export const toResponse = (
 
   const contentLength = body instanceof Uint8Array ? String(body.byteLength) : "";
 
-  // FUTURE: Set status / statusText
+  if (!responseInit)
+    responseInit =
+      result instanceof Error
+        ? { status: 500, statusText: "REQUEST_FAILED" }
+        : { status: 200, statusText: "OK" };
 
   const init = mergeResponseInit(
     isStream
