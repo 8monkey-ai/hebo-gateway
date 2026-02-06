@@ -75,7 +75,7 @@ export const withLifecycle = (
       if (error) logError(error);
 
       if (!(response.body instanceof ReadableStream)) {
-        logAccess("completed");
+        logAccess(error ? "failed" : "completed");
         return response;
       }
 

@@ -23,6 +23,8 @@ export const toResponse = (
     body = result;
   } else if (typeof result === "string") {
     body = TEXT_ENCODER.encode(result);
+  } else if (result instanceof Error) {
+    body = TEXT_ENCODER.encode(JSON.stringify({ message: result.message }));
   } else {
     body = TEXT_ENCODER.encode(JSON.stringify(result));
   }
