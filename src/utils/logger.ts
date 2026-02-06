@@ -97,11 +97,9 @@ export const getRequestMeta = (request?: Request): Record<string, unknown> => {
   if (!request) return {};
 
   let path = request.url;
-  let query: string | undefined;
   try {
     const url = new URL(request.url);
     path = url.pathname;
-    query = url.search || undefined;
   } catch {
     path = request.url;
   }
@@ -110,7 +108,6 @@ export const getRequestMeta = (request?: Request): Record<string, unknown> => {
   return {
     method: request.method,
     path,
-    query,
     contentType: getHeader(headers, "content-type"),
     contentLength: getHeader(headers, "content-length"),
     userAgent: getHeader(headers, "user-agent"),
