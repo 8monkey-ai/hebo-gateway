@@ -1,3 +1,5 @@
+const TEXT_ENCODER = new TextEncoder();
+
 export const mergeResponseInit = (
   defaultHeaders: HeadersInit,
   responseInit?: ResponseInit,
@@ -20,9 +22,9 @@ export const toResponse = (
   if (isStream || result instanceof Uint8Array) {
     body = result;
   } else if (typeof result === "string") {
-    body = new TextEncoder().encode(result);
+    body = TEXT_ENCODER.encode(result);
   } else {
-    body = new TextEncoder().encode(JSON.stringify(result));
+    body = TEXT_ENCODER.encode(JSON.stringify(result));
   }
 
   const contentLength = body instanceof Uint8Array ? String(body.byteLength) : "";
