@@ -121,12 +121,16 @@ export const instrumentStreamResponse = (
         controller.close();
         finish("completed");
       } catch (err) {
-        controller.close();
-
         const kind =
           (err as any)?.name === "AbortError" || signal?.aborted ? "cancelled" : "errored";
 
         finish(kind, err);
+
+        try {
+          await src.cancel(err);
+        } catch {}
+
+        controller.close();
       } finally {
         try {
           reader.releaseLock();
