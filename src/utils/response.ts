@@ -105,6 +105,7 @@ export const instrumentStreamResponse = (
             return;
           }
 
+          // eslint-disable-next-line no-await-in-loop
           const { value, done } = await reader.read();
           if (done) break;
 

@@ -23,18 +23,18 @@ const withLogger = async (context: GatewayContext) => {
     kind: string,
     stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
   ) => {
+    const totalDuration = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
+    const responseTime = stats?.firstByteAt && +(stats.firstByteAt - start).toFixed(2);
+
     const meta: Record<string, unknown> = {
       req: getRequestMeta(context.request),
       res: getResponseMeta(response),
       requestId: context.request.headers.get("x-request-id"),
+      totalDuration,
+      responseTime: responseTime ?? totalDuration,
+      bytesIn: requestBytes,
+      bytesOut: stats?.bytes ?? Number(response.headers.get("content-length")),
     };
-
-    meta["totalDuration"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
-    meta["responseTime"] = stats?.firstByteAt
-      ? +(stats.firstByteAt - start).toFixed(2)
-      : meta["totalDuration"];
-    meta["bytesIn"] = requestBytes;
-    meta["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
     const msg = `[gateway] request ${kind}`;
 
