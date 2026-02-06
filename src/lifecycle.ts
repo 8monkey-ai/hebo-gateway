@@ -32,10 +32,10 @@ export const withLifecycle = (
       ) => {
         const req = getRequestMeta(request);
         const res = getResponseMeta(response);
-        res["durationMs"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
-        res["ttfbMs"] = stats?.firstByteAt
+        res["totalDuration"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
+        res["responseTime"] = stats?.firstByteAt
           ? +(stats.firstByteAt - start).toFixed(2)
-          : res["durationMs"];
+          : res["totalDuration"];
         res["bytesIn"] = requestBytes;
         res["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
@@ -44,8 +44,8 @@ export const withLifecycle = (
         logger.info({ req, res }, msg);
       };
 
-      const logError = (err: unknown) => {
-        logger.error(err instanceof Error ? err : new Error(String(err)));
+      const logError = (error: unknown) => {
+        logger.error({ err: error instanceof Error ? error : new Error(String(error)) });
       };
 
       if (error) logError(error);

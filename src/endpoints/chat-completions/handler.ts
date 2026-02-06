@@ -83,7 +83,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         model: languageModelWithMiddleware,
         abortSignal: ctx.request.signal,
         onError: ({ error }) => {
-          logger.error(error instanceof Error ? error : new Error(String(error)));
+          logger.error({ err: error instanceof Error ? error : new Error(String(error)) });
         },
         ...textOptions,
       });
