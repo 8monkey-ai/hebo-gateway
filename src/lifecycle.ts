@@ -13,7 +13,7 @@ export const withLifecycle = (
   const parsedConfig = parseConfig(config);
 
   const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
-    // Initialize some logging variables
+    // Initialize some variables needed for logging later
     const start = performance.now();
 
     let requestBytes = 0;
@@ -24,6 +24,7 @@ export const withLifecycle = (
       request = new Request(request, { body: bodyBuffer });
     }
 
+    // Log when finalizing the request (stream-compatible)
     const finalize = (response: Response, error?: unknown) => {
       const req = getRequestMeta(request);
 
@@ -56,6 +57,7 @@ export const withLifecycle = (
       });
     };
 
+    // The actual lifecycle logic
     const context: GatewayContext = {
       request,
       state: state ?? {},
