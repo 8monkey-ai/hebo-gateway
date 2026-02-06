@@ -14,23 +14,32 @@ export const toResponse = (
   result: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer> | object | string,
   responseInit?: ResponseInit,
 ): Response => {
-  let body: BodyInit;
+  let body: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>;
 
   const isStream = result instanceof ReadableStream;
-  if (isStream || typeof result === "string" || result instanceof Uint8Array) {
+  if (isStream || result instanceof Uint8Array) {
     body = result;
+  } else if (typeof result === "string") {
+    body = new TextEncoder().encode(result);
   } else {
-    body = JSON.stringify(result);
+    body = new TextEncoder().encode(JSON.stringify(result));
   }
+
+  const contentLength = body instanceof Uint8Array ? String(body.byteLength) : "";
+
+  // FUTURE: Set status / statusText
 
   const init = mergeResponseInit(
     isStream
       ? {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache",
           Connection: "keep-alive",
         }
-      : { "Content-Type": "application/json" },
+      : {
+          "content-type": "application/json",
+          "content-length": contentLength,
+        },
     responseInit,
   );
 
@@ -38,31 +47,41 @@ export const toResponse = (
 };
 
 export type StreamResponseHooks = {
-  onComplete?: (stats: { streamBytes: number; firstByteAt?: number; lastByteAt: number }) => void;
+  onComplete?: (stats: { bytes: number; firstByteAt?: number; lastByteAt: number }) => void;
   onError?: (error: unknown) => void;
 };
 
 export const wrapStreamResponse = (response: Response, hooks: StreamResponseHooks): Response => {
-  let streamBytes = 0;
-  let didFirstByte = false;
-  let firstByteAt: number | undefined;
+  const stats = {
+    bytes: 0,
+    didFirstByte: false,
+    firstByteAt: undefined as number | undefined,
+  };
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
-      if (!didFirstByte) {
-        didFirstByte = true;
-        firstByteAt = performance.now();
+      if (!stats.didFirstByte) {
+        stats.didFirstByte = true;
+        stats.firstByteAt = performance.now();
       }
-      streamBytes += chunk.byteLength;
+      stats.bytes += chunk.byteLength;
       controller.enqueue(chunk);
     },
     flush() {
-      hooks.onComplete?.({ streamBytes, firstByteAt, lastByteAt: performance.now() });
+      hooks.onComplete?.({
+        bytes: stats.bytes,
+        firstByteAt: stats.firstByteAt,
+        lastByteAt: performance.now(),
+      });
     },
   });
 
   response.body?.pipeTo(writable).catch((error) => {
     hooks.onError?.(error);
-    hooks.onComplete?.({ streamBytes, firstByteAt, lastByteAt: performance.now() });
+    hooks.onComplete?.({
+      bytes: stats.bytes,
+      firstByteAt: stats.firstByteAt,
+      lastByteAt: performance.now(),
+    });
   });
 
   return new Response(readable, response);

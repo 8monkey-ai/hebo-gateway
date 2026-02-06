@@ -23,7 +23,7 @@ export const withLifecycle = (
       const req = getRequestMeta(request);
 
       const log = (
-        stats?: { streamBytes?: number; firstByteAt?: number; lastByteAt?: number },
+        stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
         err: unknown = error,
       ) => {
         const res = getResponseMeta(response);
@@ -31,7 +31,7 @@ export const withLifecycle = (
         res["ttfbMs"] = stats?.firstByteAt
           ? (stats.firstByteAt - start).toFixed(2)
           : res["durationMs"];
-        res["streamBytes"] = stats?.streamBytes ?? 0;
+        res["bytes"] = stats?.bytes ?? 0;
 
         const msg = err ? "[gateway] request failed" : "[gateway] request completed";
 
@@ -39,13 +39,12 @@ export const withLifecycle = (
       };
 
       if (!(result instanceof ReadableStream)) {
-        log({ streamBytes: result?.byteLength });
+        log({ bytes: result?.byteLength });
         return response;
       }
 
       return wrapStreamResponse(response, {
-        onComplete: ({ streamBytes, firstByteAt, lastByteAt }) =>
-          log({ streamBytes, firstByteAt, lastByteAt }, error),
+        onComplete: (params) => log(params),
         // FUTURE log errors
         // onError: (err) => log(undefined, err),
       });
@@ -69,9 +68,7 @@ export const withLifecycle = (
       if (raw instanceof ReadableStream) {
         result = raw;
       } else {
-        result = new TextEncoder().encode(
-          typeof result === "string" ? result : JSON.stringify(result),
-        );
+        result = new TextEncoder().encode(typeof raw === "string" ? raw : JSON.stringify(raw));
       }
       context.response = toResponse(result);
 
