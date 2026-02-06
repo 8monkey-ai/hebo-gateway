@@ -185,7 +185,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions!.unknown).toBeUndefined();
   });
 
-  test("should merge all providerOptions into target providerName", async () => {
+  test("should merge all providerOptions into target providerName and reserve others", async () => {
     const middleware = forwardParamsMiddleware("anthropic.messages");
     const params = {
       prompt: [],
@@ -208,8 +208,8 @@ describe("forwardParamsMiddleware", () => {
         otherOption: "value2",
         existingOption: "value3",
       },
+      openai: { other_option: "value2" },
     });
     expect(result.providerOptions!.unknown).toBeUndefined();
-    expect(result.providerOptions!.openai).toBeUndefined();
   });
 });

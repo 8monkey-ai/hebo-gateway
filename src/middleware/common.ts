@@ -68,17 +68,24 @@ function snakizeKeysDeep(value: unknown): unknown {
 }
 
 function processOptions(providerOptions: Record<string, JSONObject>, providerName: ProviderId) {
-  const merged: Record<string, unknown> = {};
-
-  for (const ns of Object.keys(providerOptions)) {
-    const options = providerOptions[ns] as Record<string, unknown>;
-    for (const key in options) {
-      merged[key] = options[key];
-    }
-    delete providerOptions[ns];
+  if (providerOptions[providerName]) {
+    providerOptions[providerName] = camelizeKeysDeep(providerOptions[providerName]) as Record<
+      string,
+      JSONObject
+    >;
   }
+  const target = (providerOptions[providerName] ??= {});
 
-  providerOptions[providerName] = camelizeKeysDeep(merged) as JSONObject;
+  for (const key in providerOptions) {
+    if (key === providerName) continue;
+
+    const source = camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>;
+    for (const k in source) {
+      target[k] = source[k] as JSONObject;
+    }
+
+    if (key === "unknown") delete providerOptions[key];
+  }
 }
 
 function processMetadata(providerMetadata: Record<string, JSONObject>) {
@@ -160,7 +167,7 @@ export function extractProviderNamespace(id: string): string {
   const [first, second] = id.split(".");
   // FUTURE: map vertex to google once AI SDK support per-message level provider options
   if (first === "vertex" || second === "vertex") return "vertex";
-  return first;
+  return first!;
 }
 
 export function forwardParamsMiddleware(provider: string): LanguageModelMiddleware {
