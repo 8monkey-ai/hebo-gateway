@@ -17,7 +17,7 @@ export const withLifecycle = (
 
     const finalize = (
       response: Response,
-      result?: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer>,
+      result?: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer> | object | string,
       error?: unknown,
     ) => {
       const req = getRequestMeta(request);
@@ -39,7 +39,7 @@ export const withLifecycle = (
       };
 
       if (!(result instanceof ReadableStream)) {
-        log({ bytes: result?.byteLength });
+        log();
         return response;
       }
 
@@ -63,13 +63,7 @@ export const withLifecycle = (
 
       context.request = before ? maybeApplyRequestPatch(request, before) : request;
 
-      const raw = await run(context);
-      let result;
-      if (raw instanceof ReadableStream) {
-        result = raw;
-      } else {
-        result = new TextEncoder().encode(typeof raw === "string" ? raw : JSON.stringify(raw));
-      }
+      const result = await run(context);
       context.response = toResponse(result);
 
       const after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
