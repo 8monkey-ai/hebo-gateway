@@ -53,6 +53,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
     const isGptOss = model.modelId.includes("gpt-oss");
 
     if (isGptOss) {
+      // FUTURE: warn that unable to disable reasoning for gpt-oss models
       target["reasoningEffort"] = mapGptOssReasoningEffort(reasoning.effort);
     } else if (reasoning.enabled === false) {
       target["reasoningEffort"] = "none";
