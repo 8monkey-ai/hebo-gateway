@@ -15,14 +15,31 @@ export const withLifecycle = (
   const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
     // Initialize some variables needed for logging later
     const start = performance.now();
-
     let requestBytes = 0;
+
+    let body: ArrayBuffer | undefined;
     if (request.body) {
-      const bodyBuffer = await request.arrayBuffer();
-      requestBytes = bodyBuffer.byteLength;
-      // eslint-disable-next-line unicorn/no-invalid-fetch-options
-      request = new Request(request, { body: bodyBuffer });
+      body = await request.arrayBuffer();
+      requestBytes = body.byteLength;
     }
+
+    const existingRequestId = request.headers.get("x-request-id");
+    const requestId =
+      existingRequestId ??
+      request.headers.get("x-correlation-id") ??
+      request.headers.get("x-trace-id") ??
+      crypto.randomUUID();
+
+    let headers: Headers | undefined;
+    if (!existingRequestId) {
+      headers = new Headers(request.headers);
+      headers.set("x-request-id", requestId);
+    }
+
+    request = new Request(request, {
+      ...(headers ? { headers } : {}),
+      ...(body ? { body } : {}),
+    });
 
     // Log when finalizing the request (stream-compatible)
     const finalize = (response: Response, error?: unknown) => {
@@ -30,22 +47,29 @@ export const withLifecycle = (
         kind: string,
         stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
       ) => {
-        const req = getRequestMeta(request);
-        const res = getResponseMeta(response);
-        res["totalDuration"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
-        res["responseTime"] = stats?.firstByteAt
+        const meta: Record<string, unknown> = {
+          req: getRequestMeta(request),
+          res: getResponseMeta(response),
+          requestId: request.headers.get("x-request-id"),
+        };
+
+        meta["totalDuration"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
+        meta["responseTime"] = stats?.firstByteAt
           ? +(stats.firstByteAt - start).toFixed(2)
-          : res["totalDuration"];
-        res["bytesIn"] = requestBytes;
-        res["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
+          : meta["totalDuration"];
+        meta["bytesIn"] = requestBytes;
+        meta["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
         const msg = `[gateway] request ${kind}`;
 
-        logger.info({ req, res }, msg);
+        logger.info(meta, msg);
       };
 
       const logError = (error: unknown) => {
-        logger.error({ err: error instanceof Error ? error : new Error(String(error)) });
+        logger.error({
+          requestId: request.headers.get("x-request-id"),
+          err: error instanceof Error ? error : new Error(String(error)),
+        });
       };
 
       if (error) logError(error);
