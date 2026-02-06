@@ -39,7 +39,7 @@ export type GatewayContext = {
   /**
    * Incoming request for the lifecycle.
    */
-  request?: Request;
+  request: Request;
   /**
    * Parsed body from the request.
    */

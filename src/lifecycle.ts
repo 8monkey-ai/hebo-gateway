@@ -13,13 +13,18 @@ export const withLifecycle = (
   const parsedConfig = parseConfig(config);
 
   const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
+    // Initialize some logging variables
     const start = performance.now();
 
-    const finalize = (
-      response: Response,
-      result?: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer> | object | string,
-      error?: unknown,
-    ) => {
+    let requestBytes = 0;
+    if (request.body) {
+      const bodyBuffer = await request.arrayBuffer();
+      requestBytes = bodyBuffer.byteLength;
+      // eslint-disable-next-line unicorn/no-invalid-fetch-options
+      request = new Request(request, { body: bodyBuffer });
+    }
+
+    const finalize = (response: Response, error?: unknown) => {
       const req = getRequestMeta(request);
 
       const log = (
@@ -31,14 +36,15 @@ export const withLifecycle = (
         res["ttfbMs"] = stats?.firstByteAt
           ? +(stats.firstByteAt - start).toFixed(2)
           : res["durationMs"];
-        res["bytes"] = stats?.bytes ?? Number(response.headers.get("content-length"));
+        res["bytesIn"] = requestBytes;
+        res["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
         const msg = err ? "[gateway] request failed" : "[gateway] request completed";
 
         logger.info({ req, res }, msg);
       };
 
-      if (!(result instanceof ReadableStream)) {
+      if (!(response.body instanceof ReadableStream)) {
         log();
         return response;
       }
@@ -61,17 +67,17 @@ export const withLifecycle = (
       const before = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
       if (before instanceof Response) return finalize(before);
 
-      context.request = before ? maybeApplyRequestPatch(request, before) : request;
+      // eslint-disable-next-line no-unused-expressions
+      before && (context.request = maybeApplyRequestPatch(context.request, before));
 
-      const result = await run(context);
-      context.response = toResponse(result);
+      context.response = toResponse(await run(context));
 
       const after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
       const response = after ?? context.response;
 
-      return finalize(response, result);
+      return finalize(response);
     } catch (e) {
-      return finalize(createOpenAIErrorResponse(e), undefined, e);
+      return finalize(createOpenAIErrorResponse(e), e);
     }
   };
 
