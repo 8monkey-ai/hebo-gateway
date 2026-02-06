@@ -26,9 +26,8 @@ export const withLifecycle = (
 
     // Log when finalizing the request (stream-compatible)
     const finalize = (response: Response, error?: unknown) => {
-      const req = getRequestMeta(request);
-
       const logAccess = (stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number }) => {
+        const req = getRequestMeta(request);
         const res = getResponseMeta(response);
         res["durationMs"] = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
         res["ttfbMs"] = stats?.firstByteAt
@@ -44,10 +43,7 @@ export const withLifecycle = (
       };
 
       const logError = (err: unknown) => {
-        logger.error(
-          err instanceof Error ? err : new Error(String(err)),
-          "[gateway] request failed",
-        );
+        logger.error(err instanceof Error ? err : new Error(String(err)));
       };
 
       if (error) logError(error);
