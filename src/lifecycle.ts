@@ -27,8 +27,8 @@ export const withLifecycle = (
     // Log when finalizing the request (stream-compatible)
     const finalize = (response: Response, error?: unknown) => {
       const logAccess = (
+        kind: string,
         stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
-        aborted = false,
       ) => {
         const req = getRequestMeta(request);
         const res = getResponseMeta(response);
@@ -39,11 +39,7 @@ export const withLifecycle = (
         res["bytesIn"] = requestBytes;
         res["bytesOut"] = stats?.bytes ?? Number(response.headers.get("content-length"));
 
-        const msg = aborted
-          ? "[gateway] request aborted"
-          : response.status >= 400
-            ? "[gateway] request failed"
-            : "[gateway] request completed";
+        const msg = `[gateway] request ${kind}`;
 
         logger.info({ req, res }, msg);
       };
@@ -55,14 +51,14 @@ export const withLifecycle = (
       if (error) logError(error);
 
       if (!(response.body instanceof ReadableStream)) {
-        logAccess();
+        logAccess("completed");
         return response;
       }
 
       return wrapStreamResponse(
         response,
         {
-          onComplete: (params, aborted) => logAccess(params, aborted),
+          onComplete: (kind, params) => logAccess(kind, params),
           onError: (err) => logError(err),
         },
         request.signal,

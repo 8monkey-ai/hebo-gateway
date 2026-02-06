@@ -52,10 +52,12 @@ export const toResponse = (
   return new Response(body, init);
 };
 
+type StreamEndKind = "completed" | "cancelled" | "errored";
+
 export type StreamResponseHooks = {
   onComplete?: (
+    kind: StreamEndKind,
     stats: { bytes: number; firstByteAt?: number; lastByteAt: number },
-    aborted: boolean,
   ) => void;
   onError?: (error: unknown) => void;
 };
@@ -65,43 +67,79 @@ export const wrapStreamResponse = (
   hooks: StreamResponseHooks,
   signal?: AbortSignal,
 ): Response => {
-  const stats = {
-    bytes: 0,
-    didFirstByte: false,
-    firstByteAt: undefined as number | undefined,
+  const src = response.body;
+  if (!src) return response;
+
+  const stats = { bytes: 0, didFirstByte: false, firstByteAt: undefined as number | undefined };
+  let done = false;
+
+  const finish = (kind: StreamEndKind, reason?: unknown) => {
+    if (done) return;
+    done = true;
+
+    if (!reason) reason = signal?.reason;
+
+    if (kind !== "completed") {
+      hooks.onError?.(reason);
+    }
+
+    const timing = {
+      bytes: stats.bytes,
+      firstByteAt: stats.firstByteAt,
+      lastByteAt: performance.now(),
+    };
+
+    hooks.onComplete?.(kind, timing);
   };
-  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
-    transform(chunk, controller) {
-      if (!stats.didFirstByte) {
-        stats.didFirstByte = true;
-        stats.firstByteAt = performance.now();
+
+  const out = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = src.getReader();
+
+      try {
+        for (;;) {
+          if (signal?.aborted) {
+            finish("cancelled", signal.reason);
+            return;
+          }
+
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          if (!stats.didFirstByte) {
+            stats.didFirstByte = true;
+            stats.firstByteAt = performance.now();
+          }
+
+          stats.bytes += value!.byteLength;
+          controller.enqueue(value!);
+        }
+
+        controller.close();
+        finish("completed");
+      } catch (err) {
+        controller.close();
+
+        const kind =
+          (err as any)?.name === "AbortError" || signal?.aborted ? "cancelled" : "errored";
+
+        finish(kind, err);
+      } finally {
+        try {
+          reader.releaseLock();
+        } catch {}
       }
-      stats.bytes += chunk.byteLength;
-      controller.enqueue(chunk);
     },
-    flush() {
-      hooks.onComplete?.(
-        {
-          bytes: stats.bytes,
-          firstByteAt: stats.firstByteAt,
-          lastByteAt: performance.now(),
-        },
-        false,
-      );
+
+    cancel(reason) {
+      finish("cancelled", reason);
+      src.cancel(reason).catch(() => {});
     },
   });
 
-  response.body?.pipeTo(writable, signal ? { signal } : undefined).catch((reason) => {
-    if (reason !== undefined) hooks.onError?.(reason);
-    hooks.onComplete?.(
-      {
-        bytes: stats.bytes,
-        firstByteAt: stats.firstByteAt,
-        lastByteAt: performance.now(),
-      },
-      true,
-    );
+  return new Response(out, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
   });
-
-  return new Response(readable, response);
 };
