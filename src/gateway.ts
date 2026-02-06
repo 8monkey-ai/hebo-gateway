@@ -33,12 +33,11 @@ export function gateway(config: GatewayConfig) {
     }
 
     const response = new Response("Not Found", { status: 404 });
+    const durationMs = (performance.now() - start).toFixed(2);
     logger.warn(
       {
         req: getRequestMeta(req),
-        res: Object.assign(getResponseMeta(response), {
-          durationMs: Math.round((performance.now() - start) * 100) / 100,
-        }),
+        res: Object.assign(getResponseMeta(response), { durationMs, ttfbMs: durationMs }),
       },
       "[gateway] route not found",
     );

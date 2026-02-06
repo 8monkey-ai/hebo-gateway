@@ -11,16 +11,16 @@ export const mergeResponseInit = (
 };
 
 export const toResponse = (
-  result: ReadableStream | object | string,
+  result: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer> | object | string,
   responseInit?: ResponseInit,
 ): Response => {
-  const isStream = result instanceof ReadableStream;
   let body: BodyInit;
 
-  if (isStream) {
+  const isStream = result instanceof ReadableStream;
+  if (isStream || typeof result === "string" || result instanceof Uint8Array) {
     body = result;
   } else {
-    body = typeof result === "string" ? result : JSON.stringify(result);
+    body = JSON.stringify(result);
   }
 
   const init = mergeResponseInit(
@@ -38,25 +38,31 @@ export const toResponse = (
 };
 
 export type StreamResponseHooks = {
-  onComplete?: (stats: { streamBytes: number }) => void;
+  onComplete?: (stats: { streamBytes: number; firstByteAt?: number; lastByteAt: number }) => void;
   onError?: (error: unknown) => void;
 };
 
 export const wrapStreamResponse = (response: Response, hooks: StreamResponseHooks): Response => {
   let streamBytes = 0;
+  let didFirstByte = false;
+  let firstByteAt: number | undefined;
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
+      if (!didFirstByte) {
+        didFirstByte = true;
+        firstByteAt = performance.now();
+      }
       streamBytes += chunk.byteLength;
       controller.enqueue(chunk);
     },
     flush() {
-      hooks.onComplete?.({ streamBytes });
+      hooks.onComplete?.({ streamBytes, firstByteAt, lastByteAt: performance.now() });
     },
   });
 
   response.body?.pipeTo(writable).catch((error) => {
     hooks.onError?.(error);
-    hooks.onComplete?.({ streamBytes });
+    hooks.onComplete?.({ streamBytes, firstByteAt, lastByteAt: performance.now() });
   });
 
   return new Response(readable, response);
