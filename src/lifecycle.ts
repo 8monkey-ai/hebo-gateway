@@ -63,7 +63,7 @@ const withLogger = async (context: GatewayContext) => {
     if (error) logError(error);
 
     if (!(response.body instanceof ReadableStream)) {
-      logAccess(response, error ? "failed" : "completed");
+      logAccess(response, error ? "errored" : "completed");
       return response;
     }
 
