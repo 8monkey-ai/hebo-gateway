@@ -79,11 +79,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Execute request (streaming vs. non-streaming).
     if (stream) {
-      // FUTURE: hook up error logging to onError
-      // FUTURE: is the abort signal enough?
       const result = streamText({
         model: languageModelWithMiddleware,
+        // FUTURE: is the abort signal enough?
         abortSignal: ctx.request.signal,
+        onError: ({ error }) => {
+          logger.error(error instanceof Error ? error : new Error(String(error)));
+        },
         ...textOptions,
       });
 
