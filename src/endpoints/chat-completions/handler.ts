@@ -48,7 +48,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
-    logger.debug(`[chat] model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
+    logger.debug({ msg: `[chat] model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}` });
 
     ctx.operation = "text";
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
@@ -63,7 +63,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
-    logger.debug(`[chat] provider resolved: ${ctx.resolvedModelId} -> ${languageModel.provider}`);
+    logger.debug({
+      msg: `[chat] provider resolved: ${ctx.resolvedModelId} -> ${languageModel.provider}`,
+    });
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);

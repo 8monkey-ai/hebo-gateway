@@ -124,12 +124,12 @@ export const withCanonicalIds = (
         specificationVersion: "v3",
         languageModel: (id: string) => {
           const mapped = applyFallbackAffixes(normalizeId(id));
-          logger.debug(`[canonical] language id mapped: ${id} -> ${mapped}`);
+          logger.debug({ msg: `[canonical] language id mapped: ${id} -> ${mapped}` });
           return languageModel(mapped);
         },
         embeddingModel: (id: string) => {
           const mapped = applyFallbackAffixes(normalizeId(id));
-          logger.debug(`[canonical] embedding id mapped: ${id} -> ${mapped}`);
+          logger.debug({ msg: `[canonical] embedding id mapped: ${id} -> ${mapped}` });
           return embeddingModel(mapped);
         },
       } satisfies ProviderV3)
@@ -147,7 +147,7 @@ export const withCanonicalIds = (
       Object.defineProperty(out, k, {
         get: () => {
           const mapped = applyTemplate(v);
-          logger.debug(`[canonical] mapped id: ${k} -> ${mapped}`);
+          logger.debug({ msg: `[canonical] mapped id: ${k} -> ${mapped}` });
           return fn(mapped);
         },
       });

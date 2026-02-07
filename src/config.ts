@@ -22,7 +22,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   for (const id in providers) {
     const provider = providers[id];
     if (provider === undefined) {
-      logger.warn(`[config] provider removed: ${id} (undefined)`);
+      logger.warn({ msg: `[config] provider removed: ${id} (undefined)` });
       continue;
     }
     parsedProviders[id] = provider;
@@ -41,7 +41,10 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
     for (const p of model!.providers) {
       if (p in parsedProviders) kept.push(p);
-      else logger.warn(`[config] provider removed from model: ${id} -> ${p} (not configured)`);
+      else
+        logger.warn({
+          msg: `[config] provider removed from model: ${id} -> ${p} (not configured)`,
+        });
     }
 
     if (kept.length > 0) parsedModels[id] = { ...model!, providers: kept };

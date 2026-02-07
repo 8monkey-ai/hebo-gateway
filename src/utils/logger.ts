@@ -78,7 +78,7 @@ export function setLogger(next: Logger) {
   g[KEY] = next;
   g[KEY_EXTERNAL] = true;
   logger = next;
-  logger.info(`[logger] custom logger configured`);
+  logger.info({ msg: `[logger] custom logger configured` });
 }
 
 export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) {
@@ -86,9 +86,9 @@ export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) 
   if (g[KEY_EXTERNAL]) return;
   logger = wrapLogger(g[KEY] ?? defaultLogger, g[KEY_CONFIG]);
   const current = getLoggerConfig();
-  logger.info(
-    `[logger] default logger configured: level=${current.level} disabled=${current.disabled}`,
-  );
+  logger.info({
+    msg: `[logger] default logger configured: level=${current.level} disabled=${current.disabled}`,
+  });
 }
 
 const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
