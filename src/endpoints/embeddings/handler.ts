@@ -48,7 +48,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
-    logger.debug(`[embeddings] model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
+    logger.debug(`embeddings: model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
 
     ctx.operation = "embeddings";
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
@@ -64,7 +64,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(
-      `[embeddings] provider resolved: ${ctx.resolvedModelId} -> ${embeddingModel.provider}`,
+      `embeddings: provider resolved: ${ctx.resolvedModelId} -> ${embeddingModel.provider}`,
     );
 
     // Convert inputs to AI SDK call options.
