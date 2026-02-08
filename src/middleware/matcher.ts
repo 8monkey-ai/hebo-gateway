@@ -3,7 +3,7 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 
-import { logger } from "../utils/logger";
+import { logger } from "../logger";
 
 type MiddlewareEntry = {
   language?: LanguageModelMiddleware | LanguageModelMiddleware[];

@@ -2,9 +2,9 @@ import type { ProviderV3 } from "@ai-sdk/provider";
 
 import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
 import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
-import type { Logger, LoggerConfig } from "./utils/logger";
 
 /**
  * Request overrides returned from the `before` hook.

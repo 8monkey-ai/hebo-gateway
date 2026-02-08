@@ -5,8 +5,8 @@ import { customProvider } from "ai";
 import type { ModelCatalog, ModelId } from "../models/types";
 import type { ProviderRegistry } from "./types";
 
+import { logger } from "../logger";
 import { GatewayError } from "../utils/errors";
-import { logger } from "../utils/logger";
 
 export const resolveProvider = (args: {
   providers: ProviderRegistry;

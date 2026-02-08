@@ -1,5 +1,6 @@
+import { isLogger, logger, setLoggerInstance } from "./logger";
+import { createDefaultLogger } from "./logger/default";
 import { kParsed, type GatewayConfig, type GatewayConfigParsed } from "./types";
-import { logger, setLogger } from "./utils/logger";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // If it has been parsed before, just return
@@ -9,9 +10,15 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const parsedProviders = {} as typeof providers;
   const models = config.models ?? {};
 
-  const loggerConfig = config.logger;
-  if (loggerConfig) {
-    setLogger(loggerConfig);
+  // Set the global logger instance
+  if (config.logger) {
+    if (isLogger(config.logger)) {
+      setLoggerInstance(config.logger);
+      logger.info(`[logger] custom logger configured`);
+    } else {
+      setLoggerInstance(createDefaultLogger(config.logger));
+      logger.info(`[logger] default logger configured: level=${config.logger.level}`);
+    }
   }
 
   // Strip providers that are not configured

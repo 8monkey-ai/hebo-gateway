@@ -8,8 +8,8 @@ import type {
 
 import { parseConfig } from "./config";
 import { withInstrumentation } from "./instrumentation";
+import { isLoggerDisabled, logger } from "./logger";
 import { toOpenAIErrorResponse } from "./utils/errors";
-import { isLoggerDisabled, logger } from "./utils/logger";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { toResponse } from "./utils/response";
 
