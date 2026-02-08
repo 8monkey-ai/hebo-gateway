@@ -4,7 +4,7 @@ import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
-import { getRequestMeta, getResponseMeta } from "./utils/instrumentation";
+import { getRequestMeta, getResponseMeta } from "./instrumentation";
 import { logger } from "./utils/logger";
 
 export function gateway(config: GatewayConfig) {

@@ -1,6 +1,6 @@
-import type { GatewayContext } from "../types";
+import type { GatewayContext } from "./types";
 
-import { logger } from "./logger";
+import { logger } from "./utils/logger";
 
 type InstrumentStreamEndKind = "completed" | "cancelled" | "errored";
 

@@ -7,8 +7,8 @@ import type {
 } from "./types";
 
 import { parseConfig } from "./config";
+import { withInstrumentation } from "./instrumentation";
 import { toOpenAIErrorResponse } from "./utils/errors";
-import { withInstrumentation } from "./utils/instrumentation";
 import { isLoggerDisabled, logger } from "./utils/logger";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { toResponse } from "./utils/response";
