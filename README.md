@@ -461,8 +461,9 @@ import { gateway } from "@hebo-ai/gateway";
 const gw = gateway({
   // ...
   logger: {
+    // default from NODE_ENV / ENV.NODE_ENV: "debug" (dev), "info" (production)
     level: "debug", // "trace" | "debug" | "info" | "warn" | "error" | "silent"
-  }, // or: logger: customLogger
+  },
 });
 ```
 
@@ -475,11 +476,13 @@ Example with **pino**:
 import pino from "pino";
 import { gateway } from "@hebo-ai/gateway";
 
-const pinoLogger = pino({ level: "debug" });
-
 const gw = gateway({
   // ...
-  logger: pinoLogger,
+  logger: pino(
+    {
+      level: "debug"
+    }
+  ),
 });
 ```
 
