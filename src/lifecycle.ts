@@ -53,9 +53,8 @@ const withLogger = async (context: GatewayContext) => {
   };
 
   const logError = (error: unknown) => {
-    logger.error({
+    logger.error(error instanceof Error ? error : new Error(String(error)), {
       requestId: context.request.headers.get("x-request-id"),
-      err: error instanceof Error ? error : new Error(String(error)),
     });
   };
 

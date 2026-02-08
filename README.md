@@ -453,23 +453,21 @@ Most SDKs handle these fields out-of-the-box.
 
 ### Logger Settings
 
-You can configure logging via the `logging` field in the gateway config. By default, the logger uses `console` and sets the level to `debug` in non-production and `info` in production.
+You can configure logging via the `logger` field in the gateway config. By default, the logger uses `console` and sets the level to `debug` in non-production and `info` in production.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
 
 const gw = gateway({
   // ...
-  logging: {
-    level: "debug", // "debug" | "info" | "warn" | "error" | "silent"
-    disabled: false,
-    // Optional: bring your own logger
-    // logger: customLogger,
-  },
+  logger: {
+    level: "debug", // "trace" | "debug" | "info" | "warn" | "error" | "silent"
+  }, // or: logger: customLogger
 });
 ```
 
-If you provide a custom logger, it must implement `debug`, `info`, `warn`, and `error` methods.
+If you provide a custom logger, it must implement `trace`, `debug`, `info`, `warn`, and `error` methods.
+For production workloads, we recommend `pino` for better logging performance and lower overhead.
 
 Example with **pino**:
 
@@ -481,10 +479,7 @@ const pinoLogger = pino({ level: "debug" });
 
 const gw = gateway({
   // ...
-  logging: {
-    logger: pinoLogger,
-    level: "debug",
-  },
+  logger: pinoLogger,
 });
 ```
 

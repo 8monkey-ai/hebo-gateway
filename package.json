@@ -154,6 +154,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^3.0.7",
     "ai": "^6.0.67",
+    "serialize-error": "^13.0.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -176,6 +177,7 @@
     "next": "^16.1.6",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.42.0",
+    "pino": "^10.3.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^6.0.5",

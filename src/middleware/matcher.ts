@@ -40,7 +40,7 @@ class SimpleMatcher {
   match(key: string): Stored[] {
     const cached = this.cache.get(key);
     if (cached) {
-      logger.debug({ msg: `[middleware] cache hit: ${key} (${cached.length})` });
+      logger.debug(`[middleware] cache hit: ${key} (${cached.length})`);
       return cached;
     }
 
@@ -58,12 +58,12 @@ class SimpleMatcher {
         this.cache.delete(key);
         if (--n === 0) break;
       }
-      logger.warn({ msg: `[middleware] cache eviction` });
+      logger.warn(`[middleware] cache eviction`);
     }
 
     this.cache.set(key, out);
     const matchedSummary = matched.length > 0 ? matched.join(",") : "none";
-    logger.debug({ msg: `[middleware] rules matched: ${key} (${out.length}) [${matchedSummary}]` });
+    logger.debug(`[middleware] rules matched: ${key} (${out.length}) [${matchedSummary}]`);
     return out;
   }
 }

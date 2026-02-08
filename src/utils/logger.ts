@@ -9,86 +9,116 @@ export type LogFn = {
   (err: Error, obj?: Record<string, unknown>, msg?: string): void;
 };
 
-export type Logger = {
-  debug: LogFn;
-  info: LogFn;
-  warn: LogFn;
-  error: LogFn;
-};
+export type Logger = Record<"trace" | "debug" | "info" | "warn" | "error", LogFn>;
+export type LoggerConfig = { level?: LogLevel };
+export type LoggerInput = Logger | LoggerConfig;
 
 export const getDefaultLogLevel = (): "debug" | "info" => (isProduction() ? "info" : "debug");
 
-export type LogLevel = ReturnType<typeof getDefaultLogLevel> | "warn" | "error" | "silent";
-
 const KEY = Symbol.for("@hebo/logger");
-const KEY_CONFIG = Symbol.for("@hebo/logger.config");
-const KEY_EXTERNAL = Symbol.for("@hebo/logger.external");
-
 type GlobalWithLogger = typeof globalThis & {
   [KEY]?: Logger;
-  [KEY_CONFIG]?: {
-    disabled?: boolean;
-    level?: LogLevel;
-  };
-  [KEY_EXTERNAL]?: boolean;
 };
+const g = globalThis as GlobalWithLogger;
 
-const defaultLogger = console satisfies Logger;
 const noop: LogFn = () => {};
-const levelOrder = {
+
+const LEVEL = {
+  trace: 5,
   debug: 10,
   info: 20,
   warn: 30,
   error: 40,
-} as Record<Exclude<LogLevel, "silent">, number>;
+};
+const LEVELS = Object.keys(LEVEL) as (keyof typeof LEVEL)[];
+type LogLevel = keyof typeof LEVEL | "silent";
 
-const g = globalThis as GlobalWithLogger;
+const isLogger = (input: LoggerInput): input is Logger =>
+  typeof input === "object" && input !== null && "info" in input;
 
-const defaultLevel: LogLevel = getDefaultLogLevel();
-
-export const getLoggerConfig = () => ({ ...g[KEY_CONFIG] });
-
-g[KEY] ??= defaultLogger;
-g[KEY_CONFIG] ??= { disabled: false, level: defaultLevel };
-g[KEY_EXTERNAL] ??= false;
-
-const wrapLogger = (base: Logger, config: { disabled?: boolean; level?: LogLevel }): Logger => {
-  if (config.disabled === true || config.level === "silent") {
-    return { debug: noop, info: noop, warn: noop, error: noop };
+const createDefaultLogger = (config: { level?: LogLevel }): Logger => {
+  if (config.level === "silent") {
+    return { trace: noop, debug: noop, info: noop, warn: noop, error: noop };
   }
 
-  const threshold = levelOrder[config.level ?? getDefaultLogLevel()];
+  const threshold = LEVEL[config.level ?? getDefaultLogLevel()];
+  const enabled = (lvl: keyof typeof LEVEL) => LEVEL[lvl] >= threshold;
 
-  const debugEnabled = levelOrder.debug >= threshold;
-  const infoEnabled = levelOrder.info >= threshold;
-  const warnEnabled = levelOrder.warn >= threshold;
-  const errorEnabled = levelOrder.error >= threshold;
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !(value instanceof Error);
 
-  return {
-    debug: debugEnabled ? base.debug : noop,
-    info: infoEnabled ? base.info : noop,
-    warn: warnEnabled ? base.warn : noop,
-    error: errorEnabled ? base.error : noop,
+  const buildLogObject = async (
+    level: LogLevel,
+    args: unknown[],
+  ): Promise<Record<string, unknown>> => {
+    if (args.length === 0) return {};
+
+    const [first, second, third] = args;
+    let obj: Record<string, unknown> | undefined;
+    let err: Error | undefined;
+    let msg: string | undefined;
+
+    if (first instanceof Error) {
+      err = first;
+      if (isRecord(second)) {
+        obj = second;
+        if (typeof third !== "undefined") {
+          msg = String(third);
+        }
+      } else if (typeof second !== "undefined") {
+        msg = String(second);
+      }
+    } else if (isRecord(first)) {
+      obj = first;
+      if (typeof second !== "undefined") {
+        msg = String(second);
+      }
+    } else {
+      msg = String(first);
+    }
+
+    if (err && typeof msg === "undefined") {
+      msg = err.message;
+    }
+
+    const out: Record<string, unknown> = obj ?? {};
+    out["level"] = level;
+    out["time"] = Date.now();
+    if (typeof msg !== "undefined") {
+      out["msg"] = msg;
+    }
+    if (err) {
+      const { serializeError } = await import("serialize-error");
+      out["err"] = serializeError(err);
+    }
+    return out;
   };
+
+  const makeLogFn =
+    (level: LogLevel, write: (line: string) => void): LogFn =>
+    async (...args: unknown[]) =>
+      write(JSON.stringify(await buildLogObject(level, args)));
+
+  return Object.fromEntries(
+    LEVELS.map((lvl) => [lvl, enabled(lvl) ? makeLogFn(lvl, console.log) : noop]),
+  ) as Logger;
 };
 
-export let logger: Logger = wrapLogger(g[KEY], g[KEY_CONFIG]);
+g[KEY] ??= createDefaultLogger({});
 
-export function setLogger(next: Logger) {
-  g[KEY] = next;
-  g[KEY_EXTERNAL] = true;
-  logger = next;
-  logger.info({ msg: `[logger] custom logger configured` });
-}
+export let logger: Logger = g[KEY];
 
-export function setLoggerConfig(next: { disabled?: boolean; level?: LogLevel }) {
-  g[KEY_CONFIG] = { ...g[KEY_CONFIG], ...next };
-  if (g[KEY_EXTERNAL]) return;
-  logger = wrapLogger(g[KEY] ?? defaultLogger, g[KEY_CONFIG]);
-  const current = getLoggerConfig();
-  logger.info({
-    msg: `[logger] default logger configured: level=${current.level} disabled=${current.disabled}`,
-  });
+export function setLogger(next: LoggerInput) {
+  if (isLogger(next)) {
+    g[KEY] = next;
+    logger = g[KEY];
+    logger.info(`[logger] custom logger configured`);
+    return;
+  }
+
+  g[KEY] = createDefaultLogger(next);
+  logger = g[KEY];
+  logger.info(`[logger] default logger configured: level=${next.level}`);
 }
 
 const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
