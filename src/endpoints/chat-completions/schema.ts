@@ -245,5 +245,3 @@ export const ChatCompletionsChunkSchema = z.object({
   provider_metadata: z.any().optional().meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
-
-export type ChatCompletionsStream = ReadableStream<Uint8Array>;

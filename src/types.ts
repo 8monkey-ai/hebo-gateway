@@ -4,7 +4,7 @@ import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
 import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
-import type { LoggerInput } from "./utils/logger";
+import type { Logger, LoggerConfig } from "./utils/logger";
 
 /**
  * Request overrides returned from the `before` hook.
@@ -125,8 +125,6 @@ export type GatewayHooks = {
     | Promise<void | object | ReadableStream<Uint8Array>>;
 };
 
-export type GatewayLoggerConfig = LoggerInput;
-
 /**
  * Main configuration object for the gateway.
  */
@@ -150,7 +148,7 @@ export type GatewayConfig = {
   /**
    * Preferred logger configuration: custom logger or default logger settings.
    */
-  logger?: GatewayLoggerConfig;
+  logger?: Logger | LoggerConfig;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");

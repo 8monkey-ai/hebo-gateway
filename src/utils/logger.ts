@@ -9,7 +9,6 @@ export type LogFn = {
 
 export type Logger = Record<"trace" | "debug" | "info" | "warn" | "error", LogFn>;
 export type LoggerConfig = { level?: LogLevel };
-export type LoggerInput = Logger | LoggerConfig;
 
 export const getDefaultLogLevel = (): "debug" | "info" => (isProduction() ? "info" : "debug");
 
@@ -31,7 +30,7 @@ const LEVEL = {
 const LEVELS = Object.keys(LEVEL) as (keyof typeof LEVEL)[];
 type LogLevel = keyof typeof LEVEL | "silent";
 
-const isLogger = (input: LoggerInput): input is Logger =>
+const isLogger = (input: Logger | LoggerConfig): input is Logger =>
   typeof input === "object" && input !== null && "info" in input;
 
 const createDefaultLogger = (config: { level?: LogLevel }): Logger => {
@@ -106,7 +105,7 @@ g[KEY] ??= createDefaultLogger({});
 
 export let logger: Logger = g[KEY];
 
-export function setLogger(next: LoggerInput) {
+export function setLogger(next: Logger | LoggerConfig) {
   if (isLogger(next)) {
     g[KEY] = next;
     logger = g[KEY];
@@ -119,7 +118,7 @@ export function setLogger(next: LoggerInput) {
   logger.info(`[logger] default logger configured: level=${next.level}`);
 }
 
-export function isLoggerDisabled(input?: LoggerInput | null): boolean {
+export function isLoggerDisabled(input?: Logger | LoggerConfig | null): boolean {
   if (!input) return true;
   if (typeof input !== "object" || "info" in input) return false;
   return input.level === "silent";
