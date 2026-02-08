@@ -65,9 +65,9 @@ export type GatewayContext = {
    */
   resolvedProviderId?: ProviderId;
   /**
-   * Response returned by the handler.
+   * Result returned by the handler (pre-response).
    */
-  response?: Response;
+  result?: object | ReadableStream<Uint8Array>;
 };
 
 /**
@@ -85,7 +85,7 @@ export type ResolveProviderHookContext = RequiredHookContext<
   "request" | "body" | "modelId" | "resolvedModelId" | "operation"
 >;
 export type AfterHookContext = RequiredHookContext<
-  "request" | "response" | "provider" | "resolvedModelId" | "operation"
+  "request" | "result" | "provider" | "resolvedModelId" | "operation"
 >;
 
 /**
@@ -94,8 +94,8 @@ export type AfterHookContext = RequiredHookContext<
 export type GatewayHooks = {
   /**
    * Runs before any endpoint handler logic.
-   * @returns Optional RequestPatch to merge into headers / override body.
-   * Returning a Response stops execution of the endpoint.
+   * @returns Optional RequestPatch to merge into headers / override body,
+   * or Response to short-circuit the request.
    */
   before?: (
     ctx: BeforeHookContext,
@@ -116,7 +116,13 @@ export type GatewayHooks = {
    * Runs after the endpoint handler.
    * @returns Response to replace, or undefined to keep original.
    */
-  after?: (ctx: AfterHookContext) => void | Response | Promise<void | Response>;
+  after?: (
+    ctx: AfterHookContext,
+  ) =>
+    | void
+    | object
+    | ReadableStream<Uint8Array>
+    | Promise<void | object | ReadableStream<Uint8Array>>;
 };
 
 export type GatewayLoggerConfig = LoggerInput;

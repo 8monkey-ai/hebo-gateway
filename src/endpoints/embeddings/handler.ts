@@ -9,7 +9,7 @@ import type {
   ResolveModelHookContext,
 } from "../../types";
 
-import { withLifecycle } from "../../lifecycle";
+import { createHandler } from "../../lifecycle";
 import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
@@ -94,5 +94,5 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     return toEmbeddings(result, ctx.modelId);
   };
 
-  return { handler: withLifecycle(handler, config) };
+  return { handler: createHandler(handler, config) };
 };

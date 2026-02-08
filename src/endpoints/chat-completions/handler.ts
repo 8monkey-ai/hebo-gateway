@@ -9,7 +9,7 @@ import type {
   ResolveModelHookContext,
 } from "../../types";
 
-import { withLifecycle } from "../../lifecycle";
+import { createHandler } from "../../lifecycle";
 import { forwardParamsMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
@@ -106,5 +106,5 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     return toChatCompletions(result, ctx.modelId);
   };
 
-  return { handler: withLifecycle(handler, config) };
+  return { handler: createHandler(handler, config) };
 };
