@@ -4,8 +4,8 @@ import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
-import { getRequestMeta, getResponseMeta } from "./instrumentation";
 import { logger } from "./logger";
+import { getRequestMeta, getResponseMeta } from "./telemetry/utils";
 
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");

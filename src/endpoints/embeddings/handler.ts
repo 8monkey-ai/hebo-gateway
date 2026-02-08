@@ -9,7 +9,7 @@ import type {
   ResolveModelHookContext,
 } from "../../types";
 
-import { createHandler } from "../../lifecycle";
+import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
@@ -94,5 +94,5 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     return toEmbeddings(result, ctx.modelId);
   };
 
-  return { handler: createHandler(handler, config) };
+  return { handler: winterCgHandler(handler, config) };
 };

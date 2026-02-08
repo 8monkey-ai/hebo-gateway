@@ -1,6 +1,6 @@
 import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
-import { createHandler } from "../../lifecycle";
+import { winterCgHandler } from "../../lifecycle";
 import { GatewayError } from "../../utils/errors";
 import { toModels, toModel } from "./converters";
 
@@ -33,5 +33,5 @@ export const models = (config: GatewayConfig): Endpoint => {
     return toModel(modelId, model);
   };
 
-  return { handler: createHandler(handler, config) };
+  return { handler: winterCgHandler(handler, config) };
 };
