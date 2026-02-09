@@ -23,12 +23,13 @@ export const withAccessLog =
     ) => {
       const totalDuration = +((stats?.streamEnd ?? performance.now()) - start).toFixed(2);
       const responseTime = stats?.streamStart && +(stats.streamStart - start).toFixed(2);
+      const requestMeta = getRequestMeta(ctx.request);
       const responseMeta = getResponseMeta(ctx.response);
 
       const meta: Record<string, unknown> = {
         requestId: ctx.request.headers.get("x-request-id"),
         ai: getAIMeta(ctx),
-        request: getRequestMeta(ctx.request),
+        request: requestMeta,
         response: responseMeta,
         timings: {
           totalDuration,
@@ -40,13 +41,9 @@ export const withAccessLog =
         },
       };
 
-      const u = ctx.request.url;
-      const i = u.indexOf("/", u.indexOf("//") + 2);
-      const path = i === -1 ? "/" : u.slice(i);
-
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
 
-      const msg = `${ctx.request.method} ${path} ${realStatus}`;
+      const msg = `${ctx.request.method} ${requestMeta["path"]} ${realStatus}`;
 
       logger.info(meta, msg);
     };
