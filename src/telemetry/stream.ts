@@ -13,7 +13,7 @@ export const instrumentStream = (
   hooks: InstrumentStreamHooks,
   signal?: AbortSignal,
 ): ReadableStream<Uint8Array> => {
-  const stats = { bytes: 0, didFirstByte: false, firstByteAt: undefined as number | undefined };
+  const stats = { bytes: 0, firstByteAt: performance.now() };
   let done = false;
 
   const finish = (kind: InstrumentStreamEndKind, reason?: unknown) => {
@@ -49,11 +49,6 @@ export const instrumentStream = (
           // eslint-disable-next-line no-await-in-loop
           const { value, done } = await reader.read();
           if (done) break;
-
-          if (!stats.didFirstByte) {
-            stats.didFirstByte = true;
-            stats.firstByteAt = performance.now();
-          }
 
           stats.bytes += value!.byteLength;
           controller.enqueue(value!);
