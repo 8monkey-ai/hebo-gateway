@@ -385,7 +385,7 @@ console.log(`🐒 Hebo Gateway is running with Hono framework`);
 
 ### Next.js
 
-#### (App Router)
+#### App Router
 
 `app/api/gateway/[...all]/route.ts`
 
@@ -399,7 +399,7 @@ const gw = gateway({
 export const POST = gw.handler, GET = gw.handler;
 ```
 
-#### (Pages Router)
+#### Pages Router
 
 `pages/api/gateway/[...all].ts`
 
@@ -448,17 +448,13 @@ Hebo Gateway also works directly with runtime-level `Request -> Response` handle
 `api/gateway.ts`
 
 ```ts
-export const config = { runtime: "edge" };
+export const runtime = "edge";
 
 const gw = gateway({
-  // Required when your gateway is mounted under a path
-  basePath: "/api/gateway",
   // ...
 });
 
-export default function handler(request: Request) {
-  return gw.handler(request);
-}
+export default gw.handler;
 ```
 
 ### Cloudflare Workers
@@ -471,9 +467,7 @@ const gw = gateway({
 });
 
 export default {
-  fetch(request: Request): Response | Promise<Response> {
-    return gw.handler(request);
-  },
+  fetch: gw.handler,
 };
 ```
 
@@ -496,20 +490,15 @@ serve((request: Request) => gw.handler(request));
 `src/lambda.ts`
 
 ```ts
-import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
+import { awsLambdaEventHandler } from "@hattip/adapter-aws-lambda";
 
 const gw = gateway({
   // ...
 });
 
-export const handler: APIGatewayProxyHandlerV2 = async event => {
-  // Convert the incoming Lambda event to a standard Request
-  const request = eventToRequest(event);
-  const response = await gw.handler(request);
-
-  // Convert the Response back to API Gateway/Lambda URL format
-  return responseToApiGatewayV2(response);
-};
+export const handler = awsLambdaEventHandler({
+  handler: gw.handler,
+});
 ```
 
 ## OpenAI Extensions
