@@ -3,7 +3,7 @@ type InstrumentStreamEndKind = "completed" | "cancelled" | "errored";
 export type InstrumentStreamHooks = {
   onComplete?: (
     kind: InstrumentStreamEndKind,
-    stats: { bytes: number; firstByteAt?: number; lastByteAt: number },
+    stats: { bytes: number; streamStart: number; streamEnd: number },
   ) => void;
   onError?: (error: unknown) => void;
 };
@@ -13,7 +13,7 @@ export const instrumentStream = (
   hooks: InstrumentStreamHooks,
   signal?: AbortSignal,
 ): ReadableStream<Uint8Array> => {
-  const stats = { bytes: 0, firstByteAt: performance.now() };
+  const stats = { bytes: 0, streamStart: performance.now() };
   let done = false;
 
   const finish = (kind: InstrumentStreamEndKind, reason?: unknown) => {
@@ -28,8 +28,8 @@ export const instrumentStream = (
 
     const timing = {
       bytes: stats.bytes,
-      firstByteAt: stats.firstByteAt,
-      lastByteAt: performance.now(),
+      streamStart: stats.streamStart,
+      streamEnd: performance.now(),
     };
 
     hooks.onComplete?.(kind, timing);

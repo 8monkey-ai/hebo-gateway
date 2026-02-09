@@ -19,10 +19,10 @@ export const withAccessLog =
 
     const logAccess = (
       kind: string,
-      stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
+      stats?: { bytes?: number; streamStart?: number; streamEnd?: number },
     ) => {
-      const totalDuration = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
-      const responseTime = stats?.firstByteAt && +(stats.firstByteAt - start).toFixed(2);
+      const totalDuration = +((stats?.streamEnd ?? performance.now()) - start).toFixed(2);
+      const responseTime = stats?.streamStart && +(stats.streamStart - start).toFixed(2);
       const responseMeta = getResponseMeta(ctx.response);
 
       const meta: Record<string, unknown> = {
