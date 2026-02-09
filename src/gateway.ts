@@ -38,7 +38,7 @@ export function gateway(config: GatewayConfig) {
     logger.warn(
       {
         req: getRequestMeta(req),
-        res: Object.assign(getResponseMeta(response), { durationMs, ttfbMs: durationMs }),
+        res: { ...getResponseMeta(response), durationMs, ttfbMs: durationMs },
       },
       `${req.method} ${pathname} 404`,
     );
