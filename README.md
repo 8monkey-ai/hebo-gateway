@@ -40,7 +40,8 @@ bun install @hebo-ai/gateway
 - OpenAI Extensions
   - [Reasoning](#reasoning)
 - Advanced Usage
-  - [Logger Settings](#logger-settings) | [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
+  - [Logger Settings](#logger-settings) | [Passing Framework State to Hooks](#passing-framework-state-to-hooks)
+  - [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
 
 ## Quickstart
