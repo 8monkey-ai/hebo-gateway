@@ -11,7 +11,9 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const models = config.models ?? {};
 
   // Set the global logger instance
-  if (config.logger) {
+  if (config.logger === undefined) {
+    setLoggerInstance(createDefaultLogger({}));
+  } else if (config.logger !== null) {
     setLoggerInstance(isLogger(config.logger) ? config.logger : createDefaultLogger(config.logger));
 
     logger.info(
@@ -19,8 +21,6 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
         ? `[logger] custom logger configured`
         : `[logger] logger configured: level=${config.logger.level}`,
     );
-  } else {
-    setLoggerInstance(createDefaultLogger({}));
   }
 
   // Strip providers that are not configured
