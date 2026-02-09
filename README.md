@@ -29,22 +29,17 @@ bun install @hebo-ai/gateway
 
 ## Table of Contents
 
-- [Quickstart](#quickstart)
+- Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
-
-- [Configuration Reference](#configuration-reference)
+- Configuration Reference
   - [Providers](#providers) | [Models](#models) | [Model Presets](#model-presets) | [User-defined Models](#user-defined-models) | [Hooks](#hooks)
-
-- [Framework Support](#framework-support)
+- Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js (App Router)](#nextjs-app-router) | [Next.js (Pages Router)](#nextjs-pages-router) | [TanStack Start](#tanstack-start)
-
-- [Runtime Support](#runtime-support)
+- Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy)
-
-- [OpenAI Extensions](#openai-extensions)
+- OpenAI Extensions
   - [Reasoning](#reasoning)
-
-- [Advanced Usage](#advanced-usage)
+- Advanced Usage
   - [Logger Settings](#logger-settings) | [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
 
