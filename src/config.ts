@@ -17,7 +17,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
       logger.info(`[logger] custom logger configured`);
     } else {
       setLoggerInstance(createDefaultLogger(config.logger));
-      logger.info(`[logger] default logger configured: level=${config.logger.level}`);
+      logger.info(`[logger] logger configured: level=${config.logger.level}`);
     }
   }
 
@@ -25,14 +25,14 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   for (const id in providers) {
     const provider = providers[id];
     if (provider === undefined) {
-      logger.warn(`config: provider removed: ${id} (undefined)`);
+      logger.warn(`[config] ${id} provider removed (undefined)`);
       continue;
     }
     parsedProviders[id] = provider;
   }
 
   if (Object.keys(parsedProviders).length === 0) {
-    throw new Error("No providers configured (config.providers is empty).");
+    throw new Error("No providers configured (config.providers is empty)");
   }
 
   // Strip providers that are not configured from models
@@ -51,11 +51,11 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     if (kept.length > 0) parsedModels[id] = { ...model!, providers: kept };
   }
   for (const warning of warnings) {
-    logger.warn(`config: provider removed: ${warning} (not configured)`);
+    logger.warn(`[config] ${warning} provider removed (not configured)`);
   }
 
   if (Object.keys(parsedModels).length === 0) {
-    throw new Error("No models configured (config.models is empty).");
+    throw new Error("No models configured (config.models is empty)");
   }
 
   return {

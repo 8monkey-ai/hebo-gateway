@@ -1,11 +1,11 @@
-type InstrumentStreamEndKind = "completed" | "cancelled" | "errored";
+type InstrumentStreamFinishStatus = 200 | 502 | 503 | 499;
 
 export type InstrumentStreamHooks = {
   onComplete?: (
-    kind: InstrumentStreamEndKind,
+    status: InstrumentStreamFinishStatus,
     stats: { bytes: number; streamStart: number; streamEnd: number },
   ) => void;
-  onError?: (error: unknown) => void;
+  onError?: (error: unknown, status: InstrumentStreamFinishStatus) => void;
 };
 
 export const instrumentStream = (
@@ -16,14 +16,14 @@ export const instrumentStream = (
   const stats = { bytes: 0, streamStart: performance.now() };
   let done = false;
 
-  const finish = (kind: InstrumentStreamEndKind, reason?: unknown) => {
+  const finish = (status: InstrumentStreamFinishStatus, reason?: unknown) => {
     if (done) return;
     done = true;
 
     if (!reason) reason = signal?.reason;
 
-    if (kind !== "completed") {
-      hooks.onError?.(reason);
+    if (status >= 400) {
+      hooks.onError?.(reason, status);
     }
 
     const timing = {
@@ -32,7 +32,7 @@ export const instrumentStream = (
       streamEnd: performance.now(),
     };
 
-    hooks.onComplete?.(kind, timing);
+    hooks.onComplete?.(status, timing);
   };
 
   return new ReadableStream<Uint8Array>({
@@ -42,7 +42,9 @@ export const instrumentStream = (
       try {
         for (;;) {
           if (signal?.aborted) {
-            finish("cancelled", signal.reason);
+            finish(499, signal.reason);
+            reader.cancel(signal.reason).catch(() => {});
+            controller.close();
             return;
           }
 
@@ -54,18 +56,13 @@ export const instrumentStream = (
           controller.enqueue(value!);
         }
 
+        finish(200);
         controller.close();
-        finish("completed");
       } catch (err) {
-        const kind =
-          (err as any)?.name === "AbortError" || signal?.aborted ? "cancelled" : "errored";
+        const status = signal?.aborted ? 499 : (err as any)?.name === "AbortError" ? 503 : 502;
 
-        finish(kind, err);
-
-        try {
-          await src.cancel(err);
-        } catch {}
-
+        finish(status, err);
+        reader.cancel(err).catch(() => {});
         controller.close();
       } finally {
         try {
@@ -75,7 +72,7 @@ export const instrumentStream = (
     },
 
     cancel(reason) {
-      finish("cancelled", reason);
+      finish(499, reason);
       src.cancel(reason).catch(() => {});
     },
   });

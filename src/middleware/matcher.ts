@@ -40,7 +40,7 @@ class SimpleMatcher {
   match(key: string): Stored[] {
     const cached = this.cache.get(key);
     if (cached) {
-      logger.debug(`middleware: cache hit: ${key} (${cached.length})`);
+      logger.debug(`[middleware] cache hit for ${key} (${cached.length})`);
       return cached;
     }
 
@@ -63,7 +63,7 @@ class SimpleMatcher {
 
     this.cache.set(key, out);
     const matchedSummary = matched.length > 0 ? matched.join(",") : "none";
-    logger.debug(`middleware: rules matched: ${key} (${out.length}) [${matchedSummary}]`);
+    logger.debug(`[middleware] matched ${key} to [${matchedSummary}]`);
     return out;
   }
 }

@@ -40,7 +40,7 @@ export function gateway(config: GatewayConfig) {
         req: getRequestMeta(req),
         res: Object.assign(getResponseMeta(response), { durationMs, ttfbMs: durationMs }),
       },
-      "[gateway] route not found",
+      `${req.method} ${pathname} 404`,
     );
     return Promise.resolve(response);
   };

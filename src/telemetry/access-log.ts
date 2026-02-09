@@ -18,7 +18,7 @@ export const withAccessLog =
     }
 
     const logAccess = (
-      kind: string,
+      status: number,
       stats?: { bytes?: number; streamStart?: number; streamEnd?: number },
     ) => {
       const totalDuration = +((stats?.streamEnd ?? performance.now()) - start).toFixed(2);
@@ -40,40 +40,36 @@ export const withAccessLog =
         },
       };
 
-      const msg = `[gateway] request ${kind}`;
+      const u = ctx.request.url;
+      const i = u.indexOf("/", u.indexOf("//") + 2);
+      const path = i === -1 ? "/" : u.slice(i);
 
-      if (kind === "errored") {
-        logger.error(meta, msg);
-      } else if (kind === "cancelled") {
-        logger.warn(meta, msg);
-      } else {
-        logger.info(meta, msg);
-      }
-    };
+      const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
 
-    const logError = (error: unknown) => {
-      logger.error(error instanceof Error ? error : new Error(String(error)), {
-        requestId: ctx.request.headers.get("x-request-id"),
-      });
+      const msg = `${ctx.request.method} ${path} ${realStatus}`;
+
+      logger.info(meta, msg);
     };
 
     await run(ctx);
 
-    if (ctx.response!.body) {
+    if (ctx.response!.body instanceof ReadableStream) {
       const instrumented = instrumentStream(
         ctx.response!.body,
         {
-          onComplete: (kind, params) => logAccess(kind, params),
-          onError: (err) => logError(err),
+          onComplete: (status, params) => logAccess(status, params),
         },
         ctx.request.signal,
       );
+
       ctx.response = new Response(instrumented, {
         status: ctx.response!.status,
         statusText: ctx.response!.statusText,
         headers: ctx.response!.headers,
       });
+
+      return;
     }
 
-    logAccess(ctx.response!.status >= 400 ? "errored" : "completed");
+    logAccess(ctx.response!.status);
   };

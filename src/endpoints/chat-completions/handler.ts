@@ -48,7 +48,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
-    logger.debug(`chat: model resolved: ${ctx.modelId} -> ${ctx.resolvedModelId}`);
+    logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
 
     ctx.operation = "text";
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
@@ -63,7 +63,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
-    logger.debug(`chat: provider resolved: ${ctx.resolvedModelId} -> ${languageModel.provider}`);
+    logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
@@ -84,11 +84,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
-        abortSignal: ctx.request.signal,
         onError: ({ error }) => {
           logger.error(error instanceof Error ? error : new Error(String(error)), {
             requestId: ctx.request.headers.get("x-request-id"),
           });
+          throw error;
+        },
+        onAbort: () => {
+          throw new DOMException("Upstream failed", "AbortError");
         },
         ...textOptions,
       });
