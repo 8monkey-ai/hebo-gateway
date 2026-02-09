@@ -2,6 +2,38 @@
 
 Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Quickstart](#quickstart)
+  - [Setup A Gateway Instance](#setup-a-gateway-instance)
+  - [Mount Route Handlers](#mount-route-handlers)
+  - [Call the Gateway](#call-the-gateway)
+- [Configuration Reference](#configuration-reference)
+  - [Providers](#providers)
+  - [Models](#models)
+    - [Model Presets](#model-presets)
+    - [User-defined Models](#user-defined-models)
+  - [Hooks](#hooks)
+- [Framework Support](#framework-support)
+  - [ElysiaJS](#elysiajs)
+  - [Hono](#hono)
+  - [Next.js](#nextjs-app-router)
+  - [TanStack Start](#tanstack-start)
+- [Runtime Support](#runtime-support)
+  - [Vercel Edge](#vercel-edge)
+  - [Cloudflare Workers](#cloudflare-workers)
+  - [Deno Deploy](#deno-deploy)
+- [OpenAI Extensions](#openai-extensions)
+  - [Reasoning](#reasoning)
+- [Advanced Usage](#advanced-usage)
+  - [Logger Settings](#logger-settings)
+  - [Passing Framework State to Hooks](#passing-framework-state-to-hooks)
+  - [Selective Route Mounting](#selective-route-mounting)
+  - [Low-level Schemas & Converters](#low-level-schemas--converters)
+
 ## Overview
 
 Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
@@ -418,6 +450,58 @@ export const Route = createFileRoute("/api/$")({
     },
   },
 });
+```
+
+## Runtime Support
+
+Hebo Gateway also works directly with runtime-level `Request -> Response` handlers.
+
+### Vercel Edge
+
+`api/gateway.ts`
+
+```ts
+export const config = { runtime: "edge" };
+
+const gw = gateway({
+  // Required when your gateway is mounted under a path
+  basePath: "/api/gateway",
+  // ...
+});
+
+export default function handler(request: Request) {
+  return gw.handler(request);
+}
+```
+
+### Cloudflare Workers
+
+`src/index.ts`
+
+```ts
+const gw = gateway({
+  // ...
+});
+
+export default {
+  fetch(request: Request): Response | Promise<Response> {
+    return gw.handler(request);
+  },
+};
+```
+
+### Deno Deploy
+
+`main.ts`
+
+```ts
+import { serve } from "https://deno.land/std/http/server.ts";
+
+const gw = gateway({
+  // ...
+});
+
+serve((request: Request) => gw.handler(request));
 ```
 
 ## OpenAI Extensions
