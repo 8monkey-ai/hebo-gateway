@@ -2,7 +2,8 @@
 
 Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
-## Overview
+
+## 🐒 Overview
 
 Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
 
@@ -10,7 +11,7 @@ Hebo Gateway is an open-source, embeddable AI gateway framework built to live in
 
 Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/260127-hebo-gateway/) (`https://hebo.ai/blog/260127-hebo-gateway/`)
 
-## Features
+## 🍌 Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
@@ -20,13 +21,29 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
-## Installation
+## 📦 Installation
 
 ```bash
 bun install @hebo-ai/gateway
 ```
 
-## Quickstart
+## ☰ Table of Contents
+
+- Quickstart
+  - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
+- Configuration Reference
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) 
+- Framework Support
+  - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
+- Runtime Support
+  - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
+- OpenAI Extensions
+  - [Reasoning](#reasoning)
+- Advanced Usage
+  - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
+
+
+## 🚀 Quickstart
 
 ### Setup A Gateway Instance
 
@@ -115,7 +132,7 @@ const { text } = await generateText({
 console.log(text);
 ```
 
-## Configuration Reference
+## ⚙️ Configuration Reference
 
 ### Providers
 
@@ -338,7 +355,7 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
 
-## Framework Support
+## 🧩 Framework Support
 
 Hebo Gateway exposes **WinterCG-compatible** handlers that integrate with almost any existing framework.
 
@@ -366,7 +383,9 @@ export default new Hono().mount("/v1/gateway/", gw.handler);
 console.log(`🐒 Hebo Gateway is running with Hono framework`);
 ```
 
-### Next.js (App Router)
+### Next.js
+
+#### App Router
 
 `app/api/gateway/[...all]/route.ts`
 
@@ -380,7 +399,7 @@ const gw = gateway({
 export const POST = gw.handler, GET = gw.handler;
 ```
 
-### Next.js (Pages Router)
+#### Pages Router
 
 `pages/api/gateway/[...all].ts`
 
@@ -420,7 +439,69 @@ export const Route = createFileRoute("/api/$")({
 });
 ```
 
-## OpenAI Extensions
+## 🌍 Runtime Support
+
+Hebo Gateway also works directly with runtime-level `Request -> Response` handlers.
+
+### Vercel Edge
+
+`api/gateway.ts`
+
+```ts
+export const runtime = "edge";
+
+const gw = gateway({
+  // ...
+});
+
+export default gw.handler;
+```
+
+### Cloudflare Workers
+
+`src/index.ts`
+
+```ts
+const gw = gateway({
+  // ...
+});
+
+export default {
+  fetch: gw.handler,
+};
+```
+
+### Deno Deploy
+
+`main.ts`
+
+```ts
+import { serve } from "https://deno.land/std/http/server.ts";
+
+const gw = gateway({
+  // ...
+});
+
+serve((request: Request) => gw.handler(request));
+```
+
+### AWS Lambda
+
+`src/lambda.ts`
+
+```ts
+import { awsLambdaEventHandler } from "@hattip/adapter-aws-lambda";
+
+const gw = gateway({
+  // ...
+});
+
+export const handler = awsLambdaEventHandler({
+  handler: gw.handler,
+});
+```
+
+## 🧠 OpenAI Extensions
 
 ### Reasoning
 
@@ -453,7 +534,7 @@ Reasoning output is surfaced as extension to the `completion` object.
 
 Most SDKs handle these fields out-of-the-box.
 
-## Advanced Usage
+## 🧪 Advanced Usage
 
 ### Logger Settings
 
