@@ -91,6 +91,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
+        // No abort signal here, otherwise we can't detect upstream from client cancellations
+        // abortSignal: ctx.request.signal,
         onError: ({ error }) => {
           logger.error(error instanceof Error ? error : new Error(String(error)), {
             requestId: ctx.request.headers.get("x-request-id"),
