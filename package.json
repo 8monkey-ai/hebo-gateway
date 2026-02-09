@@ -38,8 +38,10 @@
   ],
   "type": "module",
   "sideEffects": [
+    "./dist/logger/index.js",
     "./dist/providers/**/*.js",
     "./dist/models/**/*.js",
+    "./src/logger/index.ts",
     "./src/providers/**/*.ts",
     "./src/models/**/*.ts"
   ],
