@@ -7,10 +7,8 @@ function snakeToCamel(key: string): string {
   if (key.indexOf("_") === -1) return key;
 
   let out = "";
-
   for (let i = 0; i < key.length; i++) {
     const c = key[i]!;
-
     if (c === "_" && i + 1 < key.length) {
       const next = key[i + 1]!;
       if (next >= "a" && next <= "z") {
@@ -19,15 +17,22 @@ function snakeToCamel(key: string): string {
         continue;
       }
     }
-
     out += c;
   }
 
   return out;
 }
 
+function hasUppercase(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]!;
+    if (c >= "A" && c <= "Z") return true;
+  }
+  return false;
+}
+
 function camelToSnake(key: string): string {
-  if (!/[A-Z]/.test(key)) return key;
+  if (!hasUppercase(key)) return key;
 
   let out = "";
   for (let i = 0; i < key.length; i++) {
@@ -37,60 +42,39 @@ function camelToSnake(key: string): string {
   return out;
 }
 
-function camelizeKeysDeep(value: unknown): unknown {
+function remapDeep(value: unknown, mapKey: (k: string) => string): unknown {
   if (value === null || typeof value !== "object") return value;
 
   if (Array.isArray(value)) {
-    return value.map((v) => camelizeKeysDeep(v));
+    return value.map((v) => remapDeep(v, mapKey));
   }
 
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(value)) {
-    if (v === undefined || v === null) continue;
-    out[snakeToCamel(k)] = camelizeKeysDeep(v);
+  for (const key of Object.keys(value)) {
+    out[mapKey(key)] = remapDeep((value as Record<string, unknown>)[key], mapKey);
   }
   return out;
 }
 
-function snakizeKeysDeep(value: unknown): unknown {
-  if (value === null || typeof value !== "object") return value;
+function processOptions(options: Record<string, JSONObject>, providerName: ProviderId) {
+  const target = (options[providerName] = remapDeep(
+    options[providerName] ?? {},
+    snakeToCamel,
+  ) as JSONObject) as Record<string, JSONObject>;
 
-  if (Array.isArray(value)) {
-    return value.map((v) => snakizeKeysDeep(v));
-  }
-
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(value)) {
-    if (v === undefined || v === null) continue;
-    out[camelToSnake(k)] = snakizeKeysDeep(v);
-  }
-  return out;
-}
-
-function processOptions(providerOptions: Record<string, JSONObject>, providerName: ProviderId) {
-  if (providerOptions[providerName]) {
-    providerOptions[providerName] = camelizeKeysDeep(providerOptions[providerName]) as Record<
-      string,
-      JSONObject
-    >;
-  }
-  const target = (providerOptions[providerName] ??= {});
-
-  for (const key in providerOptions) {
-    if (key === providerName) continue;
-
-    const source = camelizeKeysDeep(providerOptions[key]) as Record<string, JSONObject>;
-    for (const k in source) {
-      target[k] = source[k] as JSONObject;
-    }
-
-    if (key === "unknown") delete providerOptions[key];
+  for (const namespace in options) {
+    if (namespace === providerName) continue;
+    Object.assign(
+      target,
+      remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>,
+    );
+    if (namespace === "unknown") delete options[namespace];
   }
 }
 
-function processMetadata(providerMetadata: Record<string, JSONObject>) {
-  for (const key in providerMetadata) {
-    providerMetadata[key] = snakizeKeysDeep(providerMetadata[key]) as JSONObject;
+function processMetadata(metadata: Record<string, JSONObject>) {
+  for (const namespace in metadata) {
+    metadata[namespace] = remapDeep(metadata[namespace], camelToSnake) as JSONObject;
   }
 }
 

@@ -8,14 +8,10 @@ export const withAccessLog =
   (run: (ctx: GatewayContext) => Promise<void>) => async (ctx: GatewayContext) => {
     const start = performance.now();
 
-    let body: ArrayBuffer | undefined;
-    let requestBytes = 0;
-    if (ctx.request.body && ctx.request.method !== "GET") {
-      body = await ctx.request.arrayBuffer();
-      requestBytes = body.byteLength;
-      // eslint-disable-next-line no-invalid-fetch-options
-      ctx.request = new Request(ctx.request, { body, signal: ctx.request.signal });
-    }
+    const requestBytes = (() => {
+      const n = Number(ctx.request.headers.get("content-length"));
+      return Number.isFinite(n) ? n : undefined;
+    })();
 
     const logAccess = (
       status: number,

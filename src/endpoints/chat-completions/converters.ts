@@ -81,6 +81,8 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     ...rest
   } = params;
 
+  Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
+
   return {
     messages: convertToModelMessages(messages),
     tools: convertToToolSet(tools),
@@ -93,10 +95,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     stopSequences: stop ? (Array.isArray(stop) ? stop : [stop]) : undefined,
     topP: top_p,
     providerOptions: {
-      unknown: {
-        ...rest,
-        ...parseReasoningOptions(reasoning_effort, reasoning),
-      },
+      unknown: rest,
     },
   };
 }
@@ -207,23 +206,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
     if (part.type === "image_url") {
       const url = part.image_url.url;
       if (url.startsWith("data:")) {
-        const parts = url.split(",");
-        const metadata = parts[0];
-        const base64Data = parts[1];
-
-        if (!metadata || !base64Data) {
-          throw new GatewayError("Invalid data URL: missing metadata or data", 400);
-        }
-
-        const mimeTypePart = metadata.split(":")[1];
-        if (!mimeTypePart) {
-          throw new GatewayError("Invalid data URL: missing MIME type part", 400);
-        }
-
-        const mimeType = mimeTypePart.split(";")[0];
-        if (!mimeType) {
-          throw new GatewayError("Invalid data URL: missing MIME type", 400);
-        }
+        const { mimeType, base64Data } = parseDataUrl(url);
 
         return mimeType.startsWith("image/")
           ? {
@@ -300,6 +283,24 @@ function parseToolOutput(content: string) {
   } catch {
     return { type: "text" as const, value: content };
   }
+}
+
+function parseDataUrl(url: string): { mimeType: string; base64Data: string } {
+  const commaIndex = url.indexOf(",");
+  if (commaIndex <= "data:".length || commaIndex === url.length - 1) {
+    throw new GatewayError("Invalid data URL: missing metadata or data", 400);
+  }
+
+  const metadata = url.slice("data:".length, commaIndex);
+  const base64Data = url.slice(commaIndex + 1);
+
+  const semicolonIndex = metadata.indexOf(";");
+  const mimeType = (semicolonIndex === -1 ? metadata : metadata.slice(0, semicolonIndex)).trim();
+  if (!mimeType) {
+    throw new GatewayError("Invalid data URL: missing MIME type", 400);
+  }
+
+  return { mimeType, base64Data };
 }
 
 function parseReasoningOptions(
@@ -434,19 +435,16 @@ export class ChatCompletionsStream extends TransformStream<
           }
 
           case "tool-call": {
+            const toolCall = toChatCompletionsToolCall(
+              part.toolCallId,
+              part.toolName,
+              part.input,
+              part.providerMetadata,
+            ) as ChatCompletionsToolCallDelta;
+            toolCall.index = toolCallIndexCounter++;
             controller.enqueue(
               createChunk({
-                tool_calls: [
-                  {
-                    ...toChatCompletionsToolCall(
-                      part.toolCallId,
-                      part.toolName,
-                      part.input,
-                      part.providerMetadata,
-                    ),
-                    index: toolCallIndexCounter++,
-                  } satisfies ChatCompletionsToolCallDelta,
-                ],
+                tool_calls: [toolCall],
               }),
             );
             break;
@@ -524,29 +522,25 @@ export const toChatCompletionsAssistantMessage = (
 };
 
 export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
-  return {
-    ...(usage.inputTokens !== undefined && {
-      prompt_tokens: usage.inputTokens,
-    }),
-    ...(usage.outputTokens !== undefined && {
-      completion_tokens: usage.outputTokens,
-    }),
-    ...((usage.totalTokens !== undefined ||
-      usage.inputTokens !== undefined ||
-      usage.outputTokens !== undefined) && {
-      total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
-    }),
-    ...(usage.outputTokenDetails?.reasoningTokens !== undefined && {
-      completion_tokens_details: {
-        reasoning_tokens: usage.outputTokenDetails.reasoningTokens,
-      },
-    }),
-    ...(usage.inputTokenDetails?.cacheReadTokens !== undefined && {
-      prompt_tokens_details: {
-        cached_tokens: usage.inputTokenDetails.cacheReadTokens,
-      },
-    }),
-  };
+  const out: ChatCompletionsUsage = {};
+
+  const prompt = usage.inputTokens;
+  if (prompt !== undefined) out.prompt_tokens = prompt;
+
+  const completion = usage.outputTokens;
+  if (completion !== undefined) out.completion_tokens = completion;
+
+  if (prompt !== undefined || completion !== undefined || usage.totalTokens !== undefined) {
+    out.total_tokens = usage.totalTokens ?? (prompt ?? 0) + (completion ?? 0);
+  }
+
+  const reasoning = usage.outputTokenDetails?.reasoningTokens;
+  if (reasoning !== undefined) out.completion_tokens_details = { reasoning_tokens: reasoning };
+
+  const cached = usage.inputTokenDetails?.cacheReadTokens;
+  if (cached !== undefined) out.prompt_tokens_details = { cached_tokens: cached };
+
+  return out;
 }
 
 export function toChatCompletionsToolCall(
