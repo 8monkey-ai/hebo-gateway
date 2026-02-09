@@ -316,20 +316,22 @@ const gw = gateway({
     },
     /**
      * Runs after the endpoint handler.
-     * @param ctx.response Response returned by the handler.
-     * @returns Response to replace, or undefined to keep original.
+     * @param ctx.result Result object returned by the handler.
+     * @returns Modified result, or undefined to keep original.
      */
-    after: async (ctx: { response: Response }): Promise<Response | void> => {
+    after: async (ctx: {
+      result: object | ReadableStream<Uint8Array>
+    }): Promise<object | ReadableStream<Uint8Array> | void> => {
       // Example Use Cases:
-      // - Transform response
-      // - Response logging
+      // - Transform result
+      // - Result logging
       return undefined;
     },
   },
 });
 ```
 
-The `ctx` object is **readonly for core fields**. Use return values to override request / response and provide modelId / provider instances.
+The `ctx` object is **readonly for core fields**. Use return values to override request / result and to provide modelId / provider instances.
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
