@@ -1,5 +1,8 @@
 export * from "./gateway";
 export type * from "./types";
+
+export * from "./errors/gateway";
+export * from "./errors/openai";
 export * from "./logger";
 
 export * from "./middleware/common";

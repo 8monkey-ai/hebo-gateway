@@ -35,65 +35,11 @@ import {
   UnsupportedModelVersionError,
   UnsupportedFunctionalityError,
 } from "ai";
-import * as z from "zod";
 
-import { isProduction } from "./env";
-import { toResponse } from "./response";
+import { GatewayError } from "./gateway";
+import { STATUS_CODE } from "./utils";
 
-export const STATUS_CODES = {
-  400: "BAD_REQUEST",
-  401: "UNAUTHORIZED",
-  402: "PAYMENT_REQUIRED",
-  403: "FORBIDDEN",
-  404: "NOT_FOUND",
-  405: "METHOD_NOT_ALLOWED",
-  409: "CONFLICT",
-  422: "UNPROCESSABLE_ENTITY",
-  429: "TOO_MANY_REQUESTS",
-  500: "INTERNAL_SERVER_ERROR",
-  502: "BAD_GATEWAY",
-  503: "SERVICE_UNAVAILABLE",
-  504: "GATEWAY_TIMEOUT",
-} as const;
-
-export const STATUS_CODE = (status: number) => {
-  const label = STATUS_CODES[status as keyof typeof STATUS_CODES];
-  if (label) return label;
-  return status >= 400 && status < 500 ? STATUS_CODES[400] : STATUS_CODES[500];
-};
-
-export class GatewayError extends Error {
-  readonly status: number;
-  readonly code: string;
-
-  constructor(error: string | Error, status: number, code?: string, cause?: unknown) {
-    const msg = typeof error === "string" ? error : error.message;
-    super(msg);
-    this.status = status;
-    this.code = code ?? STATUS_CODE(status);
-    this.cause =
-      cause ?? (typeof error === "string" ? undefined : (error as { cause?: unknown }).cause);
-  }
-}
-
-export const OpenAIErrorSchema = z.object({
-  error: z.object({
-    message: z.string(),
-    type: z.string(),
-    code: z.string().optional().nullable(),
-    param: z.string().optional().nullable(),
-  }),
-});
-
-export class OpenAIError {
-  readonly error;
-
-  constructor(message: string, type: string = "server_error", code?: string, param: string = "") {
-    this.error = { message, type, code: code?.toLowerCase(), param };
-  }
-}
-
-function normalizeAiSdkError(error: unknown): GatewayError | undefined {
+export const normalizeAiSdkError = (error: unknown): GatewayError | undefined => {
   if (APICallError.isInstance(error)) {
     const status = error.statusCode ?? (error.isRetryable ? 502 : 422);
     const code = `UPSTREAM_${STATUS_CODE(status)}`;
@@ -150,43 +96,4 @@ function normalizeAiSdkError(error: unknown): GatewayError | undefined {
   }
 
   return undefined;
-}
-
-function getErrorMeta(error: unknown) {
-  const rawMessage = error instanceof Error ? error.message : String(error);
-
-  let code: string;
-  let status: number;
-  let param = "";
-
-  if (error instanceof GatewayError) {
-    ({ code, status } = error);
-  } else {
-    const normalized = normalizeAiSdkError(error);
-    if (normalized) {
-      ({ code, status } = normalized);
-    } else {
-      status = 500;
-      code = STATUS_CODE(status);
-    }
-  }
-
-  const type = status < 500 ? "invalid_request_error" : "server_error";
-  const shouldMask = !code.includes("UPSTREAM") && status >= 500 && isProduction();
-  const message = shouldMask ? STATUS_CODE(status) : rawMessage;
-
-  return { code, status, param, type, message, rawMessage };
-}
-
-export function toOpenAIError(error: unknown): OpenAIError {
-  const meta = getErrorMeta(error);
-  return new OpenAIError(meta.message, meta.type, meta.code);
-}
-
-export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
-  const meta = getErrorMeta(error);
-  return toResponse(
-    new OpenAIError(meta.message, meta.type, meta.code),
-    Object.assign({}, responseInit, { status: meta.status, statusText: meta.code }),
-  );
-}
+};

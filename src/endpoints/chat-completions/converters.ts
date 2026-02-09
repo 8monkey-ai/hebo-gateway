@@ -42,7 +42,8 @@ import type {
   ChatCompletionsReasoningConfig,
 } from "./schema";
 
-import { GatewayError, OpenAIError, toOpenAIError } from "../../utils/errors";
+import { GatewayError } from "../../errors/gateway";
+import { OpenAIError, toOpenAIError } from "../../errors/openai";
 import { toResponse } from "../../utils/response";
 
 export type TextCallOptions = {

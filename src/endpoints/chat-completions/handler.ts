@@ -9,12 +9,12 @@ import type {
   ResolveModelHookContext,
 } from "../../types";
 
+import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { forwardParamsMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { GatewayError } from "../../utils/errors";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { ChatCompletionsBodySchema } from "./schema";

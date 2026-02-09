@@ -1,11 +1,9 @@
-type InstrumentStreamFinishStatus = 200 | 502 | 503 | 499;
-
 export type InstrumentStreamHooks = {
   onComplete?: (
-    status: InstrumentStreamFinishStatus,
+    status: number,
     stats: { bytes: number; streamStart: number; streamEnd: number },
   ) => void;
-  onError?: (error: unknown, status: InstrumentStreamFinishStatus) => void;
+  onError?: (error: unknown, status: number) => void;
 };
 
 export const instrumentStream = (
@@ -16,7 +14,7 @@ export const instrumentStream = (
   const stats = { bytes: 0, streamStart: performance.now() };
   let done = false;
 
-  const finish = (status: InstrumentStreamFinishStatus, reason?: unknown) => {
+  const finish = (status: number, reason?: unknown) => {
     if (done) return;
     done = true;
 

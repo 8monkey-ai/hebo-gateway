@@ -1,9 +1,9 @@
 import type { AfterHookContext, BeforeHookContext, GatewayConfig, GatewayContext } from "./types";
 
 import { parseConfig } from "./config";
+import { toOpenAIErrorResponse } from "./errors/openai";
 import { isLoggerDisabled, logger } from "./logger";
 import { withAccessLog } from "./telemetry/access-log";
-import { toOpenAIErrorResponse } from "./utils/errors";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { toResponse } from "./utils/response";
 

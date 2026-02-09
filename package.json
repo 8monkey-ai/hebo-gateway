@@ -51,11 +51,6 @@
       "import": "./dist/index.js",
       "dev-source": "./src/index.ts"
     },
-    "./endpoints": {
-      "types": "./dist/endpoints/index.d.ts",
-      "import": "./dist/endpoints/index.js",
-      "dev-source": "./src/endpoints/index.ts"
-    },
     "./endpoints/chat-completions": {
       "types": "./dist/endpoints/chat-completions/index.d.ts",
       "import": "./dist/endpoints/chat-completions/index.js",
@@ -70,6 +65,11 @@
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
+    },
+    "./errors/openai": {
+      "types": "./dist/errors/openai.d.ts",
+      "import": "./dist/errors/openai.js",
+      "dev-source": "./src/errors/openai.ts"
     },
     "./middleware/common": {
       "types": "./dist/middleware/common.d.ts",

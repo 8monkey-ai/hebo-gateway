@@ -8,7 +8,6 @@ export type LogFn = {
 export type Logger = Record<"trace" | "debug" | "info" | "warn" | "error", LogFn>;
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "silent";
 export type LoggerConfig = { level?: LogLevel };
-export type LoggerInput = Logger | LoggerConfig;
 
 const KEY = Symbol.for("@hebo/logger");
 type GlobalWithLogger = typeof globalThis & {
@@ -26,10 +25,10 @@ g[KEY] ??= {
 
 export let logger: Logger = g[KEY];
 
-export const isLogger = (input: LoggerInput): input is Logger =>
+export const isLogger = (input: Logger | LoggerConfig): input is Logger =>
   typeof input === "object" && input !== null && "info" in input;
 
-export function isLoggerDisabled(input?: LoggerInput | null): boolean {
+export function isLoggerDisabled(input?: Logger | LoggerConfig | null): boolean {
   if (!input) return true;
   if (typeof input !== "object" || "info" in input) return false;
   return input.level === "silent";

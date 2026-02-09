@@ -9,12 +9,12 @@ import type {
   ResolveModelHookContext,
 } from "../../types";
 
+import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { GatewayError } from "../../utils/errors";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
