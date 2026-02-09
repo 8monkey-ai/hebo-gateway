@@ -17,6 +17,7 @@ import type {
   UserModelMessage,
 } from "ai";
 
+import { convertBase64ToUint8Array } from "@ai-sdk/provider-utils";
 import { jsonSchema, JsonToSseTransformStream, tool } from "ai";
 
 import type {
@@ -227,12 +228,12 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         return mimeType.startsWith("image/")
           ? {
               type: "image" as const,
-              image: Buffer.from(base64Data, "base64"),
+              image: convertBase64ToUint8Array(base64Data),
               mediaType: mimeType,
             }
           : {
               type: "file" as const,
-              data: Buffer.from(base64Data, "base64"),
+              data: convertBase64ToUint8Array(base64Data),
               mediaType: mimeType,
             };
       }
@@ -247,12 +248,12 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
       return media_type.startsWith("image/")
         ? {
             type: "image" as const,
-            image: Buffer.from(data, "base64"),
+            image: convertBase64ToUint8Array(data),
             mediaType: media_type,
           }
         : {
             type: "file" as const,
-            data: Buffer.from(data, "base64"),
+            data: convertBase64ToUint8Array(data),
             filename,
             mediaType: media_type,
           };

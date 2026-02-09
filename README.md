@@ -2,7 +2,6 @@
 
 Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
-
 ## 🐒 Overview
 
 Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
@@ -32,7 +31,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) 
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -41,7 +40,6 @@ bun install @hebo-ai/gateway
   - [Reasoning](#reasoning)
 - Advanced Usage
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
-
 
 ## 🚀 Quickstart
 
