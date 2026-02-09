@@ -32,7 +32,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Model Presets](#model-presets) | [User-defined Models](#user-defined-models) | [Hooks](#hooks)
+  - [Providers](#providers) | [Models](#models) | [Model Presets](#model-presets) | [User-defined Models](#user-defined-models) | [Hooks](#hooks) | [Logger](#logger-settings) | 
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js (App Router)](#nextjs-app-router) | [Next.js (Pages Router)](#nextjs-pages-router) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -40,8 +40,7 @@ bun install @hebo-ai/gateway
 - OpenAI Extensions
   - [Reasoning](#reasoning)
 - Advanced Usage
-  - [Logger Settings](#logger-settings) | [Passing Framework State to Hooks](#passing-framework-state-to-hooks)
-  - [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
+  - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
 
 ## Quickstart
