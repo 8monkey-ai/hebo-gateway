@@ -2,9 +2,10 @@ import { serializeError } from "serialize-error";
 
 import type { LogFn, LogLevel, Logger } from "./index";
 
-import { isProduction } from "../utils/env";
+import { isProduction, isTest } from "../utils/env";
 
-export const getDefaultLogLevel = (): "debug" | "info" => (isProduction() ? "info" : "debug");
+export const getDefaultLogLevel = (): LogLevel =>
+  isTest() ? "silent" : isProduction() ? "info" : "debug";
 
 const noop: LogFn = () => {};
 
@@ -14,6 +15,7 @@ const LEVEL = {
   info: 20,
   warn: 30,
   error: 40,
+  silent: 50,
 };
 const LEVELS = Object.keys(LEVEL) as (keyof typeof LEVEL)[];
 
@@ -66,7 +68,7 @@ const makeLogFn =
     write(JSON.stringify(buildLogObject(level, args)));
 
 export const createDefaultLogger = (config: { level?: LogLevel }): Logger => {
-  if (config.level === "silent") {
+  if (config.level === "silent" || getDefaultLogLevel() === "silent") {
     return { trace: noop, debug: noop, info: noop, warn: noop, error: noop };
   }
 
