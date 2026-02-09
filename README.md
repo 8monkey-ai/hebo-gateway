@@ -32,9 +32,9 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Model Presets](#model-presets) | [User-defined Models](#user-defined-models) | [Hooks](#hooks) | [Logger](#logger-settings) | 
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | 
 - Framework Support
-  - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js (App Router)](#nextjs-app-router) | [Next.js (Pages Router)](#nextjs-pages-router) | [TanStack Start](#tanstack-start)
+  - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy)
 - OpenAI Extensions
@@ -383,7 +383,9 @@ export default new Hono().mount("/v1/gateway/", gw.handler);
 console.log(`🐒 Hebo Gateway is running with Hono framework`);
 ```
 
-### Next.js (App Router)
+### Next.js
+
+#### (App Router)
 
 `app/api/gateway/[...all]/route.ts`
 
@@ -397,7 +399,7 @@ const gw = gateway({
 export const POST = gw.handler, GET = gw.handler;
 ```
 
-### Next.js (Pages Router)
+#### (Pages Router)
 
 `pages/api/gateway/[...all].ts`
 
