@@ -53,6 +53,6 @@ export const winterCgHandler = (
 
     await handler(ctx);
 
-    return ctx.response!;
+    return ctx.response ?? new Response("Internal Server Error", { status: 500 });
   };
 };

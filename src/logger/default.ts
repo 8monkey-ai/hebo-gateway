@@ -54,7 +54,7 @@ const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknow
   return {
     level,
     time: Date.now(),
-    ...(msg !== undefined ? { msg } : {}),
+    ...(msg ? { msg } : {}),
     ...(err ? { err: serializeError(err) } : {}),
     ...obj,
   };

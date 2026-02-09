@@ -27,8 +27,9 @@ export function toOpenAIError(error: unknown): OpenAIError {
 
 export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
   const meta = getErrorMeta(error);
-  return toResponse(
-    new OpenAIError(meta.message, meta.type, meta.code),
-    Object.assign({}, responseInit, { status: meta.status, statusText: meta.code }),
-  );
+  return toResponse(new OpenAIError(meta.message, meta.type, meta.code), {
+    ...responseInit,
+    status: meta.status,
+    statusText: meta.code,
+  });
 }

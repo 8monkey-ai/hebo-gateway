@@ -63,7 +63,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = embeddingModel.provider;
-    logger.debug(`embeddings: using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
+    logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
