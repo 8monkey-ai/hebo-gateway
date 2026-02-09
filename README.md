@@ -3,7 +3,7 @@
 Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
 
-## 👋 Overview
+## 🐒 Overview
 
 Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
 
@@ -11,7 +11,7 @@ Hebo Gateway is an open-source, embeddable AI gateway framework built to live in
 
 Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/260127-hebo-gateway/) (`https://hebo.ai/blog/260127-hebo-gateway/`)
 
-## ✨ Features
+## 🍌 Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
@@ -27,7 +27,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 bun install @hebo-ai/gateway
 ```
 
-## 🧭 Table of Contents
+## ☰ Table of Contents
 
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
