@@ -38,8 +38,10 @@
   ],
   "type": "module",
   "sideEffects": [
+    "./dist/logger/index.js",
     "./dist/providers/**/*.js",
     "./dist/models/**/*.js",
+    "./src/logger/index.ts",
     "./src/providers/**/*.ts",
     "./src/models/**/*.ts"
   ],
@@ -48,11 +50,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "dev-source": "./src/index.ts"
-    },
-    "./endpoints": {
-      "types": "./dist/endpoints/index.d.ts",
-      "import": "./dist/endpoints/index.js",
-      "dev-source": "./src/endpoints/index.ts"
     },
     "./endpoints/chat-completions": {
       "types": "./dist/endpoints/chat-completions/index.d.ts",
@@ -68,6 +65,11 @@
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
+    },
+    "./errors/openai": {
+      "types": "./dist/errors/openai.d.ts",
+      "import": "./dist/errors/openai.js",
+      "dev-source": "./src/errors/openai.ts"
     },
     "./middleware/common": {
       "types": "./dist/middleware/common.d.ts",
@@ -154,6 +156,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^3.0.7",
     "ai": "^6.0.67",
+    "serialize-error": "^13.0.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -176,6 +179,7 @@
     "next": "^16.1.6",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.42.0",
+    "pino": "^10.3.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^6.0.5",

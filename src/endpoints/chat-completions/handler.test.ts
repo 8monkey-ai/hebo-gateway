@@ -92,9 +92,9 @@ describe("Chat Completions Handler", () => {
     const request = new Request(baseUrl, { method: "GET" });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "METHOD_NOT_ALLOWED",
+        code: "method_not_allowed",
         message: "Method Not Allowed",
         type: "invalid_request_error",
       },
@@ -108,39 +108,39 @@ describe("Chat Completions Handler", () => {
     });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "BAD_REQUEST",
+        code: "bad_request",
         message: "Invalid JSON",
         type: "invalid_request_error",
       },
     });
   });
 
-  test("should return 422 for validation errors (missing messages)", async () => {
+  test("should return 400 for validation errors (missing messages)", async () => {
     const request = postJson(baseUrl, { model: "openai/gpt-oss-20b" });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "UNPROCESSABLE_ENTITY",
-        message: "Validation error",
-        param: expect.stringContaining("✖ Invalid input"),
+        code: "bad_request",
+        message: "✖ Invalid input: expected array, received undefined\n  → at messages",
         type: "invalid_request_error",
+        param: "",
       },
     });
   });
 
-  test("should return 400 for non-existent model", async () => {
+  test("should return 422 for non-existent model", async () => {
     const request = postJson(baseUrl, {
       model: "non-existent",
       messages: [{ role: "user", content: "hi" }],
     });
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "BAD_REQUEST",
+        code: "model_not_found",
         message: "Model 'non-existent' not found in catalog",
         type: "invalid_request_error",
       },

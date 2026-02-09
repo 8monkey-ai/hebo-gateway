@@ -1,37 +1,37 @@
 import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
 
-import { withLifecycle } from "../../lifecycle";
-import { createErrorResponse } from "../../utils/errors";
-import { createModelsResponse, createModelResponse } from "./converters";
+import { GatewayError } from "../../errors/gateway";
+import { winterCgHandler } from "../../lifecycle";
+import { toModels, toModel } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
   // eslint-disable-next-line require-await
-  const handler = async (ctx: GatewayContext): Promise<Response> => {
+  const handler = async (ctx: GatewayContext) => {
     const request = ctx.request;
 
     if (!request || request.method !== "GET") {
-      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
+      throw new GatewayError("Method Not Allowed", 405);
     }
 
     const rawId = request.url.split("/models/", 2)[1]?.split("?", 1)[0];
     if (!rawId) {
-      return createModelsResponse(ctx.models);
+      return toModels(ctx.models);
     }
 
     let modelId = rawId;
     try {
       modelId = decodeURIComponent(rawId);
     } catch {
-      return createErrorResponse("BAD_REQUEST", "Invalid model ID", 400);
+      throw new GatewayError(`Invalid model ID: '${modelId}'`, 400);
     }
 
     const model = ctx.models[modelId];
     if (!model) {
-      return createErrorResponse("NOT_FOUND", `Model '${modelId}' not found`, 404);
+      throw new GatewayError(`Model not found: '${modelId}'`, 404);
     }
 
-    return createModelResponse(modelId, model);
+    return toModel(modelId, model);
   };
 
-  return { handler: withLifecycle(handler, config) };
+  return { handler: winterCgHandler(handler, config) };
 };

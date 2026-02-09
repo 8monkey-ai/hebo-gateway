@@ -20,6 +20,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
     "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
     "noEmit": false,
     "declaration": true,
 

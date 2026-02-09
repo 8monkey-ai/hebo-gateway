@@ -42,8 +42,9 @@ import type {
   ChatCompletionsReasoningConfig,
 } from "./schema";
 
-import { OpenAIError } from "../../utils/errors";
-import { mergeResponseInit } from "../../utils/response";
+import { GatewayError } from "../../errors/gateway";
+import { OpenAIError, toOpenAIError } from "../../errors/openai";
+import { toResponse } from "../../utils/response";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -210,17 +211,17 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         const base64Data = parts[1];
 
         if (!metadata || !base64Data) {
-          throw new OpenAIError("Invalid data URL: missing metadata or data");
+          throw new GatewayError("Invalid data URL: missing metadata or data", 400);
         }
 
         const mimeTypePart = metadata.split(":")[1];
         if (!mimeTypePart) {
-          throw new OpenAIError("Invalid data URL: missing MIME type part");
+          throw new GatewayError("Invalid data URL: missing MIME type part", 400);
         }
 
         const mimeType = mimeTypePart.split(";")[0];
         if (!mimeType) {
-          throw new OpenAIError("Invalid data URL: missing MIME type");
+          throw new GatewayError("Invalid data URL: missing MIME type", 400);
         }
 
         return mimeType.startsWith("image/")
@@ -359,10 +360,7 @@ export function toChatCompletionsResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return new Response(
-    JSON.stringify(toChatCompletions(result, model)),
-    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
-  );
+  return toResponse(toChatCompletions(result, model), responseInit);
 }
 
 export function toChatCompletionsStream(
@@ -380,17 +378,7 @@ export function toChatCompletionsStreamResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return new Response(
-    toChatCompletionsStream(result, model),
-    mergeResponseInit(
-      {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-      responseInit,
-    ),
-  );
+  return toResponse(toChatCompletionsStream(result, model), responseInit);
 }
 
 export class ChatCompletionsStream extends TransformStream<
@@ -489,15 +477,7 @@ export class ChatCompletionsStream extends TransformStream<
 
           case "error": {
             const error = part.error;
-            const msg = error instanceof Error ? error.message : String(error);
-            const e = error as { code?: string; status?: number };
-            controller.enqueue(
-              new OpenAIError(
-                msg,
-                e.status && e.status < 500 ? "invalid_request_error" : "server_error",
-                e.code,
-              ),
-            );
+            controller.enqueue(toOpenAIError(error));
             break;
           }
         }

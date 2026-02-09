@@ -2,8 +2,9 @@ import type { ProviderV3 } from "@ai-sdk/provider";
 
 import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
 import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
-import type { ProviderRegistry } from "./providers/types";
+import type { ProviderId, ProviderRegistry } from "./providers/types";
 
 /**
  * Request overrides returned from the `before` hook.
@@ -38,7 +39,7 @@ export type GatewayContext = {
   /**
    * Incoming request for the lifecycle.
    */
-  request?: Request;
+  request: Request;
   /**
    * Parsed body from the request.
    */
@@ -60,7 +61,15 @@ export type GatewayContext = {
    */
   provider?: ProviderV3;
   /**
-   * Response returned by the handler.
+   * Resolved provider ID.
+   */
+  resolvedProviderId?: ProviderId;
+  /**
+   * Result returned by the handler (pre-response).
+   */
+  result?: object | ReadableStream<Uint8Array>;
+  /**
+   * Final response returned by the lifecycle.
    */
   response?: Response;
 };
@@ -80,7 +89,7 @@ export type ResolveProviderHookContext = RequiredHookContext<
   "request" | "body" | "modelId" | "resolvedModelId" | "operation"
 >;
 export type AfterHookContext = RequiredHookContext<
-  "request" | "response" | "provider" | "resolvedModelId" | "operation"
+  "request" | "result" | "provider" | "resolvedModelId" | "operation"
 >;
 
 /**
@@ -89,8 +98,8 @@ export type AfterHookContext = RequiredHookContext<
 export type GatewayHooks = {
   /**
    * Runs before any endpoint handler logic.
-   * @returns Optional RequestPatch to merge into headers / override body.
-   * Returning a Response stops execution of the endpoint.
+   * @returns Optional RequestPatch to merge into headers / override body,
+   * or Response to short-circuit the request.
    */
   before?: (
     ctx: BeforeHookContext,
@@ -111,7 +120,13 @@ export type GatewayHooks = {
    * Runs after the endpoint handler.
    * @returns Response to replace, or undefined to keep original.
    */
-  after?: (ctx: AfterHookContext) => void | Response | Promise<void | Response>;
+  after?: (
+    ctx: AfterHookContext,
+  ) =>
+    | void
+    | object
+    | ReadableStream<Uint8Array>
+    | Promise<void | object | ReadableStream<Uint8Array>>;
 };
 
 /**
@@ -134,6 +149,10 @@ export type GatewayConfig = {
    * Optional lifecycle hooks for routing, auth, and response shaping.
    */
   hooks?: GatewayHooks;
+  /**
+   * Preferred logger configuration: custom logger or default logger settings.
+   */
+  logger?: Logger | LoggerConfig;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");

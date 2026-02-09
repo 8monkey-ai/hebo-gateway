@@ -56,7 +56,7 @@ describe("Embeddings Handler", () => {
     },
   });
 
-  test("should return 400 if model does not support embeddings", async () => {
+  test("should return 422 if model does not support embeddings", async () => {
     const request = postJson(baseUrl, {
       model: "gpt-oss-20b",
       input: "hello world",
@@ -65,9 +65,9 @@ describe("Embeddings Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "BAD_REQUEST",
+        code: "model_unsupported_operation",
         message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
         type: "invalid_request_error",
       },
@@ -106,12 +106,12 @@ describe("Embeddings Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "UNPROCESSABLE_ENTITY",
-        message: "Validation error",
-        param: "✖ Invalid input\n  → at input",
+        code: "bad_request",
+        message: "✖ Invalid input\n  → at input",
         type: "invalid_request_error",
+        param: "",
       },
     });
   });
@@ -122,9 +122,9 @@ describe("Embeddings Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "METHOD_NOT_ALLOWED",
+        code: "method_not_allowed",
         message: "Method Not Allowed",
         type: "invalid_request_error",
       },

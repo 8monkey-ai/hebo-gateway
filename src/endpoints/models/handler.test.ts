@@ -111,9 +111,9 @@ describe("Models Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
-    expect(data).toEqual({
+    expect(data).toMatchObject({
       error: {
-        code: "METHOD_NOT_ALLOWED",
+        code: "method_not_allowed",
         message: "Method Not Allowed",
         type: "invalid_request_error",
       },

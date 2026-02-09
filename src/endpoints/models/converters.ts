@@ -1,7 +1,7 @@
 import type { ModelCatalog, CatalogModel } from "../../models/types";
 import type { ModelList, Model } from "./schema";
 
-import { mergeResponseInit } from "../../utils/response";
+import { toResponse } from "../../utils/response";
 
 export function toModel(id: string, catalogModel: CatalogModel): Model {
   const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
@@ -44,10 +44,7 @@ export function toModels(models: ModelCatalog): ModelList {
   };
 }
 export function createModelsResponse(models: ModelCatalog, responseInit?: ResponseInit): Response {
-  return new Response(
-    JSON.stringify(toModels(models)),
-    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
-  );
+  return toResponse(toModels(models), responseInit);
 }
 
 export function createModelResponse(
@@ -55,8 +52,5 @@ export function createModelResponse(
   catalogModel: CatalogModel,
   responseInit?: ResponseInit,
 ): Response {
-  return new Response(
-    JSON.stringify(toModel(id, catalogModel)),
-    mergeResponseInit({ "Content-Type": "application/json" }, responseInit),
-  );
+  return toResponse(toModel(id, catalogModel), responseInit);
 }

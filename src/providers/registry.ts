@@ -5,6 +5,9 @@ import { customProvider } from "ai";
 import type { ModelCatalog, ModelId } from "../models/types";
 import type { ProviderRegistry } from "./types";
 
+import { GatewayError } from "../errors/gateway";
+import { logger } from "../logger";
+
 export const resolveProvider = (args: {
   providers: ProviderRegistry;
   models: ModelCatalog;
@@ -16,23 +19,31 @@ export const resolveProvider = (args: {
   const catalogModel = models[modelId];
 
   if (!catalogModel) {
-    throw new Error(`Model '${modelId}' not found in catalog`);
+    throw new GatewayError(`Model '${modelId}' not found in catalog`, 422, "MODEL_NOT_FOUND");
   }
 
   if (catalogModel.modalities && !catalogModel.modalities.output.includes(operation)) {
-    throw new Error(`Model '${modelId}' does not support '${operation}' output`);
+    throw new GatewayError(
+      `Model '${modelId}' does not support '${operation}' output`,
+      422,
+      "MODEL_UNSUPPORTED_OPERATION",
+    );
   }
 
   // FUTURE: implement fallback logic [e.g. runtime config invalid]
   const resolvedProviderId = catalogModel.providers[0];
 
   if (!resolvedProviderId) {
-    throw new Error(`No providers configured for model '${modelId}'`);
+    throw new GatewayError(`No providers configured for model '${modelId}'`, 422, "NO_PROVIDERS");
   }
 
   const provider = providers[resolvedProviderId];
   if (!provider) {
-    throw new Error(`Provider '${resolvedProviderId}' not configured`);
+    throw new GatewayError(
+      `Provider '${resolvedProviderId}' not configured`,
+      422,
+      "PROVIDER_NOT_CONFIGURED",
+    );
   }
 
   return provider;
@@ -111,8 +122,16 @@ export const withCanonicalIds = (
     ? ({
         ...provider,
         specificationVersion: "v3",
-        languageModel: (id: string) => languageModel(applyFallbackAffixes(normalizeId(id))),
-        embeddingModel: (id: string) => embeddingModel(applyFallbackAffixes(normalizeId(id))),
+        languageModel: (id: string) => {
+          const mapped = applyFallbackAffixes(normalizeId(id));
+          logger.debug(`[canonical] mapped ${id} to ${mapped}`);
+          return languageModel(mapped);
+        },
+        embeddingModel: (id: string) => {
+          const mapped = applyFallbackAffixes(normalizeId(id));
+          logger.debug(`[canonical] mapped ${id} to ${mapped}`);
+          return embeddingModel(mapped);
+        },
       } satisfies ProviderV3)
     : provider;
 
@@ -126,7 +145,11 @@ export const withCanonicalIds = (
       if (v === undefined) continue;
       // This is lazy so that provider is only create once called
       Object.defineProperty(out, k, {
-        get: () => fn(applyTemplate(v)),
+        get: () => {
+          const mapped = applyTemplate(v);
+          logger.debug(`[canonical] mapped ${k} to ${mapped}`);
+          return fn(mapped);
+        },
       });
     }
 

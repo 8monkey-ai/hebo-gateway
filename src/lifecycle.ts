@@ -1,67 +1,58 @@
-import type {
-  AfterHookContext,
-  BeforeHookContext,
-  GatewayConfig,
-  GatewayContext,
-  RequestPatch,
-} from "./types";
+import type { AfterHookContext, BeforeHookContext, GatewayConfig, GatewayContext } from "./types";
 
 import { parseConfig } from "./config";
-import { createErrorResponse } from "./utils/errors";
+import { toOpenAIErrorResponse } from "./errors/openai";
+import { isLoggerDisabled, logger } from "./logger";
+import { withAccessLog } from "./telemetry/access-log";
+import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
+import { toResponse } from "./utils/response";
 
-const maybeApplyRequestPatch = (request: Request, patch: RequestPatch) => {
-  if (!patch.headers && patch.body === undefined) return request;
-
-  if (!patch.headers) {
-    // eslint-disable-next-line no-invalid-fetch-options
-    return new Request(request, { body: patch.body });
-  }
-
-  const headers = new Headers(request.headers);
-  for (const [key, value] of new Headers(patch.headers)) {
-    headers.set(key, value);
-  }
-
-  const init: RequestInit = { headers };
-  if (patch.body !== undefined) init.body = patch.body;
-
-  return new Request(request, init);
-};
-
-export const withLifecycle = (
-  run: (ctx: GatewayContext) => Promise<Response>,
+export const winterCgHandler = (
+  run: (ctx: GatewayContext) => Promise<object | ReadableStream<Uint8Array>>,
   config: GatewayConfig,
 ) => {
   const parsedConfig = parseConfig(config);
 
-  const handler = async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
-    const context: GatewayContext = {
+  const core = async (ctx: GatewayContext): Promise<void> => {
+    try {
+      const headers = prepareRequestHeaders(ctx.request);
+      if (headers) ctx.request = new Request(ctx.request, { headers });
+
+      const before = await parsedConfig.hooks?.before?.(ctx as BeforeHookContext);
+      if (before) {
+        if (before instanceof Response) {
+          ctx.response = before;
+          return;
+        }
+        ctx.request = maybeApplyRequestPatch(ctx.request, before);
+      }
+
+      ctx.result = await run(ctx);
+
+      const after = await parsedConfig.hooks?.after?.(ctx as AfterHookContext);
+      if (after) ctx.result = after;
+
+      ctx.response = ctx.result instanceof Response ? ctx.result : toResponse(ctx.result);
+    } catch (error) {
+      logger.error(error instanceof Error ? error : new Error(String(error)), {
+        requestId: ctx.request.headers.get("x-request-id"),
+      });
+      ctx.response = toOpenAIErrorResponse(error);
+    }
+  };
+
+  const handler = isLoggerDisabled(parsedConfig.logger) ? core : withAccessLog(core);
+
+  return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
+    const ctx: GatewayContext = {
       request,
       state: state ?? {},
       providers: parsedConfig.providers,
       models: parsedConfig.models,
     };
 
-    let beforeResult;
-    try {
-      beforeResult = await parsedConfig.hooks?.before?.(context as BeforeHookContext);
-    } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
-    }
-    if (beforeResult instanceof Response) return beforeResult;
+    await handler(ctx);
 
-    context.request = beforeResult ? maybeApplyRequestPatch(request, beforeResult) : request;
-
-    context.response = await run(context);
-
-    let after;
-    try {
-      after = await parsedConfig.hooks?.after?.(context as AfterHookContext);
-    } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
-    }
-    return after ?? context.response;
+    return ctx.response ?? new Response("Internal Server Error", { status: 500 });
   };
-
-  return handler;
 };

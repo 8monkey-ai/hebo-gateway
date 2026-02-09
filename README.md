@@ -318,20 +318,22 @@ const gw = gateway({
     },
     /**
      * Runs after the endpoint handler.
-     * @param ctx.response Response returned by the handler.
-     * @returns Response to replace, or undefined to keep original.
+     * @param ctx.result Result object returned by the handler.
+     * @returns Modified result, or undefined to keep original.
      */
-    after: async (ctx: { response: Response }): Promise<Response | void> => {
+    after: async (ctx: {
+      result: object | ReadableStream<Uint8Array>
+    }): Promise<object | ReadableStream<Uint8Array> | void> => {
       // Example Use Cases:
-      // - Transform response
-      // - Response logging
+      // - Transform result
+      // - Result logging
       return undefined;
     },
   },
 });
 ```
 
-The `ctx` object is **readonly for core fields**. Use return values to override request / response and provide modelId / provider instances.
+The `ctx` object is **readonly for core fields**. Use return values to override request / result and to provide modelId / provider instances.
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
@@ -452,6 +454,40 @@ Reasoning output is surfaced as extension to the `completion` object.
 Most SDKs handle these fields out-of-the-box.
 
 ## Advanced Usage
+
+### Logger Settings
+
+You can configure logging via the `logger` field in the gateway config. By default, the logger uses `console` and sets the level to `debug` in non-production and `info` in production (based on the `NODE_ENV` environment variable).
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  logger: {
+    level: "debug", // "trace" | "debug" | "info" | "warn" | "error" | "silent"
+  },
+});
+```
+
+If you provide a custom logger, it must implement `trace`, `debug`, `info`, `warn`, and `error` methods.
+For production workloads, we recommend `pino` for better logging performance and lower overhead.
+
+Example with **pino**:
+
+```ts
+import pino from "pino";
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  logger: pino(
+    {
+      level: "info"
+    }
+  ),
+});
+```
 
 ### Passing Framework State to Hooks
 

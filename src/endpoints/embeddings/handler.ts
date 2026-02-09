@@ -9,74 +9,70 @@ import type {
   ResolveModelHookContext,
 } from "../../types";
 
-import { withLifecycle } from "../../lifecycle";
+import { GatewayError } from "../../errors/gateway";
+import { winterCgHandler } from "../../lifecycle";
+import { logger } from "../../logger";
 import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { createErrorResponse } from "../../utils/errors";
-import { convertToEmbedCallOptions, createEmbeddingsResponse } from "./converters";
+import { prepareForwardHeaders } from "../../utils/request";
+import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
-  const handler = async (ctx: GatewayContext): Promise<Response> => {
+  const handler = async (ctx: GatewayContext) => {
+    // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
-      return createErrorResponse("METHOD_NOT_ALLOWED", "Method Not Allowed", 405);
+      throw new GatewayError("Method Not Allowed", 405);
     }
 
+    // Parse + validate input.
     let body;
     try {
       body = await ctx.request.json();
     } catch {
-      return createErrorResponse("BAD_REQUEST", "Invalid JSON", 400);
+      throw new GatewayError("Invalid JSON", 400);
     }
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
     if (!parsed.success) {
-      return createErrorResponse(
-        "UNPROCESSABLE_ENTITY",
-        "Validation error",
-        422,
-        z.prettifyError(parsed.error),
-      );
+      throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
 
+    // Resolve model + provider (hooks may override defaults).
     let inputs;
     ({ model: ctx.modelId, ...inputs } = parsed.data);
 
-    try {
-      ctx.resolvedModelId =
-        (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
+    ctx.resolvedModelId =
+      (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
+    logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
 
     ctx.operation = "embeddings";
-    try {
-      const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
-      ctx.provider =
-        override ??
-        resolveProvider({
-          providers: ctx.providers,
-          models: ctx.models,
-          modelId: ctx.resolvedModelId,
-          operation: ctx.operation,
-        });
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
+    const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
+    ctx.provider =
+      override ??
+      resolveProvider({
+        providers: ctx.providers,
+        models: ctx.models,
+        modelId: ctx.resolvedModelId,
+        operation: ctx.operation,
+      });
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
+    ctx.resolvedProviderId = embeddingModel.provider;
+    logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
 
-    let embedOptions;
-    try {
-      embedOptions = convertToEmbedCallOptions(inputs);
-    } catch (error) {
-      return createErrorResponse("BAD_REQUEST", error, 400);
-    }
+    // Convert inputs to AI SDK call options.
+    const embedOptions = convertToEmbedCallOptions(inputs);
+    logger.trace(
+      { requestId: ctx.request.headers.get("x-request-id"), options: embedOptions },
+      "[embeddings] AI SDK options",
+    );
 
+    // Build middleware chain (model -> forward params -> provider).
     const middleware = [];
     for (const m of modelMiddlewareMatcher.forEmbeddingModel(ctx.resolvedModelId))
       middleware.push(m);
@@ -89,18 +85,21 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       middleware,
     });
 
-    let result;
-    try {
-      result = await embedMany({
-        model: embeddingModelWithMiddleware,
-        ...embedOptions,
-      });
-    } catch (error) {
-      return createErrorResponse("INTERNAL_SERVER_ERROR", error, 500);
-    }
+    // Execute request.
+    const result = await embedMany({
+      model: embeddingModelWithMiddleware,
+      headers: prepareForwardHeaders(ctx.request),
+      abortSignal: ctx.request.signal,
+      ...embedOptions,
+    });
 
-    return createEmbeddingsResponse(result, ctx.modelId);
+    logger.trace(
+      { requestId: ctx.request.headers.get("x-request-id"), result },
+      "[embeddings] AI SDK result",
+    );
+
+    return toEmbeddings(result, ctx.modelId);
   };
 
-  return { handler: withLifecycle(handler, config) };
+  return { handler: winterCgHandler(handler, config) };
 };
