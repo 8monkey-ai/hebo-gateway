@@ -54,7 +54,7 @@ const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknow
   const out: Record<string, unknown> = obj ?? {};
   out["level"] = level;
   out["time"] = Date.now();
-  if (typeof msg !== "undefined") {
+  if (msg !== undefined) {
     out["msg"] = msg;
   }
   if (err) {
