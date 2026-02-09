@@ -44,8 +44,8 @@ const gw = gateway({
       console.log(ctx.state.auth.userId);
     },
   },
-  logging: {
-    level: "debug",
+  logger: {
+    level: "trace",
   },
 });
 
