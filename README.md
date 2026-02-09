@@ -2,11 +2,33 @@
 
 Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
+
+## Overview
+
+Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
+
+Hebo Gateway is an open-source, embeddable AI gateway framework built to live inside your app. It gives you full control over providers, models, routing, and the request lifecycle.
+
+Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/260127-hebo-gateway/) (`https://hebo.ai/blog/260127-hebo-gateway/`)
+
+## Features
+
+- 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
+- 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
+- 🧩 Provider registry compatible with Vercel AI SDK providers.
+- 🧭 Canonical model IDs and parameter naming across providers.
+- 🗂️ Model catalog with extensible metadata capabilities.
+- 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
+- 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
+
+## Installation
+
+```bash
+bun install @hebo-ai/gateway
+```
+
 ## Table of Contents
 
-- [Overview](#overview)
-- [Features](#features)
-- [Installation](#installation)
 - [Quickstart](#quickstart)
   - [Setup A Gateway Instance](#setup-a-gateway-instance)
   - [Mount Route Handlers](#mount-route-handlers)
@@ -34,29 +56,6 @@ Roll your own AI gateway for full control over models, providers, routing logic,
   - [Selective Route Mounting](#selective-route-mounting)
   - [Low-level Schemas & Converters](#low-level-schemas--converters)
 
-## Overview
-
-Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
-
-Hebo Gateway is an open-source, embeddable AI gateway framework built to live inside your app. It gives you full control over providers, models, routing, and the request lifecycle.
-
-Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/260127-hebo-gateway/) (`https://hebo.ai/blog/260127-hebo-gateway/`)
-
-## Features
-
-- 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
-- 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
-- 🧩 Provider registry compatible with Vercel AI SDK providers.
-- 🧭 Canonical model IDs and parameter naming across providers.
-- 🗂️ Model catalog with extensible metadata capabilities.
-- 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
-- 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
-
-## Installation
-
-```bash
-bun install @hebo-ai/gateway
-```
 
 ## Quickstart
 
