@@ -67,6 +67,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
+    logger.trace(
+      {
+        requestId: ctx.request.headers.get("x-request-id"),
+        options: textOptions,
+      },
+      "[chat] AI SDK options",
+    );
 
     // Build middleware chain (model -> forward params -> provider).
     const middleware = [];
@@ -93,6 +100,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },
+        experimental_include: {
+          requestBody: false,
+        },
+        includeRawChunks: false,
         ...textOptions,
       });
 
@@ -103,8 +114,17 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
+      experimental_include: {
+        requestBody: false,
+        responseBody: false,
+      },
       ...textOptions,
     });
+
+    logger.trace(
+      { requestId: ctx.request.headers.get("x-request-id"), result },
+      "[chat] AI SDK result",
+    );
 
     return toChatCompletions(result, ctx.modelId);
   };

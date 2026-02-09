@@ -51,16 +51,13 @@ const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknow
     msg = err.message;
   }
 
-  const out: Record<string, unknown> = obj ?? {};
-  out["level"] = level;
-  out["time"] = Date.now();
-  if (msg !== undefined) {
-    out["msg"] = msg;
-  }
-  if (err) {
-    out["err"] = serializeError(err);
-  }
-  return out;
+  return {
+    level,
+    time: Date.now(),
+    ...(msg !== undefined ? { msg } : {}),
+    ...(err ? { err: serializeError(err) } : {}),
+    ...obj,
+  };
 };
 
 const makeLogFn =

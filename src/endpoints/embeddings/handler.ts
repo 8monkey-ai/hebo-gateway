@@ -67,6 +67,10 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
+    logger.trace(
+      { requestId: ctx.request.headers.get("x-request-id"), options: embedOptions },
+      "[embeddings] AI SDK options",
+    );
 
     // Build middleware chain (model -> forward params -> provider).
     const middleware = [];
@@ -88,6 +92,11 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });
+
+    logger.trace(
+      { requestId: ctx.request.headers.get("x-request-id"), result },
+      "[embeddings] AI SDK result",
+    );
 
     return toEmbeddings(result, ctx.modelId);
   };
