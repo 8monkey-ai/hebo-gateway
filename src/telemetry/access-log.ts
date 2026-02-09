@@ -14,7 +14,7 @@ export const withAccessLog =
       body = await ctx.request.arrayBuffer();
       requestBytes = body.byteLength;
       // eslint-disable-next-line no-invalid-fetch-options
-      ctx.request = new Request(ctx.request, { body });
+      ctx.request = new Request(ctx.request, { body, signal: ctx.request.signal });
     }
 
     const logAccess = (
