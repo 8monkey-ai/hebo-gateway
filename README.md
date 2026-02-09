@@ -455,7 +455,7 @@ Most SDKs handle these fields out-of-the-box.
 
 ### Logger Settings
 
-You can configure logging via the `logger` field in the gateway config. By default, the logger uses `console` and sets the level to `debug` in non-production and `info` in production.
+You can configure logging via the `logger` field in the gateway config. By default, the logger uses `console` and sets the level to `debug` in non-production and `info` in production (based on the `NODE_ENV` environment variable).
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
@@ -463,7 +463,6 @@ import { gateway } from "@hebo-ai/gateway";
 const gw = gateway({
   // ...
   logger: {
-    // default from NODE_ENV / ENV.NODE_ENV: "debug" (dev), "info" (production)
     level: "debug", // "trace" | "debug" | "info" | "warn" | "error" | "silent"
   },
 });
@@ -482,7 +481,7 @@ const gw = gateway({
   // ...
   logger: pino(
     {
-      level: "debug"
+      level: "info"
     }
   ),
 });
