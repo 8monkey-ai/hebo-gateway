@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: <cmd that prints ndjson> | scripts/jsonlog
+# Example: bun dev | scripts/jsonlog
+
+set -m
+trap 'kill 0' EXIT
+
+jq --unbuffered -Rcr '
+  fromjson? | [
+    ((.time/1000 | strftime("%H:%M:%S")) + " " + (.level|tostring|ascii_upcase) + " " + (.msg // "")),
+    (tostring)
+  ] | @tsv
+' \
+| bat --color=always --style=plain --language=log \
+| fzf --ansi --delimiter=$'\t' --with-nth=1 \
+      --preview 'echo {2} | jq -C .' \
+      --no-sort --tac \
+      --bind 'enter:execute(echo {2} | fx)' \
+      --preview-window=right:50%:wrap
