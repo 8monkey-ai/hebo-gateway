@@ -32,11 +32,11 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | 
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) 
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
-  - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy)
+  - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
 - OpenAI Extensions
   - [Reasoning](#reasoning)
 - Advanced Usage
@@ -489,6 +489,27 @@ const gw = gateway({
 });
 
 serve((request: Request) => gw.handler(request));
+```
+
+### AWS Lambda
+
+`src/lambda.ts`
+
+```ts
+import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
+
+const gw = gateway({
+  // ...
+});
+
+export const handler: APIGatewayProxyHandlerV2 = async event => {
+  // Convert the incoming Lambda event to a standard Request
+  const request = eventToRequest(event);
+  const response = await gw.handler(request);
+
+  // Convert the Response back to API Gateway/Lambda URL format
+  return responseToApiGatewayV2(response);
+};
 ```
 
 ## OpenAI Extensions
