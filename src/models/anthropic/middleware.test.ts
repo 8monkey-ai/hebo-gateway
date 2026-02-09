@@ -23,12 +23,12 @@ test("claudeReasoningMiddleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(claudeReasoningMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(claudeReasoningMiddleware);
   }
 });
@@ -215,7 +215,7 @@ test("claudeReasoningMiddleware > should use 64k as default fallback for maxOutp
     model: new MockLanguageModelV3(),
   });
 
-  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);
+  expect(result.providerOptions?.anthropic?.thinking?.budgetTokens).toBe(32000);
 });
 
 test("claudeReasoningMiddleware > should cap default maxOutputTokens for Opus 4.1", async () => {
@@ -237,7 +237,7 @@ test("claudeReasoningMiddleware > should cap default maxOutputTokens for Opus 4.
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.1" }),
   });
 
-  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(16000);
+  expect(result.providerOptions?.anthropic?.thinking?.budgetTokens).toBe(16000);
 });
 
 test("claudeReasoningMiddleware > should clamp max_tokens for Opus 4", async () => {
@@ -259,5 +259,5 @@ test("claudeReasoningMiddleware > should clamp max_tokens for Opus 4", async () 
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4" }),
   });
 
-  expect(result.providerOptions.anthropic.thinking.budgetTokens).toBe(32000);
+  expect(result.providerOptions?.anthropic?.thinking?.budgetTokens).toBe(32000);
 });

@@ -70,9 +70,9 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
-  embedding: openAIDimensionsMiddleware,
+  embedding: [openAIDimensionsMiddleware],
 });
 
 modelMiddlewareMatcher.useForModel("openai/gpt-*", {
-  language: openAIReasoningMiddleware,
+  language: [openAIReasoningMiddleware],
 });

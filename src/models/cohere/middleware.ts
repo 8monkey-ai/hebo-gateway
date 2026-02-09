@@ -69,8 +69,8 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: cohereDimensionsMiddleware });
+modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: [cohereDimensionsMiddleware] });
 
 modelMiddlewareMatcher.useForModel("cohere/command-a-reasoning", {
-  language: cohereReasoningMiddleware,
+  language: [cohereReasoningMiddleware],
 });

@@ -17,12 +17,12 @@ test("voyageDimensionsMiddleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).toContain(voyageDimensionsMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).not.toContain(voyageDimensionsMiddleware);
   }
 });

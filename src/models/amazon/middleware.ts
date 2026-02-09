@@ -70,9 +70,9 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel("amazon/nova-*embeddings*", {
-  embedding: novaDimensionsMiddleware,
+  embedding: [novaDimensionsMiddleware],
 });
 
 modelMiddlewareMatcher.useForModel("amazon/nova-2-*", {
-  language: novaReasoningMiddleware,
+  language: [novaReasoningMiddleware],
 });

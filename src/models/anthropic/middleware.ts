@@ -56,5 +56,5 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel(["anthropic/claude-*3*7*", "anthropic/claude-*4*"], {
-  language: claudeReasoningMiddleware,
+  language: [claudeReasoningMiddleware],
 });

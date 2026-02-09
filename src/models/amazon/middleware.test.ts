@@ -16,12 +16,12 @@ test("nova middleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(novaReasoningMiddleware);
   }
 
   for (const id of languageNonMatching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(novaReasoningMiddleware);
   }
 
@@ -34,12 +34,12 @@ test("nova middleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of embeddingMatching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).toContain(novaDimensionsMiddleware);
   }
 
   for (const id of embeddingNonMatching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).not.toContain(novaDimensionsMiddleware);
   }
 });

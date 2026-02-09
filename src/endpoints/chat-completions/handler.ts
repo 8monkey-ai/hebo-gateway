@@ -12,7 +12,6 @@ import type {
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
-import { forwardParamsMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { prepareForwardHeaders } from "../../utils/request";
@@ -76,14 +75,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     );
 
     // Build middleware chain (model -> forward params -> provider).
-    const middleware = [];
-    for (const m of modelMiddlewareMatcher.forModel(ctx.resolvedModelId)) middleware.push(m);
-    middleware.push(forwardParamsMiddleware(languageModel.provider));
-    for (const m of modelMiddlewareMatcher.forProvider(languageModel.provider)) middleware.push(m);
-
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
-      middleware,
+      middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
     // Execute request (streaming vs. non-streaming).

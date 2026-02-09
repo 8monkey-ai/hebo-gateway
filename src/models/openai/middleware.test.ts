@@ -18,12 +18,12 @@ test("openAI middleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(openAIReasoningMiddleware);
   }
 
   for (const id of languageNonMatching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(openAIReasoningMiddleware);
   }
 
@@ -35,12 +35,12 @@ test("openAI middleware > matching patterns", () => {
   const embeddingNonMatching = ["openai/gpt-5"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of embeddingMatching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).toContain(openAIDimensionsMiddleware);
   }
 
   for (const id of embeddingNonMatching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).not.toContain(openAIDimensionsMiddleware);
   }
 });
@@ -126,7 +126,7 @@ test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", asyn
         model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
       });
 
-      expect(result.providerOptions.openai.reasoningEffort).toBe(expected);
+      expect(result.providerOptions?.openai.reasoningEffort).toBe(expected);
     }),
   );
 });

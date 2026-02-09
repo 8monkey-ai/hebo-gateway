@@ -12,7 +12,6 @@ import type {
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
-import { forwardParamsEmbeddingMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { prepareForwardHeaders } from "../../utils/request";
@@ -73,16 +72,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     );
 
     // Build middleware chain (model -> forward params -> provider).
-    const middleware = [];
-    for (const m of modelMiddlewareMatcher.forEmbeddingModel(ctx.resolvedModelId))
-      middleware.push(m);
-    middleware.push(forwardParamsEmbeddingMiddleware(embeddingModel.provider));
-    for (const m of modelMiddlewareMatcher.forEmbeddingProvider(embeddingModel.provider))
-      middleware.push(m);
-
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
       model: embeddingModel,
-      middleware,
+      middleware: modelMiddlewareMatcher.forEmbedding(ctx.resolvedModelId, embeddingModel.provider),
     });
 
     // Execute request.

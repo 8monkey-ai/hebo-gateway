@@ -18,12 +18,12 @@ test("geminiReasoningMiddleware > matching patterns", () => {
   const nonMatching = ["google/gemini-1.5-pro", "google/gemini-1.5-flash"];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(geminiReasoningMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.forModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(geminiReasoningMiddleware);
   }
 });
@@ -36,12 +36,12 @@ test("geminiDimensionsMiddleware > matching patterns", () => {
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).toContain(geminiDimensionsMiddleware);
   }
 
   for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.forEmbeddingModel(id);
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).not.toContain(geminiDimensionsMiddleware);
   }
 });

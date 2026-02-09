@@ -106,9 +106,9 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
-  embedding: geminiDimensionsMiddleware,
+  embedding: [geminiDimensionsMiddleware],
 });
 
 modelMiddlewareMatcher.useForModel(["google/gemini-2*", "google/gemini-3*"], {
-  language: geminiReasoningMiddleware,
+  language: [geminiReasoningMiddleware],
 });
