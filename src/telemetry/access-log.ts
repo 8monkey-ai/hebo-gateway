@@ -5,32 +5,30 @@ import { instrumentStream } from "./stream";
 import { getAIMeta, getRequestMeta, getResponseMeta } from "./utils";
 
 export const withAccessLog =
-  (run: (context: GatewayContext) => Promise<Response>) =>
-  async (context: GatewayContext): Promise<Response> => {
+  (run: (ctx: GatewayContext) => Promise<void>) => async (ctx: GatewayContext) => {
     const start = performance.now();
 
     let body: ArrayBuffer | undefined;
     let requestBytes = 0;
-    if (context.request.body && context.request.method !== "GET") {
-      body = await context.request.arrayBuffer();
+    if (ctx.request.body && ctx.request.method !== "GET") {
+      body = await ctx.request.arrayBuffer();
       requestBytes = body.byteLength;
       // eslint-disable-next-line no-invalid-fetch-options
-      context.request = new Request(context.request, { body });
+      ctx.request = new Request(ctx.request, { body });
     }
 
     const logAccess = (
       kind: string,
       stats?: { bytes?: number; firstByteAt?: number; lastByteAt?: number },
-      response?: Response,
     ) => {
       const totalDuration = +((stats?.lastByteAt ?? performance.now()) - start).toFixed(2);
       const responseTime = stats?.firstByteAt && +(stats.firstByteAt - start).toFixed(2);
-      const responseMeta = getResponseMeta(response);
+      const responseMeta = getResponseMeta(ctx.response);
 
       const meta: Record<string, unknown> = {
-        requestId: context.request.headers.get("x-request-id"),
-        ai: getAIMeta(context),
-        request: getRequestMeta(context.request),
+        requestId: ctx.request.headers.get("x-request-id"),
+        ai: getAIMeta(ctx),
+        request: getRequestMeta(ctx.request),
         response: responseMeta,
         timings: {
           totalDuration,
@@ -55,32 +53,27 @@ export const withAccessLog =
 
     const logError = (error: unknown) => {
       logger.error(error instanceof Error ? error : new Error(String(error)), {
-        requestId: context.request.headers.get("x-request-id"),
+        requestId: ctx.request.headers.get("x-request-id"),
       });
     };
 
-    try {
-      const response = await run(context);
-      if (response.body) {
-        const instrumented = instrumentStream(
-          response.body,
-          {
-            onComplete: (kind, params) => logAccess(kind, params, response),
-            onError: (err) => logError(err),
-          },
-          context.request.signal,
-        );
-        return new Response(instrumented, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-        });
-      }
+    await run(ctx);
 
-      logAccess(response.status >= 400 ? "errored" : "completed", undefined, response);
-      return response;
-    } catch (error) {
-      logError(error);
-      throw error;
+    if (ctx.response!.body) {
+      const instrumented = instrumentStream(
+        ctx.response!.body,
+        {
+          onComplete: (kind, params) => logAccess(kind, params),
+          onError: (err) => logError(err),
+        },
+        ctx.request.signal,
+      );
+      ctx.response = new Response(instrumented, {
+        status: ctx.response!.status,
+        statusText: ctx.response!.statusText,
+        headers: ctx.response!.headers,
+      });
     }
+
+    logAccess(ctx.response!.status >= 400 ? "errored" : "completed");
   };

@@ -68,6 +68,10 @@ export type GatewayContext = {
    * Result returned by the handler (pre-response).
    */
   result?: object | ReadableStream<Uint8Array>;
+  /**
+   * Final response returned by the lifecycle.
+   */
+  response?: Response;
 };
 
 /**

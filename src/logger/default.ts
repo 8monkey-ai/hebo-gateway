@@ -32,22 +32,22 @@ const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknow
     err = first;
     if (isRecord(second)) {
       obj = second;
-      if (typeof third !== "undefined") {
+      if (third !== undefined) {
         msg = String(third);
       }
-    } else if (typeof second !== "undefined") {
+    } else if (second !== undefined) {
       msg = String(second);
     }
   } else if (isRecord(first)) {
     obj = first;
-    if (typeof second !== "undefined") {
+    if (second !== undefined) {
       msg = String(second);
     }
   } else {
     msg = String(first);
   }
 
-  if (err && typeof msg === "undefined") {
+  if (err && msg === undefined) {
     msg = err.message;
   }
 

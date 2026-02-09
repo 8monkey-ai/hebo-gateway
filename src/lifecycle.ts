@@ -13,38 +13,46 @@ export const winterCgHandler = (
 ) => {
   const parsedConfig = parseConfig(config);
 
-  const core = async (ctx: GatewayContext): Promise<Response> => {
+  const core = async (ctx: GatewayContext): Promise<void> => {
     try {
       const headers = prepareRequestHeaders(ctx.request);
       if (headers) ctx.request = new Request(ctx.request, { headers });
 
       const before = await parsedConfig.hooks?.before?.(ctx as BeforeHookContext);
       if (before) {
-        if (before instanceof Response) return before;
+        if (before instanceof Response) {
+          ctx.response = before;
+          return;
+        }
         ctx.request = maybeApplyRequestPatch(ctx.request, before);
       }
 
       ctx.result = await run(ctx);
 
       const after = await parsedConfig.hooks?.after?.(ctx as AfterHookContext);
-      const result = after ?? ctx.result;
+      if (after) ctx.result = after;
 
-      return result instanceof Response ? result : toResponse(result);
+      ctx.response = ctx.result instanceof Response ? ctx.result : toResponse(ctx.result);
     } catch (error) {
       logger.error(error instanceof Error ? error : new Error(String(error)), {
         requestId: ctx.request.headers.get("x-request-id"),
       });
-      return toOpenAIErrorResponse(error);
+      ctx.response = toOpenAIErrorResponse(error);
     }
   };
 
   const handler = isLoggerDisabled(parsedConfig.logger) ? core : withAccessLog(core);
 
-  return (request: Request, state?: Record<string, unknown>) =>
-    handler({
+  return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
+    const ctx: GatewayContext = {
       request,
       state: state ?? {},
       providers: parsedConfig.providers,
       models: parsedConfig.models,
-    });
+    };
+
+    await handler(ctx);
+
+    return ctx.response!;
+  };
 };
