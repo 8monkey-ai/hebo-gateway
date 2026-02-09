@@ -3,7 +3,7 @@
 Roll your own AI gateway for full control over models, providers, routing logic, guardrails, observability and more ...
 
 
-## Overview
+## 👋 Overview
 
 Existing AI gateways like OpenRouter, Vercel AI Gateway, LiteLLM, and Portkey work out of the box, but they’re hard to extend once your needs go beyond configuration.
 
@@ -11,7 +11,7 @@ Hebo Gateway is an open-source, embeddable AI gateway framework built to live in
 
 Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/260127-hebo-gateway/) (`https://hebo.ai/blog/260127-hebo-gateway/`)
 
-## Features
+## ✨ Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
@@ -21,13 +21,13 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
-## Installation
+## 📦 Installation
 
 ```bash
 bun install @hebo-ai/gateway
 ```
 
-## Table of Contents
+## 🧭 Table of Contents
 
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
@@ -43,7 +43,7 @@ bun install @hebo-ai/gateway
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
 
-## Quickstart
+## 🚀 Quickstart
 
 ### Setup A Gateway Instance
 
@@ -132,7 +132,7 @@ const { text } = await generateText({
 console.log(text);
 ```
 
-## Configuration Reference
+## ⚙️ Configuration Reference
 
 ### Providers
 
@@ -355,7 +355,7 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
 
-## Framework Support
+## 🧩 Framework Support
 
 Hebo Gateway exposes **WinterCG-compatible** handlers that integrate with almost any existing framework.
 
@@ -439,7 +439,7 @@ export const Route = createFileRoute("/api/$")({
 });
 ```
 
-## Runtime Support
+## 🌍 Runtime Support
 
 Hebo Gateway also works directly with runtime-level `Request -> Response` handlers.
 
@@ -501,7 +501,7 @@ export const handler = awsLambdaEventHandler({
 });
 ```
 
-## OpenAI Extensions
+## 🧠 OpenAI Extensions
 
 ### Reasoning
 
@@ -534,7 +534,7 @@ Reasoning output is surfaced as extension to the `completion` object.
 
 Most SDKs handle these fields out-of-the-box.
 
-## Advanced Usage
+## 🧪 Advanced Usage
 
 ### Logger Settings
 
