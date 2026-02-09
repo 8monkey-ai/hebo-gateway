@@ -29,7 +29,7 @@ export const isLogger = (input: Logger | LoggerConfig): input is Logger =>
   typeof input === "object" && input !== null && "info" in input;
 
 export function isLoggerDisabled(input?: Logger | LoggerConfig | null): boolean {
-  if (!input) return true;
+  if (!input) return false;
   if (typeof input !== "object" || "info" in input) return false;
   return input.level === "silent";
 }
