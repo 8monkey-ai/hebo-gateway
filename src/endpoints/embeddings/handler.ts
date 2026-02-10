@@ -14,6 +14,8 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
+import { markPerf } from "../../telemetry/perf";
+import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
@@ -67,7 +69,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace(
-      { requestId: ctx.request.headers.get("x-request-id"), options: embedOptions },
+      { requestId: resolveRequestId(ctx.request), options: embedOptions },
       "[embeddings] AI SDK options",
     );
 
@@ -78,15 +80,17 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request.
+    markPerf(ctx.request, "aiSdkStart");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });
+    markPerf(ctx.request, "aiSdkEnd");
 
     logger.trace(
-      { requestId: ctx.request.headers.get("x-request-id"), result },
+      { requestId: resolveRequestId(ctx.request), result },
       "[embeddings] AI SDK result",
     );
 

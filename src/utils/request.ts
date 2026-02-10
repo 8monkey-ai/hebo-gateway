@@ -1,11 +1,12 @@
 import type { RequestPatch } from "../types";
 
 import pkg from "../../package.json" with { type: "json" };
+import { REQUEST_ID_HEADER } from "./headers";
 
 const GATEWAY_VERSION = pkg.version;
 
 export const prepareRequestHeaders = (request: Request) => {
-  const existingRequestId = request.headers.get("x-request-id");
+  const existingRequestId = request.headers.get(REQUEST_ID_HEADER);
   if (existingRequestId) return;
 
   const requestId =
@@ -14,7 +15,7 @@ export const prepareRequestHeaders = (request: Request) => {
     crypto.randomUUID();
 
   const headers = new Headers(request.headers);
-  headers.set("x-request-id", requestId);
+  headers.set(REQUEST_ID_HEADER, requestId);
 
   return headers;
 };
@@ -37,7 +38,7 @@ export const prepareForwardHeaders = (request: Request): Record<string, string> 
     : `@hebo-ai/gateway/${GATEWAY_VERSION}`;
 
   return {
-    "x-request-id": request.headers.get("x-request-id")!,
+    [REQUEST_ID_HEADER]: request.headers.get(REQUEST_ID_HEADER)!,
     "user-agent": appendedUserAgent,
   };
 };
