@@ -1,4 +1,10 @@
+import { REQUEST_ID_HEADER, resolveRequestId } from "./headers";
+
 const TEXT_ENCODER = new TextEncoder();
+
+export const prepareResponseInit = (request: Request): ResponseInit => ({
+  headers: { [REQUEST_ID_HEADER]: resolveRequestId(request.headers)! },
+});
 
 export const mergeResponseInit = (
   defaultHeaders: HeadersInit,
@@ -9,7 +15,13 @@ export const mergeResponseInit = (
   if (override) {
     new Headers(override).forEach((value, key) => headers.set(key, value));
   }
-  return responseInit ? { ...responseInit, headers } : { headers };
+  if (!responseInit) return { headers };
+
+  return {
+    status: responseInit.status,
+    statusText: responseInit.statusText,
+    headers,
+  };
 };
 
 export const toResponse = (
@@ -30,12 +42,15 @@ export const toResponse = (
   }
 
   const contentLength = body instanceof Uint8Array ? String(body.byteLength) : "";
+  const isError = result instanceof Error;
 
-  if (!responseInit)
-    responseInit =
-      result instanceof Error
-        ? { status: 500, statusText: "REQUEST_FAILED" }
-        : { status: 200, statusText: "OK" };
+  if (!responseInit?.statusText) {
+    const status = responseInit?.status ?? (isError ? 500 : 200);
+    const statusText = isError ? "REQUEST_FAILED" : "OK";
+    const headers = responseInit?.headers;
+
+    responseInit = headers ? { status, statusText, headers } : { status, statusText };
+  }
 
   const init = mergeResponseInit(
     isStream

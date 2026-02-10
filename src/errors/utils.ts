@@ -1,4 +1,3 @@
-import { isProduction } from "../utils/env";
 import { normalizeAiSdkError } from "./ai-sdk";
 import { GatewayError } from "./gateway";
 
@@ -25,7 +24,7 @@ export const STATUS_CODE = (status: number) => {
 };
 
 export function getErrorMeta(error: unknown) {
-  const rawMessage = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : String(error);
 
   let code: string;
   let status: number;
@@ -44,8 +43,6 @@ export function getErrorMeta(error: unknown) {
   }
 
   const type = status < 500 ? "invalid_request_error" : "server_error";
-  const shouldMask = !code.includes("UPSTREAM") && status >= 500 && isProduction();
-  const message = shouldMask ? STATUS_CODE(status) : rawMessage;
 
-  return { code, status, param, type, message, rawMessage };
+  return { code, status, param, type, message };
 }

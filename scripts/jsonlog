@@ -18,4 +18,5 @@ jq --unbuffered -Rcr '
       --preview 'echo {2} | jq -C .' \
       --no-sort --tac \
       --bind 'enter:execute(echo {2} | fx)' \
+      --bind 'shift-down:preview-half-page-down,shift-up:preview-half-page-up' \
       --preview-window=right:50%:wrap

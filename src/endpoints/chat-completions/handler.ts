@@ -14,6 +14,8 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
+import { markPerf } from "../../telemetry/perf";
+import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { ChatCompletionsBodySchema } from "./schema";
@@ -68,7 +70,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
       {
-        requestId: ctx.request.headers.get("x-request-id"),
+        requestId: resolveRequestId(ctx.request),
         options: textOptions,
       },
       "[chat] AI SDK options",
@@ -81,6 +83,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request (streaming vs. non-streaming).
+    markPerf(ctx.request, "aiSdkStart");
     if (stream) {
       const result = streamText({
         model: languageModelWithMiddleware,
@@ -89,7 +92,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         // abortSignal: ctx.request.signal,
         onError: ({ error }) => {
           logger.error(error instanceof Error ? error : new Error(String(error)), {
-            requestId: ctx.request.headers.get("x-request-id"),
+            requestId: resolveRequestId(ctx.request),
           });
           throw error;
         },
@@ -102,6 +105,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         includeRawChunks: false,
         ...textOptions,
       });
+      markPerf(ctx.request, "aiSdkEnd");
 
       return toChatCompletionsStream(result, ctx.modelId);
     }
@@ -116,11 +120,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       },
       ...textOptions,
     });
+    markPerf(ctx.request, "aiSdkEnd");
 
-    logger.trace(
-      { requestId: ctx.request.headers.get("x-request-id"), result },
-      "[chat] AI SDK result",
-    );
+    logger.trace({ requestId: resolveRequestId(ctx.request), result }, "[chat] AI SDK result");
 
     return toChatCompletions(result, ctx.modelId);
   };
