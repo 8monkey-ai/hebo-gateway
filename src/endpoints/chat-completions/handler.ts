@@ -91,8 +91,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         // No abort signal here, otherwise we can't detect upstream from client cancellations
         // abortSignal: ctx.request.signal,
         onError: ({ error }) => {
-          logger.error(error instanceof Error ? error : new Error(String(error)), {
+          logger.error({
             requestId: resolveRequestId(ctx.request),
+            err: error instanceof Error ? error : new Error(String(error)),
           });
           throw error;
         },

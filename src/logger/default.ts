@@ -25,39 +25,37 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknown> => {
   if (args.length === 0) return {};
 
-  const [first, second, third] = args;
+  const [first, second] = args;
+
   let obj: Record<string, unknown> | undefined;
-  let err: Error | undefined;
+  let err: unknown;
   let msg: string | undefined;
 
   if (first instanceof Error) {
     err = first;
-    if (isRecord(second)) {
-      obj = second;
-      if (third !== undefined) {
-        msg = String(third);
-      }
-    } else if (second !== undefined) {
-      msg = String(second);
-    }
   } else if (isRecord(first)) {
-    obj = first;
-    if (second !== undefined) {
-      msg = String(second);
+    if (first["err"] !== undefined) {
+      err = first["err"];
+      delete first["err"];
     }
+    obj = first;
   } else {
     msg = String(first);
   }
 
+  if (second !== undefined) {
+    msg = String(second);
+  }
+
   if (err && msg === undefined) {
-    msg = err.message;
+    msg = err instanceof Error ? err.message : String(err);
   }
 
   return {
     level,
     time: Date.now(),
     ...(msg ? { msg } : {}),
-    ...(err ? { err: serializeError(err) } : {}),
+    ...(err ? { err: err instanceof Error ? serializeError(err) : err } : {}),
     ...obj,
   };
 };

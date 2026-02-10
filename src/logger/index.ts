@@ -4,7 +4,6 @@ export type LogFn = {
   (msg: string): void;
   (obj: Record<string, unknown>, msg?: string): void;
   (err: Error, msg?: string): void;
-  (err: Error, obj?: Record<string, unknown>, msg?: string): void;
 };
 
 export type Logger = Record<"trace" | "debug" | "info" | "warn" | "error", LogFn>;

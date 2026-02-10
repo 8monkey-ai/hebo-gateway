@@ -44,6 +44,7 @@ export const initPerf = (source: RequestIdSource) => {
   perfByRequestId.set(id, {
     timers: {},
     origin: performance.now(),
+    // eslint-disable-next-line eqeqeq
     memory: heapUsed == null ? undefined : { steadyHeapUsed: heapUsed, peakHeapUsed: heapUsed },
   });
 };
