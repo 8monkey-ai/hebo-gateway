@@ -1,7 +1,9 @@
 import * as z from "zod";
 
+import { isProduction } from "../utils/env";
+import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta } from "./utils";
+import { getErrorMeta, STATUS_CODE } from "./utils";
 
 export const OpenAIErrorSchema = z.object({
   error: z.object({
@@ -27,7 +29,18 @@ export function toOpenAIError(error: unknown): OpenAIError {
 
 export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
   const meta = getErrorMeta(error);
-  return toResponse(new OpenAIError(meta.message, meta.type, meta.code), {
+
+  const shouldMask = isProduction() && (meta.status >= 500 || meta.code.includes("UPSTREAM"));
+
+  let message;
+  if (shouldMask) {
+    const requestId = resolveRequestId(responseInit);
+    message = `${STATUS_CODE(meta.status)} (${requestId})`;
+  } else {
+    message = meta.message;
+  }
+
+  return toResponse(new OpenAIError(message, meta.type, meta.code), {
     ...responseInit,
     status: meta.status,
     statusText: meta.code,

@@ -1,3 +1,4 @@
+import { resolveRequestId } from "../utils/headers";
 import { initFetch } from "./fetch";
 
 type PerfStore = {
@@ -7,27 +8,12 @@ type PerfStore = {
 type RequestIdSource = string | URL | Request | RequestInit;
 
 const REQ_PERF_KEY = Symbol.for("@hebo/perf/by-request");
-const REQUEST_ID_HEADER = "x-request-id";
 
 type GlobalPerfState = typeof globalThis & {
   [REQ_PERF_KEY]?: Map<string, PerfStore>;
 };
 const g = globalThis as GlobalPerfState;
 const perfByRequestId = (g[REQ_PERF_KEY] ??= new Map<string, PerfStore>());
-
-const resolveRequestId = (source: RequestIdSource): string | undefined => {
-  if (typeof source === "string") return undefined;
-  if (source instanceof URL) return undefined;
-
-  let headers: Headers | undefined;
-  if (source instanceof Request) {
-    headers = source.headers;
-  } else if (source.headers) {
-    headers = source.headers instanceof Headers ? source.headers : new Headers(source.headers);
-  }
-
-  return headers?.get(REQUEST_ID_HEADER) ?? undefined;
-};
 
 const getPerfStore = (source: RequestIdSource): PerfStore | undefined => {
   const requestId = resolveRequestId(source);

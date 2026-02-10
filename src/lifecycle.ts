@@ -4,8 +4,9 @@ import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { isLoggerDisabled, logger } from "./logger";
 import { withAccessLog } from "./telemetry/access-log";
+import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
-import { toResponse } from "./utils/response";
+import { prepareResponseInit, toResponse } from "./utils/response";
 
 export const winterCgHandler = (
   run: (ctx: GatewayContext) => Promise<object | ReadableStream<Uint8Array>>,
@@ -29,12 +30,16 @@ export const winterCgHandler = (
       const after = await parsedConfig.hooks?.after?.(ctx as AfterHookContext);
       if (after) ctx.result = after;
 
-      ctx.response = ctx.result instanceof Response ? ctx.result : toResponse(ctx.result);
+      if (ctx.result instanceof Response) {
+        ctx.response = ctx.result;
+        return;
+      }
+      ctx.response = toResponse(ctx.result, prepareResponseInit(ctx.request));
     } catch (error) {
       logger.error(error instanceof Error ? error : new Error(String(error)), {
-        requestId: ctx.request.headers.get("x-request-id"),
+        requestId: resolveRequestId(ctx.request)!,
       });
-      ctx.response = toOpenAIErrorResponse(error);
+      ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));
     }
   };
 
@@ -47,6 +52,7 @@ export const winterCgHandler = (
       providers: parsedConfig.providers,
       models: parsedConfig.models,
     };
+
     const headers = prepareRequestHeaders(ctx.request);
     if (headers) ctx.request = new Request(ctx.request, { headers });
 

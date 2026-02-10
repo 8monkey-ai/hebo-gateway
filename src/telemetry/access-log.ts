@@ -1,6 +1,7 @@
 import type { GatewayContext } from "../types";
 
 import { logger } from "../logger";
+import { resolveRequestId } from "../utils/headers";
 import { clearPerf, getPerfMeta, initPerf, markPerf } from "./perf";
 import { instrumentStream } from "./stream";
 import { getAIMeta, getRequestMeta, getResponseMeta } from "./utils";
@@ -22,7 +23,7 @@ export const withAccessLog =
       const responseMeta = getResponseMeta(ctx.response);
 
       const meta: Record<string, unknown> = {
-        requestId: ctx.request.headers.get("x-request-id"),
+        requestId: resolveRequestId(ctx.request),
         ai: getAIMeta(ctx),
         request: requestMeta,
         response: responseMeta,
