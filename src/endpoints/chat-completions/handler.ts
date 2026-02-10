@@ -100,6 +100,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },
+        timeout: {
+          chunkMs: 5 * 60 * 1000,
+        },
         experimental_include: {
           requestBody: false,
         },
@@ -119,6 +122,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         requestBody: false,
         responseBody: false,
       },
+      timeout: 5 * 60 * 1000,
       ...textOptions,
     });
     markPerf(ctx.request, "aiSdkEnd");
