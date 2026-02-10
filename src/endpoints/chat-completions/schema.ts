@@ -62,6 +62,18 @@ export const ChatCompletionsUserMessageSchema = z.object({
 });
 export type ChatCompletionsUserMessage = z.infer<typeof ChatCompletionsUserMessageSchema>;
 
+export const ChatCompletionsReasoningDetailSchema = z.object({
+  id: z.string().optional(),
+  index: z.int().nonnegative(),
+  type: z.string(),
+  text: z.string().optional(),
+  signature: z.string().optional(),
+  data: z.string().optional(),
+  summary: z.string().optional(),
+  format: z.string().optional(),
+});
+export type ChatCompletionsReasoningDetail = z.infer<typeof ChatCompletionsReasoningDetailSchema>;
+
 export const ChatCompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
   // FUTURE: this should support arrays of TextContentPart and RefusalContentPart
@@ -71,6 +83,10 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
   // Extensions
   reasoning_content: z.string().optional().meta({ extension: true }),
+  reasoning_details: z
+    .array(ChatCompletionsReasoningDetailSchema)
+    .optional()
+    .meta({ extension: true }),
   extra_content: z.record(z.string(), z.any()).optional().meta({ extension: true }),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
