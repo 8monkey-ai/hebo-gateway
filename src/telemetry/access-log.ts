@@ -2,7 +2,7 @@ import type { GatewayContext } from "../types";
 
 import { logger } from "../logger";
 import { resolveRequestId } from "../utils/headers";
-import { clearPerf, getPerfMeta, initPerf, markPerf } from "./perf";
+import { clearPerf, getMemoryMeta, getPerfMeta, initPerf, markPerf } from "./perf";
 import { instrumentStream } from "./stream";
 import { getAIMeta, getRequestMeta, getResponseMeta } from "./utils";
 
@@ -28,6 +28,7 @@ export const withAccessLog =
         request: requestMeta,
         response: responseMeta,
         timings: getPerfMeta(ctx.request),
+        memory: getMemoryMeta(ctx.request),
         bytes: {
           in: requestBytes,
           out: stats?.bytes ?? responseMeta["contentLength"],
