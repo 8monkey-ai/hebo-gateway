@@ -117,6 +117,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const result = await generateText({
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
+      // FUTURE: currently can't tell whether upstream or downstream abort
       abortSignal: ctx.request.signal,
       experimental_include: {
         requestBody: false,
