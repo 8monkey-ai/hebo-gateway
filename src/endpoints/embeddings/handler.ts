@@ -14,6 +14,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
+import { markPerf } from "../../telemetry/perf";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { EmbeddingsBodySchema } from "./schema";
@@ -78,12 +79,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request.
+    markPerf(ctx.request, "aiSdkStart");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });
+    markPerf(ctx.request, "aiSdkEnd");
 
     logger.trace(
       { requestId: ctx.request.headers.get("x-request-id"), result },

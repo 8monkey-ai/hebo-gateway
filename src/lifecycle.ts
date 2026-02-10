@@ -15,9 +15,6 @@ export const winterCgHandler = (
 
   const core = async (ctx: GatewayContext): Promise<void> => {
     try {
-      const headers = prepareRequestHeaders(ctx.request);
-      if (headers) ctx.request = new Request(ctx.request, { headers });
-
       const before = await parsedConfig.hooks?.before?.(ctx as BeforeHookContext);
       if (before) {
         if (before instanceof Response) {
@@ -50,6 +47,8 @@ export const winterCgHandler = (
       providers: parsedConfig.providers,
       models: parsedConfig.models,
     };
+    const headers = prepareRequestHeaders(ctx.request);
+    if (headers) ctx.request = new Request(ctx.request, { headers });
 
     await handler(ctx);
 

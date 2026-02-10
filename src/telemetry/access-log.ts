@@ -1,24 +1,23 @@
 import type { GatewayContext } from "../types";
 
 import { logger } from "../logger";
+import { clearPerf, getPerfMeta, initPerf, markPerf } from "./perf";
 import { instrumentStream } from "./stream";
 import { getAIMeta, getRequestMeta, getResponseMeta } from "./utils";
 
 export const withAccessLog =
   (run: (ctx: GatewayContext) => Promise<void>) => async (ctx: GatewayContext) => {
-    const start = performance.now();
+    initPerf(ctx.request);
 
     const requestBytes = (() => {
       const n = Number(ctx.request.headers.get("content-length"));
       return Number.isFinite(n) ? n : undefined;
     })();
 
-    const logAccess = (
-      status: number,
-      stats?: { bytes?: number; streamStart?: number; streamEnd?: number },
-    ) => {
-      const totalDuration = +((stats?.streamEnd ?? performance.now()) - start).toFixed(2);
-      const responseTime = stats?.streamStart && +(stats.streamStart - start).toFixed(2);
+    const logAccess = (status: number, stats?: { bytes?: number }) => {
+      if (!stats) markPerf(ctx.request, "responseTime");
+      markPerf(ctx.request, "totalDuration");
+
       const requestMeta = getRequestMeta(ctx.request);
       const responseMeta = getResponseMeta(ctx.response);
 
@@ -27,10 +26,7 @@ export const withAccessLog =
         ai: getAIMeta(ctx),
         request: requestMeta,
         response: responseMeta,
-        timings: {
-          totalDuration,
-          responseTime: responseTime ?? totalDuration,
-        },
+        timings: getPerfMeta(ctx.request),
         bytes: {
           in: requestBytes,
           out: stats?.bytes ?? responseMeta["contentLength"],
@@ -42,6 +38,8 @@ export const withAccessLog =
       const msg = `${ctx.request.method} ${requestMeta["path"]} ${realStatus}`;
 
       logger.info(meta, msg);
+
+      clearPerf(ctx.request);
     };
 
     await run(ctx);
@@ -60,6 +58,8 @@ export const withAccessLog =
         statusText: ctx.response!.statusText,
         headers: ctx.response!.headers,
       });
+
+      markPerf(ctx.request, "responseTime");
 
       return;
     }
