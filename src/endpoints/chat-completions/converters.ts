@@ -18,7 +18,7 @@ import type {
 } from "ai";
 
 import { convertBase64ToUint8Array } from "@ai-sdk/provider-utils";
-import { jsonSchema, JsonToSseTransformStream, tool } from "ai";
+import { jsonSchema, tool } from "ai";
 
 import type {
   ChatCompletionsToolCall,
@@ -368,11 +368,8 @@ export function toChatCompletionsResponse(
 export function toChatCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-): ReadableStream<Uint8Array> {
-  return result.fullStream
-    .pipeThrough(new ChatCompletionsStream(model))
-    .pipeThrough(new JsonToSseTransformStream())
-    .pipeThrough(new TextEncoderStream());
+): ReadableStream<ChatCompletionsChunk | OpenAIError> {
+  return result.fullStream.pipeThrough(new ChatCompletionsStream(model));
 }
 
 export function toChatCompletionsStreamResponse(

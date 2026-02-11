@@ -14,7 +14,7 @@ import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
 
 export const winterCgHandler = (
-  run: (ctx: GatewayContext) => Promise<object | ReadableStream<Uint8Array>>,
+  run: (ctx: GatewayContext) => Promise<object | ReadableStream<object>>,
   config: GatewayConfig,
 ) => {
   const parsedConfig = parseConfig(config);
@@ -30,8 +30,8 @@ export const winterCgHandler = (
         ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
       }
 
-      ctx.result = await run(ctx);
-      ctx.response = toResponse(ctx.result, prepareResponseInit(ctx.request));
+      ctx.result = (await run(ctx)) as typeof ctx.result;
+      ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.request));
 
       const onResponse = await parsedConfig.hooks?.onResponse?.(ctx as OnResponseHookContext);
       if (onResponse) ctx.response = onResponse;

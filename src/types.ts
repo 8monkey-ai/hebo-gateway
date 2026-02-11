@@ -1,7 +1,12 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
 
-import type { ChatCompletionsBody } from "./endpoints/chat-completions/schema";
-import type { EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type {
+  ChatCompletions,
+  ChatCompletionsBody,
+  ChatCompletionsChunk,
+} from "./endpoints/chat-completions/schema";
+import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type { OpenAIError } from "./errors/openai";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
@@ -67,7 +72,11 @@ export type GatewayContext = {
   /**
    * Result returned by the handler (pre-response).
    */
-  result?: object | ReadableStream<Uint8Array>;
+  result?:
+    | ChatCompletions
+    | ReadableStream<ChatCompletionsChunk | OpenAIError>
+    | Embeddings
+    | object;
   /**
    * Final response returned by the lifecycle.
    */
@@ -137,9 +146,12 @@ export type GatewayHooks = {
     ctx: AfterHookContext,
   ) =>
     | void
-    | object
-    | ReadableStream<Uint8Array>
-    | Promise<void | object | ReadableStream<Uint8Array>>;
+    | ChatCompletions
+    | ReadableStream<ChatCompletionsChunk | OpenAIError>
+    | Embeddings
+    | Promise<
+        void | ChatCompletions | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings
+      >;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.

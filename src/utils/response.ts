@@ -2,6 +2,19 @@ import { REQUEST_ID_HEADER, resolveRequestId } from "./headers";
 
 const TEXT_ENCODER = new TextEncoder();
 
+class JsonToSseTransformStream extends TransformStream<unknown, string> {
+  constructor() {
+    super({
+      transform(part, controller) {
+        controller.enqueue(`data: ${JSON.stringify(part)}\n\n`);
+      },
+      flush(controller) {
+        controller.enqueue("data: [DONE]\n\n");
+      },
+    });
+  }
+}
+
 export const prepareResponseInit = (request: Request): ResponseInit => ({
   headers: { [REQUEST_ID_HEADER]: resolveRequestId(request.headers)! },
 });
@@ -25,13 +38,15 @@ export const mergeResponseInit = (
 };
 
 export const toResponse = (
-  result: ReadableStream<Uint8Array> | Uint8Array<ArrayBuffer> | object | string,
+  result: ReadableStream | Uint8Array<ArrayBuffer> | object | string,
   responseInit?: ResponseInit,
 ): Response => {
   let body: BodyInit;
 
   const isStream = result instanceof ReadableStream;
-  if (isStream || result instanceof Uint8Array) {
+  if (isStream) {
+    body = result.pipeThrough(new JsonToSseTransformStream()).pipeThrough(new TextEncoderStream());
+  } else if (result instanceof Uint8Array) {
     body = result;
   } else if (typeof result === "string") {
     body = TEXT_ENCODER.encode(result);
@@ -57,7 +72,7 @@ export const toResponse = (
       ? {
           "content-type": "text/event-stream",
           "cache-control": "no-cache",
-          Connection: "keep-alive",
+          connection: "keep-alive",
         }
       : {
           "content-type": "application/json",
