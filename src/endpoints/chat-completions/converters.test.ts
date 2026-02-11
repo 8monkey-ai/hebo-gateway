@@ -184,6 +184,7 @@ describe("Chat Completions Converters", () => {
           {
             type: "reasoning.encrypted",
             data: "secret-data",
+            format: "unknown",
             index: 0,
           },
         ],

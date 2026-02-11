@@ -611,15 +611,28 @@ export function toReasoningDetail(
   id: string,
   index: number,
 ): ChatCompletionsReasoningDetail {
-  const entries = Object.entries(reasoning.providerMetadata ?? {});
-  const [_, metadata] = entries[0] ?? [];
+  const providerMetadata = reasoning.providerMetadata ?? {};
 
-  if (metadata?.["redactedData"]) {
+  let redactedData: string | undefined;
+  let signature: string | undefined;
+
+  for (const metadata of Object.values(providerMetadata)) {
+    if (metadata && typeof metadata === "object") {
+      if ("redactedData" in metadata && typeof metadata["redactedData"] === "string") {
+        redactedData = metadata["redactedData"];
+      }
+      if ("signature" in metadata && typeof metadata["signature"] === "string") {
+        signature = metadata["signature"];
+      }
+    }
+  }
+
+  if (redactedData) {
     return {
       id,
       index,
       type: "reasoning.encrypted",
-      data: metadata["redactedData"] as string,
+      data: redactedData,
       format: "unknown",
     };
   }
@@ -629,7 +642,7 @@ export function toReasoningDetail(
     index,
     type: "reasoning.text",
     text: reasoning.text,
-    signature: metadata?.["signature"] as string | undefined,
+    signature,
     format: "unknown",
   };
 }
