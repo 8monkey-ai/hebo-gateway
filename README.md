@@ -573,7 +573,6 @@ const gw = gateway({
 ```
 
 If you provide a custom logger, it must implement `trace`, `debug`, `info`, `warn`, and `error` methods.
-For production workloads, we recommend `pino` for better logging performance and lower overhead.
 
 Example with **pino**:
 
@@ -590,6 +589,9 @@ const gw = gateway({
   ),
 });
 ```
+
+> [!TIP]
+> For production workloads, we recommend `pino` for better logging performance and lower overhead.
 
 ### Telemetry Settings
 
@@ -609,6 +611,9 @@ const gw = gateway({
   },
 });
 ```
+
+> [!TIP]
+> For observability integration that is not otel compliant (for example, Langfuse), you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
 ### Passing Framework State to Hooks
 
