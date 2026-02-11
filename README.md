@@ -532,6 +532,15 @@ Reasoning output is surfaced as extension to the `completion` object.
 
 Most SDKs handle these fields out-of-the-box.
 
+#### Thinking Blocks & Context Preservation
+
+Advanced models (like Anthropic Claude 3.7 or Gemini 3) surface structured reasoning steps and signatures that act as a "save state" for the model's internal reasoning process. To maintain this context across multi-turn conversations and tool-calling workflows, you should pass back the following extensions in subsequent messages:
+
+- **reasoning_details**: Standardized array of reasoning steps and generic signatures.
+- **extra_content**: Provider-specific extensions, such as **Google's thought signatures** on Vertex AI.
+
+For **Gemini 3** models, returning the thought signature via `extra_content` is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance.
+
 ## 🧪 Advanced Usage
 
 ### Logger Settings
