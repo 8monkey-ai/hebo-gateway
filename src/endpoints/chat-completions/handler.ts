@@ -101,7 +101,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           throw new DOMException("Upstream failed", "AbortError");
         },
         timeout: {
-          chunkMs: 5 * 60 * 1000,
+          totalMs: 5 * 60 * 1000,
         },
         experimental_include: {
           requestBody: false,
