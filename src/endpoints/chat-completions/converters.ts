@@ -476,6 +476,7 @@ export class ChatCompletionsStream extends TransformStream<
 
           case "error": {
             const error = part.error;
+            // FUTURE mask in production mode and return responseID
             controller.enqueue(toOpenAIError(error));
             break;
           }
