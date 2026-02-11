@@ -31,7 +31,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Telemetry](#telemetry-settings)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -588,6 +588,25 @@ const gw = gateway({
       level: "info"
     }
   ),
+});
+```
+
+### Telemetry Settings
+
+Hebo Gateway can forward telemetry settings via the `telemetry` config field.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { trace } from "@opentelemetry/api";
+
+const gw = gateway({
+  // ...
+  telemetry: {
+    // default: false
+    enabled: true,
+    // default: TraceProivder from @opentelemetry/api singleton
+    tracer: trace.getTracer("my-gateway"),
+  },
 });
 ```
 

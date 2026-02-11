@@ -1,4 +1,5 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
+import type { Tracer } from "@opentelemetry/api";
 
 import type {
   ChatCompletions,
@@ -179,6 +180,20 @@ export type GatewayConfig = {
    * Optional lifecycle hooks for routing, auth, and response shaping.
    */
   hooks?: GatewayHooks;
+  /**
+   * Optional AI SDK telemetry configuration.
+   */
+  telemetry?: {
+    /**
+     * Enable AI SDK OpenTelemetry instrumentation.
+     * Disabled by default.
+     */
+    enabled?: boolean;
+    /**
+     * Optional custom OpenTelemetry tracer passed to AI SDK telemetry.
+     */
+    tracer?: Tracer;
+  };
   /**
    * Preferred logger configuration: custom logger or default logger settings.
    */

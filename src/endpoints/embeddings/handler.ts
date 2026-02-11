@@ -16,6 +16,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
+import { toAiSdkTelemetry } from "../../telemetry/otel";
 import { markPerf } from "../../telemetry/perf";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
@@ -30,6 +31,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
+
+    const requestId = resolveRequestId(ctx.request);
 
     // Parse + validate input.
     let body;
@@ -72,10 +75,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
-    logger.trace(
-      { requestId: resolveRequestId(ctx.request), options: embedOptions },
-      "[embeddings] AI SDK options",
-    );
+    logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -88,15 +88,13 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
+      experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });
     markPerf(ctx.request, "aiSdkEnd");
 
-    logger.trace(
-      { requestId: resolveRequestId(ctx.request), result },
-      "[embeddings] AI SDK result",
-    );
+    logger.trace({ requestId, result }, "[embeddings] AI SDK result");
 
     ctx.result = toEmbeddings(result, ctx.modelId);
 

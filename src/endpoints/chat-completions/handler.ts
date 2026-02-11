@@ -16,6 +16,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
+import { toAiSdkTelemetry } from "../../telemetry/otel";
 import { markPerf } from "../../telemetry/perf";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
@@ -30,6 +31,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
+
+    const requestId = resolveRequestId(ctx.request);
 
     // Parse + validate input.
     let body;
@@ -74,7 +77,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
       {
-        requestId: resolveRequestId(ctx.request),
+        requestId,
         options: textOptions,
       },
       "[chat] AI SDK options",
@@ -92,11 +95,12 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
+        experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
         // No abort signal here, otherwise we can't detect upstream from client cancellations
         // abortSignal: ctx.request.signal,
         onError: ({ error }) => {
           logger.error({
-            requestId: resolveRequestId(ctx.request),
+            requestId,
             err: error instanceof Error ? error : new Error(String(error)),
           });
           throw error;
@@ -123,6 +127,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const result = await generateText({
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
+      experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
       // FUTURE: currently can't tell whether upstream or downstream abort
       abortSignal: ctx.request.signal,
       experimental_include: {
@@ -134,7 +139,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     });
     markPerf(ctx.request, "aiSdkEnd");
 
-    logger.trace({ requestId: resolveRequestId(ctx.request), result }, "[chat] AI SDK result");
+    logger.trace({ requestId, result }, "[chat] AI SDK result");
 
     ctx.result = toChatCompletions(result, ctx.modelId);
 
