@@ -7,7 +7,7 @@ import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
 
 /**
- * Request overrides returned from the `before` hook.
+ * Request overrides returned from the `onRequest` hook.
  */
 export type RequestPatch = {
   /**
@@ -83,7 +83,8 @@ export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
 
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
   Required<Pick<HookContext, K>>;
-export type BeforeHookContext = RequiredHookContext<"request">;
+export type OnRequestHookContext = RequiredHookContext<"request">;
+export type BeforeHookContext = RequiredHookContext<"request" | "body" | "operation">;
 export type ResolveModelHookContext = RequiredHookContext<"request" | "body" | "modelId">;
 export type ResolveProviderHookContext = RequiredHookContext<
   "request" | "body" | "modelId" | "resolvedModelId" | "operation"
@@ -91,6 +92,7 @@ export type ResolveProviderHookContext = RequiredHookContext<
 export type AfterHookContext = RequiredHookContext<
   "request" | "result" | "provider" | "resolvedModelId" | "operation"
 >;
+export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
 
 /**
  * Hooks to plugin to the gateway lifecycle.
@@ -101,9 +103,20 @@ export type GatewayHooks = {
    * @returns Optional RequestPatch to merge into headers / override body,
    * or Response to short-circuit the request.
    */
+  onRequest?: (
+    ctx: OnRequestHookContext,
+  ) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
+  /**
+   * Runs after request JSON is parsed and validated for chat completions / embeddings.
+   * @returns Replacement parsed body, or undefined to keep original.
+   */
   before?: (
     ctx: BeforeHookContext,
-  ) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
+  ) =>
+    | void
+    | ChatCompletionsBody
+    | EmbeddingsBody
+    | Promise<void | ChatCompletionsBody | EmbeddingsBody>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @returns Canonical model ID or undefined to keep original.
@@ -118,7 +131,7 @@ export type GatewayHooks = {
   ) => ProviderV3 | void | Promise<ProviderV3 | void>;
   /**
    * Runs after the endpoint handler.
-   * @returns Response to replace, or undefined to keep original.
+   * @returns Result to replace, or undefined to keep original.
    */
   after?: (
     ctx: AfterHookContext,
@@ -127,6 +140,11 @@ export type GatewayHooks = {
     | object
     | ReadableStream<Uint8Array>
     | Promise<void | object | ReadableStream<Uint8Array>>;
+  /**
+   * Runs after the lifecycle has produced the final Response.
+   * @returns Replacement Response, or undefined to keep original.
+   */
+  onResponse?: (ctx: OnResponseHookContext) => void | Response | Promise<void | Response>;
 };
 
 /**

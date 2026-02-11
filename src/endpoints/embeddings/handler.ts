@@ -2,6 +2,8 @@ import { embedMany, wrapEmbeddingModel } from "ai";
 import * as z from "zod/mini";
 
 import type {
+  AfterHookContext,
+  BeforeHookContext,
   GatewayConfig,
   Endpoint,
   GatewayContext,
@@ -43,15 +45,17 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
     ctx.body = parsed.data;
 
+    ctx.operation = "embeddings";
+    ctx.body = (await hooks?.before?.(ctx as BeforeHookContext)) ?? ctx.body;
+
     // Resolve model + provider (hooks may override defaults).
     let inputs;
-    ({ model: ctx.modelId, ...inputs } = parsed.data);
+    ({ model: ctx.modelId, ...inputs } = ctx.body);
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
 
-    ctx.operation = "embeddings";
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
       override ??
@@ -94,7 +98,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       "[embeddings] AI SDK result",
     );
 
-    return toEmbeddings(result, ctx.modelId);
+    ctx.result = toEmbeddings(result, ctx.modelId);
+
+    return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
   };
 
   return { handler: winterCgHandler(handler, config) };

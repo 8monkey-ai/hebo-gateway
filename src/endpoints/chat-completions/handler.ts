@@ -2,6 +2,8 @@ import { generateText, streamText, wrapLanguageModel } from "ai";
 import * as z from "zod/mini";
 
 import type {
+  AfterHookContext,
+  BeforeHookContext,
   GatewayConfig,
   Endpoint,
   GatewayContext,
@@ -43,15 +45,17 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
     ctx.body = parsed.data;
 
+    ctx.operation = "text";
+    ctx.body = (await hooks?.before?.(ctx as BeforeHookContext)) ?? ctx.body;
+
     // Resolve model + provider (hooks may override defaults).
     let inputs, stream;
-    ({ model: ctx.modelId, stream, ...inputs } = parsed.data);
+    ({ model: ctx.modelId, stream, ...inputs } = ctx.body);
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
 
-    ctx.operation = "text";
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
       override ??
@@ -111,7 +115,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       });
       markPerf(ctx.request, "aiSdkEnd");
 
-      return toChatCompletionsStream(result, ctx.modelId);
+      ctx.result = toChatCompletionsStream(result, ctx.modelId);
+
+      return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
     }
 
     const result = await generateText({
@@ -130,7 +136,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     logger.trace({ requestId: resolveRequestId(ctx.request), result }, "[chat] AI SDK result");
 
-    return toChatCompletions(result, ctx.modelId);
+    ctx.result = toChatCompletions(result, ctx.modelId);
+
+    return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
   };
 
   return { handler: winterCgHandler(handler, config) };

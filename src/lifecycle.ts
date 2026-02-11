@@ -1,4 +1,9 @@
-import type { AfterHookContext, BeforeHookContext, GatewayConfig, GatewayContext } from "./types";
+import type {
+  GatewayConfig,
+  GatewayContext,
+  OnRequestHookContext,
+  OnResponseHookContext,
+} from "./types";
 
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
@@ -16,25 +21,20 @@ export const winterCgHandler = (
 
   const core = async (ctx: GatewayContext): Promise<void> => {
     try {
-      const before = await parsedConfig.hooks?.before?.(ctx as BeforeHookContext);
-      if (before) {
-        if (before instanceof Response) {
-          ctx.response = before;
+      const onRequest = await parsedConfig.hooks?.onRequest?.(ctx as OnRequestHookContext);
+      if (onRequest) {
+        if (onRequest instanceof Response) {
+          ctx.response = onRequest;
           return;
         }
-        ctx.request = maybeApplyRequestPatch(ctx.request, before);
+        ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
       }
 
       ctx.result = await run(ctx);
-
-      const after = await parsedConfig.hooks?.after?.(ctx as AfterHookContext);
-      if (after) ctx.result = after;
-
-      if (ctx.result instanceof Response) {
-        ctx.response = ctx.result;
-        return;
-      }
       ctx.response = toResponse(ctx.result, prepareResponseInit(ctx.request));
+
+      const onResponse = await parsedConfig.hooks?.onResponse?.(ctx as OnResponseHookContext);
+      if (onResponse) ctx.response = onResponse;
     } catch (error) {
       logger.error({
         requestId: resolveRequestId(ctx.request)!,

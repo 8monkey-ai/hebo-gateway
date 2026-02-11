@@ -288,11 +288,23 @@ const gw = gateway({
      * @returns Optional RequestPatch to merge into headers / override body.
      * Returning a Response stops execution of the endpoint.
      */
-    before: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
+    onRequest: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
       // Example Use Cases:
-      // - Transform request body
       // - Verify authentication
       // - Enforce rate limits
+      return undefined;
+    },
+    /**
+     * Runs after body is parsed & validated.
+     * @param ctx.body Parsed request body.
+     * @returns Replacement parsed body, or undefined to keep original body unchanged.
+     */
+    before: async (ctx: {
+      body: ChatCompletionsBody | EmbeddingsBody;
+      operation: "text" | "embeddings";
+    }): Promise<ChatCompletionsBody | EmbeddingsBody | void> => {
+      // Example Use Cases:
+      // - Transform request body
       // - Observability integration
       return undefined;
     },
@@ -344,11 +356,22 @@ const gw = gateway({
       // - Result logging
       return undefined;
     },
+    /**
+     * Runs after the gateway has produced the final Response.
+     * @param ctx.response Response object returned by the lifecycle.
+     * @returns Replacement response, or undefined to keep original.
+     */
+    onResponse: async (ctx: { response: Response }): Promise<Response | void> => {
+      // Example Use Cases:
+      // - Add response headers
+      // - Replace or redact response payload
+      return undefined;
+    },
   },
 });
 ```
 
-The `ctx` object is **readonly for core fields**. Use return values to override request / result and to provide modelId / provider instances.
+The `ctx` object is **readonly for core fields**. Use return values to override request / parsed body / result / response and to provide modelId / provider instances.
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
