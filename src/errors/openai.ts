@@ -35,6 +35,7 @@ export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseIni
   let message;
   if (shouldMask) {
     const requestId = resolveRequestId(responseInit);
+    // FUTURE: always attach requestId to errors (masked and unmasked)
     message = `${STATUS_CODE(meta.status)} (${requestId})`;
   } else {
     message = meta.message;
