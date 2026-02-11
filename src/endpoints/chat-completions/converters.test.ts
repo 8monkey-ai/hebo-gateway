@@ -153,6 +153,7 @@ describe("Chat Completions Converters", () => {
             text: "Thinking hard...",
             signature: "sig-xyz",
             format: "unknown",
+            index: 0,
           },
         ],
       });
@@ -172,6 +173,32 @@ describe("Chat Completions Converters", () => {
       expect(content[1]).toEqual({
         type: "text",
         text: "The result is 42.",
+      });
+    });
+
+    test("should convert reasoning.encrypted back to reasoning parts", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "Hello",
+        reasoning_details: [
+          {
+            type: "reasoning.encrypted",
+            data: "secret-data",
+            index: 0,
+          },
+        ],
+      });
+
+      expect(Array.isArray(message.content)).toBe(true);
+      const content = message.content as any[];
+      expect(content[0]).toEqual({
+        type: "reasoning",
+        text: "",
+        providerOptions: {
+          unknown: {
+            redactedData: "secret-data",
+          },
+        },
       });
     });
   });

@@ -43,6 +43,7 @@ import type {
   ChatCompletionsToolCallDelta,
   ChatCompletionsReasoningEffort,
   ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningDetail,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -152,31 +153,39 @@ export function fromChatCompletionsAssistantMessage(
 ): AssistantModelMessage {
   const { tool_calls, role, content, extra_content, reasoning_details } = message;
 
-  const parts: AssistantContent[] = [];
+  const parts: AssistantContent = [];
 
-  if (reasoning_details?.length) {
-    for (const detail of reasoning_details) {
-      if (detail.text && detail.type === "reasoning.text") {
-        const part: AssistantContent = {
-          type: "reasoning",
-          text: detail.text,
-        };
-
-        if (detail.signature) {
-          part.providerOptions = {
-            unknown: {
-              signature: detail.signature,
+  if (Array.isArray(parts)) {
+    if (reasoning_details?.length) {
+      for (const detail of reasoning_details) {
+        if (detail.text && detail.type === "reasoning.text") {
+          parts.push({
+            type: "reasoning",
+            text: detail.text,
+            providerOptions: detail.signature
+              ? {
+                  unknown: {
+                    signature: detail.signature,
+                  },
+                }
+              : undefined,
+          });
+        } else if (detail.type === "reasoning.encrypted" && detail.data) {
+          parts.push({
+            type: "reasoning",
+            text: "",
+            providerOptions: {
+              unknown: {
+                redactedData: detail.data,
+              },
             },
-          };
+          });
         }
-        parts.push(part);
       }
     }
-  }
 
-  if (tool_calls?.length) {
-    parts.push(
-      ...tool_calls.map((tc: ChatCompletionsToolCall) => {
+    if (tool_calls?.length) {
+      for (const tc of tool_calls) {
         const { id, function: fn, extra_content } = tc;
         const out: ToolCallPart = {
           type: "tool-call",
@@ -187,19 +196,19 @@ export function fromChatCompletionsAssistantMessage(
         if (extra_content) {
           out.providerOptions = extra_content;
         }
-        return out;
-      }),
-    );
-  } else if (content !== undefined && content !== null) {
-    parts.push({
-      type: "text",
-      text: content,
-    });
+        parts.push(out);
+      }
+    } else if (content !== undefined && content !== null) {
+      parts.push({
+        type: "text",
+        text: content,
+      });
+    }
   }
 
   const out: AssistantModelMessage = {
     role: role,
-    content: parts.length > 0 ? parts : (content ?? ""),
+    content: Array.isArray(parts) && parts.length > 0 ? parts : (content ?? ""),
   };
 
   if (extra_content) {
@@ -605,12 +614,12 @@ export function toReasoningDetail(
   const entries = Object.entries(reasoning.providerMetadata ?? {});
   const [_, metadata] = entries[0] ?? [];
 
-  if (metadata?.redactedData) {
+  if (metadata?.["redactedData"]) {
     return {
       id,
       index,
       type: "reasoning.encrypted",
-      data: metadata.redactedData,
+      data: metadata["redactedData"] as string,
       format: "unknown",
     };
   }
@@ -620,7 +629,7 @@ export function toReasoningDetail(
     index,
     type: "reasoning.text",
     text: reasoning.text,
-    signature: metadata?.signature,
+    signature: metadata?.["signature"] as string | undefined,
     format: "unknown",
   };
 }
