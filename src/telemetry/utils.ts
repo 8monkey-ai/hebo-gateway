@@ -21,12 +21,11 @@ export const getRequestAttributes = (request?: Request): Attributes => {
   if (!request) return {};
 
   const attributes: Attributes = {};
-  const headers = request.headers;
   attributes["http.request.method"] = request.method;
   attributes["url.path"] = getPath(request);
-  attributes["http.request.header.content_type"] = getHeader(headers, "content-type");
-  attributes["http.request.header.content_length"] = getHeader(headers, "content-length");
-  attributes["user_agent.original"] = getHeader(headers, "user-agent");
+  attributes["http.request.header.content_type"] = getHeader(request.headers, "content-type");
+  attributes["http.request.header.content_length"] = getHeader(request.headers, "content-length");
+  attributes["user_agent.original"] = getHeader(request.headers, "user-agent");
 
   return attributes;
 };
@@ -48,9 +47,8 @@ export const getResponseAttributes = (result?: Response): Attributes => {
   if (!result) return {};
 
   const attributes: Attributes = {};
-  const headers = result.headers;
   attributes["http.response.status_code"] = result.status;
-  attributes["http.response.header.content_type"] = getHeader(headers, "content-type");
-  attributes["http.response.header.content_length"] = getHeader(headers, "content-length");
+  attributes["http.response.header.content_type"] = getHeader(result.headers, "content-type");
+  attributes["http.response.header.content_length"] = getHeader(result.headers, "content-length");
   return attributes;
 };

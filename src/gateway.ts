@@ -5,7 +5,7 @@ import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 import { logger } from "./logger";
-import { getRequestMeta, getResponseMeta } from "./telemetry/utils";
+import { getRequestAttributes, getResponseAttributes } from "./telemetry/utils";
 
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
@@ -37,8 +37,9 @@ export function gateway(config: GatewayConfig) {
     const durationMs = +(performance.now() - start).toFixed(2);
     logger.warn(
       {
-        req: getRequestMeta(req),
-        res: { ...getResponseMeta(response), durationMs, ttfbMs: durationMs },
+        ...getRequestAttributes(req),
+        ...getResponseAttributes(response),
+        "http.server.duration": durationMs,
       },
       `${req.method} ${pathname} 404`,
     );
