@@ -2,6 +2,7 @@ import type { ProviderId } from "../providers/types";
 
 export const CANONICAL_MODEL_IDS = [
   // Anthropic
+  "anthropic/claude-opus-4.6",
   "anthropic/claude-haiku-4.5",
   "anthropic/claude-sonnet-4.5",
   "anthropic/claude-opus-4.5",
@@ -21,6 +22,7 @@ export const CANONICAL_MODEL_IDS = [
   "openai/gpt-5.2-chat",
   "openai/gpt-5.2-pro",
   "openai/gpt-5.2-codex",
+  "openai/gpt-5.3-codex",
   "openai/gpt-5-mini",
   "openai/gpt-5-nano",
   "openai/gpt-5-codex",

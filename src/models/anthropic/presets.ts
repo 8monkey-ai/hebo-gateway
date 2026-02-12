@@ -108,7 +108,19 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Claude Opus 4.5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     created: "2025-11-01",
-    knowledge: "2025-08",
+    knowledge: "2025-05",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const claudeOpus46 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-opus-4.6" as const,
+  {
+    ...CLAUDE_BASE,
+    ...CLAUDE_PDF_MODALITIES,
+    name: "Claude Opus 4.6",
+    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
+    created: "2026-02-05",
+    knowledge: "2025-05",
   } satisfies DeepPartial<CatalogModel>,
 );
 
@@ -137,6 +149,7 @@ export const claudeOpus4 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const claudeAtomic = {
+  "v4.6": [claudeOpus46],
   "v4.5": [claudeHaiku45, claudeSonnet45, claudeOpus45],
   "v4.1": [claudeOpus41],
   v4: [claudeSonnet4, claudeOpus4],
@@ -145,17 +158,22 @@ const claudeAtomic = {
   v3: [claudeHaiku3],
   haiku: [claudeHaiku45, claudeHaiku35, claudeHaiku3],
   sonnet: [claudeSonnet45, claudeSonnet4, claudeSonnet37, claudeSonnet35],
-  opus: [claudeOpus45, claudeOpus41, claudeOpus4],
+  opus: [claudeOpus46, claudeOpus45, claudeOpus41, claudeOpus4],
 } as const;
 
 const claudeGroups = {
-  "v4.x": [...claudeAtomic["v4.5"], ...claudeAtomic["v4.1"], ...claudeAtomic["v4"]],
+  "v4.x": [
+    ...claudeAtomic["v4.6"],
+    ...claudeAtomic["v4.5"],
+    ...claudeAtomic["v4.1"],
+    ...claudeAtomic["v4"],
+  ],
   "v3.x": [...claudeAtomic["v3.7"], ...claudeAtomic["v3.5"], ...claudeAtomic["v3"]],
 } as const;
 
 export const claude = {
   ...claudeAtomic,
   ...claudeGroups,
-  latest: [...claudeAtomic["v4.5"]],
+  latest: [...claudeAtomic["v4.6"]],
   all: Object.values(claudeAtomic).flat(),
 } as const;

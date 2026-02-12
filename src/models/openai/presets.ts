@@ -178,6 +178,16 @@ export const gpt52Codex = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const gpt53Codex = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.3-codex" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.3 Codex",
+    created: "2026-02-05",
+    knowledge: "2025-08",
+  } satisfies CatalogModel,
+);
+
 export const textEmbedding3Small = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/text-embedding-3-small" as const,
   {
@@ -230,13 +240,14 @@ const gptAtomic = {
   v5: [gpt5, gpt5Mini, gpt5Nano, gpt5Pro],
   "v5.1": [gpt51, gpt51Chat, gpt51Codex, gpt51CodexMax],
   "v5.2": [gpt52, gpt52Chat, gpt52Pro, gpt52Codex],
-  codex: [gpt5Codex, gpt51Codex, gpt51CodexMax, gpt52Codex],
+  "v5.3": [gpt53Codex],
+  codex: [gpt5Codex, gpt51Codex, gpt51CodexMax, gpt52Codex, gpt53Codex],
   chat: [gpt51Chat, gpt52Chat],
   pro: [gpt5Pro, gpt52Pro],
 } as const;
 
 const gptGroups = {
-  "v5.x": [...gptAtomic["v5"], ...gptAtomic["v5.1"], ...gptAtomic["v5.2"]],
+  "v5.x": [...gptAtomic["v5"], ...gptAtomic["v5.1"], ...gptAtomic["v5.2"], ...gptAtomic["v5.3"]],
 } as const;
 
 const textEmbeddingsAtomic = {
