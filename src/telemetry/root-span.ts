@@ -26,14 +26,15 @@ export const withRootSpan =
 
       attrs["http.response.status_code_effective"] =
         status === 200 ? (ctx.response?.status ?? status) : status;
+
+      rootSpan.setStatus({ code: status === 200 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
+
       attrs["network.io.bytes_in"] = Number(ctx.request.headers.get("content-length"));
       attrs["network.io.bytes_out"] =
         stats?.bytes ?? Number(attrs["http.response.header.content_length"]);
       attrs["http.server.duration"] = performance.now() - requestStart;
 
       rootSpan.setAttributes(attrs);
-
-      rootSpan.setStatus({ code: status === 200 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
 
       rootSpan.finish();
     };
