@@ -16,7 +16,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { toAiSdkTelemetry } from "../../telemetry/otel";
+import { toAiSdkTelemetry } from "../../telemetry/ai-sdk";
 import { withSpan } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";

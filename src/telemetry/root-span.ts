@@ -11,16 +11,11 @@ import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
 import { getAIAttributes, getRequestAttributes, getResponseAttributes } from "./utils";
 
-export const withAccessSpan =
+export const withRootSpan =
   (run: (ctx: GatewayContext) => Promise<void>, tracer?: Tracer) => async (ctx: GatewayContext) => {
     const requestStart = performance.now();
     const rootSpan = startSpan(ctx.request.url, undefined, tracer, true);
     initFetch();
-
-    const requestBytes = (() => {
-      const n = Number(ctx.request.headers.get("content-length"));
-      return Number.isFinite(n) ? n : undefined;
-    })();
 
     const endAccessSpan = (status: number, stats?: { bytes: number }) => {
       const attrs: Attributes = {};
@@ -32,8 +27,9 @@ export const withAccessSpan =
       attrs["request.id"] = resolveRequestId(ctx.request);
       attrs["http.response.status_code_effective"] =
         status === 200 ? (ctx.response?.status ?? status) : status;
-      attrs["network.io.bytes_in"] = requestBytes;
-      attrs["network.io.bytes_out"] = stats?.bytes ?? attrs["http.response.header.content_length"];
+      attrs["network.io.bytes_in"] = Number(ctx.request.headers.get("content-length"));
+      attrs["network.io.bytes_out"] =
+        stats?.bytes ?? Number(attrs["http.response.header.content_length"]);
       attrs["http.server.duration"] = performance.now() - requestStart;
 
       rootSpan.setAttributes(attrs);

@@ -8,7 +8,7 @@ import type {
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
-import { withAccessSpan } from "./telemetry/access-log";
+import { withRootSpan } from "./telemetry/root-span";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
@@ -45,7 +45,7 @@ export const winterCgHandler = (
   };
 
   const handler = parsedConfig.telemetry?.enabled
-    ? withAccessSpan(core, parsedConfig.telemetry?.tracer)
+    ? withRootSpan(core, parsedConfig.telemetry?.tracer)
     : core;
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {

@@ -6,6 +6,7 @@ const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undef
 
 const getPath = (request: Request) => {
   try {
+    // FUTURE: optimize
     return new URL(request.url).pathname;
   } catch {
     return request.url;
@@ -15,6 +16,7 @@ const getPath = (request: Request) => {
 const toGenAIOperationName = (operation?: GatewayContext["operation"]) =>
   operation === "embeddings" ? "embeddings" : operation === "text" ? "chat" : undefined;
 
+// FUTURE: check with Elysia
 export const getRequestAttributes = (request?: Request): Attributes => {
   if (!request) return {};
 
@@ -29,6 +31,7 @@ export const getRequestAttributes = (request?: Request): Attributes => {
   return attributes;
 };
 
+// FUTURE: check with Gen AI
 export const getAIAttributes = (context?: Partial<GatewayContext>): Attributes => {
   if (!context) return {};
 
@@ -40,6 +43,7 @@ export const getAIAttributes = (context?: Partial<GatewayContext>): Attributes =
   return attributes;
 };
 
+// FUTURE: check with Elysia
 export const getResponseAttributes = (result?: Response): Attributes => {
   if (!result) return {};
 
