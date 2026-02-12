@@ -18,11 +18,12 @@ export const withRootSpan =
     initFetch();
 
     const endAccessSpan = (status: number, stats?: { bytes: number }) => {
-      const attrs: Attributes = {};
-
-      Object.assign(attrs, getRequestAttributes(ctx.request));
-      Object.assign(attrs, getResponseAttributes(ctx.response));
-      Object.assign(attrs, getAIAttributes(ctx));
+      const attrs: Attributes = Object.assign(
+        {},
+        getRequestAttributes(ctx.request),
+        getResponseAttributes(ctx.response),
+        getAIAttributes(ctx),
+      );
 
       attrs["request.id"] = resolveRequestId(ctx.request);
       attrs["http.response.status_code_effective"] =
@@ -34,7 +35,7 @@ export const withRootSpan =
 
       rootSpan.setAttributes(attrs);
 
-      rootSpan.setStatus({ code: status == 200 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
+      rootSpan.setStatus({ code: status === 200 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
 
       rootSpan.finish();
     };
