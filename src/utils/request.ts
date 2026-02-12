@@ -10,9 +10,7 @@ export const prepareRequestHeaders = (request: Request) => {
   if (existingRequestId) return;
 
   const requestId =
-    request.headers.get("x-correlation-id") ??
-    request.headers.get("x-trace-id") ??
-    crypto.randomUUID();
+    "req_" + crypto.getRandomValues(new Uint32Array(2)).reduce((s, n) => s + n.toString(36), "");
 
   const headers = new Headers(request.headers);
   headers.set(REQUEST_ID_HEADER, requestId);
@@ -38,7 +36,6 @@ export const prepareForwardHeaders = (request: Request): Record<string, string> 
     : `@hebo-ai/gateway/${GATEWAY_VERSION}`;
 
   return {
-    [REQUEST_ID_HEADER]: request.headers.get(REQUEST_ID_HEADER)!,
     "user-agent": appendedUserAgent,
   };
 };
