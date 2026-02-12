@@ -5,7 +5,6 @@ import { SpanStatusCode } from "@opentelemetry/api";
 
 import type { GatewayContext } from "../types";
 
-import { resolveRequestId } from "../utils/headers";
 import { initFetch } from "./fetch";
 import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
@@ -25,7 +24,6 @@ export const withRootSpan =
         getAIAttributes(ctx),
       );
 
-      attrs["request.id"] = resolveRequestId(ctx.request);
       attrs["http.response.status_code_effective"] =
         status === 200 ? (ctx.response?.status ?? status) : status;
       attrs["network.io.bytes_in"] = Number(ctx.request.headers.get("content-length"));

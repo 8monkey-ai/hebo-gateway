@@ -1,3 +1,5 @@
+import { resolveRequestId } from "#/utils/headers";
+
 import type { GatewayContext } from "../types";
 
 const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
@@ -19,6 +21,7 @@ export const getRequestAttributes = (request?: Request) => {
   if (!request) return {};
 
   return {
+    "request.id": resolveRequestId(request),
     "http.request.method": request.method,
     "url.path": getPath(request),
     "http.request.header.content_type": getHeader(request.headers, "content-type"),
