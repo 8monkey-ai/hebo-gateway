@@ -9,9 +9,11 @@ import type {
   ToolSet,
   ModelMessage,
   UserContent,
+  AssistantContent,
   LanguageModelUsage,
   Output,
   TextStreamPart,
+  ReasoningOutput,
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
@@ -41,6 +43,7 @@ import type {
   ChatCompletionsToolCallDelta,
   ChatCompletionsReasoningEffort,
   ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningDetail,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -147,35 +150,71 @@ export function fromChatCompletionsUserMessage(
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
 ): AssistantModelMessage {
-  const { tool_calls, role, content, extra_content } = message;
+  const { tool_calls, role, content, extra_content, reasoning_details } = message;
 
-  if (!tool_calls?.length) {
-    const out: AssistantModelMessage = {
-      role: role,
-      content: content ?? "",
-    };
-    if (extra_content) {
-      out.providerOptions = extra_content;
+  const parts: AssistantContent = [];
+
+  if (Array.isArray(parts)) {
+    if (reasoning_details?.length) {
+      for (const detail of reasoning_details) {
+        if (detail.text && detail.type === "reasoning.text") {
+          parts.push({
+            type: "reasoning",
+            text: detail.text,
+            providerOptions: detail.signature
+              ? {
+                  unknown: {
+                    signature: detail.signature,
+                  },
+                }
+              : undefined,
+          });
+        } else if (detail.type === "reasoning.encrypted" && detail.data) {
+          parts.push({
+            type: "reasoning",
+            text: "",
+            providerOptions: {
+              unknown: {
+                redactedData: detail.data,
+              },
+            },
+          });
+        }
+      }
     }
-    return out;
+
+    if (tool_calls?.length) {
+      for (const tc of tool_calls) {
+        const { id, function: fn, extra_content } = tc;
+        const out: ToolCallPart = {
+          type: "tool-call",
+          toolCallId: id,
+          toolName: fn.name,
+          input: parseToolOutput(fn.arguments).value,
+        };
+        if (extra_content) {
+          out.providerOptions = extra_content;
+        }
+        parts.push(out);
+      }
+    } else if (content !== undefined && content !== null) {
+      parts.push({
+        type: "text",
+        text: content,
+      });
+    }
   }
 
-  return {
+  const out: AssistantModelMessage = {
     role: role,
-    content: tool_calls.map((tc: ChatCompletionsToolCall) => {
-      const { id, function: fn, extra_content } = tc;
-      const out: ToolCallPart = {
-        type: "tool-call",
-        toolCallId: id,
-        toolName: fn.name,
-        input: parseToolOutput(fn.arguments).value,
-      };
-      if (extra_content) {
-        out.providerOptions = extra_content;
-      }
-      return out;
-    }),
+    content: Array.isArray(parts) && parts.length > 0 ? parts : (content ?? ""),
   };
+
+  if (extra_content) {
+    out.providerOptions = extra_content;
+  }
+
+  return out;
 }
 
 export function fromChatCompletionsToolResultMessage(
@@ -388,6 +427,7 @@ export class ChatCompletionsStream extends TransformStream<
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
+    const reasoningIdToIndex = new Map<string, number>();
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
@@ -425,8 +465,30 @@ export class ChatCompletionsStream extends TransformStream<
           }
 
           case "reasoning-delta": {
+            let index = reasoningIdToIndex.get(part.id);
+            if (index === undefined) {
+              index = reasoningIdToIndex.size;
+              reasoningIdToIndex.set(part.id, index);
+            }
+
             controller.enqueue(
-              createChunk({ reasoning_content: part.text }, part.providerMetadata),
+              createChunk(
+                {
+                  reasoning_content: part.text,
+                  reasoning_details: [
+                    toReasoningDetail(
+                      {
+                        type: "reasoning",
+                        text: part.text,
+                        providerMetadata: part.providerMetadata,
+                      },
+                      part.id,
+                      index,
+                    ),
+                  ],
+                },
+                part.providerMetadata,
+              ),
             );
             break;
           }
@@ -502,22 +564,84 @@ export const toChatCompletionsAssistantMessage = (
     );
   }
 
+  const reasoningDetails: ChatCompletionsReasoningDetail[] = [];
+
   for (const part of result.content) {
     if (part.type === "text") {
-      message.content = part.text;
-      if (part.providerMetadata) {
-        message.extra_content = part.providerMetadata;
+      if (message.content === null) {
+        message.content = part.text;
+        if (part.providerMetadata) {
+          message.extra_content = part.providerMetadata;
+        }
       }
-      break;
+    } else if (part.type === "reasoning") {
+      reasoningDetails.push(
+        toReasoningDetail(part, `reasoning-${crypto.randomUUID()}`, reasoningDetails.length),
+      );
     }
   }
 
   if (result.reasoningText) {
     message.reasoning_content = result.reasoningText;
+
+    if (reasoningDetails.length === 0) {
+      reasoningDetails.push(
+        toReasoningDetail(
+          { type: "reasoning", text: result.reasoningText },
+          `reasoning-${crypto.randomUUID()}`,
+          0,
+        ),
+      );
+    }
+  }
+
+  if (reasoningDetails.length > 0) {
+    message.reasoning_details = reasoningDetails;
   }
 
   return message;
 };
+
+export function toReasoningDetail(
+  reasoning: ReasoningOutput,
+  id: string,
+  index: number,
+): ChatCompletionsReasoningDetail {
+  const providerMetadata = reasoning.providerMetadata ?? {};
+
+  let redactedData: string | undefined;
+  let signature: string | undefined;
+
+  for (const metadata of Object.values(providerMetadata)) {
+    if (metadata && typeof metadata === "object") {
+      if ("redactedData" in metadata && typeof metadata["redactedData"] === "string") {
+        redactedData = metadata["redactedData"];
+      }
+      if ("signature" in metadata && typeof metadata["signature"] === "string") {
+        signature = metadata["signature"];
+      }
+    }
+  }
+
+  if (redactedData) {
+    return {
+      id,
+      index,
+      type: "reasoning.encrypted",
+      data: redactedData,
+      format: "unknown",
+    };
+  }
+
+  return {
+    id,
+    index,
+    type: "reasoning.text",
+    text: reasoning.text,
+    signature,
+    format: "unknown",
+  };
+}
 
 export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
   const out: ChatCompletionsUsage = {};
