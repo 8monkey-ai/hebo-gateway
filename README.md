@@ -349,8 +349,8 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings | object
-    }): Promise<ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings | object | void> => {
+      result: ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings
+    }): Promise<ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging

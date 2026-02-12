@@ -37,7 +37,7 @@ export const winterCgHandler = (
       if (onResponse) ctx.response = onResponse;
     } catch (error) {
       logger.error({
-        requestId: resolveRequestId(ctx.request)!,
+        requestId: resolveRequestId(ctx.request),
         err: error instanceof Error ? error : new Error(String(error)),
       });
       ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));

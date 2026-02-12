@@ -41,16 +41,16 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const parsedModels = {} as typeof models;
   const warnings = new Set<string>();
   for (const id in models) {
-    const model = models[id!];
+    const model = models[id]!;
 
     const kept: string[] = [];
 
-    for (const p of model!.providers) {
+    for (const p of model.providers) {
       if (p in parsedProviders) kept.push(p);
       else warnings.add(p);
     }
 
-    if (kept.length > 0) parsedModels[id] = { ...model!, providers: kept };
+    if (kept.length > 0) parsedModels[id] = { ...model, providers: kept };
   }
   for (const warning of warnings) {
     logger.warn(`[config] ${warning} provider removed (not configured)`);

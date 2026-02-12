@@ -7,6 +7,7 @@ import type {
   ChatCompletionsChunk,
 } from "./endpoints/chat-completions/schema";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type { Model, ModelList } from "./endpoints/models";
 import type { OpenAIError } from "./errors/openai";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
@@ -77,7 +78,8 @@ export type GatewayContext = {
     | ChatCompletions
     | ReadableStream<ChatCompletionsChunk | OpenAIError>
     | Embeddings
-    | object;
+    | Model
+    | ModelList;
   /**
    * Final response returned by the lifecycle.
    */
