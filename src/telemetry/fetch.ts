@@ -1,4 +1,6 @@
-import { markPerf, markPerfOnce } from "./perf";
+import { SpanKind } from "@opentelemetry/api";
+
+import { startSpan } from "./span";
 
 const ORIGINAL_FETCH_KEY = Symbol.for("@hebo/fetch/original-fetch");
 
@@ -10,10 +12,15 @@ const g = globalThis as GlobalFetchState;
 
 const perfFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const original = g[ORIGINAL_FETCH_KEY]!;
-  markPerfOnce(init ?? input, "fetchStart");
-  const response = await original(input, init);
-  markPerf(init ?? input, "fetchEnd");
-  return response;
+  const span = startSpan("fetch", { kind: SpanKind.CLIENT });
+  try {
+    return await span.runWithContext(() => original(input, init));
+  } catch (error) {
+    span.recordError(error);
+    throw error;
+  } finally {
+    span.finish();
+  }
 };
 
 export const initFetch = () => {

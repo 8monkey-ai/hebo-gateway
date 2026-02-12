@@ -7,8 +7,8 @@ import type {
 
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
-import { isLoggerDisabled, logger } from "./logger";
-import { withAccessLog } from "./telemetry/access-log";
+import { logger } from "./logger";
+import { withAccessSpan } from "./telemetry/access-log";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
@@ -44,7 +44,9 @@ export const winterCgHandler = (
     }
   };
 
-  const handler = isLoggerDisabled(parsedConfig.logger) ? core : withAccessLog(core);
+  const handler = parsedConfig.telemetry?.enabled
+    ? withAccessSpan(core, parsedConfig.telemetry?.tracer)
+    : core;
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
     const ctx: GatewayContext = {

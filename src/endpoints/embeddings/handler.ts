@@ -17,7 +17,7 @@ import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { toAiSdkTelemetry } from "../../telemetry/otel";
-import { markPerf } from "../../telemetry/perf";
+import { withSpan } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
@@ -84,15 +84,15 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request.
-    markPerf(ctx.request, "aiSdkStart");
-    const result = await embedMany({
-      model: embeddingModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request),
-      experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
-      abortSignal: ctx.request.signal,
-      ...embedOptions,
-    });
-    markPerf(ctx.request, "aiSdkEnd");
+    const result = await withSpan("ai-sdk.embedMany", () =>
+      embedMany({
+        model: embeddingModelWithMiddleware,
+        headers: prepareForwardHeaders(ctx.request),
+        experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
+        abortSignal: ctx.request.signal,
+        ...embedOptions,
+      }),
+    );
 
     logger.trace({ requestId, result }, "[embeddings] AI SDK result");
 

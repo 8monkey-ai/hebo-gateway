@@ -17,7 +17,7 @@ import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import { toAiSdkTelemetry } from "../../telemetry/otel";
-import { markPerf } from "../../telemetry/perf";
+import { withSpan } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
@@ -90,54 +90,56 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request (streaming vs. non-streaming).
-    markPerf(ctx.request, "aiSdkStart");
     if (stream) {
-      const result = streamText({
-        model: languageModelWithMiddleware,
-        headers: prepareForwardHeaders(ctx.request),
-        experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
-        // No abort signal here, otherwise we can't detect upstream from client cancellations
-        // abortSignal: ctx.request.signal,
-        onError: ({ error }) => {
-          logger.error({
-            requestId,
-            err: error instanceof Error ? error : new Error(String(error)),
-          });
-          throw error;
-        },
-        onAbort: () => {
-          throw new DOMException("Upstream failed", "AbortError");
-        },
-        timeout: {
-          totalMs: 5 * 60 * 1000,
-        },
-        experimental_include: {
-          requestBody: false,
-        },
-        includeRawChunks: false,
-        ...textOptions,
-      });
-      markPerf(ctx.request, "aiSdkEnd");
+      const result = await withSpan("ai-sdk.streamText", () =>
+        streamText({
+          model: languageModelWithMiddleware,
+          headers: prepareForwardHeaders(ctx.request),
+          experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
+          // No abort signal here, otherwise we can't detect upstream from client cancellations
+          // abortSignal: ctx.request.signal,
+          onError: ({ error }) => {
+            const err = error instanceof Error ? error : new Error(String(error));
+            logger.error({
+              requestId,
+              err,
+            });
+            throw error;
+          },
+          onAbort: () => {
+            throw new DOMException("Upstream failed", "AbortError");
+          },
+          timeout: {
+            totalMs: 5 * 60 * 1000,
+          },
+          experimental_include: {
+            requestBody: false,
+          },
+          includeRawChunks: false,
+          ...textOptions,
+        }),
+      );
 
       ctx.result = toChatCompletionsStream(result, ctx.modelId);
 
       return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
     }
 
-    const result = await generateText({
-      model: languageModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request),
-      experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
-      // FUTURE: currently can't tell whether upstream or downstream abort
-      abortSignal: ctx.request.signal,
-      experimental_include: {
-        requestBody: false,
-        responseBody: false,
-      },
-      timeout: 5 * 60 * 1000,
-      ...textOptions,
-    });
-    markPerf(ctx.request, "aiSdkEnd");
+    const result = await withSpan("ai-sdk.generateText", () =>
+      generateText({
+        model: languageModelWithMiddleware,
+        headers: prepareForwardHeaders(ctx.request),
+        experimental_telemetry: toAiSdkTelemetry(config, "text"),
+        // FUTURE: currently can't tell whether upstream or downstream abort
+        abortSignal: ctx.request.signal,
+        experimental_include: {
+          requestBody: false,
+          responseBody: false,
+        },
+        timeout: 5 * 60 * 1000,
+        ...textOptions,
+      }),
+    );
 
     logger.trace({ requestId, result }, "[chat] AI SDK result");
 

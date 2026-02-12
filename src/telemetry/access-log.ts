@@ -1,56 +1,55 @@
+import type { Attributes } from "@opentelemetry/api";
+import type { Tracer } from "@opentelemetry/api";
+
+import { SpanStatusCode } from "@opentelemetry/api";
+
 import type { GatewayContext } from "../types";
 
-import { logger } from "../logger";
 import { resolveRequestId } from "../utils/headers";
-import { clearPerf, getMemoryMeta, getPerfMeta, initPerf, markPerf } from "./perf";
+import { initFetch } from "./fetch";
+import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
-import { getAIMeta, getRequestMeta, getResponseMeta } from "./utils";
+import { getAIAttributes, getRequestAttributes, getResponseAttributes } from "./utils";
 
-export const withAccessLog =
-  (run: (ctx: GatewayContext) => Promise<void>) => async (ctx: GatewayContext) => {
-    initPerf(ctx.request);
+export const withAccessSpan =
+  (run: (ctx: GatewayContext) => Promise<void>, tracer?: Tracer) => async (ctx: GatewayContext) => {
+    const requestStart = performance.now();
+    const rootSpan = startSpan(ctx.request.url, undefined, tracer, true);
+    initFetch();
 
     const requestBytes = (() => {
       const n = Number(ctx.request.headers.get("content-length"));
       return Number.isFinite(n) ? n : undefined;
     })();
 
-    const logAccess = (status: number, stats?: { bytes?: number }) => {
-      if (!stats) markPerf(ctx.request, "responseTime");
-      markPerf(ctx.request, "totalDuration");
+    const endAccessSpan = (status: number, stats?: { bytes: number }) => {
+      const attrs: Attributes = {};
 
-      const requestMeta = getRequestMeta(ctx.request);
-      const responseMeta = getResponseMeta(ctx.response);
+      Object.assign(attrs, getRequestAttributes(ctx.request));
+      Object.assign(attrs, getResponseAttributes(ctx.response));
+      Object.assign(attrs, getAIAttributes(ctx));
 
-      const meta: Record<string, unknown> = {
-        requestId: resolveRequestId(ctx.request),
-        ai: getAIMeta(ctx),
-        request: requestMeta,
-        response: responseMeta,
-        timings: getPerfMeta(ctx.request),
-        memory: getMemoryMeta(ctx.request),
-        bytes: {
-          in: requestBytes,
-          out: stats?.bytes ?? responseMeta["contentLength"],
-        },
-      };
+      attrs["request.id"] = resolveRequestId(ctx.request);
+      attrs["http.response.status_code_effective"] =
+        status === 200 ? (ctx.response?.status ?? status) : status;
+      attrs["network.io.bytes_in"] = requestBytes;
+      attrs["network.io.bytes_out"] = stats?.bytes ?? attrs["http.response.header.content_length"];
+      attrs["http.server.duration"] = performance.now() - requestStart;
 
-      const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
+      rootSpan.setAttributes(attrs);
 
-      const msg = `${ctx.request.method} ${requestMeta["path"]} ${realStatus}`;
+      rootSpan.setStatus({ code: status == 200 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
 
-      logger.info(meta, msg);
-
-      clearPerf(ctx.request);
+      rootSpan.finish();
     };
 
-    await run(ctx);
+    await rootSpan.runWithContext(() => run(ctx));
 
     if (ctx.response!.body instanceof ReadableStream) {
       const instrumented = instrumentStream(
         ctx.response!.body,
         {
-          onComplete: (status, params) => logAccess(status, params),
+          onComplete: (status, params) => endAccessSpan(status, params),
         },
         ctx.request.signal,
       );
@@ -60,11 +59,8 @@ export const withAccessLog =
         statusText: ctx.response!.statusText,
         headers: ctx.response!.headers,
       });
-
-      markPerf(ctx.request, "responseTime");
-
       return;
     }
 
-    logAccess(ctx.response!.status);
+    endAccessSpan(ctx.response!.status);
   };

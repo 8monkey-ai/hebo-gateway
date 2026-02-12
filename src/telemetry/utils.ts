@@ -1,46 +1,52 @@
+import type { Attributes } from "@opentelemetry/api";
+
 import type { GatewayContext } from "../types";
 
 const getHeader = (headers: Headers, name: string) => headers.get(name) ?? undefined;
 
-export const getRequestMeta = (request?: Request): Record<string, unknown> => {
+const getPath = (request: Request) => {
+  try {
+    return new URL(request.url).pathname;
+  } catch {
+    return request.url;
+  }
+};
+
+const toGenAIOperationName = (operation?: GatewayContext["operation"]) =>
+  operation === "embeddings" ? "embeddings" : operation === "text" ? "chat" : undefined;
+
+export const getRequestAttributes = (request?: Request): Attributes => {
   if (!request) return {};
 
-  let path = request.url;
-  try {
-    const url = new URL(request.url);
-    path = url.pathname;
-  } catch {
-    path = request.url;
-  }
-
+  const attributes: Attributes = {};
   const headers = request.headers;
-  return {
-    method: request.method,
-    path,
-    contentType: getHeader(headers, "content-type"),
-    contentLength: getHeader(headers, "content-length"),
-    userAgent: getHeader(headers, "user-agent"),
-  };
+  attributes["http.request.method"] = request.method;
+  attributes["url.path"] = getPath(request);
+  attributes["http.request.header.content_type"] = getHeader(headers, "content-type");
+  attributes["http.request.header.content_length"] = getHeader(headers, "content-length");
+  attributes["user_agent.original"] = getHeader(headers, "user-agent");
+
+  return attributes;
 };
 
-export const getAIMeta = (context?: Partial<GatewayContext>): Record<string, unknown> => {
+export const getAIAttributes = (context?: Partial<GatewayContext>): Attributes => {
   if (!context) return {};
 
-  return {
-    modelId: context.modelId,
-    resolvedModelId: context.resolvedModelId,
-    resolvedProviderId: context.resolvedProviderId,
-  };
+  const attributes: Attributes = {};
+  attributes["gen_ai.operation.name"] = toGenAIOperationName(context.operation);
+  attributes["gen_ai.request.model"] = context.modelId;
+  attributes["gen_ai.response.model"] = context.resolvedModelId;
+  attributes["gen_ai.provider.name"] = context.resolvedProviderId;
+  return attributes;
 };
 
-export const getResponseMeta = (result?: Response): Record<string, unknown> => {
+export const getResponseAttributes = (result?: Response): Attributes => {
   if (!result) return {};
 
+  const attributes: Attributes = {};
   const headers = result.headers;
-  return {
-    status: result.status,
-    statusText: result.statusText,
-    contentType: getHeader(headers, "content-type"),
-    contentLength: getHeader(headers, "content-length"),
-  };
+  attributes["http.response.status_code"] = result.status;
+  attributes["http.response.header.content_type"] = getHeader(headers, "content-type");
+  attributes["http.response.header.content_length"] = getHeader(headers, "content-length");
+  return attributes;
 };

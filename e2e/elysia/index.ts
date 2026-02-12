@@ -14,6 +14,7 @@ import { withCanonicalIdsForCohere } from "@hebo-ai/gateway/providers/cohere";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { withCanonicalIdsForVoyage } from "@hebo-ai/gateway/providers/voyage";
 import { Elysia } from "elysia";
+import { pino } from "pino";
 import { createVoyage } from "voyage-ai-provider";
 
 const basePath = "/v1/gateway";
@@ -44,9 +45,7 @@ const gw = gateway({
       console.log(ctx.state.auth.userId);
     },
   },
-  logger: {
-    level: "trace",
-  },
+  //logger: pino({ level: "trace" }),
 });
 
 const app = new Elysia()
