@@ -83,5 +83,6 @@ export const withSpan = async <T>(
 };
 
 export const addSpanEvent = (name: string, attributes?: Attributes) => {
-  trace.getActiveSpan()?.addEvent(name, attributes);
+  const allAttributes = Object.assign(attributes ?? {}, getMemoryAttributes());
+  trace.getActiveSpan()?.addEvent(name, allAttributes);
 };
