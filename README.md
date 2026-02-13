@@ -620,7 +620,7 @@ const gw = gateway({
     // "required" = minimal baseline attributes
     // "recommended" = practical operational attributes (request/response metadata, genai model/usage fields)
     // "full" = also include body fields (e.g. genai input/output messages)
-    attributes: "recommended",
+    attributes: "full",
   },
 });
 ```
@@ -628,10 +628,10 @@ const gw = gateway({
 Attribute names and span semantics follow OpenTelemetry GenAI semantic conventions:
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 
-To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
-
 > [!TIP]
-> For observability integration that is not otel compliant (for example, Langfuse), you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
+> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
+
+For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
 ### Passing Framework State to Hooks
 
