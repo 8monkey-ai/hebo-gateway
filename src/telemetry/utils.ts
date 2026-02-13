@@ -103,6 +103,7 @@ export const getAIAttributes = (body?: object, result?: object) => {
     "gen_ai.response.id": result && "id" in result ? result.id : undefined,
   };
 
+  // FUTURE: allow to disable system_instructions, messages, tool.definitions
   if (isChat) {
     if (body) {
       const inputs = body as ChatCompletionsBody;
