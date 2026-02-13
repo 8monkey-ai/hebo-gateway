@@ -8,8 +8,9 @@ import type {
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
+import { initFetch } from "./telemetry/fetch";
 import { withOtel } from "./telemetry/otel";
-import { addSpanEvent, recordSpanError } from "./telemetry/span";
+import { addSpanEvent, recordSpanError, setSpanTracer } from "./telemetry/span";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
@@ -19,6 +20,10 @@ export const winterCgHandler = (
   config: GatewayConfig,
 ) => {
   const parsedConfig = parseConfig(config);
+  if (parsedConfig.telemetry?.enabled) {
+    setSpanTracer(parsedConfig.telemetry?.tracer);
+    initFetch();
+  }
 
   const core = async (ctx: GatewayContext): Promise<void> => {
     try {

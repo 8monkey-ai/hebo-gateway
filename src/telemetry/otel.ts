@@ -4,7 +4,6 @@ import { SpanStatusCode } from "@opentelemetry/api";
 
 import type { GatewayConfigParsed, GatewayContext } from "../types";
 
-import { initFetch } from "./fetch";
 import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
 import {
@@ -18,8 +17,7 @@ export const withOtel =
   (run: (ctx: GatewayContext) => Promise<void>, config: GatewayConfigParsed) =>
   async (ctx: GatewayContext) => {
     const requestStart = performance.now();
-    const aiSpan = startSpan(ctx.request.url, undefined, config.telemetry?.tracer);
-    initFetch();
+    const aiSpan = startSpan(ctx.request.url);
 
     const endAiSpan = (status: number, stats?: { bytes: number }) => {
       const attrs: Attributes = getAIAttributes(

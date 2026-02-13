@@ -3,7 +3,8 @@ import type { Attributes, Span, SpanOptions, Tracer } from "@opentelemetry/api";
 import { INVALID_SPAN_CONTEXT, SpanKind, SpanStatusCode, context, trace } from "@opentelemetry/api";
 
 const DEFAULT_TRACER_NAME = "@hebo-ai/gateway";
-const mem = () => process?.memoryUsage?.();
+
+let spanTracer: Tracer | undefined;
 
 const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
 
@@ -14,7 +15,7 @@ const maybeSetDynamicAttributes = (span: Span, getAttributes: () => Attributes) 
 };
 
 const getMemoryAttributes = (): Attributes => {
-  const memory = mem();
+  const memory = process?.memoryUsage?.();
   if (!memory) return {};
 
   return {
@@ -31,8 +32,12 @@ const NOOP_SPAN = {
   isExisting: true,
 };
 
-export const startSpan = (name: string, options?: SpanOptions, customTracer?: Tracer) => {
-  const tracer = customTracer ?? trace.getTracer(DEFAULT_TRACER_NAME);
+export const setSpanTracer = (tracer?: Tracer) => {
+  spanTracer = tracer;
+};
+
+export const startSpan = (name: string, options?: SpanOptions) => {
+  const tracer = spanTracer ?? trace.getTracer(DEFAULT_TRACER_NAME);
 
   const parentContext = context.active();
   const activeSpan = trace.getActiveSpan();
