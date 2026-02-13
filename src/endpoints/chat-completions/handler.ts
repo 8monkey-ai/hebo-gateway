@@ -16,7 +16,6 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { toAiSdkTelemetry } from "../../telemetry/ai-sdk";
 import { withSpan } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
@@ -95,7 +94,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         streamText({
           model: languageModelWithMiddleware,
           headers: prepareForwardHeaders(ctx.request),
-          experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
           // No abort signal here, otherwise we can't detect upstream from client cancellations
           // abortSignal: ctx.request.signal,
           onError: ({ error }) => {
@@ -129,7 +127,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       generateText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
-        experimental_telemetry: toAiSdkTelemetry(config, "text"),
         // FUTURE: currently can't tell whether upstream or downstream abort
         abortSignal: ctx.request.signal,
         experimental_include: {
