@@ -617,9 +617,15 @@ const gw = gateway({
     enabled: true,
     // default: TraceProivder from @opentelemetry/api singleton
     tracer: trace.getTracer("my-gateway"),
+    // "required" = minimal baseline attributes
+    // "recommended" = practical operational attributes (request/response metadata, genai model/usage fields)
+    // "full" = also include body fields (e.g. genai input/output messages)
+    attributes: "recommended",
   },
 });
 ```
+Attribute names and span semantics follow OpenTelemetry GenAI semantic conventions:
+https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 
 > [!TIP]
 > For observability integration that is not otel compliant (for example, Langfuse), you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.

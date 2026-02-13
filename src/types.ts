@@ -195,6 +195,13 @@ export type GatewayConfig = {
      * Optional custom OpenTelemetry tracer passed to AI SDK telemetry.
      */
     tracer?: Tracer;
+    /**
+     * Controls how many telemetry attributes are attached to spans.
+     * - required: minimal safe baseline
+     * - recommended: practical defaults
+     * - full: include all available attributes
+     */
+    attributes?: "required" | "recommended" | "full";
   };
   /**
    * Preferred logger configuration: custom logger or default logger settings.

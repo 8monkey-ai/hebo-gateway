@@ -10,6 +10,7 @@ import type {
 } from "../endpoints/chat-completions/schema";
 
 type GenAIPart = Record<string, unknown>;
+const DEFAULT_ATTRIBUTES_LEVEL = "recommended";
 
 const toTextPart = (content: string): GenAIPart => ({ type: "text", content });
 
@@ -59,7 +60,10 @@ const toMessageParts = (message: ChatCompletionsMessage): GenAIPart[] => {
   return [];
 };
 
-export const getRequestAttributes = (request?: Request) => {
+export const getRequestAttributes = (
+  request?: Request,
+  attributesLevel = DEFAULT_ATTRIBUTES_LEVEL,
+) => {
   if (!request) return {};
 
   let url;
@@ -68,13 +72,11 @@ export const getRequestAttributes = (request?: Request) => {
     url = new URL(request.url);
   } catch {}
 
-  return {
-    "http.request.id": resolveRequestId(request),
+  const attrs = {
     "http.request.method": request.method,
     "url.full": request.url,
     "url.path": url?.pathname,
     "url.scheme": url?.protocol.replace(":", ""),
-    // TODO: "url.query"
     "server.address": url?.hostname,
     "server.port": url
       ? url.port
@@ -83,14 +85,33 @@ export const getRequestAttributes = (request?: Request) => {
           ? 443
           : 80
       : undefined,
-    "http.request.header.content-type": [request.headers.get("content-type") ?? undefined],
-    "http.request.header.content-length": [request.headers.get("content-length") ?? undefined],
-    "user_agent.original": request.headers.get("user-agent") ?? undefined,
-    // TODO: "client.address"
   };
+
+  if (attributesLevel !== "required") {
+    Object.assign(attrs, {
+      "http.request.id": resolveRequestId(request),
+      "user_agent.original": request.headers.get("user-agent") ?? undefined,
+    });
+  }
+
+  if (attributesLevel === "full") {
+    Object.assign(attrs, {
+      // TODO: "url.query"
+      "http.request.header.content-type": [request.headers.get("content-type") ?? undefined],
+      "http.request.header.content-length": [request.headers.get("content-length") ?? undefined],
+      // TODO: "client.address"
+    });
+  }
+
+  return attrs;
 };
 
-export const getAIAttributes = (body?: object, result?: object) => {
+export const getAIAttributes = (
+  body?: object,
+  result?: object,
+  attributesLevel = DEFAULT_ATTRIBUTES_LEVEL,
+  providerName?: string,
+) => {
   if (!body && !result) return {};
 
   const isChat = !!body && "messages" in body;
@@ -98,90 +119,129 @@ export const getAIAttributes = (body?: object, result?: object) => {
 
   const attrs = {
     "gen_ai.operation.name": isEmbeddings ? "embeddings" : isChat ? "chat" : undefined,
+    "gen_ai.output.type": isEmbeddings ? "embedding" : isChat ? "text" : undefined,
     "gen_ai.request.model": body && "model" in body ? body.model : undefined,
-    "gen_ai.response.model": result && "model" in result ? result.model : undefined,
-    "gen_ai.response.id": result && "id" in result ? result.id : undefined,
+    "gen_ai.provider.name": providerName,
   };
 
-  // FUTURE: allow to disable system_instructions, messages, tool.definitions
   if (isChat) {
     if (body) {
       const inputs = body as ChatCompletionsBody;
 
-      Object.assign(attrs, {
-        // FUTURE: only construct once
-        "gen_ai.system_instructions": inputs.messages
-          .filter((m) => m.role === "system")
-          .map((m) => JSON.stringify({ parts: [toTextPart(m.content)] })),
-        "gen_ai.input.messages": inputs.messages
-          .filter((m) => m.role !== "system")
-          .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
-        "gen_ai.tool.definitions": JSON.stringify(inputs.tools),
-        "gen_ai.request.stream": inputs.stream,
-        "gen_ai.request.seed": inputs.seed,
-        "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
-        "gen_ai.request.max_tokens": inputs.max_completion_tokens,
-        "gen_ai.request.presence_penalty": inputs.presence_penalty,
-        "gen_ai.request.stop_sequences": inputs.stop
-          ? Array.isArray(inputs.stop)
-            ? inputs.stop
-            : [inputs.stop]
-          : undefined,
-        "gen_ai.request.temperature": inputs.temperature,
-        "gen_ai.request.top_p": inputs.top_p,
-      });
+      if (inputs.seed !== undefined) {
+        Object.assign(attrs, { "gen_ai.request.seed": inputs.seed });
+      }
+
+      if (attributesLevel !== "required") {
+        Object.assign(attrs, {
+          "gen_ai.request.stream": inputs.stream,
+          "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
+          "gen_ai.request.max_tokens": inputs.max_completion_tokens,
+          "gen_ai.request.presence_penalty": inputs.presence_penalty,
+          "gen_ai.request.stop_sequences": inputs.stop
+            ? Array.isArray(inputs.stop)
+              ? inputs.stop
+              : [inputs.stop]
+            : undefined,
+          "gen_ai.request.temperature": inputs.temperature,
+          "gen_ai.request.top_p": inputs.top_p,
+        });
+      }
+
+      if (attributesLevel === "full") {
+        Object.assign(attrs, {
+          // FUTURE: only construct once
+          "gen_ai.system_instructions": inputs.messages
+            .filter((m) => m.role === "system")
+            .map((m) => JSON.stringify({ parts: [toTextPart(m.content)] })),
+          "gen_ai.input.messages": inputs.messages
+            .filter((m) => m.role !== "system")
+            .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
+          "gen_ai.tool.definitions": JSON.stringify(inputs.tools),
+        });
+      }
     }
 
     // FUTURE: implement streaming
     if (result && !(result instanceof ReadableStream)) {
       const completions = result as ChatCompletions;
+
       Object.assign(attrs, {
-        "gen_ai.output.type": "text",
-        "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
-        "gen_ai.output.messages": completions.choices?.map((c) =>
-          JSON.stringify({
-            role: c.message.role,
-            parts: toMessageParts(c.message),
-            finish_reason: c.finish_reason,
-          }),
-        ),
-        "gen_ai.response.finish_reasons": completions.choices?.map((c) => c.finish_reason),
-        "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
-        "gen_ai.usage.cached_tokens": completions.usage?.prompt_tokens_details?.cached_tokens,
-        "gen_ai.usage.output_tokens": completions.usage?.completion_tokens,
-        "gen_ai.usage.reasoning_tokens":
-          completions.usage?.completion_tokens_details?.reasoning_tokens,
+        "gen_ai.response.model": completions.model,
+        "gen_ai.response.id": completions.id,
       });
+
+      if (attributesLevel !== "required") {
+        Object.assign(attrs, {
+          "gen_ai.response.finish_reasons": completions.choices?.map((c) => c.finish_reason),
+          "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
+          "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
+          "gen_ai.usage.cached_tokens": completions.usage?.prompt_tokens_details?.cached_tokens,
+          "gen_ai.usage.output_tokens": completions.usage?.completion_tokens,
+          "gen_ai.usage.reasoning_tokens":
+            completions.usage?.completion_tokens_details?.reasoning_tokens,
+        });
+      }
+
+      if (attributesLevel === "full") {
+        Object.assign(attrs, {
+          "gen_ai.output.messages": completions.choices?.map((c) =>
+            JSON.stringify({
+              role: c.message.role,
+              parts: toMessageParts(c.message),
+              finish_reason: c.finish_reason,
+            }),
+          ),
+        });
+      }
     }
   }
 
   if (isEmbeddings) {
     if (body) {
       const inputs = body as EmbeddingsBody;
-      Object.assign(attrs, {
-        "gen_ai.embeddings.dimension.count": inputs.dimensions,
-      });
+      if (attributesLevel !== "required") {
+        Object.assign(attrs, {
+          "gen_ai.embeddings.dimension.count": inputs.dimensions,
+        });
+      }
     }
 
     if (result) {
       const embeddings = result as Embeddings;
+
       Object.assign(attrs, {
-        "gen_ai.output.type": "embedding",
-        "gen_ai.usage.input_tokens": embeddings.usage?.prompt_tokens,
-        "gen_ai.usage.total_tokens": embeddings.usage?.total_tokens,
+        "gen_ai.response.model": embeddings.model,
       });
+
+      if (attributesLevel !== "required") {
+        Object.assign(attrs, {
+          "gen_ai.usage.input_tokens": embeddings.usage?.prompt_tokens,
+          "gen_ai.usage.total_tokens": embeddings.usage?.total_tokens,
+        });
+      }
     }
   }
 
   return attrs;
 };
 
-export const getResponseAttributes = (response?: Response) => {
+export const getResponseAttributes = (
+  response?: Response,
+  attributesLevel = DEFAULT_ATTRIBUTES_LEVEL,
+) => {
   if (!response) return {};
 
-  return {
+  const attrs = {
     "http.response.status_code": response.status,
-    "http.response.header.content-type": [response.headers.get("content-type") ?? undefined],
-    "http.response.header.content-length": [response.headers.get("content-length") ?? undefined],
   };
+
+  if (attributesLevel === "full") {
+    Object.assign(attrs, {
+      "http.response.header.content-type": [response.headers.get("content-type") ?? undefined],
+      "http.response.header.content-length": [response.headers.get("content-length") ?? undefined],
+    });
+  }
+
+  return attrs;
 };

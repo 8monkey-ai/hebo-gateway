@@ -1,9 +1,8 @@
 import type { Attributes } from "@opentelemetry/api";
-import type { Tracer } from "@opentelemetry/api";
 
 import { SpanStatusCode } from "@opentelemetry/api";
 
-import type { GatewayContext } from "../types";
+import type { GatewayConfigParsed, GatewayContext } from "../types";
 
 import { initFetch } from "./fetch";
 import { startSpan } from "./span";
@@ -11,13 +10,19 @@ import { instrumentStream } from "./stream";
 import { getAIAttributes, getRequestAttributes, getResponseAttributes } from "./utils";
 
 export const withOtel =
-  (run: (ctx: GatewayContext) => Promise<void>, tracer?: Tracer) => async (ctx: GatewayContext) => {
+  (run: (ctx: GatewayContext) => Promise<void>, config: GatewayConfigParsed) =>
+  async (ctx: GatewayContext) => {
     const requestStart = performance.now();
-    const aiSpan = startSpan(ctx.request.url, undefined, tracer);
+    const aiSpan = startSpan(ctx.request.url, undefined, config.telemetry?.tracer);
     initFetch();
 
     const endAiSpan = (status: number, stats?: { bytes: number }) => {
-      const attrs: Attributes = getAIAttributes(ctx.body, ctx.result);
+      const attrs: Attributes = getAIAttributes(
+        ctx.body,
+        ctx.result,
+        config.telemetry?.attributes,
+        ctx.resolvedProviderId,
+      );
 
       attrs["gen_ai.server.request.duration"] = Number(
         ((performance.now() - requestStart) / 1000).toFixed(4),
@@ -26,14 +31,16 @@ export const withOtel =
       if (!aiSpan.isExisting) {
         Object.assign(
           attrs,
-          getRequestAttributes(ctx.request),
-          getResponseAttributes(ctx.response),
+          getRequestAttributes(ctx.request, config.telemetry?.attributes),
+          getResponseAttributes(ctx.response, config.telemetry?.attributes),
         );
       }
 
-      attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);
-      attrs["http.response.body.size"] =
-        stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
+      if (config.telemetry?.attributes === "full") {
+        attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);
+        attrs["http.response.body.size"] =
+          stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
+      }
 
       attrs["http.response.status_code_effective"] = status;
 

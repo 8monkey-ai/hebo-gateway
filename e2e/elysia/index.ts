@@ -47,7 +47,7 @@ const gw = gateway({
   ),
   hooks: {
     resolveProvider: async (ctx: HookContext) => {
-      console.log(ctx.state.auth.userId);
+      //console.log(ctx.state.auth.userId);
     },
   },
   logger: null,
@@ -69,4 +69,4 @@ const app = new Elysia()
   .all(`${basePath}/*`, (ctx) => gw.handler(ctx.request, { auth: ctx.auth }), { parse: "none" })
   .listen(3000);
 
-console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
+//console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);

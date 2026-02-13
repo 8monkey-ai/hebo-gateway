@@ -44,9 +44,7 @@ export const winterCgHandler = (
     }
   };
 
-  const handler = parsedConfig.telemetry?.enabled
-    ? withOtel(core, parsedConfig.telemetry?.tracer)
-    : core;
+  const handler = parsedConfig.telemetry?.enabled ? withOtel(core, parsedConfig) : core;
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
     const ctx: GatewayContext = {
