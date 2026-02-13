@@ -43,10 +43,14 @@ export const withOtel =
 
       Object.assign(attrs, getBaggageAttributes(ctx.request));
 
-      if (config.telemetry?.attributes === "full") {
+      if (config.telemetry?.attributes !== "required") {
         attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);
         attrs["http.response.body.size"] =
           stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
+      }
+
+      if (config.telemetry?.attributes === "full") {
+        attrs["http.request.body"] = JSON.stringify(ctx.body);
       }
 
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
