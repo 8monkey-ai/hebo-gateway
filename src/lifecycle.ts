@@ -24,7 +24,7 @@ export const winterCgHandler = (
     try {
       if (parsedConfig.hooks?.onRequest) {
         const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
-        addSpanEvent("lifecycle.hooks.on_request.completed");
+        addSpanEvent("hebo.hooks.on_request.completed");
 
         if (onRequest) {
           if (onRequest instanceof Response) {
@@ -40,7 +40,7 @@ export const winterCgHandler = (
 
       if (parsedConfig.hooks?.onResponse) {
         const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
-        addSpanEvent("lifecycle.hooks.on_response.completed");
+        addSpanEvent("hebo.hooks.on_response.completed");
         if (onResponse) {
           ctx.response = onResponse;
         }

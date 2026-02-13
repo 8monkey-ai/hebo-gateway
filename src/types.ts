@@ -44,7 +44,7 @@ export type GatewayContext = {
    */
   models: ModelCatalog;
   /**
-   * Incoming request for the lifecycle.
+   * Incoming request for the handler.
    */
   request: Request;
   /**
@@ -81,14 +81,13 @@ export type GatewayContext = {
     | Model
     | ModelList;
   /**
-   * Structured object result for streaming requests.
-   * Used when `result` is a stream but a structured summary is available.
-   */
-  streamResult?: ChatCompletions | Embeddings | Model | ModelList;
-  /**
-   * Final response returned by the lifecycle.
+   * Response object returned by the handler.
    */
   response?: Response;
+  /**
+   * Structured object result for streaming requests. Only available at the end of the stream.
+   */
+  streamResult?: ChatCompletions;
 };
 
 /**

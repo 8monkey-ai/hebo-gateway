@@ -33,7 +33,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
-    addSpanEvent("lifecycle.handler.started");
+    addSpanEvent("hebo.handler.started");
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -49,19 +49,19 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
-    addSpanEvent("lifecycle.request.deserialized");
+    addSpanEvent("hebo.request.deserialized");
 
     const parsed = ChatCompletionsBodySchema.safeParse(body);
     if (!parsed.success) {
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
-    addSpanEvent("lifecycle.request.parsed");
+    addSpanEvent("hebo.request.parsed");
 
     ctx.operation = "chat";
     if (hooks?.before) {
       ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
-      addSpanEvent("lifecycle.hooks.before.completed");
+      addSpanEvent("hebo.hooks.before.completed");
     }
 
     // Resolve model + provider (hooks may override defaults).
@@ -71,7 +71,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
-    addSpanEvent("lifecycle.model.resolved", {
+    addSpanEvent("hebo.model.resolved", {
       "gen_ai.request.model": ctx.modelId ?? "",
       "gen_ai.response.model": ctx.resolvedModelId ?? "",
     });
@@ -89,7 +89,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
-    addSpanEvent("lifecycle.provider.resolved", { "gen_ai.provider.name": ctx.resolvedProviderId });
+    addSpanEvent("hebo.provider.resolved", { "gen_ai.provider.name": ctx.resolvedProviderId });
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
@@ -100,7 +100,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       },
       "[chat] AI SDK options",
     );
-    addSpanEvent("lifecycle.options.prepared");
+    addSpanEvent("hebo.options.prepared");
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -110,7 +110,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Execute request (streaming vs. non-streaming).
     if (stream) {
-      addSpanEvent("lifecycle.ai-sdk.started");
+      addSpanEvent("hebo.ai-sdk.started");
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
@@ -142,20 +142,20 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         includeRawChunks: false,
         ...textOptions,
       });
-      addSpanEvent("lifecycle.ai-sdk.completed");
+      addSpanEvent("hebo.ai-sdk.completed");
 
       ctx.result = toChatCompletionsStream(result, ctx.resolvedModelId);
-      addSpanEvent("lifecycle.result.transformed");
+      addSpanEvent("hebo.result.transformed");
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
-        addSpanEvent("lifecycle.hooks.after.completed");
+        addSpanEvent("hebo.hooks.after.completed");
       }
 
       return ctx.result;
     }
 
-    addSpanEvent("lifecycle.ai-sdk.started");
+    addSpanEvent("hebo.ai-sdk.started");
     const result = await generateText({
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
@@ -169,14 +169,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       ...textOptions,
     });
     logger.trace({ requestId, result }, "[chat] AI SDK result");
-    addSpanEvent("lifecycle.ai-sdk.completed");
+    addSpanEvent("hebo.ai-sdk.completed");
 
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
-    addSpanEvent("lifecycle.result.transformed");
+    addSpanEvent("hebo.result.transformed");
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
-      addSpanEvent("lifecycle.hooks.after.completed");
+      addSpanEvent("hebo.hooks.after.completed");
     }
 
     return ctx.result;

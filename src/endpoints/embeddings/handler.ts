@@ -26,7 +26,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
-    addSpanEvent("lifecycle.handler.started");
+    addSpanEvent("hebo.handler.started");
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -42,19 +42,19 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
-    addSpanEvent("lifecycle.request.deserialized");
+    addSpanEvent("hebo.request.deserialized");
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
     if (!parsed.success) {
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
-    addSpanEvent("lifecycle.request.parsed");
+    addSpanEvent("hebo.request.parsed");
 
     ctx.operation = "embeddings";
     if (hooks?.before) {
       ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
-      addSpanEvent("lifecycle.hooks.before.completed");
+      addSpanEvent("hebo.hooks.before.completed");
     }
 
     // Resolve model + provider (hooks may override defaults).
@@ -64,7 +64,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
-    addSpanEvent("lifecycle.model.resolved", {
+    addSpanEvent("hebo.model.resolved", {
       "gen_ai.request.model": ctx.modelId ?? "",
       "gen_ai.response.model": ctx.resolvedModelId ?? "",
     });
@@ -82,14 +82,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
-    addSpanEvent("lifecycle.provider.resolved", {
+    addSpanEvent("hebo.provider.resolved", {
       "gen_ai.provider.name": ctx.resolvedProviderId,
     });
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
-    addSpanEvent("lifecycle.options.prepared");
+    addSpanEvent("hebo.options.prepared");
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -98,7 +98,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request.
-    addSpanEvent("lifecycle.ai-sdk.started");
+    addSpanEvent("hebo.ai-sdk.started");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
@@ -106,14 +106,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       ...embedOptions,
     });
     logger.trace({ requestId, result }, "[embeddings] AI SDK result");
-    addSpanEvent("lifecycle.ai-sdk.completed");
+    addSpanEvent("hebo.ai-sdk.completed");
 
     ctx.result = toEmbeddings(result, ctx.modelId);
-    addSpanEvent("lifecycle.result.transformed");
+    addSpanEvent("hebo.result.transformed");
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
-      addSpanEvent("lifecycle.hooks.after.completed");
+      addSpanEvent("hebo.hooks.after.completed");
     }
 
     return ctx.result;
