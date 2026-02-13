@@ -49,9 +49,9 @@ export const withOtel =
           stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
       }
 
-      attrs["http.response.status_code_effective"] = status;
-
-      aiSpan.setStatus({ code: status >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.OK });
+      const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
+      attrs["http.response.status_code_effective"] = realStatus;
+      aiSpan.setStatus({ code: realStatus >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.OK });
 
       if (ctx.operation && ctx.modelId) {
         aiSpan.updateName(`${ctx.operation} ${ctx.modelId}`);
