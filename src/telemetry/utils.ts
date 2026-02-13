@@ -76,7 +76,13 @@ export const getRequestAttributes = (request?: Request) => {
     "url.scheme": url?.protocol.replace(":", ""),
     // TODO: "url.query"
     "server.address": url?.hostname,
-    "server.port": url?.port ? Number(url.port) : url?.protocol === "https:" ? 443 : 80,
+    "server.port": url
+      ? url.port
+        ? Number(url.port)
+        : url.protocol === "https:"
+          ? 443
+          : 80
+      : undefined,
     "http.request.header.content-type": [request.headers.get("content-type") ?? undefined],
     "http.request.header.content-length": [request.headers.get("content-length") ?? undefined],
     "user_agent.original": request.headers.get("user-agent") ?? undefined,
@@ -131,14 +137,14 @@ export const getAIAttributes = (body?: object, result?: object) => {
       Object.assign(attrs, {
         "gen_ai.output.type": "text",
         "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
-        "gen_ai.output.messages": completions.choices.map((c) =>
+        "gen_ai.output.messages": completions.choices?.map((c) =>
           JSON.stringify({
             role: c.message.role,
             parts: toMessageParts(c.message),
             finish_reason: c.finish_reason,
           }),
         ),
-        "gen_ai.response.finish_reasons": completions.choices.map((c) => c.finish_reason),
+        "gen_ai.response.finish_reasons": completions.choices?.map((c) => c.finish_reason),
         "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
         "gen_ai.usage.cached_tokens": completions.usage?.prompt_tokens_details?.cached_tokens,
         "gen_ai.usage.output_tokens": completions.usage?.completion_tokens,

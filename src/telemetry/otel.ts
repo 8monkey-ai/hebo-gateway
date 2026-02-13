@@ -33,7 +33,7 @@ export const withOtel =
 
       attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);
       attrs["http.response.body.size"] =
-        stats?.bytes ?? Number(attrs["http.response.header.content_length"] || 0);
+        stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
 
       attrs["http.response.status_code_effective"] = status;
 
