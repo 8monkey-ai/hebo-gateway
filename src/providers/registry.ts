@@ -22,10 +22,10 @@ export const resolveProvider = (args: {
     throw new GatewayError(`Model '${modelId}' not found in catalog`, 422, "MODEL_NOT_FOUND");
   }
 
-  const modality = operation === "embeddings" ? "embeddings" : "text";
+  const modality = operation === "embeddings" ? "embedding" : "text";
   if (catalogModel.modalities && !catalogModel.modalities.output.includes(modality)) {
     throw new GatewayError(
-      `Model '${modelId}' does not support '${operation}' output`,
+      `Model '${modelId}' does not support '${modality}' output`,
       422,
       "MODEL_UNSUPPORTED_OPERATION",
     );

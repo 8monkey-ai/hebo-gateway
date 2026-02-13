@@ -93,7 +93,7 @@ export type CatalogModel = {
   knowledge?: string;
   modalities?: {
     input: readonly ("text" | "image" | "file" | "audio" | "video" | "pdf")[];
-    output: readonly ("text" | "image" | "audio" | "video" | "embeddings")[];
+    output: readonly ("text" | "image" | "audio" | "video" | "embedding")[];
   };
   context?: number;
   capabilities?: readonly (

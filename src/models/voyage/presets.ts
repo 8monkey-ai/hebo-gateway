@@ -6,7 +6,7 @@ import { presetFor, type DeepPartial } from "../../utils/preset";
 const VOYAGE_BASE = {
   modalities: {
     input: ["text"] as const,
-    output: ["embeddings"] as const,
+    output: ["embedding"] as const,
   },
   providers: ["voyage"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;

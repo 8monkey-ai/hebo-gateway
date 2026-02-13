@@ -22,7 +22,7 @@ const GEMINI_BASE = {
 const GEMINI_EMBEDDINGS_BASE = {
   modalities: {
     input: ["text"] as const,
-    output: ["embeddings"] as const,
+    output: ["embedding"] as const,
   },
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;

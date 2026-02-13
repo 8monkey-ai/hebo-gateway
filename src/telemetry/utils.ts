@@ -107,6 +107,7 @@ export const getRequestAttributes = (
 };
 
 export const getAIAttributes = (
+  operation?: "chat" | "embeddings" | "models",
   body?: object,
   result?: object,
   attributesLevel = DEFAULT_ATTRIBUTES_LEVEL,
@@ -114,17 +115,15 @@ export const getAIAttributes = (
 ) => {
   if (!body && !result) return {};
 
-  const isChat = !!body && "messages" in body;
-  const isEmbeddings = !!body && "input" in body;
-
   const attrs = {
-    "gen_ai.operation.name": isEmbeddings ? "embeddings" : isChat ? "chat" : undefined,
-    "gen_ai.output.type": isEmbeddings ? "embedding" : isChat ? "text" : undefined,
+    "gen_ai.operation.name": operation,
+    "gen_ai.output.type":
+      operation === "embeddings" ? "embedding" : operation === "chat" ? "text" : undefined,
     "gen_ai.request.model": body && "model" in body ? body.model : undefined,
     "gen_ai.provider.name": providerName,
   };
 
-  if (isChat) {
+  if (operation === "chat") {
     if (body) {
       const inputs = body as ChatCompletionsBody;
 
@@ -197,7 +196,7 @@ export const getAIAttributes = (
     }
   }
 
-  if (isEmbeddings) {
+  if (operation === "embeddings") {
     if (body) {
       const inputs = body as EmbeddingsBody;
       if (attributesLevel !== "required") {
