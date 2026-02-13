@@ -1,13 +1,12 @@
-import type { Embeddings, EmbeddingsBody } from "#/endpoints/embeddings";
-
-import { resolveRequestId } from "#/utils/headers";
-
 import type {
   ChatCompletions,
   ChatCompletionsBody,
   ChatCompletionsContentPart,
   ChatCompletionsMessage,
 } from "../endpoints/chat-completions/schema";
+import type { Embeddings, EmbeddingsBody } from "../endpoints/embeddings";
+
+import { resolveRequestId } from "../utils/headers";
 
 type GenAIPart = Record<string, unknown>;
 const DEFAULT_ATTRIBUTES_LEVEL = "recommended";

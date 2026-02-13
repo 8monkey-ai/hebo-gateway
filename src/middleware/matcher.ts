@@ -4,6 +4,7 @@ import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 
 import { logger } from "../logger";
+import { addSpanEvent } from "../telemetry/span";
 import { forwardParamsEmbeddingMiddleware, forwardParamsMiddleware } from "./common";
 
 type MiddlewareEntries = {
@@ -117,6 +118,7 @@ class ModelMiddlewareMatcher {
         if (--n === 0) break;
       }
       logger.warn(`[middleware] cache eviction`);
+      addSpanEvent("hebo.middelware.cache.evicted");
     }
 
     this.cache.set(key, out);
