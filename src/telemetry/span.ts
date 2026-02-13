@@ -86,3 +86,12 @@ export const addSpanEvent = (name: string, attributes?: Attributes) => {
   const allAttributes = Object.assign(attributes ?? {}, getMemoryAttributes());
   trace.getActiveSpan()?.addEvent(name, allAttributes);
 };
+
+export const recordSpanError = (error: unknown) => {
+  const span = trace.getActiveSpan();
+  if (!span) return;
+
+  const err = toError(error);
+  span.recordException(err);
+  span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+};

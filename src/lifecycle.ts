@@ -9,7 +9,7 @@ import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
 import { withOtel } from "./telemetry/otel";
-import { addSpanEvent } from "./telemetry/span";
+import { addSpanEvent, recordSpanError } from "./telemetry/span";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
@@ -46,6 +46,7 @@ export const winterCgHandler = (
         }
       }
     } catch (error) {
+      recordSpanError(error);
       logger.error({
         requestId: resolveRequestId(ctx.request),
         err: error instanceof Error ? error : new Error(String(error)),
