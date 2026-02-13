@@ -10,42 +10,53 @@ import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
 import { getAIAttributes, getRequestAttributes, getResponseAttributes } from "./utils";
 
-export const withRootSpan =
+export const withOtel =
   (run: (ctx: GatewayContext) => Promise<void>, tracer?: Tracer) => async (ctx: GatewayContext) => {
     const requestStart = performance.now();
-    const rootSpan = startSpan(ctx.request.url, undefined, tracer, true);
+    const aiSpan = startSpan(ctx.request.url, undefined, tracer);
     initFetch();
 
-    const endAccessSpan = (status: number, stats?: { bytes: number }) => {
-      const attrs: Attributes = Object.assign(
-        {},
-        getRequestAttributes(ctx.request),
-        getResponseAttributes(ctx.response),
-        getAIAttributes(ctx),
+    const endAiSpan = (status: number, stats?: { bytes: number }) => {
+      const attrs: Attributes = getAIAttributes(ctx.body, ctx.result);
+
+      attrs["gen_ai.server.request.duration"] = Number(
+        ((performance.now() - requestStart) / 1000).toFixed(4),
       );
 
-      attrs["http.response.status_code_effective"] =
-        status === 200 ? (ctx.response?.status ?? status) : status;
+      if (!aiSpan.isExisting) {
+        Object.assign(
+          attrs,
+          getRequestAttributes(ctx.request),
+          getResponseAttributes(ctx.response),
+        );
+      }
 
-      rootSpan.setStatus({ code: status === 200 ? SpanStatusCode.OK : SpanStatusCode.ERROR });
-
-      attrs["network.io.bytes_in"] = Number(ctx.request.headers.get("content-length"));
-      attrs["network.io.bytes_out"] =
+      attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length"));
+      attrs["http.response.body.size"] =
         stats?.bytes ?? Number(attrs["http.response.header.content_length"]);
-      attrs["http.server.duration"] = performance.now() - requestStart;
 
-      rootSpan.setAttributes(attrs);
+      attrs["http.response.status_code_effective"] = status;
 
-      rootSpan.finish();
+      aiSpan.setStatus({ code: status >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.OK });
+
+      if (ctx.operation && ctx.modelId) {
+        aiSpan.updateName(`${ctx.operation} ${ctx.modelId}`);
+      } else if (ctx.operation) {
+        aiSpan.updateName(`${ctx.operation}`);
+      }
+
+      aiSpan.setAttributes(attrs);
+
+      aiSpan.finish();
     };
 
-    await rootSpan.runWithContext(() => run(ctx));
+    await aiSpan.runWithContext(() => run(ctx));
 
     if (ctx.response!.body instanceof ReadableStream) {
       const instrumented = instrumentStream(
         ctx.response!.body,
         {
-          onComplete: (status, params) => endAccessSpan(status, params),
+          onComplete: (status, params) => endAiSpan(status, params),
         },
         ctx.request.signal,
       );
@@ -58,5 +69,5 @@ export const withRootSpan =
       return;
     }
 
-    endAccessSpan(ctx.response!.status);
+    endAiSpan(ctx.response!.status);
   };

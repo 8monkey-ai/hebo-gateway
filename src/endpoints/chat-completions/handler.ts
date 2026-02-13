@@ -48,7 +48,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
     ctx.body = parsed.data;
 
-    ctx.operation = "text";
+    ctx.operation = "chat";
     ctx.body = (await hooks?.before?.(ctx as BeforeHookContext)) ?? ctx.body;
 
     // Resolve model + provider (hooks may override defaults).

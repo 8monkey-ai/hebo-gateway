@@ -56,10 +56,9 @@ export const toResponse = (
     body = TEXT_ENCODER.encode(JSON.stringify(result));
   }
 
-  const contentLength = body instanceof Uint8Array ? String(body.byteLength) : "";
-  const isError = result instanceof Error;
-
   if (!responseInit?.statusText) {
+    const isError = result instanceof Error;
+
     const status = responseInit?.status ?? (isError ? 500 : 200);
     const statusText = isError ? "REQUEST_FAILED" : "OK";
     const headers = responseInit?.headers;
@@ -76,7 +75,7 @@ export const toResponse = (
         }
       : {
           "content-type": "application/json",
-          "content-length": contentLength,
+          "content-length": String((body as Uint8Array).byteLength),
         },
     responseInit,
   );

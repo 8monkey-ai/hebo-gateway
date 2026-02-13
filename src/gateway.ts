@@ -4,12 +4,16 @@ import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
-import { logger } from "./logger";
-import { getRequestAttributes, getResponseAttributes } from "./telemetry/utils";
+import { GatewayError } from "./errors/gateway";
+import { winterCgHandler } from "./lifecycle";
 
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
   const parsedConfig = parseConfig(config);
+
+  const notFoundHandler = winterCgHandler(() => {
+    throw new GatewayError("Not Found", 404);
+  }, parsedConfig);
 
   const routes = {
     ["/chat/completions"]: chatCompletions(parsedConfig),
@@ -20,8 +24,6 @@ export function gateway(config: GatewayConfig) {
   const routeEntries = Object.entries(routes);
 
   const handler = (req: Request, state?: Record<string, unknown>): Promise<Response> => {
-    const start = performance.now();
-
     let pathname = new URL(req.url).pathname;
     if (basePath && pathname.startsWith(basePath)) {
       pathname = pathname.slice(basePath.length);
@@ -33,17 +35,7 @@ export function gateway(config: GatewayConfig) {
       }
     }
 
-    const response = new Response("Not Found", { status: 404 });
-    const durationMs = +(performance.now() - start).toFixed(2);
-    logger.warn(
-      {
-        ...getRequestAttributes(req),
-        ...getResponseAttributes(response),
-        "http.server.duration": durationMs,
-      },
-      `${req.method} ${pathname} 404`,
-    );
-    return Promise.resolve(response);
+    return notFoundHandler(req, state);
   };
 
   return { handler, routes } satisfies HeboGateway<typeof routes>;

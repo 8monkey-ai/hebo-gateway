@@ -13,6 +13,8 @@ export const models = (config: GatewayConfig): Endpoint => {
       throw new GatewayError("Method Not Allowed", 405);
     }
 
+    ctx.operation = "models";
+
     const rawId = request.url.split("/models/", 2)[1]?.split("?", 1)[0];
     if (!rawId) {
       return toModels(ctx.models);

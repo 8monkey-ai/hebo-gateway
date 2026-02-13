@@ -301,7 +301,7 @@ const gw = gateway({
      */
     before: async (ctx: {
       body: ChatCompletionsBody | EmbeddingsBody;
-      operation: "text" | "embeddings";
+      operation: "chat" | "embeddings";
     }): Promise<ChatCompletionsBody | EmbeddingsBody | void> => {
       // Example Use Cases:
       // - Transform request body
@@ -328,7 +328,7 @@ const gw = gateway({
      * @param ctx.models ModelCatalog from config.
      * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.modelId Resolved model ID.
-     * @param ctx.operation Operation type ("text" | "embeddings").
+     * @param ctx.operation Operation type ("chat" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
@@ -336,7 +336,7 @@ const gw = gateway({
       models: ModelCatalog;
       body: ChatCompletionsBody | EmbeddingsBody;
       modelId: ModelId;
-      operation: "text" | "embeddings";
+      operation: "chat" | "embeddings";
     }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
       // - Routing logic between providers

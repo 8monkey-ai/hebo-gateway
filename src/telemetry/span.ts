@@ -1,6 +1,6 @@
 import type { Attributes, Span, SpanOptions, Tracer } from "@opentelemetry/api";
 
-import { SpanStatusCode, context, trace } from "@opentelemetry/api";
+import { INVALID_SPAN_CONTEXT, SpanKind, SpanStatusCode, context, trace } from "@opentelemetry/api";
 
 const DEFAULT_TRACER_NAME = "@hebo-ai/gateway";
 const mem = () => process?.memoryUsage?.();
@@ -24,18 +24,28 @@ const getMemoryAttributes = (): Attributes => {
   };
 };
 
-export const startSpan = (
-  name: string,
-  spanOptions?: SpanOptions,
-  tracer?: Tracer,
-  rootOnly = false,
-) => {
-  const parentContext = context.active();
-  const activeSpan = rootOnly ? trace.getActiveSpan() : undefined;
+const NOOP_SPAN = {
+  runWithContext: <T>(fn: () => Promise<T> | T) => fn(),
+  recordError: (_error: unknown) => {},
+  finish: () => {},
+  isExisting: true,
+};
 
-  const span =
-    activeSpan ??
-    (tracer ?? trace.getTracer(DEFAULT_TRACER_NAME)).startSpan(name, spanOptions, parentContext);
+export const startSpan = (name: string, options?: SpanOptions, customTracer?: Tracer) => {
+  const tracer = customTracer ?? trace.getTracer(DEFAULT_TRACER_NAME);
+
+  const parentContext = context.active();
+  const activeSpan = trace.getActiveSpan();
+
+  const span = tracer.startSpan(
+    name,
+    { kind: activeSpan ? SpanKind.INTERNAL : SpanKind.SERVER, ...options },
+    parentContext,
+  );
+
+  if (!span.isRecording()) {
+    return Object.assign(trace.wrapSpanContext(INVALID_SPAN_CONTEXT), NOOP_SPAN);
+  }
 
   maybeSetDynamicAttributes(span, getMemoryAttributes);
 
@@ -50,14 +60,18 @@ export const startSpan = (
 
   const finish = () => {
     maybeSetDynamicAttributes(span, getMemoryAttributes);
-    if (!activeSpan) span.end();
+    span.end();
   };
 
-  return Object.assign(span, { runWithContext, recordError, finish });
+  return Object.assign(span, { runWithContext, recordError, finish, isExisting: !!activeSpan });
 };
 
-export const withSpan = async <T>(name: string, run: () => Promise<T> | T): Promise<T> => {
-  const started = startSpan(name);
+export const withSpan = async <T>(
+  name: string,
+  run: () => Promise<T> | T,
+  options?: SpanOptions,
+): Promise<T> => {
+  const started = startSpan(name, options);
   try {
     return await started.runWithContext(run);
   } catch (error) {
