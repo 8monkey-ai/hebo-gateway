@@ -98,8 +98,8 @@ export const getAIAttributes = (body?: object, result?: object) => {
   };
 
   if (isChat) {
-    const inputs = body as ChatCompletionsBody;
-    if (inputs) {
+    if (body) {
+      const inputs = body as ChatCompletionsBody;
       Object.assign(attrs, {
         // FUTURE: only construct once
         "gen_ai.system_instructions": inputs.messages
@@ -125,8 +125,8 @@ export const getAIAttributes = (body?: object, result?: object) => {
     }
 
     // FUTURE: implement streaming
-    const completions = result as ChatCompletions;
-    if (completions && !(completions instanceof ReadableStream)) {
+    if (result && !(result instanceof ReadableStream)) {
+      const completions = result as ChatCompletions;
       Object.assign(attrs, {
         "gen_ai.output.type": "text",
         "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
@@ -146,15 +146,15 @@ export const getAIAttributes = (body?: object, result?: object) => {
   }
 
   if (isEmbeddings) {
-    const inputs = body as EmbeddingsBody;
-    if (inputs) {
+    if (body) {
+      const inputs = body as EmbeddingsBody;
       Object.assign(attrs, {
         "gen_ai.embeddings.dimension.count": inputs.dimensions,
       });
     }
 
-    const embeddings = result as Embeddings;
-    if (embeddings) {
+    if (result) {
+      const embeddings = result as Embeddings;
       Object.assign(attrs, {
         "gen_ai.output.type": "embedding",
         "gen_ai.usage.input_tokens": embeddings.usage?.prompt_tokens,
