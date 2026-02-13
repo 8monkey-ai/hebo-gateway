@@ -6,6 +6,7 @@ import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 import { GatewayError } from "./errors/gateway";
 import { winterCgHandler } from "./lifecycle";
+import { logger } from "./logger";
 
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
@@ -29,6 +30,7 @@ export function gateway(config: GatewayConfig) {
       pathname = pathname.slice(basePath.length);
     }
 
+    logger.debug("[gateway] ${request.method} ${pathname}");
     for (const [route, endpoint] of routeEntries) {
       if (pathname === route || pathname.startsWith(route + "/")) {
         return endpoint.handler(req, state);
