@@ -1,4 +1,11 @@
-import { generateText, streamText, wrapLanguageModel } from "ai";
+import {
+  generateText,
+  Output,
+  streamText,
+  wrapLanguageModel,
+  type GenerateTextResult,
+  type ToolSet,
+} from "ai";
 import * as z from "zod/mini";
 
 import type {
@@ -120,6 +127,12 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },
+        onFinish: (event) => {
+          ctx.streamResult = toChatCompletions(
+            event as unknown as GenerateTextResult<ToolSet, Output.Output>,
+            ctx.resolvedModelId!,
+          );
+        },
         timeout: {
           totalMs: 5 * 60 * 1000,
         },
@@ -131,7 +144,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       });
       addSpanEvent("lifecycle.ai-sdk.completed");
 
-      ctx.result = toChatCompletionsStream(result, ctx.modelId);
+      ctx.result = toChatCompletionsStream(result, ctx.resolvedModelId);
       addSpanEvent("lifecycle.result.transformed");
 
       if (hooks?.after) {
@@ -158,7 +171,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     logger.trace({ requestId, result }, "[chat] AI SDK result");
     addSpanEvent("lifecycle.ai-sdk.completed");
 
-    ctx.result = toChatCompletions(result, ctx.modelId);
+    ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("lifecycle.result.transformed");
 
     if (hooks?.after) {

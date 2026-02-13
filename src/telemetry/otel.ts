@@ -24,7 +24,7 @@ export const withOtel =
     const endAiSpan = (status: number, stats?: { bytes: number }) => {
       const attrs: Attributes = getAIAttributes(
         ctx.body,
-        ctx.result,
+        ctx.streamResult ?? ctx.result,
         config.telemetry?.attributes,
         ctx.resolvedProviderId,
       );
