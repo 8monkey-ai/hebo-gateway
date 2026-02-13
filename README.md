@@ -615,12 +615,17 @@ const gw = gateway({
   telemetry: {
     // default: false
     enabled: true,
-    // default: TraceProivder from @opentelemetry/api singleton
+    // default: TraceProvider from @opentelemetry/api singleton
     tracer: trace.getTracer("my-gateway"),
     // "required" = minimal baseline attributes
-    // "recommended" = practical operational attributes (request/response metadata, genai model/usage fields)
-    // "full" = also include body fields (e.g. genai input/output messages)
-    attributes: "full",
+    // "recommended" = practical operational attributes (default)
+    // "full" = include all available attributes (including bodies)
+    attributes: {
+      // gen_ai.* semantic attributes
+      gen_ai: "full",
+      // http.*, url.*, server.* semantic attributes
+      http: "recommended",
+    },
   },
 });
 ```

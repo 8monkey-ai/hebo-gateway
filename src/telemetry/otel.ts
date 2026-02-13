@@ -25,7 +25,7 @@ export const withOtel =
       const attrs: Attributes = getAIAttributes(
         ctx.body,
         ctx.streamResult ?? ctx.result,
-        config.telemetry?.attributes,
+        config.telemetry?.attributes?.gen_ai,
         ctx.resolvedProviderId,
       );
 
@@ -36,20 +36,20 @@ export const withOtel =
       if (!aiSpan.isExisting) {
         Object.assign(
           attrs,
-          getRequestAttributes(ctx.request, config.telemetry?.attributes),
-          getResponseAttributes(ctx.response, config.telemetry?.attributes),
+          getRequestAttributes(ctx.request, config.telemetry?.attributes?.http),
+          getResponseAttributes(ctx.response, config.telemetry?.attributes?.http),
         );
       }
 
       Object.assign(attrs, getBaggageAttributes(ctx.request));
 
-      if (config.telemetry?.attributes !== "required") {
+      if (config.telemetry?.attributes?.http !== "required") {
         attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);
         attrs["http.response.body.size"] =
           stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
       }
 
-      if (config.telemetry?.attributes === "full") {
+      if (config.telemetry?.attributes?.http === "full") {
         attrs["http.request.body"] = JSON.stringify(ctx.body);
       }
 

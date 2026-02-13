@@ -204,8 +204,15 @@ export type GatewayConfig = {
      * - required: minimal safe baseline
      * - recommended: practical defaults
      * - full: include all available attributes
+     *
+     * Namespace overrides:
+     * - gen_ai: AI semantic attributes (gen_ai.*)
+     * - http: HTTP semantic attributes (http.*, url.*, server.*)
      */
-    attributes?: "required" | "recommended" | "full";
+    attributes?: {
+      gen_ai?: "required" | "recommended" | "full";
+      http?: "required" | "recommended" | "full";
+    };
   };
   /**
    * Preferred logger configuration: custom logger or default logger settings.
