@@ -9,6 +9,7 @@ import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
 import { withOtel } from "./telemetry/otel";
+import { addSpanEvent } from "./telemetry/span";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
@@ -21,20 +22,29 @@ export const winterCgHandler = (
 
   const core = async (ctx: GatewayContext): Promise<void> => {
     try {
-      const onRequest = await parsedConfig.hooks?.onRequest?.(ctx as OnRequestHookContext);
-      if (onRequest) {
-        if (onRequest instanceof Response) {
-          ctx.response = onRequest;
-          return;
+      if (parsedConfig.hooks?.onRequest) {
+        const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
+        addSpanEvent("lifecycle.hooks.on_request.completed");
+
+        if (onRequest) {
+          if (onRequest instanceof Response) {
+            ctx.response = onRequest;
+            return;
+          }
+          ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
         }
-        ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
       }
 
       ctx.result = (await run(ctx)) as typeof ctx.result;
       ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.request));
 
-      const onResponse = await parsedConfig.hooks?.onResponse?.(ctx as OnResponseHookContext);
-      if (onResponse) ctx.response = onResponse;
+      if (parsedConfig.hooks?.onResponse) {
+        const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
+        addSpanEvent("lifecycle.hooks.on_response.completed");
+        if (onResponse) {
+          ctx.response = onResponse;
+        }
+      }
     } catch (error) {
       logger.error({
         requestId: resolveRequestId(ctx.request),
