@@ -127,9 +127,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },
-        onFinish: (event) => {
+        onFinish: (result) => {
           ctx.streamResult = toChatCompletions(
-            event as unknown as GenerateTextResult<ToolSet, Output.Output>,
+            result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
         },
