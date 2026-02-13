@@ -1,8 +1,5 @@
 export type InstrumentStreamHooks = {
-  onComplete?: (
-    status: number,
-    stats: { bytes: number; streamStart: number; streamEnd: number },
-  ) => void;
+  onComplete?: (status: number, stats: { bytes: number }) => void;
   onError?: (error: unknown, status: number) => void;
 };
 
@@ -11,7 +8,7 @@ export const instrumentStream = (
   hooks: InstrumentStreamHooks,
   signal?: AbortSignal,
 ): ReadableStream<Uint8Array> => {
-  const stats = { bytes: 0, streamStart: performance.now() };
+  const stats = { bytes: 0 };
   let done = false;
 
   const finish = (status: number, reason?: unknown) => {
@@ -24,13 +21,7 @@ export const instrumentStream = (
       hooks.onError?.(reason, status);
     }
 
-    const timing = {
-      bytes: stats.bytes,
-      streamStart: stats.streamStart,
-      streamEnd: performance.now(),
-    };
-
-    hooks.onComplete?.(status, timing);
+    hooks.onComplete?.(status, stats);
   };
 
   return new ReadableStream<Uint8Array>({
