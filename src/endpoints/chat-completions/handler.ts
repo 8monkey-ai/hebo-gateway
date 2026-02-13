@@ -43,15 +43,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const requestId = resolveRequestId(ctx.request);
 
     // Parse + validate input.
-    let body;
     try {
-      body = await ctx.request.json();
+      ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
     addSpanEvent("hebo.request.deserialized");
 
-    const parsed = ChatCompletionsBodySchema.safeParse(body);
+    const parsed = ChatCompletionsBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
