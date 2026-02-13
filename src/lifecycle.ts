@@ -8,7 +8,7 @@ import type {
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
-import { withOtel } from "./telemetry/ai-span";
+import { withOtel } from "./telemetry/otel";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";

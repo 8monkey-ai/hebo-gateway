@@ -169,6 +169,7 @@
     "@ai-sdk/openai": "^3.0.23",
     "@aws-sdk/credential-providers": "^3.981.0",
     "@mjackson/node-fetch-server": "^0.7.0",
+    "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@tanstack/react-router": "^1.157.16",
     "@tanstack/react-start": "^1.157.16",
     "@types/bun": "latest",

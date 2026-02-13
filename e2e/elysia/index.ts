@@ -13,6 +13,11 @@ import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
 import { withCanonicalIdsForCohere } from "@hebo-ai/gateway/providers/cohere";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { withCanonicalIdsForVoyage } from "@hebo-ai/gateway/providers/voyage";
+import {
+  BasicTracerProvider,
+  ConsoleSpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import { Elysia } from "elysia";
 import { pino } from "pino";
 import { createVoyage } from "voyage-ai-provider";
@@ -45,7 +50,14 @@ const gw = gateway({
       console.log(ctx.state.auth.userId);
     },
   },
+  logger: null,
   //logger: pino({ level: "trace" }),
+  telemetry: {
+    enabled: true,
+    tracer: new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(new ConsoleSpanExporter())],
+    }).getTracer("hebo-gateway"),
+  },
 });
 
 const app = new Elysia()

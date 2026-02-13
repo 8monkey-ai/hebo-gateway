@@ -100,14 +100,15 @@ export const getAIAttributes = (body?: object, result?: object) => {
   if (isChat) {
     if (body) {
       const inputs = body as ChatCompletionsBody;
+
       Object.assign(attrs, {
         // FUTURE: only construct once
         "gen_ai.system_instructions": inputs.messages
           .filter((m) => m.role === "system")
-          .map((m) => ({ parts: [toTextPart(m.content)] })),
+          .map((m) => JSON.stringify({ parts: [toTextPart(m.content)] })),
         "gen_ai.input.messages": inputs.messages
           .filter((m) => m.role !== "system")
-          .map((m) => ({ role: m.role, parts: toMessageParts(m) })),
+          .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
         "gen_ai.tool.definitions": inputs.tools,
         "gen_ai.request.stream": inputs.stream,
         "gen_ai.request.seed": inputs.seed,
@@ -130,11 +131,13 @@ export const getAIAttributes = (body?: object, result?: object) => {
       Object.assign(attrs, {
         "gen_ai.output.type": "text",
         "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
-        "gen_ai.output.messages": completions.choices.map((c) => ({
-          role: c.message.role,
-          parts: toMessageParts(c.message),
-          finish_reason: c.finish_reason,
-        })),
+        "gen_ai.output.messages": completions.choices.map((c) =>
+          JSON.stringify({
+            role: c.message.role,
+            parts: toMessageParts(c.message),
+            finish_reason: c.finish_reason,
+          }),
+        ),
         "gen_ai.response.finish_reasons": completions.choices.map((c) => c.finish_reason),
         "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
         "gen_ai.usage.cached_tokens": completions.usage?.prompt_tokens_details?.cached_tokens,

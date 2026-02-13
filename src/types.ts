@@ -199,7 +199,7 @@ export type GatewayConfig = {
   /**
    * Preferred logger configuration: custom logger or default logger settings.
    */
-  logger?: Logger | LoggerConfig;
+  logger?: Logger | LoggerConfig | null;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
