@@ -116,7 +116,7 @@ export const getAIAttributes = (body?: object, result?: object) => {
         "gen_ai.input.messages": inputs.messages
           .filter((m) => m.role !== "system")
           .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
-        "gen_ai.tool.definitions": inputs.tools,
+        "gen_ai.tool.definitions": JSON.stringify(inputs.tools),
         "gen_ai.request.stream": inputs.stream,
         "gen_ai.request.seed": inputs.seed,
         "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
