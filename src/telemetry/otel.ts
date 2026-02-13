@@ -7,7 +7,12 @@ import type { GatewayConfigParsed, GatewayContext } from "../types";
 import { initFetch } from "./fetch";
 import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
-import { getAIAttributes, getRequestAttributes, getResponseAttributes } from "./utils";
+import {
+  getAIAttributes,
+  getBaggageAttributes,
+  getRequestAttributes,
+  getResponseAttributes,
+} from "./utils";
 
 export const withOtel =
   (run: (ctx: GatewayContext) => Promise<void>, config: GatewayConfigParsed) =>
@@ -35,6 +40,8 @@ export const withOtel =
           getResponseAttributes(ctx.response, config.telemetry?.attributes),
         );
       }
+
+      Object.assign(attrs, getBaggageAttributes(ctx.request));
 
       if (config.telemetry?.attributes === "full") {
         attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);

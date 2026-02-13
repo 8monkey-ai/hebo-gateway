@@ -10,7 +10,7 @@ type GlobalFetchState = typeof globalThis & {
 
 const g = globalThis as GlobalFetchState;
 
-const perfFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+const perfFetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const original = g[ORIGINAL_FETCH_KEY]!;
   return withSpan("fetch", () => original(input, init), { kind: SpanKind.CLIENT });
 };

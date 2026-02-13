@@ -11,6 +11,7 @@ import type {
 
 type GenAIPart = Record<string, unknown>;
 const DEFAULT_ATTRIBUTES_LEVEL = "recommended";
+const HEBO_BAGGAGE_PREFIX = "hebo.";
 
 const toTextPart = (content: string): GenAIPart => ({ type: "text", content });
 
@@ -96,10 +97,10 @@ export const getRequestAttributes = (
 
   if (attributesLevel === "full") {
     Object.assign(attrs, {
-      // TODO: "url.query"
+      // FUTURE: "url.query"
       "http.request.header.content-type": [request.headers.get("content-type") ?? undefined],
       "http.request.header.content-length": [request.headers.get("content-length") ?? undefined],
-      // TODO: "client.address"
+      // FUTURE: "client.address"
     });
   }
 
@@ -241,6 +242,32 @@ export const getResponseAttributes = (
       "http.response.header.content-type": [response.headers.get("content-type") ?? undefined],
       "http.response.header.content-length": [response.headers.get("content-length") ?? undefined],
     });
+  }
+
+  return attrs;
+};
+
+export const getBaggageAttributes = (request?: Request) => {
+  const h = request?.headers.get("baggage");
+  if (!h) return {};
+
+  const attrs: Record<string, string> = {};
+
+  for (const part of h.split(",")) {
+    const [k, v] = part.trim().split("=", 2);
+    if (!k || !v) continue;
+
+    const [rawValue] = v.split(";", 1);
+    if (!rawValue) continue;
+
+    let value = rawValue;
+    try {
+      value = decodeURIComponent(rawValue);
+    } catch {}
+
+    if (k.startsWith(HEBO_BAGGAGE_PREFIX)) {
+      attrs[k.slice(HEBO_BAGGAGE_PREFIX.length)] = value;
+    }
   }
 
   return attrs;
