@@ -26,7 +26,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
-    addSpanEvent("embeddings.handler.started");
+    addSpanEvent("lifecycle.handler.started");
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -42,19 +42,19 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
-    addSpanEvent("embeddings.request.deserialized");
+    addSpanEvent("lifecycle.request.deserialized");
 
     const parsed = EmbeddingsBodySchema.safeParse(body);
     if (!parsed.success) {
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
-    addSpanEvent("embeddings.request.parsed");
+    addSpanEvent("lifecycle.request.parsed");
 
     ctx.operation = "embeddings";
     if (hooks?.before) {
       ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
-      addSpanEvent("embeddings.hooks.before.completed");
+      addSpanEvent("lifecycle.hooks.before.completed");
     }
 
     // Resolve model + provider (hooks may override defaults).
@@ -64,7 +64,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
-    addSpanEvent("embeddings.model.resolved", {
+    addSpanEvent("lifecycle.model.resolved", {
       "gen_ai.request.model": ctx.modelId ?? "",
       "gen_ai.response.model": ctx.resolvedModelId ?? "",
     });
@@ -82,14 +82,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
-    addSpanEvent("embeddings.provider.resolved", {
+    addSpanEvent("lifecycle.provider.resolved", {
       "gen_ai.provider.name": ctx.resolvedProviderId,
     });
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
-    addSpanEvent("embeddings.options.prepared");
+    addSpanEvent("lifecycle.options.prepared");
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -98,7 +98,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request.
-    addSpanEvent("embeddings.ai-sdk.started");
+    addSpanEvent("lifecycle.ai-sdk.started");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
@@ -106,14 +106,14 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       ...embedOptions,
     });
     logger.trace({ requestId, result }, "[embeddings] AI SDK result");
-    addSpanEvent("embeddings.ai-sdk.completed");
+    addSpanEvent("lifecycle.ai-sdk.completed");
 
     ctx.result = toEmbeddings(result, ctx.modelId);
-    addSpanEvent("embeddings.result.transformed");
+    addSpanEvent("lifecycle.result.transformed");
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
-      addSpanEvent("embeddings.hooks.after.completed");
+      addSpanEvent("lifecycle.hooks.after.completed");
     }
 
     return ctx.result;

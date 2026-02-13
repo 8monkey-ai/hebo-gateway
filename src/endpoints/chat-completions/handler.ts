@@ -26,7 +26,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
-    addSpanEvent("chat.handler.started");
+    addSpanEvent("lifecycle.handler.started");
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -42,19 +42,19 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
-    addSpanEvent("chat.request.deserialized");
+    addSpanEvent("lifecycle.request.deserialized");
 
     const parsed = ChatCompletionsBodySchema.safeParse(body);
     if (!parsed.success) {
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
-    addSpanEvent("chat.request.parsed");
+    addSpanEvent("lifecycle.request.parsed");
 
     ctx.operation = "chat";
     if (hooks?.before) {
       ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
-      addSpanEvent("chat.hooks.before.completed");
+      addSpanEvent("lifecycle.hooks.before.completed");
     }
 
     // Resolve model + provider (hooks may override defaults).
@@ -64,7 +64,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
-    addSpanEvent("chat.model.resolved", {
+    addSpanEvent("lifecycle.model.resolved", {
       "gen_ai.request.model": ctx.modelId ?? "",
       "gen_ai.response.model": ctx.resolvedModelId ?? "",
     });
@@ -82,7 +82,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
-    addSpanEvent("chat.provider.resolved", { "gen_ai.provider.name": ctx.resolvedProviderId });
+    addSpanEvent("lifecycle.provider.resolved", { "gen_ai.provider.name": ctx.resolvedProviderId });
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
@@ -93,7 +93,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       },
       "[chat] AI SDK options",
     );
-    addSpanEvent("chat.options.prepared");
+    addSpanEvent("lifecycle.options.prepared");
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -103,7 +103,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Execute request (streaming vs. non-streaming).
     if (stream) {
-      addSpanEvent("chat.ai-sdk.started");
+      addSpanEvent("lifecycle.ai-sdk.started");
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
@@ -129,20 +129,20 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         includeRawChunks: false,
         ...textOptions,
       });
-      addSpanEvent("chat.ai-sdk.completed");
+      addSpanEvent("lifecycle.ai-sdk.completed");
 
       ctx.result = toChatCompletionsStream(result, ctx.modelId);
-      addSpanEvent("chat.result.transformed");
+      addSpanEvent("lifecycle.result.transformed");
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
-        addSpanEvent("chat.hooks.after.completed");
+        addSpanEvent("lifecycle.hooks.after.completed");
       }
 
       return ctx.result;
     }
 
-    addSpanEvent("chat.ai-sdk.started");
+    addSpanEvent("lifecycle.ai-sdk.started");
     const result = await generateText({
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
@@ -156,14 +156,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       ...textOptions,
     });
     logger.trace({ requestId, result }, "[chat] AI SDK result");
-    addSpanEvent("chat.ai-sdk.completed");
+    addSpanEvent("lifecycle.ai-sdk.completed");
 
     ctx.result = toChatCompletions(result, ctx.modelId);
-    addSpanEvent("chat.result.transformed");
+    addSpanEvent("lifecycle.result.transformed");
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
-      addSpanEvent("chat.hooks.after.completed");
+      addSpanEvent("lifecycle.hooks.after.completed");
     }
 
     return ctx.result;
