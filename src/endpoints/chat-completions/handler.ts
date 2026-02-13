@@ -33,6 +33,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
+    ctx.operation = "chat";
     addSpanEvent("hebo.handler.started");
 
     // Guard: enforce HTTP method early.
@@ -57,7 +58,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.body = parsed.data;
     addSpanEvent("hebo.request.parsed");
 
-    ctx.operation = "chat";
     if (hooks?.before) {
       ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
       addSpanEvent("hebo.hooks.before.completed");
