@@ -4,15 +4,15 @@ import { SpanStatusCode } from "@opentelemetry/api";
 
 import type { GatewayConfigParsed, GatewayContext } from "../types";
 
-import { recordRequestDuration as requestOperationDuration, recordTokenUsage } from "./metric";
-import { startSpan } from "./span";
-import { instrumentStream } from "./stream";
 import {
   getAIAttributes,
   getBaggageAttributes,
   getRequestAttributes,
   getResponseAttributes,
-} from "./utils";
+} from "./attributes";
+import { recordRequestDuration as requestOperationDuration, recordTokenUsage } from "./metric";
+import { startSpan } from "./span";
+import { instrumentStream } from "./stream";
 
 export const withOtel =
   (run: (ctx: GatewayContext) => Promise<void>, config: GatewayConfigParsed) =>
