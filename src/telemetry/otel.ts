@@ -4,6 +4,7 @@ import { SpanStatusCode } from "@opentelemetry/api";
 
 import type { GatewayConfigParsed, GatewayContext } from "../types";
 
+import { recordRequestDuration as requestOperationDuration, recordTokenUsage } from "./metric";
 import { startSpan } from "./span";
 import { instrumentStream } from "./stream";
 import {
@@ -26,10 +27,6 @@ export const withOtel =
         ctx.streamResult ?? ctx.result,
         config.telemetry?.attributes?.gen_ai,
         ctx.resolvedProviderId,
-      );
-
-      attrs["gen_ai.server.request.duration"] = Number(
-        ((performance.now() - requestStart) / 1000).toFixed(4),
       );
 
       if (!aiSpan.isExisting) {
@@ -55,6 +52,9 @@ export const withOtel =
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
       attrs["http.response.status_code_effective"] = realStatus;
       aiSpan.setStatus({ code: realStatus >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.OK });
+
+      requestOperationDuration(performance.now() - requestStart, attrs, ctx.response?.statusText);
+      recordTokenUsage(attrs, ctx.response?.statusText);
 
       if (ctx.operation && ctx.modelId) {
         aiSpan.updateName(`${ctx.operation} ${ctx.modelId}`);

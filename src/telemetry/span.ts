@@ -1,4 +1,4 @@
-import type { Attributes, Span, SpanOptions, Tracer } from "@opentelemetry/api";
+import type { Attributes, SpanOptions, Tracer } from "@opentelemetry/api";
 
 import { INVALID_SPAN_CONTEXT, SpanKind, SpanStatusCode, context, trace } from "@opentelemetry/api";
 
@@ -7,23 +7,6 @@ const DEFAULT_TRACER_NAME = "@hebo-ai/gateway";
 let spanTracer: Tracer | undefined;
 
 const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
-
-const maybeSetDynamicAttributes = (span: Span, getAttributes: () => Attributes) => {
-  const attrs = getAttributes();
-  if (Object.keys(attrs).length === 0) return;
-  span.setAttributes(attrs);
-};
-
-const getMemoryAttributes = (): Attributes => {
-  const memory = process?.memoryUsage?.();
-  if (!memory) return {};
-
-  return {
-    "process.memory.usage": memory.rss,
-    "process.memory.heap.used": memory.heapUsed,
-    "process.memory.heap.total": memory.heapTotal,
-  };
-};
 
 const NOOP_SPAN = {
   runWithContext: <T>(fn: () => Promise<T> | T) => fn(),
@@ -52,8 +35,6 @@ export const startSpan = (name: string, options?: SpanOptions) => {
     return Object.assign(trace.wrapSpanContext(INVALID_SPAN_CONTEXT), NOOP_SPAN);
   }
 
-  maybeSetDynamicAttributes(span, getMemoryAttributes);
-
   const runWithContext = <T>(fn: () => Promise<T> | T) =>
     context.with(trace.setSpan(parentContext, span), fn);
 
@@ -64,7 +45,6 @@ export const startSpan = (name: string, options?: SpanOptions) => {
   };
 
   const finish = () => {
-    maybeSetDynamicAttributes(span, getMemoryAttributes);
     span.end();
   };
 
@@ -88,8 +68,7 @@ export const withSpan = async <T>(
 };
 
 export const addSpanEvent = (name: string, attributes?: Attributes) => {
-  const allAttributes = Object.assign(attributes ?? {}, getMemoryAttributes());
-  trace.getActiveSpan()?.addEvent(name, allAttributes);
+  trace.getActiveSpan()?.addEvent(name, attributes);
 };
 
 export const recordSpanError = (error: unknown) => {
