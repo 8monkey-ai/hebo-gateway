@@ -107,6 +107,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     logger.trace({ requestId, result }, "[embeddings] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
+    // Transform result.
     ctx.result = toEmbeddings(result, ctx.modelId);
     addSpanEvent("hebo.result.transformed");
 

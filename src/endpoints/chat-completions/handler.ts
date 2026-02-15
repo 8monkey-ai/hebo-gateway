@@ -116,6 +116,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         // No abort signal here, otherwise we can't detect upstream from client cancellations
         // abortSignal: ctx.request.signal,
         onError: ({ error }) => {
+          // FUTURE: 400 only on debug / add body?
           const err = error instanceof Error ? error : new Error(String(error));
           logger.error({
             requestId,
@@ -170,6 +171,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     logger.trace({ requestId, result }, "[chat] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
+    // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
 

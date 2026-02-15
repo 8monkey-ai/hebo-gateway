@@ -51,12 +51,15 @@ export const winterCgHandler = (
         }
       }
     } catch (error) {
-      recordSpanError(error);
+      ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));
+
+      // FUTURE: 400 only on debug / add body?
       logger.error({
         requestId: resolveRequestId(ctx.request),
         err: error instanceof Error ? error : new Error(String(error)),
       });
-      ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));
+
+      if (ctx.response.status >= 500) recordSpanError(error);
     }
   };
 

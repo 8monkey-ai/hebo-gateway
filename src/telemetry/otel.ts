@@ -1,7 +1,5 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import { SpanStatusCode } from "@opentelemetry/api";
-
 import type { GatewayConfigParsed, GatewayContext } from "../types";
 
 import {
@@ -11,7 +9,7 @@ import {
   getResponseAttributes,
 } from "./attributes";
 import { recordRequestDuration as requestOperationDuration, recordTokenUsage } from "./metric";
-import { startSpan } from "./span";
+import { recordSpanError, startSpan } from "./span";
 import { instrumentStream } from "./stream";
 
 export const withOtel =
@@ -20,7 +18,7 @@ export const withOtel =
     const requestStart = performance.now();
     const aiSpan = startSpan(ctx.request.url);
 
-    const endAiSpan = (status: number, stats?: { bytes: number }) => {
+    const endAiSpan = (status: number, reason?: unknown, stats?: { bytes: number }) => {
       const attrs: Attributes = getAIAttributes(
         ctx.operation,
         ctx.body,
@@ -51,7 +49,7 @@ export const withOtel =
 
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
       attrs["http.response.status_code_effective"] = realStatus;
-      aiSpan.setStatus({ code: realStatus >= 500 ? SpanStatusCode.ERROR : SpanStatusCode.OK });
+      if (realStatus >= 500) recordSpanError(reason);
 
       requestOperationDuration(performance.now() - requestStart, attrs, ctx.response?.statusText);
       recordTokenUsage(attrs, ctx.response?.statusText);
@@ -72,9 +70,7 @@ export const withOtel =
     if (ctx.response!.body instanceof ReadableStream) {
       const instrumented = instrumentStream(
         ctx.response!.body,
-        {
-          onComplete: (status, params) => endAiSpan(status, params),
-        },
+        { onDone: endAiSpan },
         ctx.request.signal,
       );
 
