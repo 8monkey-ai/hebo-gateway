@@ -128,13 +128,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           throw new DOMException("Upstream failed", "AbortError");
         },
         onFinish: (result) => {
-          ctx.streamResult = toChatCompletions(
+          const streamResult = toChatCompletions(
             result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
           recordTokenUsage(otelAttrs);
           setSpanAttributes(
-            getChatResponseAttributes(ctx.streamResult, config.telemetry?.attributes?.gen_ai),
+            getChatResponseAttributes(streamResult, config.telemetry?.attributes?.gen_ai),
           );
           recordRequestDuration(performance.now() - start, otelAttrs);
         },

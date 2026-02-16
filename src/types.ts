@@ -84,10 +84,6 @@ export type GatewayContext = {
    * Response object returned by the handler.
    */
   response?: Response;
-  /**
-   * Structured object result for streaming requests. Only available at the end of the stream.
-   */
-  streamResult?: ChatCompletions;
 };
 
 /**

@@ -11,7 +11,7 @@ type GlobalFetchState = typeof globalThis & {
 const g = globalThis as GlobalFetchState;
 
 // FUTURE: only for LLM calls, not others; only "debug" level
-const perfFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+const otelFetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const original = g[ORIGINAL_FETCH_KEY]!;
   return withSpan("fetch", () => original(input, init), { kind: SpanKind.CLIENT });
 };
@@ -20,5 +20,5 @@ export const initFetch = () => {
   if (g[ORIGINAL_FETCH_KEY]) return;
 
   g[ORIGINAL_FETCH_KEY] = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = perfFetch as typeof fetch;
+  globalThis.fetch = otelFetch as typeof fetch;
 };
