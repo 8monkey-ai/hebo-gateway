@@ -108,7 +108,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       "[chat] AI SDK options",
     );
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getChatRequestAttributes(inputs, config.telemetry?.attributes?.gen_ai));
+    setSpanAttributes(getChatRequestAttributes(inputs, config.telemetry!.signals!.gen_ai!));
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -137,7 +137,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           );
           recordTokenUsage(otelAttrs);
           setSpanAttributes(
-            getChatResponseAttributes(streamResult, config.telemetry?.attributes?.gen_ai),
+            getChatResponseAttributes(streamResult, config.telemetry!.signals!.gen_ai!),
           );
           recordRequestDuration(performance.now() - start, otelAttrs);
         },
@@ -183,7 +183,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
     recordTokenUsage(otelAttrs);
-    setSpanAttributes(getChatResponseAttributes(ctx.result, config.telemetry?.attributes?.gen_ai));
+    setSpanAttributes(getChatResponseAttributes(ctx.result, config.telemetry!.signals!.gen_ai!));
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;

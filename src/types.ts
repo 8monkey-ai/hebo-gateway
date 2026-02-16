@@ -162,6 +162,8 @@ export type GatewayHooks = {
   onResponse?: (ctx: OnResponseHookContext) => void | Response | Promise<void | Response>;
 };
 
+export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";
+
 /**
  * Main configuration object for the gateway.
  */
@@ -183,6 +185,10 @@ export type GatewayConfig = {
    */
   hooks?: GatewayHooks;
   /**
+   * Preferred logger configuration: custom logger or default logger settings.
+   */
+  logger?: Logger | LoggerConfig | null;
+  /**
    * Optional AI SDK telemetry configuration.
    */
   telemetry?: {
@@ -196,24 +202,18 @@ export type GatewayConfig = {
      */
     tracer?: Tracer;
     /**
-     * Controls how many telemetry attributes are attached to spans.
-     * - required: minimal safe baseline
+     * Telemetry signal levels by namespace.
+     * - off: disable the namespace
+     * - required: minimal baseline
      * - recommended: practical defaults
-     * - full: include all available attributes
-     *
-     * Namespace overrides:
-     * - gen_ai: AI semantic attributes (gen_ai.*)
-     * - http: HTTP semantic attributes (http.*, url.*, server.*)
+     * - full: include all available details
      */
-    attributes?: {
-      gen_ai?: "required" | "recommended" | "full";
-      http?: "required" | "recommended" | "full";
+    signals?: {
+      gen_ai?: TelemetrySignalLevel;
+      http?: TelemetrySignalLevel;
+      hebo?: TelemetrySignalLevel;
     };
   };
-  /**
-   * Preferred logger configuration: custom logger or default logger settings.
-   */
-  logger?: Logger | LoggerConfig | null;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");

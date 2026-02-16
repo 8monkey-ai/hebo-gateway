@@ -1,6 +1,5 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import type { GatewayContext } from "../../types";
 import type {
   ChatCompletions,
   ChatCompletionsBody,
@@ -8,7 +7,7 @@ import type {
   ChatCompletionsMessage,
 } from "./schema";
 
-const DEFAULT_ATTRIBUTES_LEVEL = "recommended";
+import { type GatewayContext, type TelemetrySignalLevel } from "../../types";
 
 const toTextPart = (content: string): Record<string, unknown> => ({ type: "text", content });
 
@@ -74,15 +73,17 @@ export const getChatGeneralAttributes = (ctx: GatewayContext): Attributes => {
 
 export const getChatRequestAttributes = (
   inputs: ChatCompletionsBody,
-  attributesLevel: string = DEFAULT_ATTRIBUTES_LEVEL,
+  signalLevel: TelemetrySignalLevel,
 ): Attributes => {
+  if (signalLevel === "off") return {};
+
   const attrs: Attributes = {};
 
   if (inputs.seed !== undefined) {
     Object.assign(attrs, { "gen_ai.request.seed": inputs.seed });
   }
 
-  if (attributesLevel !== "required") {
+  if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.request.stream": inputs.stream,
       "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
@@ -98,7 +99,7 @@ export const getChatRequestAttributes = (
     });
   }
 
-  if (attributesLevel === "full") {
+  if (signalLevel === "full") {
     Object.assign(attrs, {
       "gen_ai.system_instructions": inputs.messages
         .filter((m) => m.role === "system")
@@ -115,13 +116,15 @@ export const getChatRequestAttributes = (
 
 export const getChatResponseAttributes = (
   completions: ChatCompletions,
-  attributesLevel: string = DEFAULT_ATTRIBUTES_LEVEL,
+  signalLevel: TelemetrySignalLevel,
 ): Attributes => {
+  if (signalLevel === "off") return {};
+
   const attrs: Attributes = {
     "gen_ai.response.id": completions.id,
   };
 
-  if (attributesLevel !== "required") {
+  if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.response.finish_reasons": completions.choices?.map((c) => c.finish_reason),
       "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
@@ -133,7 +136,7 @@ export const getChatResponseAttributes = (
     });
   }
 
-  if (attributesLevel === "full") {
+  if (signalLevel === "full") {
     Object.assign(attrs, {
       "gen_ai.output.messages": completions.choices?.map((c) =>
         JSON.stringify({

@@ -2,9 +2,12 @@ import type { Attributes, SpanOptions, Tracer } from "@opentelemetry/api";
 
 import { INVALID_SPAN_CONTEXT, SpanKind, SpanStatusCode, context, trace } from "@opentelemetry/api";
 
+import type { TelemetrySignalLevel } from "../types";
+
 const DEFAULT_TRACER_NAME = "@hebo-ai/gateway";
 
 let spanTracer: Tracer | undefined;
+let spanEventsEnabled = false;
 
 const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
 
@@ -17,6 +20,10 @@ const NOOP_SPAN = {
 
 export const setSpanTracer = (tracer?: Tracer) => {
   spanTracer = tracer ?? trace.getTracer(DEFAULT_TRACER_NAME);
+};
+
+export const setSpanEventsEnabled = (level?: TelemetrySignalLevel) => {
+  spanEventsEnabled = level === "recommended" || level === "full";
 };
 
 export const startSpan = (name: string, options?: SpanOptions) => {
@@ -70,7 +77,7 @@ export const withSpan = async <T>(
 };
 
 export const addSpanEvent = (name: string, attributes?: Attributes) => {
-  // FUTURE: Disable by namespace
+  if (!spanEventsEnabled) return;
   trace.getActiveSpan()?.addEvent(name, attributes);
 };
 

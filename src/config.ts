@@ -1,16 +1,21 @@
 import { isLogger, logger, setLoggerInstance } from "./logger";
 import { createDefaultLogger } from "./logger/default";
-import { kParsed, type GatewayConfig, type GatewayConfigParsed } from "./types";
+import {
+  kParsed,
+  type GatewayConfig,
+  type GatewayConfigParsed,
+  type TelemetrySignalLevel,
+} from "./types";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
-  // If it has been parsed before, just return
+  // If it has been parsed before, just return.
   if (kParsed in config) return config as GatewayConfigParsed;
 
   const providers = config.providers ?? {};
   const parsedProviders = {} as typeof providers;
   const models = config.models ?? {};
 
-  // Set the global logger instance
+  // Set the global logger instance.
   if (config.logger === undefined) {
     setLoggerInstance(createDefaultLogger({}));
   } else if (config.logger !== null) {
@@ -23,7 +28,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     );
   }
 
-  // Strip providers that are not configured
+  // Strip providers that are not configured.
   for (const id in providers) {
     const provider = providers[id];
     if (provider === undefined) {
@@ -37,7 +42,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     throw new Error("No providers configured (config.providers is empty)");
   }
 
-  // Strip providers that are not configured from models
+  // Strip providers that are not configured from models.
   const parsedModels = {} as typeof models;
   const warnings = new Set<string>();
   for (const id in models) {
@@ -60,12 +65,29 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     throw new Error("No models configured (config.models is empty)");
   }
 
+  // Default for the telemetry settings.
+  const telemetryEnabled = config.telemetry?.enabled ?? false;
+  const telemetrySignals: Record<"http" | "gen_ai" | "hebo", TelemetrySignalLevel> =
+    telemetryEnabled
+      ? {
+          http: config.telemetry?.signals?.http ?? "recommended",
+          gen_ai: config.telemetry?.signals?.gen_ai ?? "full",
+          hebo: config.telemetry?.signals?.hebo ?? "off",
+        }
+      : {
+          http: "off",
+          gen_ai: "off",
+          hebo: "off",
+        };
+
+  // Return parsed config.
   return {
     ...config,
     logger: config.logger,
     telemetry: {
       ...config.telemetry,
-      enabled: config.telemetry?.enabled ?? false,
+      enabled: telemetryEnabled,
+      signals: telemetrySignals,
     },
     providers: parsedProviders,
     models: parsedModels,

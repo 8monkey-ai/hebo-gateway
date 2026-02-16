@@ -95,7 +95,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, config.telemetry?.attributes?.gen_ai));
+    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, config.telemetry!.signals!.gen_ai!));
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -119,7 +119,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.result.transformed");
     recordTokenUsage(otelAttrs);
     setSpanAttributes(
-      getEmbeddingsResponseAttributes(ctx.result, config.telemetry?.attributes?.gen_ai),
+      getEmbeddingsResponseAttributes(ctx.result, config.telemetry!.signals!.gen_ai!),
     );
 
     if (hooks?.after) {

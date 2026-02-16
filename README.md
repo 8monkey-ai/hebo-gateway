@@ -617,14 +617,17 @@ const gw = gateway({
     enabled: true,
     // default: TraceProvider from @opentelemetry/api singleton
     tracer: trace.getTracer("my-gateway"),
-    // "required" = minimal baseline attributes
-    // "recommended" = practical operational attributes (default)
-    // "full" = include all available attributes (including bodies)
-    attributes: {
+    // Telemetry levels by namespace:
+    // "off" | "required" | "recommended" | "full"
+    signals: {
       // gen_ai.* semantic attributes
       gen_ai: "full",
       // http.*, url.*, server.* semantic attributes
       http: "recommended",
+      // hebo-specific telemetry:
+      // - recommended: hebo.* span events
+      // - full: hebo.* span events + fetch instrumentation
+      hebo: "recommended",
     },
   },
 });

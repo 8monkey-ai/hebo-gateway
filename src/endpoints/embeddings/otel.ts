@@ -1,9 +1,8 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import type { GatewayContext } from "../../types";
 import type { Embeddings, EmbeddingsInputs } from "./schema";
 
-const DEFAULT_ATTRIBUTES_LEVEL = "recommended";
+import { type GatewayContext, type TelemetrySignalLevel } from "../../types";
 
 export const getEmbeddingsGeneralAttributes = (ctx: GatewayContext): Attributes => {
   const requestModel =
@@ -21,11 +20,13 @@ export const getEmbeddingsGeneralAttributes = (ctx: GatewayContext): Attributes 
 
 export const getEmbeddingsRequestAttributes = (
   inputs: EmbeddingsInputs,
-  attributesLevel: string = DEFAULT_ATTRIBUTES_LEVEL,
+  signalLevel: TelemetrySignalLevel,
 ): Attributes => {
+  if (signalLevel === "off") return {};
+
   const attrs: Attributes = {};
 
-  if (attributesLevel !== "required") {
+  if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.embeddings.dimension.count": inputs.dimensions,
     });
@@ -36,11 +37,13 @@ export const getEmbeddingsRequestAttributes = (
 
 export const getEmbeddingsResponseAttributes = (
   embeddings: Embeddings,
-  attributesLevel: string = DEFAULT_ATTRIBUTES_LEVEL,
+  signalLevel: TelemetrySignalLevel,
 ): Attributes => {
+  if (signalLevel === "off") return {};
+
   const attrs: Attributes = {};
 
-  if (attributesLevel !== "required") {
+  if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.usage.input_tokens": embeddings.usage?.prompt_tokens,
       "gen_ai.usage.total_tokens": embeddings.usage?.total_tokens,

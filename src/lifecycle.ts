@@ -11,7 +11,13 @@ import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { initFetch } from "./telemetry/fetch";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
-import { addSpanEvent, recordSpanError, setSpanTracer, startSpan } from "./telemetry/span";
+import {
+  addSpanEvent,
+  recordSpanError,
+  setSpanEventsEnabled,
+  setSpanTracer,
+  startSpan,
+} from "./telemetry/span";
 import { wrapStream } from "./telemetry/stream";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
@@ -23,9 +29,10 @@ export const winterCgHandler = (
 ) => {
   const parsedConfig = parseConfig(config);
 
-  if (parsedConfig.telemetry?.enabled) {
-    setSpanTracer(parsedConfig.telemetry?.tracer);
-    initFetch();
+  if (parsedConfig.telemetry!.enabled) {
+    setSpanTracer(parsedConfig.telemetry!.tracer);
+    setSpanEventsEnabled(parsedConfig.telemetry!.signals!.hebo);
+    initFetch(parsedConfig.telemetry!.signals!.hebo);
   }
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
@@ -42,7 +49,7 @@ export const winterCgHandler = (
     const span = startSpan(ctx.request.url);
     span.setAttributes(getBaggageAttributes(ctx.request));
     if (!span.isExisting) {
-      span.setAttributes(getRequestAttributes(ctx.request, config.telemetry?.attributes?.http));
+      span.setAttributes(getRequestAttributes(ctx.request, parsedConfig.telemetry!.signals!.http!));
     }
 
     const finalize = (status: number, reason?: unknown) => {
@@ -51,7 +58,9 @@ export const winterCgHandler = (
       }
 
       if (!span.isExisting) {
-        span.setAttributes(getResponseAttributes(ctx.response, config.telemetry?.attributes?.http));
+        span.setAttributes(
+          getResponseAttributes(ctx.response!, parsedConfig.telemetry!.signals!.http!),
+        );
       }
 
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;

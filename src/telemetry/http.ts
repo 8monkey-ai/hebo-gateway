@@ -1,12 +1,9 @@
+import { type TelemetrySignalLevel } from "../types";
 import { resolveRequestId } from "../utils/headers";
 
-const DEFAULT_ATTRIBUTES_LEVEL = "recommended";
-
-export const getRequestAttributes = (
-  request?: Request,
-  attributesLevel = DEFAULT_ATTRIBUTES_LEVEL,
-) => {
+export const getRequestAttributes = (request: Request, signalLevel: TelemetrySignalLevel) => {
   if (!request) return {};
+  if (signalLevel === "off") return {};
 
   let url;
   try {
@@ -29,7 +26,7 @@ export const getRequestAttributes = (
       : undefined,
   };
 
-  if (attributesLevel !== "required") {
+  if (signalLevel !== "required") {
     Object.assign(attrs, {
       // FUTURE: does ElysiaJS and other frameworks attach request id?
       "http.request.id": resolveRequestId(request),
@@ -37,7 +34,7 @@ export const getRequestAttributes = (
     });
   }
 
-  if (attributesLevel === "full") {
+  if (signalLevel === "full") {
     Object.assign(attrs, {
       // FUTURE: "url.query"
       "http.request.header.content-type": [request.headers.get("content-type") ?? undefined],
@@ -49,17 +46,15 @@ export const getRequestAttributes = (
   return attrs;
 };
 
-export const getResponseAttributes = (
-  response?: Response,
-  attributesLevel = DEFAULT_ATTRIBUTES_LEVEL,
-) => {
+export const getResponseAttributes = (response: Response, signalLevel: TelemetrySignalLevel) => {
   if (!response) return {};
+  if (signalLevel === "off") return {};
 
   const attrs = {
     "http.response.status_code": response.status,
   };
 
-  if (attributesLevel === "full") {
+  if (signalLevel === "full") {
     Object.assign(attrs, {
       "http.response.header.content-type": [response.headers.get("content-type") ?? undefined],
       "http.response.header.content-length": [response.headers.get("content-length") ?? undefined],
