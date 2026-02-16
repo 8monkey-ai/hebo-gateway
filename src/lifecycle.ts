@@ -60,6 +60,7 @@ export const winterCgHandler = (
 
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
       if (realStatus !== 200) {
+        // FUTURE: in-stream errors are redacted in prod
         (realStatus >= 500 ? logger.error : logger.warn)({
           requestId: resolveRequestId(ctx.request),
           err: reason,
