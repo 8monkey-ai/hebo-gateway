@@ -23,18 +23,25 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { addSpanEvent } from "../../telemetry/span";
+import { getMetricsMeta, recordRequestDuration, recordTokenUsage } from "../../telemetry/metric";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
+import { getChatResponseAttributes } from "./otel";
 import { ChatCompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
+    const start = performance.now();
     ctx.operation = "chat";
     addSpanEvent("hebo.handler.started");
+    setSpanAttributes({
+      "gen_ai.operation.name": "chat",
+      "gen_ai.output.type": "text",
+    });
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -53,6 +60,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     const parsed = ChatCompletionsBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
+      // FUTURE: add body shape to error message
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
@@ -71,8 +79,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.model.resolved", {
-      "gen_ai.request.model": ctx.modelId ?? "",
-      "gen_ai.response.model": ctx.resolvedModelId ?? "",
+      "gen_ai.request.model": ctx.modelId,
+      "gen_ai.response.model": ctx.resolvedModelId,
     });
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
@@ -89,6 +97,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.resolvedProviderId = languageModel.provider;
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved", { "gen_ai.provider.name": ctx.resolvedProviderId });
+    setSpanAttributes({
+      "gen_ai.response.model": ctx.resolvedModelId,
+      "gen_ai.provider.name": ctx.resolvedProviderId,
+    });
+    addSpanEvent("hebo.model.resolved", {
+      "gen_ai.response.model": ctx.resolvedModelId,
+      "gen_ai.provider.name": ctx.resolvedProviderId,
+    });
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
@@ -132,6 +148,11 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
+          recordTokenUsage(getMetricsMeta(ctx));
+          setSpanAttributes(
+            getChatResponseAttributes(ctx.streamResult, config.telemetry?.attributes?.gen_ai),
+          );
+          recordRequestDuration(performance.now() - start, getMetricsMeta(ctx));
         },
         timeout: {
           totalMs: 5 * 60 * 1000,
@@ -174,11 +195,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
+    recordTokenUsage(getMetricsMeta(ctx));
+    setSpanAttributes(getChatResponseAttributes(ctx.result, config.telemetry?.attributes?.gen_ai));
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
+    recordRequestDuration(performance.now() - start, getMetricsMeta(ctx));
 
     return ctx.result;
   };

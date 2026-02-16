@@ -2,32 +2,19 @@ import type { Attributes } from "@opentelemetry/api";
 
 import type { GatewayConfigParsed, GatewayContext } from "../types";
 
-import {
-  getAIAttributes,
-  getBaggageAttributes,
-  getRequestAttributes,
-  getResponseAttributes,
-} from "./attributes";
-import { recordRequestDuration as requestOperationDuration, recordTokenUsage } from "./metric";
+import { getBaggageAttributes, getRequestAttributes, getResponseAttributes } from "./attributes";
 import { recordSpanError, startSpan } from "./span";
 import { instrumentStream } from "./stream";
 
 export const withOtel =
   (run: (ctx: GatewayContext) => Promise<void>, config: GatewayConfigParsed) =>
   async (ctx: GatewayContext) => {
-    const requestStart = performance.now();
-    const aiSpan = startSpan(ctx.request.url);
+    const span = startSpan(ctx.request.url);
 
-    const endAiSpan = (status: number, reason?: unknown, stats?: { bytes: number }) => {
-      const attrs: Attributes = getAIAttributes(
-        ctx.operation,
-        ctx.body,
-        ctx.streamResult ?? ctx.result,
-        config.telemetry?.attributes?.gen_ai,
-        ctx.resolvedProviderId,
-      );
+    const finalize = (status: number, reason?: unknown, stats?: { bytes: number }) => {
+      const attrs: Attributes = {};
 
-      if (!aiSpan.isExisting) {
+      if (!span.isExisting) {
         Object.assign(
           attrs,
           getRequestAttributes(ctx.request, config.telemetry?.attributes?.http),
@@ -51,26 +38,23 @@ export const withOtel =
       attrs["http.response.status_code_effective"] = realStatus;
       if (realStatus >= 500) recordSpanError(reason);
 
-      requestOperationDuration(performance.now() - requestStart, attrs, ctx.response?.statusText);
-      recordTokenUsage(attrs, ctx.response?.statusText);
-
       if (ctx.operation && ctx.modelId) {
-        aiSpan.updateName(`${ctx.operation} ${ctx.modelId}`);
+        span.updateName(`${ctx.operation} ${ctx.modelId}`);
       } else if (ctx.operation) {
-        aiSpan.updateName(`${ctx.operation}`);
+        span.updateName(`${ctx.operation}`);
       }
 
-      aiSpan.setAttributes(attrs);
+      span.setAttributes(attrs);
 
-      aiSpan.finish();
+      span.finish();
     };
 
-    await aiSpan.runWithContext(() => run(ctx));
+    await span.runWithContext(() => run(ctx));
 
     if (ctx.response!.body instanceof ReadableStream) {
       const instrumented = instrumentStream(
         ctx.response!.body,
-        { onDone: endAiSpan },
+        { onDone: finalize },
         ctx.request.signal,
       );
 
@@ -82,5 +66,5 @@ export const withOtel =
       return;
     }
 
-    endAiSpan(ctx.response!.status);
+    finalize(ctx.response!.status);
   };

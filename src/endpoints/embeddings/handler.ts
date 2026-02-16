@@ -16,18 +16,25 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { addSpanEvent } from "../../telemetry/span";
+import { getMetricsMeta, recordRequestDuration, recordTokenUsage } from "../../telemetry/metric";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
+import { getEmbeddingsResponseAttributes } from "./otel";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
+    const start = performance.now();
     ctx.operation = "embeddings";
     addSpanEvent("hebo.handler.started");
+    setSpanAttributes({
+      "gen_ai.operation.name": "embeddings",
+      "gen_ai.output.type": "embedding",
+    });
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -46,6 +53,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const parsed = EmbeddingsBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
+      // FUTURE: add body shape to error message
       throw new GatewayError(z.prettifyError(parsed.error), 400);
     }
     ctx.body = parsed.data;
@@ -67,6 +75,10 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       "gen_ai.request.model": ctx.modelId ?? "",
       "gen_ai.response.model": ctx.resolvedModelId ?? "",
     });
+    setSpanAttributes({
+      "gen_ai.request.model": ctx.modelId ?? "",
+      "gen_ai.response.model": ctx.resolvedModelId ?? "",
+    });
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
@@ -82,6 +94,9 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved", {
+      "gen_ai.provider.name": ctx.resolvedProviderId,
+    });
+    setSpanAttributes({
       "gen_ai.provider.name": ctx.resolvedProviderId,
     });
 
@@ -110,12 +125,18 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toEmbeddings(result, ctx.modelId);
     addSpanEvent("hebo.result.transformed");
+    const metricAttrs = getMetricsMeta(ctx);
+    recordTokenUsage(metricAttrs);
+    setSpanAttributes(
+      getEmbeddingsResponseAttributes(ctx.result, config.telemetry?.attributes?.gen_ai),
+    );
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
 
+    recordRequestDuration(performance.now() - start, metricAttrs);
     return ctx.result;
   };
 

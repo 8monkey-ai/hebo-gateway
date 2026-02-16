@@ -71,6 +71,11 @@ export const addSpanEvent = (name: string, attributes?: Attributes) => {
   trace.getActiveSpan()?.addEvent(name, attributes);
 };
 
+export const setSpanAttributes = (attributes?: Attributes) => {
+  if (!attributes) return;
+  trace.getActiveSpan()?.setAttributes(attributes);
+};
+
 export const recordSpanError = (error: unknown) => {
   const span = trace.getActiveSpan();
   if (!span) return;

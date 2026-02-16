@@ -1,5 +1,7 @@
 import { metrics, type Attributes } from "@opentelemetry/api";
 
+import type { GatewayContext } from "../types";
+
 const meter = metrics.getMeter("@hebo-ai/gateway");
 const requestDurationHistogram = meter.createHistogram("gen_ai.server.request.duration", {
   description: "End-to-end gateway request duration",
@@ -21,11 +23,22 @@ const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
   },
 });
 
-export const recordRequestDuration = (
-  duration: number,
-  attrs: Attributes,
-  statusText: string | undefined,
-) => {
+export const getMetricsMeta = (ctx: GatewayContext): Attributes => {
+  const requestModel =
+    ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
+      ? ctx.body.model
+      : ctx.modelId;
+
+  return {
+    "gen_ai.operation.name": ctx.operation,
+    "gen_ai.request.model": requestModel,
+    "gen_ai.response.model": ctx.resolvedModelId,
+    "gen_ai.provider.name": ctx.resolvedProviderId,
+  };
+};
+
+// FUTURE: fix errorType
+export const recordRequestDuration = (duration: number, attrs: Attributes, statusText?: string) => {
   const errorType = statusText && statusText !== "OK" ? statusText : undefined;
 
   requestDurationHistogram.record(duration / 1000, {
@@ -37,7 +50,8 @@ export const recordRequestDuration = (
   });
 };
 
-export const recordTokenUsage = (attrs: Attributes, statusText: string | undefined) => {
+// FUTURE: fix errorType
+export const recordTokenUsage = (attrs: Attributes, statusText?: string) => {
   const errorType = statusText && statusText !== "OK" ? statusText : undefined;
 
   const baseAttributes = {
