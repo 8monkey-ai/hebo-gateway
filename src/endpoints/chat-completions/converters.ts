@@ -537,7 +537,6 @@ export class ChatCompletionsStream extends TransformStream<
             const error = part.error;
             controller.enqueue(toOpenAIError(error));
             controller.terminate();
-            return;
           }
         }
       },

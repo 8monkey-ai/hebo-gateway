@@ -8,12 +8,9 @@ import type {
 import { parseConfig } from "./config";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
+import { getBaggageAttributes } from "./telemetry/baggage";
 import { initFetch } from "./telemetry/fetch";
-import {
-  getBaggageAttributes,
-  getRequestAttributes,
-  getResponseAttributes,
-} from "./telemetry/http";
+import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { addSpanEvent, recordSpanError, setSpanTracer, startSpan } from "./telemetry/span";
 import { wrapStream } from "./telemetry/stream";
 import { resolveRequestId } from "./utils/headers";
@@ -58,7 +55,7 @@ export const winterCgHandler = (
       }
 
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
-      if (realStatus != 200) {
+      if (realStatus !== 200) {
         (realStatus >= 500 ? logger.error : logger.warn)({
           requestId: resolveRequestId(ctx.request),
           err: reason instanceof Error ? reason : new Error(String(reason)),

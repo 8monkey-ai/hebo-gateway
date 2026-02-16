@@ -49,7 +49,6 @@ export const startSpan = (name: string, options?: SpanOptions) => {
   return Object.assign(span, { runWithContext, recordError, finish, isExisting: !!activeSpan });
 };
 
-// FUTURE: disable if not activated
 export const withSpan = async <T>(
   name: string,
   run: () => Promise<T> | T,

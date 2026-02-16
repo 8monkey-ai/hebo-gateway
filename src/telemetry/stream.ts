@@ -1,3 +1,5 @@
+const isErrorChunk = (v: unknown) => !!(v as any)?.error;
+
 export const wrapStream = (
   src: ReadableStream,
   hooks: { onDone?: (status: number, reason: unknown) => void },
@@ -11,8 +13,6 @@ export const wrapStream = (
 
     hooks.onDone?.(status, reason ?? signal?.reason);
   };
-
-  const isErrorChunk = (v: unknown) => !!(v as any)?.error;
 
   return new ReadableStream({
     async start(controller) {
