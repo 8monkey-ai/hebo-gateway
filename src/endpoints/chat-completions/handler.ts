@@ -132,10 +132,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           throw error;
         },
         onFinish: (result) => {
+          addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
             result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
+          addSpanEvent("hebo.result.transformed");
+
           const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
@@ -150,10 +153,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         includeRawChunks: false,
         ...textOptions,
       });
-      addSpanEvent("hebo.ai-sdk.completed");
 
       ctx.result = toChatCompletionsStream(result, ctx.resolvedModelId);
-      addSpanEvent("hebo.result.transformed");
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
@@ -182,6 +183,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
+
     const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);
     setSpanAttributes(genAiResponseAttrs);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
