@@ -137,8 +137,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             ctx.resolvedModelId!,
           );
           const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
-          recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           setSpanAttributes(genAiResponseAttrs);
+          recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           recordRequestDuration(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
         },
         timeout: {
@@ -183,8 +183,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
     const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);
-    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
     setSpanAttributes(genAiResponseAttrs);
+    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
