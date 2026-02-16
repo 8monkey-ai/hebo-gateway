@@ -2,7 +2,7 @@ import type { Attributes } from "@opentelemetry/api";
 
 import type { GatewayConfigParsed, GatewayContext } from "../types";
 
-import { getBaggageAttributes, getRequestAttributes, getResponseAttributes } from "./attributes";
+import { getBaggageAttributes, getRequestAttributes, getResponseAttributes } from "./http";
 import { recordSpanError, startSpan } from "./span";
 import { instrumentStream } from "./stream";
 
@@ -14,6 +14,7 @@ export const withOtel =
     const finalize = (status: number, reason?: unknown, stats?: { bytes: number }) => {
       const attrs: Attributes = {};
 
+      // FUTURE: allow disabling http
       if (!span.isExisting) {
         Object.assign(
           attrs,
@@ -24,20 +25,18 @@ export const withOtel =
 
       Object.assign(attrs, getBaggageAttributes(ctx.request));
 
+      // FUTURE: do we need this?
       if (config.telemetry?.attributes?.http !== "required") {
         attrs["http.request.body.size"] = Number(ctx.request.headers.get("content-length") || 0);
         attrs["http.response.body.size"] =
           stats?.bytes ?? Number(attrs["http.response.header.content-length"] || 0);
       }
 
-      if (config.telemetry?.attributes?.http === "full") {
-        attrs["http.request.body"] = JSON.stringify(ctx.body);
-      }
-
       const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
       attrs["http.response.status_code_effective"] = realStatus;
       if (realStatus >= 500) recordSpanError(reason);
 
+      // FUTURE: is this the right place?
       if (ctx.operation && ctx.modelId) {
         span.updateName(`${ctx.operation} ${ctx.modelId}`);
       } else if (ctx.operation) {
