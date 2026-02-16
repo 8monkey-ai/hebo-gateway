@@ -16,12 +16,16 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { getMetricsMeta, recordRequestDuration, recordTokenUsage } from "../../telemetry/gen-ai";
+import { recordRequestDuration, recordTokenUsage } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
-import { getEmbeddingsResponseAttributes } from "./otel";
+import {
+  getEmbeddingsGeneralAttributes,
+  getEmbeddingsRequestAttributes,
+  getEmbeddingsResponseAttributes,
+} from "./otel";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
@@ -31,10 +35,6 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const start = performance.now();
     ctx.operation = "embeddings";
     addSpanEvent("hebo.handler.started");
-    setSpanAttributes({
-      "gen_ai.operation.name": "embeddings",
-      "gen_ai.output.type": "embedding",
-    });
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -71,14 +71,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
-    addSpanEvent("hebo.model.resolved", {
-      "gen_ai.request.model": ctx.modelId ?? "",
-      "gen_ai.response.model": ctx.resolvedModelId ?? "",
-    });
-    setSpanAttributes({
-      "gen_ai.request.model": ctx.modelId ?? "",
-      "gen_ai.response.model": ctx.resolvedModelId ?? "",
-    });
+    addSpanEvent("hebo.model.resolved");
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
@@ -93,17 +86,16 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
-    addSpanEvent("hebo.provider.resolved", {
-      "gen_ai.provider.name": ctx.resolvedProviderId,
-    });
-    setSpanAttributes({
-      "gen_ai.provider.name": ctx.resolvedProviderId,
-    });
+    addSpanEvent("hebo.provider.resolved");
+
+    const otelAttrs = getEmbeddingsGeneralAttributes(ctx);
+    setSpanAttributes(otelAttrs);
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
     addSpanEvent("hebo.options.prepared");
+    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, config.telemetry?.attributes?.gen_ai));
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -125,8 +117,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toEmbeddings(result, ctx.modelId);
     addSpanEvent("hebo.result.transformed");
-    const metricAttrs = getMetricsMeta(ctx);
-    recordTokenUsage(metricAttrs);
+    recordTokenUsage(otelAttrs);
     setSpanAttributes(
       getEmbeddingsResponseAttributes(ctx.result, config.telemetry?.attributes?.gen_ai),
     );
@@ -136,7 +127,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordRequestDuration(performance.now() - start, metricAttrs);
+    recordRequestDuration(performance.now() - start, otelAttrs);
     return ctx.result;
   };
 

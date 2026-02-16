@@ -23,12 +23,16 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { getMetricsMeta, recordRequestDuration, recordTokenUsage } from "../../telemetry/gen-ai";
+import { recordRequestDuration, recordTokenUsage } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
-import { getChatResponseAttributes } from "./otel";
+import {
+  getChatGeneralAttributes,
+  getChatRequestAttributes,
+  getChatResponseAttributes,
+} from "./otel";
 import { ChatCompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
@@ -38,10 +42,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const start = performance.now();
     ctx.operation = "chat";
     addSpanEvent("hebo.handler.started");
-    setSpanAttributes({
-      "gen_ai.operation.name": "chat",
-      "gen_ai.output.type": "text",
-    });
 
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -78,10 +78,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
-    addSpanEvent("hebo.model.resolved", {
-      "gen_ai.request.model": ctx.modelId,
-      "gen_ai.response.model": ctx.resolvedModelId,
-    });
+    addSpanEvent("hebo.model.resolved");
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
@@ -96,15 +93,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
-    addSpanEvent("hebo.provider.resolved", { "gen_ai.provider.name": ctx.resolvedProviderId });
-    setSpanAttributes({
-      "gen_ai.response.model": ctx.resolvedModelId,
-      "gen_ai.provider.name": ctx.resolvedProviderId,
-    });
-    addSpanEvent("hebo.model.resolved", {
-      "gen_ai.response.model": ctx.resolvedModelId,
-      "gen_ai.provider.name": ctx.resolvedProviderId,
-    });
+    addSpanEvent("hebo.provider.resolved");
+
+    const otelAttrs = getChatGeneralAttributes(ctx);
+    setSpanAttributes(otelAttrs);
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
@@ -116,6 +108,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       "[chat] AI SDK options",
     );
     addSpanEvent("hebo.options.prepared");
+    setSpanAttributes(getChatRequestAttributes(inputs, config.telemetry?.attributes?.gen_ai));
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -148,11 +141,11 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
-          recordTokenUsage(getMetricsMeta(ctx));
+          recordTokenUsage(otelAttrs);
           setSpanAttributes(
             getChatResponseAttributes(ctx.streamResult, config.telemetry?.attributes?.gen_ai),
           );
-          recordRequestDuration(performance.now() - start, getMetricsMeta(ctx));
+          recordRequestDuration(performance.now() - start, otelAttrs);
         },
         timeout: {
           totalMs: 5 * 60 * 1000,
@@ -195,14 +188,14 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
-    recordTokenUsage(getMetricsMeta(ctx));
+    recordTokenUsage(otelAttrs);
     setSpanAttributes(getChatResponseAttributes(ctx.result, config.telemetry?.attributes?.gen_ai));
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
-    recordRequestDuration(performance.now() - start, getMetricsMeta(ctx));
+    recordRequestDuration(performance.now() - start, otelAttrs);
 
     return ctx.result;
   };

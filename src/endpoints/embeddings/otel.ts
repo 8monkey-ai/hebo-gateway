@@ -1,8 +1,23 @@
 import type { Attributes } from "@opentelemetry/api";
 
+import type { GatewayContext } from "../../types";
 import type { Embeddings, EmbeddingsInputs } from "./schema";
 
 const DEFAULT_ATTRIBUTES_LEVEL = "recommended";
+
+export const getEmbeddingsGeneralAttributes = (ctx: GatewayContext): Attributes => {
+  const requestModel =
+    ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
+      ? ctx.body.model
+      : ctx.modelId;
+
+  return {
+    "gen_ai.operation.name": ctx.operation,
+    "gen_ai.request.model": requestModel,
+    "gen_ai.response.model": ctx.resolvedModelId,
+    "gen_ai.provider.name": ctx.resolvedProviderId,
+  };
+};
 
 export const getEmbeddingsRequestAttributes = (
   inputs: EmbeddingsInputs,

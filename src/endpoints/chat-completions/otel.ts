@@ -1,5 +1,6 @@
 import type { Attributes } from "@opentelemetry/api";
 
+import type { GatewayContext } from "../../types";
 import type {
   ChatCompletions,
   ChatCompletionsBody,
@@ -55,6 +56,20 @@ const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown
   }
 
   return [];
+};
+
+export const getChatGeneralAttributes = (ctx: GatewayContext): Attributes => {
+  const requestModel =
+    ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
+      ? ctx.body.model
+      : ctx.modelId;
+
+  return {
+    "gen_ai.operation.name": ctx.operation,
+    "gen_ai.request.model": requestModel,
+    "gen_ai.response.model": ctx.resolvedModelId,
+    "gen_ai.provider.name": ctx.resolvedProviderId,
+  };
 };
 
 export const getChatRequestAttributes = (
