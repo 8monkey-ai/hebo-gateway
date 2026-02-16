@@ -11,13 +11,7 @@ import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { initFetch } from "./telemetry/fetch";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
-import {
-  addSpanEvent,
-  recordSpanError,
-  setSpanEventsEnabled,
-  setSpanTracer,
-  startSpan,
-} from "./telemetry/span";
+import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
 import { wrapStream } from "./telemetry/stream";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
@@ -68,10 +62,10 @@ export const winterCgHandler = (
       if (realStatus !== 200) {
         (realStatus >= 500 ? logger.error : logger.warn)({
           requestId: resolveRequestId(ctx.request),
-          err: reason instanceof Error ? reason : new Error(String(reason)),
+          err: reason,
         });
 
-        if (realStatus >= 500) recordSpanError(reason);
+        if (realStatus >= 500) span.recordError(reason);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 

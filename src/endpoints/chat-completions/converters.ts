@@ -185,6 +185,7 @@ export function fromChatCompletionsAssistantMessage(
 
     if (tool_calls?.length) {
       for (const tc of tool_calls) {
+        // eslint-disable-next-line no-shadow
         const { id, function: fn, extra_content } = tc;
         const out: ToolCallPart = {
           type: "tool-call",

@@ -131,13 +131,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },
-        onError: ({ error }) => {
-          throw error;
-        },
-        onFinish: (result) => {
+        onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
-            result as unknown as GenerateTextResult<ToolSet, Output.Output>,
+            res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
           addSpanEvent("hebo.result.transformed");

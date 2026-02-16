@@ -13,6 +13,8 @@ import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
 import { withCanonicalIdsForCohere } from "@hebo-ai/gateway/providers/cohere";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { withCanonicalIdsForVoyage } from "@hebo-ai/gateway/providers/voyage";
+import { context } from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import {
   BasicTracerProvider,
   ConsoleSpanExporter,
@@ -23,6 +25,8 @@ import { pino } from "pino";
 import { createVoyage } from "voyage-ai-provider";
 
 const basePath = "/v1/gateway";
+
+context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
 
 const gw = gateway({
   basePath,
@@ -53,7 +57,7 @@ const gw = gateway({
   //logger: pino({ level: "trace" }),
   telemetry: {
     enabled: true,
-    signals: { gen_ai: "full", http: "full", hebo: "full" },
+    signals: { gen_ai: "full", http: "recommended", hebo: "off" },
     tracer: new BasicTracerProvider({
       spanProcessors: [new SimpleSpanProcessor(new ConsoleSpanExporter())],
     }).getTracer("hebo"),

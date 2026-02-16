@@ -9,8 +9,6 @@ const DEFAULT_TRACER_NAME = "@hebo-ai/gateway";
 let spanTracer: Tracer | undefined;
 let spanEventsEnabled = false;
 
-const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
-
 const NOOP_SPAN = {
   runWithContext: <T>(fn: () => Promise<T> | T) => fn(),
   recordError: (_error: unknown) => {},
@@ -44,7 +42,7 @@ export const startSpan = (name: string, options?: SpanOptions) => {
     context.with(trace.setSpan(parentContext, span), fn);
 
   const recordError = (error: unknown) => {
-    const err = toError(error);
+    const err = error instanceof Error ? error : new Error(String(error));
     span.recordException(err);
     span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
   };
@@ -84,13 +82,4 @@ export const addSpanEvent = (name: string, attributes?: Attributes) => {
 export const setSpanAttributes = (attributes?: Attributes) => {
   if (!attributes) return;
   trace.getActiveSpan()?.setAttributes(attributes);
-};
-
-export const recordSpanError = (error: unknown) => {
-  const span = trace.getActiveSpan();
-  if (!span) return;
-
-  const err = toError(error);
-  span.recordException(err);
-  span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
 };

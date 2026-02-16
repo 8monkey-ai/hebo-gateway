@@ -5,11 +5,11 @@ export const wrapStream = (
   hooks: { onDone?: (status: number, reason: unknown) => void },
   signal?: AbortSignal,
 ): ReadableStream => {
-  let done = false;
+  let finishOnce = false;
 
   const finish = (status: number, reason?: unknown) => {
-    if (done) return;
-    done = true;
+    if (finishOnce) return;
+    finishOnce = true;
 
     hooks.onDone?.(status, reason ?? signal?.reason);
   };
@@ -35,10 +35,11 @@ export const wrapStream = (
           const { value, done } = await reader.read();
           if (done) break;
 
-          controller.enqueue(value!);
+          controller.enqueue(value);
 
           if (isErrorChunk(value)) {
-            close(502, value);
+            const status = value.error.type === "invalid_request_error" ? 422 : 502;
+            close(status, value.error.message);
             return;
           }
         }
