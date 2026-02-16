@@ -125,11 +125,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         // No abort signal here, otherwise we can't detect upstream from client cancellations
         // abortSignal: ctx.request.signal,
         onError: ({ error }) => {
-          // FUTURE: 400 only on debug / add body?
-          const err = error instanceof Error ? error : new Error(String(error));
+          // FUTURE: warn on 4xx
           logger.error({
             requestId,
-            err,
+            error: error instanceof Error ? error : new Error(String(error)),
           });
           throw error;
         },
@@ -195,8 +194,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
-    recordRequestDuration(performance.now() - start, otelAttrs);
 
+    recordRequestDuration(performance.now() - start, otelAttrs);
     return ctx.result;
   };
 

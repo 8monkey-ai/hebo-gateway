@@ -10,6 +10,7 @@ type GlobalFetchState = typeof globalThis & {
 
 const g = globalThis as GlobalFetchState;
 
+// FUTURE: only for LLM calls, not others
 const perfFetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const original = g[ORIGINAL_FETCH_KEY]!;
   return withSpan("fetch", () => original(input, init), { kind: SpanKind.CLIENT });

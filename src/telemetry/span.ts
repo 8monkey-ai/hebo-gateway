@@ -68,6 +68,7 @@ export const withSpan = async <T>(
 };
 
 export const addSpanEvent = (name: string, attributes?: Attributes) => {
+  // FUTURE: Disable by namespace
   trace.getActiveSpan()?.addEvent(name, attributes);
 };
 

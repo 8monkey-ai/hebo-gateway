@@ -53,7 +53,7 @@ export const winterCgHandler = (
     } catch (error) {
       ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));
 
-      // FUTURE: 400 only on debug / add body?
+      // FUTURE: 400 only warn
       logger.error({
         requestId: resolveRequestId(ctx.request),
         err: error instanceof Error ? error : new Error(String(error)),

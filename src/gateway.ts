@@ -30,7 +30,7 @@ export function gateway(config: GatewayConfig) {
       pathname = pathname.slice(basePath.length);
     }
 
-    logger.debug(`[gateway] ${req.method} ${pathname}`);
+    logger.info(`[gateway] ${req.method} ${pathname}`);
     for (const [route, endpoint] of routeEntries) {
       if (pathname === route || pathname.startsWith(route + "/")) {
         return endpoint.handler(req, state);
