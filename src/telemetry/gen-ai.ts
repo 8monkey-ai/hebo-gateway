@@ -22,26 +22,17 @@ const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
   },
 });
 
-// FUTURE: fix errorType
-export const recordRequestDuration = (duration: number, attrs: Attributes, statusText?: string) => {
-  const errorType = statusText && statusText !== "OK" ? statusText : undefined;
-
-  requestDurationHistogram.record(
-    duration / 1000,
-    Object.assign({}, attrs, { "error.type": errorType }),
-  );
+// FUTURE: record unsuccessful calls
+export const recordRequestDuration = (duration: number, attrs: Attributes) => {
+  requestDurationHistogram.record(duration / 1000, attrs);
 };
 
-// FUTURE: fix errorType
-export const recordTokenUsage = (attrs: Attributes, statusText?: string) => {
-  const errorType = statusText && statusText !== "OK" ? statusText : undefined;
-
-  const baseAttributes = Object.assign({}, attrs, { "error.type": errorType });
-
+// FUTURE: record unsuccessful calls
+export const recordTokenUsage = (attrs: Attributes) => {
   const add = (value: unknown, tokenType: string) => {
     tokenUsageCounter.add(
       value as number,
-      Object.assign({}, baseAttributes, { "gen_ai.token.type": tokenType }),
+      Object.assign({}, attrs, { "gen_ai.token.type": tokenType }),
     );
   };
 
