@@ -125,6 +125,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         headers: prepareForwardHeaders(ctx.request),
         // No abort signal here, otherwise we can't detect upstream from client cancellations
         // abortSignal: ctx.request.signal,
+        timeout: {
+          totalMs: 5 * 60 * 1000,
+        },
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },
@@ -143,9 +146,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           recordRequestDuration(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
-        },
-        timeout: {
-          totalMs: 5 * 60 * 1000,
         },
         experimental_include: {
           requestBody: false,
@@ -170,11 +170,11 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       headers: prepareForwardHeaders(ctx.request),
       // FUTURE: currently can't tell whether upstream or downstream abort
       abortSignal: ctx.request.signal,
+      timeout: 5 * 60 * 1000,
       experimental_include: {
         requestBody: false,
         responseBody: false,
       },
-      timeout: 5 * 60 * 1000,
       ...textOptions,
     });
     logger.trace({ requestId, result }, "[chat] AI SDK result");
