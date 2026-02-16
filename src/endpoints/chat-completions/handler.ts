@@ -95,7 +95,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const genAiSignalLevel = config.telemetry!.signals!.gen_ai!;
+    const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
     const otelAttrs = getChatGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(otelAttrs);
 

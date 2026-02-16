@@ -6,9 +6,9 @@ import { type GatewayContext, type TelemetrySignalLevel } from "../../types";
 
 export const getEmbeddingsGeneralAttributes = (
   ctx: GatewayContext,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
-  if (signalLevel === "off") return {};
+  if (!signalLevel || signalLevel === "off") return {};
 
   const requestModel =
     ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
@@ -25,9 +25,9 @@ export const getEmbeddingsGeneralAttributes = (
 
 export const getEmbeddingsRequestAttributes = (
   inputs: EmbeddingsInputs,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
-  if (signalLevel === "off") return {};
+  if (!signalLevel || signalLevel === "off") return {};
 
   const attrs: Attributes = {};
 
@@ -42,9 +42,9 @@ export const getEmbeddingsRequestAttributes = (
 
 export const getEmbeddingsResponseAttributes = (
   embeddings: Embeddings,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
-  if (signalLevel === "off") return {};
+  if (!signalLevel || signalLevel === "off") return {};
 
   const attrs: Attributes = {};
 

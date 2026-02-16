@@ -53,7 +53,7 @@ const gw = gateway({
   //logger: pino({ level: "trace" }),
   telemetry: {
     enabled: true,
-    attributes: { gen_ai: "full", http: "full" },
+    signals: { gen_ai: "full", http: "full", hebo: "full" },
     tracer: new BasicTracerProvider({
       spanProcessors: [new SimpleSpanProcessor(new ConsoleSpanExporter())],
     }).getTracer("hebo"),

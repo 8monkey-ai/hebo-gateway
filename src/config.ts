@@ -83,7 +83,6 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // Return parsed config.
   return {
     ...config,
-    logger: config.logger,
     telemetry: {
       ...config.telemetry,
       enabled: telemetryEnabled,

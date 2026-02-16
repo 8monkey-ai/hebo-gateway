@@ -59,9 +59,9 @@ const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown
 
 export const getChatGeneralAttributes = (
   ctx: GatewayContext,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
-  if (signalLevel === "off") return {};
+  if (!signalLevel || signalLevel === "off") return {};
 
   const requestModel =
     ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
@@ -78,9 +78,9 @@ export const getChatGeneralAttributes = (
 
 export const getChatRequestAttributes = (
   inputs: ChatCompletionsBody,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
-  if (signalLevel === "off") return {};
+  if (!signalLevel || signalLevel === "off") return {};
 
   const attrs: Attributes = {};
 
@@ -121,9 +121,9 @@ export const getChatRequestAttributes = (
 
 export const getChatResponseAttributes = (
   completions: ChatCompletions,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
-  if (signalLevel === "off") return {};
+  if (!signalLevel || signalLevel === "off") return {};
 
   const attrs: Attributes = {
     "gen_ai.response.id": completions.id,

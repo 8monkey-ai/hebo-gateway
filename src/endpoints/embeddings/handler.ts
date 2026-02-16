@@ -88,7 +88,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const genAiSignalLevel = config.telemetry!.signals!.gen_ai!;
+    const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
     const otelAttrs = getEmbeddingsGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(otelAttrs);
 

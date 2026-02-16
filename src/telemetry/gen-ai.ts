@@ -29,16 +29,16 @@ const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
 export const recordRequestDuration = (
   duration: number,
   attrs: Attributes,
-  signalLevel: TelemetrySignalLevel,
+  signalLevel?: TelemetrySignalLevel,
 ) => {
-  if (signalLevel === "off") return;
+  if (!signalLevel || signalLevel === "off") return;
 
   requestDurationHistogram.record(duration / 1000, attrs);
 };
 
 // FUTURE: record unsuccessful calls
-export const recordTokenUsage = (attrs: Attributes, signalLevel: TelemetrySignalLevel) => {
-  if (signalLevel !== "recommended" && signalLevel !== "full") return;
+export const recordTokenUsage = (attrs: Attributes, signalLevel?: TelemetrySignalLevel) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
 
   const add = (value: unknown, tokenType: string) => {
     tokenUsageCounter.add(

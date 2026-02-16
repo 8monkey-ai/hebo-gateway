@@ -1,9 +1,8 @@
 import { type TelemetrySignalLevel } from "../types";
 import { resolveRequestId } from "../utils/headers";
 
-export const getRequestAttributes = (request: Request, signalLevel: TelemetrySignalLevel) => {
-  if (!request) return {};
-  if (signalLevel === "off") return {};
+export const getRequestAttributes = (request: Request, signalLevel?: TelemetrySignalLevel) => {
+  if (!signalLevel || signalLevel === "off") return {};
 
   let url;
   try {
@@ -46,9 +45,8 @@ export const getRequestAttributes = (request: Request, signalLevel: TelemetrySig
   return attrs;
 };
 
-export const getResponseAttributes = (response: Response, signalLevel: TelemetrySignalLevel) => {
-  if (!response) return {};
-  if (signalLevel === "off") return {};
+export const getResponseAttributes = (response: Response, signalLevel?: TelemetrySignalLevel) => {
+  if (!signalLevel || signalLevel === "off") return {};
 
   const attrs = {
     "http.response.status_code": response.status,

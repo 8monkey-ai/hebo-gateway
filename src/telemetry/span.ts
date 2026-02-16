@@ -77,7 +77,7 @@ export const withSpan = async <T>(
 };
 
 export const addSpanEvent = (name: string, attributes?: Attributes) => {
-  if (!spanEventsEnabled) return;
+  if (!spanEventsEnabled || !attributes) return;
   trace.getActiveSpan()?.addEvent(name, attributes);
 };
 
