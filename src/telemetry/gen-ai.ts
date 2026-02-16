@@ -11,6 +11,7 @@ const requestDurationHistogram = meter.createHistogram("gen_ai.server.request.du
     ],
   },
 });
+
 const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
   description: "Token usage reported by upstream model responses",
   unit: "{token}",
