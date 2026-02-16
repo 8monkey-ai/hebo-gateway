@@ -16,7 +16,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { getMetricsMeta, recordRequestDuration, recordTokenUsage } from "../../telemetry/metric";
+import { getMetricsMeta, recordRequestDuration, recordTokenUsage } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
