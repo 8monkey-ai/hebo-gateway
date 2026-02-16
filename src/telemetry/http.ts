@@ -56,8 +56,8 @@ export const getResponseAttributes = (response: Response, signalLevel?: Telemetr
 
   if (signalLevel === "full") {
     Object.assign(attrs, {
-      "http.response.header.content-type": [response.headers.get("content-type") ?? undefined],
-      "http.response.header.content-length": [response.headers.get("content-length") ?? undefined],
+      "http.response.header.content-type": [headerArr(response.headers, "content-type")],
+      "http.response.header.content-length": [headerArr(response.headers, "content-length")],
     });
   }
 
