@@ -23,6 +23,7 @@ const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
   },
 });
 
+// FUTURE is this the right place?
 export const getMetricsMeta = (ctx: GatewayContext): Attributes => {
   const requestModel =
     ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
@@ -41,29 +42,23 @@ export const getMetricsMeta = (ctx: GatewayContext): Attributes => {
 export const recordRequestDuration = (duration: number, attrs: Attributes, statusText?: string) => {
   const errorType = statusText && statusText !== "OK" ? statusText : undefined;
 
-  requestDurationHistogram.record(duration / 1000, {
-    "gen_ai.operation.name": attrs["gen_ai.operation.name"],
-    "gen_ai.request.model": attrs["gen_ai.request.model"],
-    "gen_ai.response.model": attrs["gen_ai.response.model"],
-    "gen_ai.provider.name": attrs["gen_ai.provider.name"],
-    "error.type": errorType,
-  });
+  requestDurationHistogram.record(
+    duration / 1000,
+    Object.assign({}, attrs, { "error.type": errorType }),
+  );
 };
 
 // FUTURE: fix errorType
 export const recordTokenUsage = (attrs: Attributes, statusText?: string) => {
   const errorType = statusText && statusText !== "OK" ? statusText : undefined;
 
-  const baseAttributes = {
-    "gen_ai.operation.name": attrs["gen_ai.operation.name"],
-    "gen_ai.request.model": attrs["gen_ai.request.model"],
-    "gen_ai.response.model": attrs["gen_ai.response.model"],
-    "gen_ai.provider.name": attrs["gen_ai.provider.name"],
-    "error.type": errorType,
-  };
+  const baseAttributes = Object.assign({}, attrs, { "error.type": errorType });
 
   const add = (value: unknown, tokenType: string) => {
-    tokenUsageCounter.add(value as number, { ...baseAttributes, "gen_ai.token.type": tokenType });
+    tokenUsageCounter.add(
+      value as number,
+      Object.assign({}, baseAttributes, { "gen_ai.token.type": tokenType }),
+    );
   };
 
   add(attrs["gen_ai.usage.input_tokens"], "input");
