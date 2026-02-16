@@ -63,10 +63,7 @@ export const getChatGeneralAttributes = (
 ): Attributes => {
   if (!signalLevel || signalLevel === "off") return {};
 
-  const requestModel =
-    ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
-      ? ctx.body.model
-      : ctx.modelId;
+  const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
 
   return {
     "gen_ai.operation.name": ctx.operation,

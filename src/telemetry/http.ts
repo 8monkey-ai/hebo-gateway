@@ -1,6 +1,8 @@
 import { type TelemetrySignalLevel } from "../types";
 import { resolveRequestId } from "../utils/headers";
 
+const headerArr = (h: Headers, k: string) => (h.has(k) ? [h.get(k)!] : undefined);
+
 export const getRequestAttributes = (request: Request, signalLevel?: TelemetrySignalLevel) => {
   if (!signalLevel || signalLevel === "off") return {};
 
@@ -36,8 +38,8 @@ export const getRequestAttributes = (request: Request, signalLevel?: TelemetrySi
   if (signalLevel === "full") {
     Object.assign(attrs, {
       // FUTURE: "url.query"
-      "http.request.header.content-type": [request.headers.get("content-type") ?? undefined],
-      "http.request.header.content-length": [request.headers.get("content-length") ?? undefined],
+      "http.request.header.content-type": headerArr(request.headers, "content-type"),
+      "http.request.header.content-length": headerArr(request.headers, "content-length"),
       // FUTURE: "client.address"
     });
   }

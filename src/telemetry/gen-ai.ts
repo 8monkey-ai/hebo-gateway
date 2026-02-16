@@ -14,7 +14,7 @@ const requestDurationHistogram = meter.createHistogram("gen_ai.server.request.du
   },
 });
 
-const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
+const tokenUsageHistogram = meter.createHistogram("gen_ai.client.token.usage", {
   description: "Token usage reported by upstream model responses",
   unit: "{token}",
   advice: {
@@ -37,19 +37,24 @@ export const recordRequestDuration = (
 };
 
 // FUTURE: record unsuccessful calls
-export const recordTokenUsage = (attrs: Attributes, signalLevel?: TelemetrySignalLevel) => {
+export const recordTokenUsage = (
+  tokenAttrs: Attributes,
+  metricAttrs: Attributes,
+  signalLevel?: TelemetrySignalLevel,
+) => {
   if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
 
-  const add = (value: unknown, tokenType: string) => {
-    tokenUsageCounter.add(
-      value as number,
-      Object.assign({}, attrs, { "gen_ai.token.type": tokenType }),
+  const record = (value: unknown, tokenType: string) => {
+    if (typeof value !== "number") return;
+    tokenUsageHistogram.record(
+      value,
+      Object.assign({}, metricAttrs, { "gen_ai.token.type": tokenType }),
     );
   };
 
-  add(attrs["gen_ai.usage.input_tokens"], "input");
-  add(attrs["gen_ai.usage.output_tokens"], "output");
-  add(attrs["gen_ai.usage.total_tokens"], "total");
-  add(attrs["gen_ai.usage.cached_tokens"], "cached");
-  add(attrs["gen_ai.usage.reasoning_tokens"], "reasoning");
+  record(tokenAttrs["gen_ai.usage.input_tokens"], "input");
+  record(tokenAttrs["gen_ai.usage.output_tokens"], "output");
+  record(tokenAttrs["gen_ai.usage.total_tokens"], "total");
+  record(tokenAttrs["gen_ai.usage.cached_tokens"], "cached");
+  record(tokenAttrs["gen_ai.usage.reasoning_tokens"], "reasoning");
 };

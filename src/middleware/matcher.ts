@@ -118,7 +118,7 @@ class ModelMiddlewareMatcher {
         if (--n === 0) break;
       }
       logger.warn(`[middleware] cache eviction`);
-      addSpanEvent("hebo.middelware.cache.evicted");
+      addSpanEvent("hebo.middleware.cache.evicted");
     }
 
     this.cache.set(key, out);

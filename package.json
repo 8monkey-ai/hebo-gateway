@@ -156,7 +156,6 @@
   "dependencies": {
     "@ai-sdk/provider": "^3.0.7",
     "@ai-sdk/provider-utils": "^4.0.13",
-    "@opentelemetry/api": "^1.9.0",
     "ai": "^6.0.67",
     "serialize-error": "^13.0.1",
     "zod": "^4.3.6"
@@ -170,6 +169,7 @@
     "@ai-sdk/openai": "^3.0.23",
     "@aws-sdk/credential-providers": "^3.981.0",
     "@mjackson/node-fetch-server": "^0.7.0",
+    "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@tanstack/react-router": "^1.157.16",
     "@tanstack/react-start": "^1.157.16",
@@ -195,6 +195,7 @@
     "@ai-sdk/google-vertex": "^4.0.37",
     "@ai-sdk/groq": "^3.0.19",
     "@ai-sdk/openai": "^3.0.23",
+    "@opentelemetry/api": "^1.9.0",
     "typescript": "^5.9.3",
     "voyage-ai-provider": "^3.0.0"
   },

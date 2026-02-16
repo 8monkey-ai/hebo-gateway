@@ -96,8 +96,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.provider.resolved");
 
     const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
-    const otelAttrs = getChatGeneralAttributes(ctx, genAiSignalLevel);
-    setSpanAttributes(otelAttrs);
+    const genAiGeneralAttrs = getChatGeneralAttributes(ctx, genAiSignalLevel);
+    setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
@@ -136,9 +136,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
-          recordTokenUsage(otelAttrs, genAiSignalLevel);
-          setSpanAttributes(getChatResponseAttributes(streamResult, genAiSignalLevel));
-          recordRequestDuration(performance.now() - start, otelAttrs, genAiSignalLevel);
+          const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
+          recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          setSpanAttributes(genAiResponseAttrs);
+          recordRequestDuration(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
         },
         timeout: {
           totalMs: 5 * 60 * 1000,
@@ -181,15 +182,16 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
-    recordTokenUsage(otelAttrs, genAiSignalLevel);
-    setSpanAttributes(getChatResponseAttributes(ctx.result, genAiSignalLevel));
+    const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);
+    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    setSpanAttributes(genAiResponseAttrs);
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordRequestDuration(performance.now() - start, otelAttrs, genAiSignalLevel);
+    recordRequestDuration(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 
