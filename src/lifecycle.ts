@@ -58,6 +58,7 @@ export const winterCgHandler = (
       }
 
       if (!span.isExisting) {
+        // FUTURE add http.server.request.duration
         span.setAttributes(
           getResponseAttributes(ctx.response!, parsedConfig.telemetry!.signals!.http!),
         );

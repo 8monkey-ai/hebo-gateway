@@ -88,14 +88,15 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const otelAttrs = getEmbeddingsGeneralAttributes(ctx);
+    const genAiSignalLevel = config.telemetry!.signals!.gen_ai!;
+    const otelAttrs = getEmbeddingsGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(otelAttrs);
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, config.telemetry!.signals!.gen_ai!));
+    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, genAiSignalLevel));
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -117,17 +118,15 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toEmbeddings(result, ctx.modelId);
     addSpanEvent("hebo.result.transformed");
-    recordTokenUsage(otelAttrs);
-    setSpanAttributes(
-      getEmbeddingsResponseAttributes(ctx.result, config.telemetry!.signals!.gen_ai!),
-    );
+    recordTokenUsage(otelAttrs, genAiSignalLevel);
+    setSpanAttributes(getEmbeddingsResponseAttributes(ctx.result, genAiSignalLevel));
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordRequestDuration(performance.now() - start, otelAttrs);
+    recordRequestDuration(performance.now() - start, otelAttrs, genAiSignalLevel);
     return ctx.result;
   };
 

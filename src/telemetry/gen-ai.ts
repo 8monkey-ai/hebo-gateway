@@ -1,5 +1,7 @@
 import { metrics, type Attributes } from "@opentelemetry/api";
 
+import type { TelemetrySignalLevel } from "../types";
+
 const meter = metrics.getMeter("@hebo-ai/gateway");
 
 const requestDurationHistogram = meter.createHistogram("gen_ai.server.request.duration", {
@@ -24,12 +26,20 @@ const tokenUsageCounter = meter.createCounter("gen_ai.client.token.usage", {
 });
 
 // FUTURE: record unsuccessful calls
-export const recordRequestDuration = (duration: number, attrs: Attributes) => {
+export const recordRequestDuration = (
+  duration: number,
+  attrs: Attributes,
+  signalLevel: TelemetrySignalLevel,
+) => {
+  if (signalLevel === "off") return;
+
   requestDurationHistogram.record(duration / 1000, attrs);
 };
 
 // FUTURE: record unsuccessful calls
-export const recordTokenUsage = (attrs: Attributes) => {
+export const recordTokenUsage = (attrs: Attributes, signalLevel: TelemetrySignalLevel) => {
+  if (signalLevel !== "recommended" && signalLevel !== "full") return;
+
   const add = (value: unknown, tokenType: string) => {
     tokenUsageCounter.add(
       value as number,

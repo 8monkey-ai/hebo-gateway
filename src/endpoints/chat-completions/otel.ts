@@ -57,7 +57,12 @@ const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown
   return [];
 };
 
-export const getChatGeneralAttributes = (ctx: GatewayContext): Attributes => {
+export const getChatGeneralAttributes = (
+  ctx: GatewayContext,
+  signalLevel: TelemetrySignalLevel,
+): Attributes => {
+  if (signalLevel === "off") return {};
+
   const requestModel =
     ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
       ? ctx.body.model

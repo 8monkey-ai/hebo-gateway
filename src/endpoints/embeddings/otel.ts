@@ -4,7 +4,12 @@ import type { Embeddings, EmbeddingsInputs } from "./schema";
 
 import { type GatewayContext, type TelemetrySignalLevel } from "../../types";
 
-export const getEmbeddingsGeneralAttributes = (ctx: GatewayContext): Attributes => {
+export const getEmbeddingsGeneralAttributes = (
+  ctx: GatewayContext,
+  signalLevel: TelemetrySignalLevel,
+): Attributes => {
+  if (signalLevel === "off") return {};
+
   const requestModel =
     ctx.body && "model" in ctx.body && typeof ctx.body.model === "string"
       ? ctx.body.model

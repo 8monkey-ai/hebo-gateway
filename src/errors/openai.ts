@@ -17,7 +17,6 @@ export const OpenAIErrorSchema = z.object({
 export class OpenAIError {
   readonly error;
 
-  // FUTURE: always attach requestId to errors (masked and unmasked)
   constructor(message: string, type: string = "server_error", code?: string, param: string = "") {
     this.error = { message, type, code: code?.toLowerCase(), param };
   }
@@ -29,6 +28,7 @@ const maybeMaskMessage = (meta: ReturnType<typeof getErrorMeta>, requestId?: str
   if (!(isProduction() && (meta.status >= 500 || meta.code.includes("UPSTREAM")))) {
     return meta.message;
   }
+  // FUTURE: always attach requestId to errors (masked and unmasked)
   return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
 };
 

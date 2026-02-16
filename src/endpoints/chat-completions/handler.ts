@@ -95,7 +95,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const otelAttrs = getChatGeneralAttributes(ctx);
+    const genAiSignalLevel = config.telemetry!.signals!.gen_ai!;
+    const otelAttrs = getChatGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(otelAttrs);
 
     // Convert inputs to AI SDK call options.
@@ -108,7 +109,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       "[chat] AI SDK options",
     );
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getChatRequestAttributes(inputs, config.telemetry!.signals!.gen_ai!));
+    setSpanAttributes(getChatRequestAttributes(inputs, genAiSignalLevel));
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -135,11 +136,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             result as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
-          recordTokenUsage(otelAttrs);
-          setSpanAttributes(
-            getChatResponseAttributes(streamResult, config.telemetry!.signals!.gen_ai!),
-          );
-          recordRequestDuration(performance.now() - start, otelAttrs);
+          recordTokenUsage(otelAttrs, genAiSignalLevel);
+          setSpanAttributes(getChatResponseAttributes(streamResult, genAiSignalLevel));
+          recordRequestDuration(performance.now() - start, otelAttrs, genAiSignalLevel);
         },
         timeout: {
           totalMs: 5 * 60 * 1000,
@@ -182,15 +181,15 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
-    recordTokenUsage(otelAttrs);
-    setSpanAttributes(getChatResponseAttributes(ctx.result, config.telemetry!.signals!.gen_ai!));
+    recordTokenUsage(otelAttrs, genAiSignalLevel);
+    setSpanAttributes(getChatResponseAttributes(ctx.result, genAiSignalLevel));
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordRequestDuration(performance.now() - start, otelAttrs);
+    recordRequestDuration(performance.now() - start, otelAttrs, genAiSignalLevel);
     return ctx.result;
   };
 
