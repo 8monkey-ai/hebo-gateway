@@ -124,14 +124,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         headers: prepareForwardHeaders(ctx.request),
         // No abort signal here, otherwise we can't detect upstream from client cancellations
         // abortSignal: ctx.request.signal,
-        onError: ({ error }) => {
-          // FUTURE: warn on 4xx
-          logger.error({
-            requestId,
-            error: error instanceof Error ? error : new Error(String(error)),
-          });
-          throw error;
-        },
         onAbort: () => {
           throw new DOMException("Upstream failed", "AbortError");
         },

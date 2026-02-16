@@ -16,24 +16,22 @@ const NOOP_SPAN = {
 };
 
 export const setSpanTracer = (tracer?: Tracer) => {
-  spanTracer = tracer;
+  spanTracer = tracer ?? trace.getTracer(DEFAULT_TRACER_NAME);
 };
 
 export const startSpan = (name: string, options?: SpanOptions) => {
-  const tracer = spanTracer ?? trace.getTracer(DEFAULT_TRACER_NAME);
+  if (!spanTracer) {
+    return Object.assign(trace.wrapSpanContext(INVALID_SPAN_CONTEXT), NOOP_SPAN);
+  }
 
   const parentContext = context.active();
   const activeSpan = trace.getActiveSpan();
 
-  const span = tracer.startSpan(
+  const span = spanTracer.startSpan(
     name,
     { kind: activeSpan ? SpanKind.INTERNAL : SpanKind.SERVER, ...options },
     parentContext,
   );
-
-  if (!span.isRecording()) {
-    return Object.assign(trace.wrapSpanContext(INVALID_SPAN_CONTEXT), NOOP_SPAN);
-  }
 
   const runWithContext = <T>(fn: () => Promise<T> | T) =>
     context.with(trace.setSpan(parentContext, span), fn);
@@ -51,11 +49,16 @@ export const startSpan = (name: string, options?: SpanOptions) => {
   return Object.assign(span, { runWithContext, recordError, finish, isExisting: !!activeSpan });
 };
 
+// FUTURE: disable if not activated
 export const withSpan = async <T>(
   name: string,
   run: () => Promise<T> | T,
   options?: SpanOptions,
 ): Promise<T> => {
+  if (!spanTracer) {
+    return await run();
+  }
+
   const started = startSpan(name, options);
   try {
     return await started.runWithContext(run);

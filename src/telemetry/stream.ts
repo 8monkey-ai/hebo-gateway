@@ -1,32 +1,33 @@
-export type InstrumentStreamHooks = {
-  onDone?: (status: number, reason: unknown, stats: { bytes: number }) => void;
-};
-
-export const instrumentStream = (
-  src: ReadableStream<Uint8Array>,
-  hooks: InstrumentStreamHooks,
+export const wrapStream = (
+  src: ReadableStream,
+  hooks: { onDone?: (status: number, reason: unknown) => void },
   signal?: AbortSignal,
-): ReadableStream<Uint8Array> => {
-  const stats = { bytes: 0 };
+): ReadableStream => {
   let done = false;
 
   const finish = (status: number, reason?: unknown) => {
     if (done) return;
     done = true;
 
-    hooks.onDone?.(status, reason ?? signal?.reason, stats);
+    hooks.onDone?.(status, reason ?? signal?.reason);
   };
 
-  return new ReadableStream<Uint8Array>({
+  const isErrorChunk = (v: unknown) => !!(v as any)?.error;
+
+  return new ReadableStream({
     async start(controller) {
       const reader = src.getReader();
+
+      const close = (status: number, reason?: unknown) => {
+        finish(status, reason);
+        reader.cancel(reason).catch(() => {});
+        controller.close();
+      };
 
       try {
         for (;;) {
           if (signal?.aborted) {
-            finish(499, signal.reason);
-            reader.cancel(signal.reason).catch(() => {});
-            controller.close();
+            close(499, signal.reason);
             return;
           }
 
@@ -34,18 +35,19 @@ export const instrumentStream = (
           const { value, done } = await reader.read();
           if (done) break;
 
-          stats.bytes += value!.byteLength;
           controller.enqueue(value!);
+
+          if (isErrorChunk(value)) {
+            close(502, value);
+            return;
+          }
         }
 
         finish(200);
         controller.close();
       } catch (err) {
         const status = signal?.aborted ? 499 : (err as any)?.name === "AbortError" ? 503 : 502;
-
-        finish(status, err);
-        reader.cancel(err).catch(() => {});
-        controller.close();
+        close(status, err);
       } finally {
         try {
           reader.releaseLock();
@@ -53,7 +55,7 @@ export const instrumentStream = (
       }
     },
 
-    cancel(reason) {
+    cancel(reason?: unknown) {
       finish(499, reason);
       src.cancel(reason).catch(() => {});
     },
