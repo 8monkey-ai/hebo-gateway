@@ -50,14 +50,14 @@ const gw = gateway({
       console.log(ctx.state.auth.userId);
     },
   },
-  logger: pino({ level: "trace" }),
-  // telemetry: {
-  //   enabled: true,
-  //   attributes: "full",
-  //   tracer: new BasicTracerProvider({
-  //     spanProcessors: [new SimpleSpanProcessor(new ConsoleSpanExporter())],
-  //   }).getTracer("hebo"),
-  // },
+  //logger: pino({ level: "trace" }),
+  telemetry: {
+    enabled: true,
+    attributes: { gen_ai: "full", http: "full" },
+    tracer: new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(new ConsoleSpanExporter())],
+    }).getTracer("hebo"),
+  },
 });
 
 const app = new Elysia()
