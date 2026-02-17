@@ -202,6 +202,37 @@ describe("Chat Completions Converters", () => {
         },
       });
     });
+
+    test("should handle both content and tool_calls", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "I will call a tool.",
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: {
+              name: "my_tool",
+              arguments: "{}",
+            },
+          },
+        ],
+      });
+
+      expect(Array.isArray(message.content)).toBe(true);
+      const content = message.content as any[];
+      expect(content).toHaveLength(2);
+      expect(content[0]).toEqual({
+        type: "text",
+        text: "I will call a tool.",
+      });
+      expect(content[1]).toEqual({
+        type: "tool-call",
+        toolCallId: "call_1",
+        toolName: "my_tool",
+        input: {},
+      });
+    });
   });
 
   describe("convertToTextCallOptions", () => {

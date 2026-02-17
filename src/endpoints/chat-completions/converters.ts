@@ -154,60 +154,71 @@ export function fromChatCompletionsAssistantMessage(
 
   const parts: AssistantContent = [];
 
-  if (Array.isArray(parts)) {
-    if (reasoning_details?.length) {
-      for (const detail of reasoning_details) {
-        if (detail.text && detail.type === "reasoning.text") {
-          parts.push({
-            type: "reasoning",
-            text: detail.text,
-            providerOptions: detail.signature
-              ? {
-                  unknown: {
-                    signature: detail.signature,
-                  },
-                }
-              : undefined,
-          });
-        } else if (detail.type === "reasoning.encrypted" && detail.data) {
-          parts.push({
-            type: "reasoning",
-            text: "",
-            providerOptions: {
-              unknown: {
-                redactedData: detail.data,
-              },
+  if (reasoning_details?.length) {
+    for (const detail of reasoning_details) {
+      if (detail.text && detail.type === "reasoning.text") {
+        parts.push({
+          type: "reasoning",
+          text: detail.text,
+          providerOptions: detail.signature
+            ? {
+                unknown: {
+                  signature: detail.signature,
+                },
+              }
+            : undefined,
+        });
+      } else if (detail.type === "reasoning.encrypted" && detail.data) {
+        parts.push({
+          type: "reasoning",
+          text: "",
+          providerOptions: {
+            unknown: {
+              redactedData: detail.data,
             },
-          });
-        }
+          },
+        });
       }
     }
+  }
 
-    if (tool_calls?.length) {
-      for (const tc of tool_calls) {
-        const { id, function: fn, extra_content } = tc;
-        const out: ToolCallPart = {
-          type: "tool-call",
-          toolCallId: id,
-          toolName: fn.name,
-          input: parseToolOutput(fn.arguments).value,
-        };
-        if (extra_content) {
-          out.providerOptions = extra_content;
-        }
-        parts.push(out);
-      }
-    } else if (content !== undefined && content !== null) {
+  if (content !== undefined && content !== null) {
+    if (typeof content === "string") {
       parts.push({
         type: "text",
         text: content,
       });
+    } else if (Array.isArray(content)) {
+      for (const part of content) {
+        if (part.type === "text") {
+          parts.push({
+            type: "text",
+            text: part.text,
+          });
+        }
+      }
+    }
+  }
+
+  if (tool_calls?.length) {
+    for (const tc of tool_calls) {
+      const { id, function: fn, extra_content } = tc;
+      const out: ToolCallPart = {
+        type: "tool-call",
+        toolCallId: id,
+        toolName: fn.name,
+        input: parseToolOutput(fn.arguments).value,
+      };
+      if (extra_content) {
+        out.providerOptions = extra_content;
+      }
+      parts.push(out);
     }
   }
 
   const out: AssistantModelMessage = {
     role: role,
-    content: Array.isArray(parts) && parts.length > 0 ? parts : (content ?? ""),
+    content: parts.length > 0 ? parts : (content ?? ""),
   };
 
   if (extra_content) {
@@ -379,6 +390,7 @@ export function toChatCompletions(
   model: string,
 ): ChatCompletions {
   const finish_reason = toChatCompletionsFinishReason(result.finishReason);
+  const message = toChatCompletionsAssistantMessage(result);
 
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
@@ -388,7 +400,7 @@ export function toChatCompletions(
     choices: [
       {
         index: 0,
-        message: toChatCompletionsAssistantMessage(result),
+        message,
         finish_reason,
       } satisfies ChatCompletionsChoice,
     ],

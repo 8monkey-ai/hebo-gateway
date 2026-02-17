@@ -76,8 +76,9 @@ export type ChatCompletionsReasoningDetail = z.infer<typeof ChatCompletionsReaso
 
 export const ChatCompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
-  // FUTURE: this should support arrays of TextContentPart and RefusalContentPart
-  content: z.union([z.string(), z.null()]).optional(),
+  content: z
+    .union([z.string(), z.null(), z.array(ChatCompletionsContentPartTextSchema)])
+    .optional(),
   name: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
