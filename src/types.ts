@@ -8,7 +8,6 @@ import type {
 } from "./endpoints/chat-completions/schema";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
-import type { OpenAIError } from "./errors/openai";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
@@ -76,7 +75,7 @@ export type GatewayContext = {
    */
   result?:
     | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | OpenAIError>
+    | ReadableStream<ChatCompletionsChunk | Error>
     | Embeddings
     | Model
     | ModelList;
@@ -150,11 +149,9 @@ export type GatewayHooks = {
   ) =>
     | void
     | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | OpenAIError>
+    | ReadableStream<ChatCompletionsChunk | Error>
     | Embeddings
-    | Promise<
-        void | ChatCompletions | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings
-      >;
+    | Promise<void | ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings>;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.

@@ -405,11 +405,11 @@ export function toChatCompletionsResponse(
   return toResponse(toChatCompletions(result, model), responseInit);
 }
 
-export function toChatCompletionsStream(
+export function toChatCompletionsStream<E extends boolean = false>(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-  wrapErrors: boolean = false,
-): ReadableStream<ChatCompletionsChunk | Error | OpenAIError> {
+  wrapErrors?: E,
+): ReadableStream<ChatCompletionsChunk | (E extends true ? OpenAIError : Error)> {
   return result.fullStream.pipeThrough(new ChatCompletionsStream(model, wrapErrors));
 }
 
@@ -421,11 +421,11 @@ export function toChatCompletionsStreamResponse(
   return toResponse(toChatCompletionsStream(result, model, true), responseInit);
 }
 
-export class ChatCompletionsStream extends TransformStream<
+export class ChatCompletionsStream<E extends boolean = false> extends TransformStream<
   TextStreamPart<ToolSet>,
-  ChatCompletionsChunk | Error | OpenAIError
+  ChatCompletionsChunk | (E extends true ? OpenAIError : Error)
 > {
-  constructor(model: string, wrapErrors: boolean = false) {
+  constructor(model: string, wrapErrors?: E) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
@@ -536,13 +536,15 @@ export class ChatCompletionsStream extends TransformStream<
           }
 
           case "error": {
+            let err: Error | OpenAIError;
             if (wrapErrors) {
-              controller.enqueue(toOpenAIError(part.error));
+              err = toOpenAIError(part.error);
             } else if (part.error instanceof Error) {
-              controller.enqueue(part.error);
+              err = part.error;
             } else {
-              controller.enqueue(new Error(String(part.error)));
+              err = new Error(String(part.error));
             }
+            controller.enqueue(err as E extends true ? OpenAIError : Error);
           }
         }
       },
