@@ -14,6 +14,16 @@ const requestDurationHistogram = meter.createHistogram("gen_ai.server.request.du
   },
 });
 
+const timePerOutputTokenHistogram = meter.createHistogram("gen_ai.server.time_per_output_token", {
+  description: "End-to-end gateway request duration per output token",
+  unit: "s",
+  advice: {
+    explicitBucketBoundaries: [
+      0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 2.5,
+    ],
+  },
+});
+
 const tokenUsageHistogram = meter.createHistogram("gen_ai.client.token.usage", {
   description: "Token usage reported by upstream model responses",
   unit: "{token}",
@@ -27,13 +37,31 @@ const tokenUsageHistogram = meter.createHistogram("gen_ai.client.token.usage", {
 
 // FUTURE: record unsuccessful calls
 export const recordRequestDuration = (
-  duration: number,
+  start: number,
   attrs: Attributes,
   signalLevel?: TelemetrySignalLevel,
 ) => {
   if (!signalLevel || signalLevel === "off") return;
 
-  requestDurationHistogram.record(duration / 1000, attrs);
+  requestDurationHistogram.record((performance.now() - start) / 1000, attrs);
+};
+
+// FUTURE: record unsuccessful calls
+export const recordTimePerOutputToken = (
+  start: number,
+  tokenAttrs: Attributes,
+  metricAttrs: Attributes,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+
+  const outputTokens = tokenAttrs["gen_ai.usage.output_tokens"];
+  if (typeof outputTokens !== "number" || outputTokens <= 0) return;
+
+  timePerOutputTokenHistogram.record(
+    (performance.now() - start) / 1000 / outputTokens,
+    metricAttrs,
+  );
 };
 
 // FUTURE: record unsuccessful calls

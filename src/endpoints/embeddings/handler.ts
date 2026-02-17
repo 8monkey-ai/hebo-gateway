@@ -16,7 +16,11 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { recordRequestDuration, recordTokenUsage } from "../../telemetry/gen-ai";
+import {
+  recordRequestDuration,
+  recordTimePerOutputToken,
+  recordTokenUsage,
+} from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
@@ -127,7 +131,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordRequestDuration(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 
