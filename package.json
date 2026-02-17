@@ -168,6 +168,7 @@
     "@ai-sdk/groq": "^3.0.19",
     "@ai-sdk/openai": "^3.0.23",
     "@aws-sdk/credential-providers": "^3.981.0",
+    "@langfuse/otel": "^4.6.1",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-async-hooks": "^2.5.1",

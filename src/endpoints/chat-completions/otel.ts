@@ -54,6 +54,11 @@ const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown
     return parts;
   }
 
+  // FUTURE: remove once Langfuse supports gen_ai.system_instructions
+  if (message.role === "system") {
+    return [toTextPart(message.content)];
+  }
+
   return [];
 };
 
@@ -103,11 +108,13 @@ export const getChatRequestAttributes = (
 
   if (signalLevel === "full") {
     Object.assign(attrs, {
-      "gen_ai.system_instructions": inputs.messages
-        .filter((m) => m.role === "system")
-        .map((m) => JSON.stringify({ parts: [toTextPart(m.content)] })),
+      // FUTURE: move system instructions from messages to here
+      // blocker: https://github.com/langfuse/langfuse/issues/11607
+      // "gen_ai.system_instructions": inputs.messages
+      //   .filter((m) => m.role === "system")
+      //   .map((m) => JSON.stringify(toTextPart(m.content))),
       "gen_ai.input.messages": inputs.messages
-        .filter((m) => m.role !== "system")
+        //.filter((m) => m.role !== "system")
         .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
       "gen_ai.tool.definitions": JSON.stringify(inputs.tools),
     });

@@ -13,6 +13,7 @@ import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
 import { withCanonicalIdsForCohere } from "@hebo-ai/gateway/providers/cohere";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { withCanonicalIdsForVoyage } from "@hebo-ai/gateway/providers/voyage";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
 import { context } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import {
@@ -59,7 +60,10 @@ const gw = gateway({
     enabled: true,
     signals: { gen_ai: "full", http: "recommended", hebo: "off" },
     tracer: new BasicTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(new ConsoleSpanExporter())],
+      spanProcessors: [
+        new SimpleSpanProcessor(new ConsoleSpanExporter()),
+        new LangfuseSpanProcessor(),
+      ],
     }).getTracer("hebo"),
   },
 });
@@ -71,6 +75,6 @@ const app = new Elysia()
     },
   }))
   .all(`${basePath}/*`, (ctx) => gw.handler(ctx.request, { auth: ctx.auth }), { parse: "none" })
-  .listen(3000);
+  .listen(3100);
 
 console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
