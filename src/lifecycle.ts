@@ -24,7 +24,7 @@ export const winterCgHandler = (
 ) => {
   const parsedConfig = parseConfig(config);
 
-  if (parsedConfig.telemetry!.enabled) {
+  if (parsedConfig.telemetry?.enabled) {
     setSpanTracer(parsedConfig.telemetry?.tracer);
     setSpanEventsEnabled(parsedConfig.telemetry?.signals?.hebo);
     initFetch(parsedConfig.telemetry?.signals?.hebo);
