@@ -19,7 +19,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
-- 👁️ OpenTelemetry support with GenAI semantic conventions (Langfuse-compatible).
+- 👁️ OpenTelemetry support for GenAI semantic conventions (Langfuse-compatible).
 
 ## 📦 Installation
 
