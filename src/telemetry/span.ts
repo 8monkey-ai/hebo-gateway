@@ -4,7 +4,7 @@ import { INVALID_SPAN_CONTEXT, SpanKind, SpanStatusCode, context, trace } from "
 
 import type { TelemetrySignalLevel } from "../types";
 
-const DEFAULT_TRACER_NAME = "@hebo-ai/gateway";
+const DEFAULT_TRACER_NAME = "@hebo/gateway";
 
 let spanTracer: Tracer | undefined;
 let spanEventsEnabled = false;

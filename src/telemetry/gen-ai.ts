@@ -2,7 +2,7 @@ import { metrics, type Attributes } from "@opentelemetry/api";
 
 import type { TelemetrySignalLevel } from "../types";
 
-const meter = metrics.getMeter("@hebo-ai/gateway");
+const meter = metrics.getMeter("@hebo/gateway");
 
 const requestDurationHistogram = meter.createHistogram("gen_ai.server.request.duration", {
   description: "End-to-end gateway request duration",

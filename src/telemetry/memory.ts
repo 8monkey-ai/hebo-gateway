@@ -2,7 +2,7 @@ import { metrics } from "@opentelemetry/api";
 
 import type { TelemetrySignalLevel } from "../types";
 
-const meter = metrics.getMeter("@hebo-ai/gateway");
+const meter = metrics.getMeter("@hebo/gateway");
 const defaultHeapSpaceAttrs = { "v8js.heap.space.name": "total" } as const;
 
 const heapUsedCounter = meter.createUpDownCounter("v8js.memory.heap.used", {

@@ -7,11 +7,11 @@ export const wrapStream = (
   hooks: { onDone?: (status: number, reason: unknown) => void },
   signal?: AbortSignal,
 ): ReadableStream => {
-  let finishOnce = false;
+  let once = false;
 
   const finish = (status: number, reason?: unknown) => {
-    if (finishOnce) return;
-    finishOnce = true;
+    if (once) return;
+    once = true;
 
     hooks.onDone?.(status, reason ?? signal?.reason);
   };
