@@ -1,4 +1,6 @@
-const isErrorChunk = (v: unknown) => !!(v as any)?.error;
+import { toOpenAIError } from "#/errors/openai";
+
+const isErrorChunk = (v: unknown) => v instanceof Error || !!(v as any)?.error;
 
 export const wrapStream = (
   src: ReadableStream,
@@ -35,13 +37,15 @@ export const wrapStream = (
           const { value, done } = await reader.read();
           if (done) break;
 
-          controller.enqueue(value);
-
           if (isErrorChunk(value)) {
-            const status = value.error.type === "invalid_request_error" ? 422 : 502;
-            close(status, value.error.message);
+            const openAiError = toOpenAIError(value);
+            const status = openAiError.error.type === "invalid_request_error" ? 422 : 502;
+            controller.enqueue(openAiError);
+            close(status, value);
             return;
           }
+
+          controller.enqueue(value);
         }
 
         finish(200);

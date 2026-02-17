@@ -25,7 +25,8 @@ export class OpenAIError {
 const mapType = (status: number) => (status < 500 ? "invalid_request_error" : "server_error");
 
 const maybeMaskMessage = (meta: ReturnType<typeof getErrorMeta>, requestId?: string) => {
-  if (!(isProduction() && (meta.status >= 500 || meta.code.includes("UPSTREAM")))) {
+  // FUTURE: consider masking all upstream errors, also 4xx
+  if (!(isProduction() && meta.status >= 500)) {
     return meta.message;
   }
   // FUTURE: always attach requestId to errors (masked and unmasked)
