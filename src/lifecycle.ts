@@ -6,6 +6,7 @@ import type {
 } from "./types";
 
 import { parseConfig } from "./config";
+import { GatewayError } from "./errors/gateway";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
@@ -59,12 +60,14 @@ export const winterCgHandler = (
         );
       }
 
-      const realStatus = status === 200 ? (ctx.response?.status ?? status) : status;
+      let realStatus = status;
+      if (ctx.request.signal.aborted) realStatus = 499;
+      else if (status === 200 && ctx.response?.status) realStatus = ctx.response.status;
+
       if (realStatus !== 200) {
-        // FUTURE: in-stream errors are redacted in prod
         (realStatus >= 500 ? logger.error : logger.warn)({
           requestId: resolveRequestId(ctx.request),
-          err: reason,
+          err: reason ?? ctx.request.signal.reason,
         });
 
         if (realStatus >= 500) span.recordError(reason);
@@ -92,7 +95,7 @@ export const winterCgHandler = (
         ctx.result = (await span.runWithContext(() => run(ctx))) as typeof ctx.result;
 
         if (ctx.result instanceof ReadableStream) {
-          ctx.result = wrapStream(ctx.result, { onDone: finalize }, ctx.request.signal);
+          ctx.result = wrapStream(ctx.result, { onDone: finalize });
         }
 
         ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.request));
@@ -111,7 +114,12 @@ export const winterCgHandler = (
         finalize(ctx.response.status);
       }
     } catch (error) {
-      ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));
+      ctx.response = toOpenAIErrorResponse(
+        ctx.request.signal.aborted
+          ? new GatewayError(error ?? ctx.request.signal.reason, 499)
+          : error,
+        prepareResponseInit(ctx.request),
+      );
       finalize(ctx.response.status, error);
     }
 

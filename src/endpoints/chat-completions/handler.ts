@@ -127,13 +127,12 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
-        // No abort signal here, otherwise we can't detect upstream from client cancellations
-        // abortSignal: ctx.request.signal,
+        abortSignal: ctx.request.signal,
         timeout: {
           totalMs: 5 * 60 * 1000,
         },
         onAbort: () => {
-          throw new DOMException("Upstream failed", "AbortError");
+          throw new DOMException("The operation was aborted.", "AbortError");
         },
         onError: () => {},
         onFinish: (res) => {
@@ -171,7 +170,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const result = await generateText({
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
-      // FUTURE: currently can't tell whether upstream or downstream abort
       abortSignal: ctx.request.signal,
       timeout: 5 * 60 * 1000,
       experimental_include: {
