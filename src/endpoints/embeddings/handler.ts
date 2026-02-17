@@ -57,7 +57,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     const parsed = EmbeddingsBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
-      // FUTURE: add body shape to error message
+      // FUTURE: consider adding body shape to metadata
       throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
     }
     ctx.body = parsed.data;
