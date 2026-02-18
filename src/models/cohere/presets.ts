@@ -26,7 +26,7 @@ const COMMAND_VISION_BASE = {
 const EMBED_V3_BASE = {
   modalities: {
     input: ["text", "image"] as const,
-    output: ["embeddings"] as const,
+    output: ["embedding"] as const,
   },
   providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
@@ -34,7 +34,7 @@ const EMBED_V3_BASE = {
 const EMBED_V4_BASE = {
   modalities: {
     input: ["text", "image", "pdf"] as const,
-    output: ["embeddings"] as const,
+    output: ["embedding"] as const,
   },
   providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;

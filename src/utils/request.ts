@@ -18,17 +18,6 @@ export const prepareRequestHeaders = (request: Request) => {
   return headers;
 };
 
-export const prepareRequestBody = async (request: Request) => {
-  let requestBytes = 0;
-  let body: ArrayBuffer | undefined;
-  if (request.body) {
-    body = await request.arrayBuffer();
-    requestBytes = body.byteLength;
-  }
-
-  return { body, requestBytes };
-};
-
 export const prepareForwardHeaders = (request: Request): Record<string, string> => {
   const userAgent = request.headers.get("user-agent");
   const appendedUserAgent = userAgent

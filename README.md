@@ -19,6 +19,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
+- 👁️ OpenTelemetry support for GenAI semantic conventions (Langfuse-compatible).
 
 ## 📦 Installation
 
@@ -301,7 +302,7 @@ const gw = gateway({
      */
     before: async (ctx: {
       body: ChatCompletionsBody | EmbeddingsBody;
-      operation: "text" | "embeddings";
+      operation: "chat" | "embeddings";
     }): Promise<ChatCompletionsBody | EmbeddingsBody | void> => {
       // Example Use Cases:
       // - Transform request body
@@ -328,7 +329,7 @@ const gw = gateway({
      * @param ctx.models ModelCatalog from config.
      * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.modelId Resolved model ID.
-     * @param ctx.operation Operation type ("text" | "embeddings").
+     * @param ctx.operation Operation type ("chat" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
@@ -336,7 +337,7 @@ const gw = gateway({
       models: ModelCatalog;
       body: ChatCompletionsBody | EmbeddingsBody;
       modelId: ModelId;
-      operation: "text" | "embeddings";
+      operation: "chat" | "embeddings";
     }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
@@ -615,14 +616,31 @@ const gw = gateway({
   telemetry: {
     // default: false
     enabled: true,
-    // default: TraceProivder from @opentelemetry/api singleton
+    // default: TraceProvider from @opentelemetry/api singleton
     tracer: trace.getTracer("my-gateway"),
+    // Telemetry levels by namespace:
+    // "off" | "required" | "recommended" | "full"
+    signals: {
+      // gen_ai.* semantic attributes
+      gen_ai: "full",
+      // http.*, url.*, server.* semantic attributes
+      http: "recommended",
+      // hebo-specific telemetry:
+      // - recommended: hebo.* span events
+      // - full: hebo.* span events + fetch instrumentation
+      hebo: "recommended",
+    },
   },
 });
 ```
 
+Attribute names and span semantics follow OpenTelemetry GenAI semantic conventions:
+https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
+
 > [!TIP]
-> For observability integration that is not otel compliant (for example, Langfuse), you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
+> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
+
+For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
 ### Passing Framework State to Hooks
 

@@ -22,28 +22,36 @@ export class OpenAIError {
   }
 }
 
+const mapType = (status: number) => (status < 500 ? "invalid_request_error" : "server_error");
+
+const maybeMaskMessage = (meta: ReturnType<typeof getErrorMeta>, requestId?: string) => {
+  // FUTURE: consider masking all upstream errors, also 4xx
+  if (!(isProduction() && meta.status >= 500)) {
+    return meta.message;
+  }
+  // FUTURE: always attach requestId to errors (masked and unmasked)
+  return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
+};
+
 export function toOpenAIError(error: unknown): OpenAIError {
   const meta = getErrorMeta(error);
-  return new OpenAIError(meta.message, meta.type, meta.code);
+
+  return new OpenAIError(maybeMaskMessage(meta), mapType(meta.status), meta.code);
 }
 
 export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
   const meta = getErrorMeta(error);
 
-  const shouldMask = isProduction() && (meta.status >= 500 || meta.code.includes("UPSTREAM"));
-
-  let message;
-  if (shouldMask) {
-    const requestId = resolveRequestId(responseInit);
-    // FUTURE: always attach requestId to errors (masked and unmasked)
-    message = `${STATUS_CODE(meta.status)} (${requestId})`;
-  } else {
-    message = meta.message;
-  }
-
-  return toResponse(new OpenAIError(message, meta.type, meta.code), {
-    ...responseInit,
-    status: meta.status,
-    statusText: meta.code,
-  });
+  return toResponse(
+    new OpenAIError(
+      maybeMaskMessage(meta, resolveRequestId(responseInit)),
+      mapType(meta.status),
+      meta.code,
+    ),
+    {
+      ...responseInit,
+      status: meta.status,
+      statusText: meta.code,
+    },
+  );
 }

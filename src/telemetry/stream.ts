@@ -1,67 +1,51 @@
-export type InstrumentStreamHooks = {
-  onComplete?: (
+import { toOpenAIError } from "#/errors/openai";
+
+const isErrorChunk = (v: unknown) => v instanceof Error || !!(v as any)?.error;
+
+export const wrapStream = (
+  src: ReadableStream,
+  hooks: { onDone?: (status: number, reason: unknown) => void },
+): ReadableStream => {
+  let finished = false;
+
+  const done = (
+    reader: ReadableStreamDefaultReader,
+    controller: ReadableStreamDefaultController,
     status: number,
-    stats: { bytes: number; streamStart: number; streamEnd: number },
-  ) => void;
-  onError?: (error: unknown, status: number) => void;
-};
-
-export const instrumentStream = (
-  src: ReadableStream<Uint8Array>,
-  hooks: InstrumentStreamHooks,
-  signal?: AbortSignal,
-): ReadableStream<Uint8Array> => {
-  const stats = { bytes: 0, streamStart: performance.now() };
-  let done = false;
-
-  const finish = (status: number, reason?: unknown) => {
-    if (done) return;
-    done = true;
-
-    if (!reason) reason = signal?.reason;
-
-    if (status >= 400) {
-      hooks.onError?.(reason, status);
+    reason?: unknown,
+  ) => {
+    if (!finished) {
+      finished = true;
+      hooks.onDone?.(status, reason);
     }
-
-    const timing = {
-      bytes: stats.bytes,
-      streamStart: stats.streamStart,
-      streamEnd: performance.now(),
-    };
-
-    hooks.onComplete?.(status, timing);
+    reader.cancel(reason).catch(() => {});
+    controller.close();
   };
 
-  return new ReadableStream<Uint8Array>({
+  return new ReadableStream({
     async start(controller) {
       const reader = src.getReader();
 
       try {
         for (;;) {
-          if (signal?.aborted) {
-            finish(499, signal.reason);
-            reader.cancel(signal.reason).catch(() => {});
-            controller.close();
+          // eslint-disable-next-line no-await-in-loop
+          const { value, done: eof } = await reader.read();
+          if (eof) break;
+
+          const out = isErrorChunk(value) ? toOpenAIError(value) : value;
+          controller.enqueue(out);
+
+          if (out !== value) {
+            const status = out.error?.type === "invalid_request_error" ? 422 : 502;
+            done(reader, controller, status, value);
             return;
           }
-
-          // eslint-disable-next-line no-await-in-loop
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          stats.bytes += value!.byteLength;
-          controller.enqueue(value!);
         }
 
-        finish(200);
-        controller.close();
+        done(reader, controller, 200);
       } catch (err) {
-        const status = signal?.aborted ? 499 : (err as any)?.name === "AbortError" ? 503 : 502;
-
-        finish(status, err);
-        reader.cancel(err).catch(() => {});
-        controller.close();
+        controller.enqueue(toOpenAIError(err));
+        done(reader, controller, 502, err);
       } finally {
         try {
           reader.releaseLock();
@@ -70,7 +54,10 @@ export const instrumentStream = (
     },
 
     cancel(reason) {
-      finish(499, reason);
+      if (!finished) {
+        finished = true;
+        hooks.onDone?.(499, reason);
+      }
       src.cancel(reason).catch(() => {});
     },
   });

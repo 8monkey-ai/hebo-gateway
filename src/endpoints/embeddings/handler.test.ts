@@ -45,7 +45,7 @@ describe("Embeddings Handler", () => {
     models: {
       "text-embedding-3-small": {
         name: "OpenAI Embedding Model",
-        modalities: { input: ["text"], output: ["embeddings"] },
+        modalities: { input: ["text"], output: ["embedding"] },
         providers: ["openai"],
       },
       "gpt-oss-20b": {
@@ -68,7 +68,7 @@ describe("Embeddings Handler", () => {
     expect(data).toMatchObject({
       error: {
         code: "model_unsupported_operation",
-        message: "Model 'gpt-oss-20b' does not support 'embeddings' output",
+        message: "Model 'gpt-oss-20b' does not support 'embedding' output",
         type: "invalid_request_error",
       },
     });

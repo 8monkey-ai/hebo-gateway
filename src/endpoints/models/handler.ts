@@ -7,13 +7,13 @@ import { toModels, toModel } from "./converters";
 export const models = (config: GatewayConfig): Endpoint => {
   // eslint-disable-next-line require-await
   const handler = async (ctx: GatewayContext) => {
-    const request = ctx.request;
+    ctx.operation = "models";
 
-    if (!request || request.method !== "GET") {
+    if (!ctx.request || ctx.request.method !== "GET") {
       throw new GatewayError("Method Not Allowed", 405);
     }
 
-    const rawId = request.url.split("/models/", 2)[1]?.split("?", 1)[0];
+    const rawId = ctx.request.url.split("/models/", 2)[1]?.split("?", 1)[0];
     if (!rawId) {
       return toModels(ctx.models);
     }

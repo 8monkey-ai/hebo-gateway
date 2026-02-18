@@ -6,9 +6,15 @@ import type {
 } from "./types";
 
 import { parseConfig } from "./config";
+import { GatewayError } from "./errors/gateway";
 import { toOpenAIErrorResponse } from "./errors/openai";
-import { isLoggerDisabled, logger } from "./logger";
-import { withAccessLog } from "./telemetry/access-log";
+import { logger } from "./logger";
+import { getBaggageAttributes } from "./telemetry/baggage";
+import { initFetch } from "./telemetry/fetch";
+import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
+import { recordV8jsMemory } from "./telemetry/memory";
+import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
+import { wrapStream } from "./telemetry/stream";
 import { resolveRequestId } from "./utils/headers";
 import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
@@ -19,32 +25,11 @@ export const winterCgHandler = (
 ) => {
   const parsedConfig = parseConfig(config);
 
-  const core = async (ctx: GatewayContext): Promise<void> => {
-    try {
-      const onRequest = await parsedConfig.hooks?.onRequest?.(ctx as OnRequestHookContext);
-      if (onRequest) {
-        if (onRequest instanceof Response) {
-          ctx.response = onRequest;
-          return;
-        }
-        ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
-      }
-
-      ctx.result = (await run(ctx)) as typeof ctx.result;
-      ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.request));
-
-      const onResponse = await parsedConfig.hooks?.onResponse?.(ctx as OnResponseHookContext);
-      if (onResponse) ctx.response = onResponse;
-    } catch (error) {
-      logger.error({
-        requestId: resolveRequestId(ctx.request),
-        err: error instanceof Error ? error : new Error(String(error)),
-      });
-      ctx.response = toOpenAIErrorResponse(error, prepareResponseInit(ctx.request));
-    }
-  };
-
-  const handler = isLoggerDisabled(parsedConfig.logger) ? core : withAccessLog(core);
+  if (parsedConfig.telemetry?.enabled) {
+    setSpanTracer(parsedConfig.telemetry?.tracer);
+    setSpanEventsEnabled(parsedConfig.telemetry?.signals?.hebo);
+    initFetch(parsedConfig.telemetry?.signals?.hebo);
+  }
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
     const ctx: GatewayContext = {
@@ -57,7 +42,86 @@ export const winterCgHandler = (
     const headers = prepareRequestHeaders(ctx.request);
     if (headers) ctx.request = new Request(ctx.request, { headers });
 
-    await handler(ctx);
+    const span = startSpan(ctx.request.url);
+    span.setAttributes(getBaggageAttributes(ctx.request));
+    if (!span.isExisting) {
+      span.setAttributes(getRequestAttributes(ctx.request, parsedConfig.telemetry?.signals?.http));
+    }
+
+    const finalize = (status: number, reason?: unknown) => {
+      if (ctx.operation) {
+        span.updateName(`${ctx.operation}${ctx.modelId ? ` ${ctx.modelId}` : ""}`);
+      }
+
+      if (!span.isExisting) {
+        // FUTURE add http.server.request.duration
+        span.setAttributes(
+          getResponseAttributes(ctx.response!, parsedConfig.telemetry?.signals?.http),
+        );
+      }
+
+      let realStatus = status;
+      if (ctx.request.signal.aborted) realStatus = 499;
+      else if (status === 200 && ctx.response?.status) realStatus = ctx.response.status;
+
+      if (realStatus !== 200) {
+        (realStatus >= 500 ? logger.error : logger.warn)({
+          requestId: resolveRequestId(ctx.request),
+          err: reason ?? ctx.request.signal.reason,
+        });
+
+        if (realStatus >= 500) span.recordError(reason);
+      }
+      span.setAttributes({ "http.response.status_code_effective": realStatus });
+
+      recordV8jsMemory(parsedConfig.telemetry?.signals?.hebo);
+
+      span.finish();
+    };
+
+    try {
+      if (parsedConfig.hooks?.onRequest) {
+        const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
+        addSpanEvent("hebo.hooks.on_request.completed");
+
+        if (onRequest instanceof Response) {
+          ctx.response = onRequest;
+        } else if (onRequest) {
+          ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
+        }
+      }
+
+      if (!ctx.response) {
+        ctx.result = (await span.runWithContext(() => run(ctx))) as typeof ctx.result;
+
+        if (ctx.result instanceof ReadableStream) {
+          ctx.result = wrapStream(ctx.result, { onDone: finalize });
+        }
+
+        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.request));
+      }
+
+      if (parsedConfig.hooks?.onResponse) {
+        const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
+        addSpanEvent("hebo.hooks.on_response.completed");
+        if (onResponse) {
+          ctx.response = onResponse;
+        }
+      }
+
+      // FUTURE: this can leak if onResponse removed wrapper from response.body
+      if (!(ctx.result instanceof ReadableStream)) {
+        finalize(ctx.response.status);
+      }
+    } catch (error) {
+      ctx.response = toOpenAIErrorResponse(
+        ctx.request.signal.aborted
+          ? new GatewayError(error ?? ctx.request.signal.reason, 499)
+          : error,
+        prepareResponseInit(ctx.request),
+      );
+      finalize(ctx.response.status, error);
+    }
 
     return ctx.response ?? new Response("Internal Server Error", { status: 500 });
   };

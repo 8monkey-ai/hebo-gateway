@@ -12,7 +12,7 @@ export const resolveProvider = (args: {
   providers: ProviderRegistry;
   models: ModelCatalog;
   modelId: ModelId;
-  operation: "text" | "embeddings";
+  operation: "chat" | "embeddings";
 }): ProviderV3 => {
   const { providers, models, modelId, operation } = args;
 
@@ -22,9 +22,10 @@ export const resolveProvider = (args: {
     throw new GatewayError(`Model '${modelId}' not found in catalog`, 422, "MODEL_NOT_FOUND");
   }
 
-  if (catalogModel.modalities && !catalogModel.modalities.output.includes(operation)) {
+  const modality = operation === "embeddings" ? "embedding" : "text";
+  if (catalogModel.modalities && !catalogModel.modalities.output.includes(modality)) {
     throw new GatewayError(
-      `Model '${modelId}' does not support '${operation}' output`,
+      `Model '${modelId}' does not support '${modality}' output`,
       422,
       "MODEL_UNSUPPORTED_OPERATION",
     );

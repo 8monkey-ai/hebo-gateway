@@ -11,6 +11,7 @@ export const STATUS_CODES = {
   409: "CONFLICT",
   422: "UNPROCESSABLE_ENTITY",
   429: "TOO_MANY_REQUESTS",
+  499: "CLIENT_CLOSED_REQUEST",
   500: "INTERNAL_SERVER_ERROR",
   502: "BAD_GATEWAY",
   503: "SERVICE_UNAVAILABLE",
@@ -23,26 +24,24 @@ export const STATUS_CODE = (status: number) => {
   return status >= 400 && status < 500 ? STATUS_CODES[400] : STATUS_CODES[500];
 };
 
+// FUTURE: always return a wrapped GatewayError?
 export function getErrorMeta(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
-  let code: string;
   let status: number;
-  let param = "";
+  let code: string;
 
   if (error instanceof GatewayError) {
-    ({ code, status } = error);
+    ({ status, code } = error);
   } else {
     const normalized = normalizeAiSdkError(error);
     if (normalized) {
-      ({ code, status } = normalized);
+      ({ status, code } = normalized);
     } else {
       status = 500;
       code = STATUS_CODE(status);
     }
   }
 
-  const type = status < 500 ? "invalid_request_error" : "server_error";
-
-  return { code, status, param, type, message };
+  return { status, code, message };
 }
