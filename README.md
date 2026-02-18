@@ -642,6 +642,32 @@ https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 
 For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
+#### Langfuse
+
+Hebo telemetry spans are OpenTelemetry-compatible, so you can send them to Langfuse via `@langfuse/otel`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { context } from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
+
+context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+
+const gw = gateway({
+  // ...
+  telemetry: {
+    enabled: true,
+    tracer = new BasicTracerProvider({
+      spanProcessors: [new LangfuseSpanProcessor()],
+    }).getTracer("hebo");,
+  },
+});
+```
+
+Langfuse credentials are read from environment variables by the Langfuse OTel SDK (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`).
+
 ### Passing Framework State to Hooks
 
 You can pass per-request info from your framework into the gateway via the second `state` argument on the handler, then read it in hooks through `ctx.state`.
