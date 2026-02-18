@@ -1,4 +1,4 @@
-import { toOpenAIError } from "#/errors/openai";
+import { toOpenAIError } from "../errors/openai";
 
 const isErrorChunk = (v: unknown) => v instanceof Error || !!(v as any)?.error;
 
