@@ -150,6 +150,17 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
 });
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
+export const ChatCompletionsResponseFormatSchema = z.object({
+  type: z.literal("json_schema"),
+  json_schema: z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    schema: z.record(z.string(), z.any()),
+    strict: z.boolean().optional(),
+  }),
+});
+export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsResponseFormatSchema>;
+
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z
@@ -167,6 +178,7 @@ const ChatCompletionsInputsSchema = z.object({
   seed: z.int().optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
+  response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   // Extensions
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),

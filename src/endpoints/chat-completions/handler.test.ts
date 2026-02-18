@@ -12,6 +12,7 @@ describe("Chat Completions Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
     // eslint-disable-next-line require-await
     doGenerate: async (options) => {
+      const isStructuredOutput = options.responseFormat?.type === "json";
       const isToolCall = options.tools && options.tools.length > 0;
 
       if (isToolCall) {
@@ -27,6 +28,24 @@ describe("Chat Completions Handler", () => {
               toolCallId: "call_123",
               toolName: "get_current_weather",
               input: '{"location":"San Francisco, CA"}',
+            },
+          ],
+          providerMetadata: { provider: { key: "value" } },
+          warnings: [],
+        };
+      }
+
+      if (isStructuredOutput) {
+        return {
+          finishReason: { unified: "stop", raw: "stop" },
+          usage: {
+            inputTokens: { total: 10, noCache: 10, cacheRead: 20, cacheWrite: 0 },
+            outputTokens: { total: 20, text: 20, reasoning: 10 },
+          },
+          content: [
+            {
+              type: "text",
+              text: '{"city":"San Francisco","temp_c":18}',
             },
           ],
           providerMetadata: { provider: { key: "value" } },
@@ -298,5 +317,33 @@ describe("Chat Completions Handler", () => {
     expect(res.status).toBe(200);
     const data = await parseResponse(res);
     expect(data.model).toBe("openai/gpt-oss-20b");
+  });
+
+  test("should generate non-streaming structured output", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "Return weather as JSON" }],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "weather",
+          schema: {
+            type: "object",
+            properties: {
+              city: { type: "string" },
+              temp_c: { type: "number" },
+            },
+            required: ["city", "temp_c"],
+            additionalProperties: false,
+          },
+          strict: true,
+        },
+      },
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse(res);
+    expect(data.choices[0].message.content).toBe('{"city":"San Francisco","temp_c":18}');
   });
 });

@@ -11,7 +11,7 @@ import type {
   UserContent,
   AssistantContent,
   LanguageModelUsage,
-  Output,
+  Output as OutputType,
   TextStreamPart,
   ReasoningOutput,
   AssistantModelMessage,
@@ -20,7 +20,7 @@ import type {
 } from "ai";
 
 import { convertBase64ToUint8Array } from "@ai-sdk/provider-utils";
-import { jsonSchema, tool } from "ai";
+import { Output, jsonSchema, tool } from "ai";
 
 import type {
   ChatCompletionsToolCall,
@@ -44,6 +44,7 @@ import type {
   ChatCompletionsReasoningEffort,
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningDetail,
+  ChatCompletionsResponseFormat,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -54,6 +55,7 @@ export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
+  output?: OutputType.Output;
   temperature?: number;
   maxOutputTokens?: number;
   frequencyPenalty?: number;
@@ -74,6 +76,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     temperature,
     max_tokens,
     max_completion_tokens,
+    response_format,
     reasoning_effort,
     reasoning,
     frequency_penalty,
@@ -90,6 +93,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     messages: convertToModelMessages(messages),
     tools: convertToToolSet(tools),
     toolChoice: convertToToolChoice(tool_choice),
+    output: convertToOutput(response_format),
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
     frequencyPenalty: frequency_penalty,
@@ -101,6 +105,19 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
       unknown: rest,
     },
   };
+}
+
+function convertToOutput(responseFormat: ChatCompletionsResponseFormat | undefined) {
+  if (!responseFormat) {
+    return;
+  }
+
+  const { name, description, schema } = responseFormat.json_schema;
+  return Output.object({
+    name,
+    description,
+    schema: jsonSchema(schema),
+  });
 }
 
 export function convertToModelMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
@@ -376,7 +393,7 @@ function parseReasoningOptions(
 // --- Response Flow ---
 
 export function toChatCompletions(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, OutputType.Output>,
   model: string,
 ): ChatCompletions {
   const finish_reason = toChatCompletionsFinishReason(result.finishReason);
@@ -398,7 +415,7 @@ export function toChatCompletions(
   };
 }
 export function toChatCompletionsResponse(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, OutputType.Output>,
   model: string,
   responseInit?: ResponseInit,
 ): Response {
@@ -406,7 +423,7 @@ export function toChatCompletionsResponse(
 }
 
 export function toChatCompletionsStream<E extends boolean = false>(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, OutputType.Output>,
   model: string,
   wrapErrors?: E,
 ): ReadableStream<ChatCompletionsChunk | (E extends true ? OpenAIError : Error)> {
@@ -414,7 +431,7 @@ export function toChatCompletionsStream<E extends boolean = false>(
 }
 
 export function toChatCompletionsStreamResponse(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, OutputType.Output>,
   model: string,
   responseInit?: ResponseInit,
 ): Response {
@@ -553,7 +570,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
 }
 
 export const toChatCompletionsAssistantMessage = (
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, OutputType.Output>,
 ): ChatCompletionsAssistantMessage => {
   const message: ChatCompletionsAssistantMessage = {
     role: "assistant",
