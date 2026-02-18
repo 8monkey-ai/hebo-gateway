@@ -150,7 +150,7 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
 });
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
-export const ChatCompletionsResponseFormatJsonSchemaSchema = z.object({
+export const ChatCompletionsResponseFormatJsonSchema = z.object({
   type: z.literal("json_schema"),
   json_schema: z.object({
     name: z.string(),
@@ -163,7 +163,7 @@ export const ChatCompletionsResponseFormatTextSchema = z.object({
   type: z.literal("text"),
 });
 export const ChatCompletionsResponseFormatSchema = z.union([
-  ChatCompletionsResponseFormatJsonSchemaSchema,
+  ChatCompletionsResponseFormatJsonSchema,
   ChatCompletionsResponseFormatTextSchema,
 ]);
 export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsResponseFormatSchema>;
