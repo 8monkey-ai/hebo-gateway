@@ -19,7 +19,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
-- 👁️ Observability support via OTel GenAI semantic conventions (Langfuse-compatible).
+- 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
 
 ## 📦 Installation
 
@@ -272,7 +272,7 @@ const gw = gateway({
 
 ### Hooks
 
-Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality, like your actual routing logic. All hooks are available as async and non-async.
+Hooks allow you to plug into the lifecycle of the gateway and enrich it with additional functionality, like your actual routing logic. All hooks are available as async and non-async.
 
 ```ts
 const gw = gateway({
@@ -315,10 +315,10 @@ const gw = gateway({
      * @param ctx.modelId Incoming model ID.
      * @returns Canonical model ID or undefined to keep original.
      */
-    resolveModelId?: (ctx: {
+    resolveModelId: async (ctx: {
       body: ChatCompletionsBody | EmbeddingsBody;
       modelId: ModelId;
-    }) => ModelId | void | Promise<ModelId | void> {
+    }): Promise<ModelId | void> => {
       // Example Use Cases:
       // - Resolve modelAlias to modelId
       return undefined;
@@ -328,7 +328,7 @@ const gw = gateway({
      * @param ctx.providers ProviderRegistry from config.
      * @param ctx.models ModelCatalog from config.
      * @param ctx.body The parsed body object with all call parameters.
-     * @param ctx.modelId Resolved model ID.
+     * @param ctx.resolvedModelId Resolved model ID.
      * @param ctx.operation Operation type ("chat" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
@@ -336,7 +336,7 @@ const gw = gateway({
       providers: ProviderRegistry;
       models: ModelCatalog;
       body: ChatCompletionsBody | EmbeddingsBody;
-      modelId: ModelId;
+      resolvedModelId: ModelId;
       operation: "chat" | "embeddings";
     }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
@@ -350,8 +350,8 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings
-    }): Promise<ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings | void> => {
+      result: ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings;
+    }): Promise<ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
