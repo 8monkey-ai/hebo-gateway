@@ -156,6 +156,7 @@ export const ChatCompletionsResponseFormatJsonSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     schema: z.record(z.string(), z.any()),
+    // FUTURE: we are currently always defaulting to strict
     strict: z.boolean().optional(),
   }),
 });
