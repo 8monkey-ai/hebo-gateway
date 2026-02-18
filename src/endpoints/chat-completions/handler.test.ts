@@ -346,4 +346,19 @@ describe("Chat Completions Handler", () => {
     const data = await parseResponse(res);
     expect(data.choices[0].message.content).toBe('{"city":"San Francisco","temp_c":18}');
   });
+
+  test('should accept response_format type "text"', async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "Say hi" }],
+      response_format: {
+        type: "text",
+      },
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse(res);
+    expect(data.choices[0].message.content).toBe("Hello from AI");
+  });
 });

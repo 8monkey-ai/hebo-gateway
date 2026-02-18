@@ -273,5 +273,16 @@ describe("Chat Completions Converters", () => {
 
       expect(parsed).toEqual({ city: "San Francisco" });
     });
+
+    test("should treat response_format text as default text output", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        response_format: {
+          type: "text",
+        },
+      });
+
+      expect(result.output).toBeUndefined();
+    });
   });
 });

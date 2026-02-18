@@ -108,7 +108,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
 }
 
 function convertToOutput(responseFormat: ChatCompletionsResponseFormat | undefined) {
-  if (!responseFormat) {
+  if (!responseFormat || responseFormat.type === "text") {
     return;
   }
 
