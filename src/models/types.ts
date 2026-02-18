@@ -3,6 +3,7 @@ import type { ProviderId } from "../providers/types";
 export const CANONICAL_MODEL_IDS = [
   // Anthropic
   "anthropic/claude-opus-4.6",
+  "anthropic/claude-sonnet-4.6",
   "anthropic/claude-haiku-4.5",
   "anthropic/claude-sonnet-4.5",
   "anthropic/claude-opus-4.5",
