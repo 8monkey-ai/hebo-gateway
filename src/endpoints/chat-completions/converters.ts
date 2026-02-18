@@ -11,7 +11,6 @@ import type {
   UserContent,
   AssistantContent,
   LanguageModelUsage,
-  Output as OutputType,
   TextStreamPart,
   ReasoningOutput,
   AssistantModelMessage,
@@ -55,7 +54,7 @@ export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
-  output?: OutputType.Output;
+  output?: Output.Output;
   temperature?: number;
   maxOutputTokens?: number;
   frequencyPenalty?: number;
@@ -393,7 +392,7 @@ function parseReasoningOptions(
 // --- Response Flow ---
 
 export function toChatCompletions(
-  result: GenerateTextResult<ToolSet, OutputType.Output>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): ChatCompletions {
   const finish_reason = toChatCompletionsFinishReason(result.finishReason);
@@ -415,7 +414,7 @@ export function toChatCompletions(
   };
 }
 export function toChatCompletionsResponse(
-  result: GenerateTextResult<ToolSet, OutputType.Output>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
   responseInit?: ResponseInit,
 ): Response {
@@ -423,7 +422,7 @@ export function toChatCompletionsResponse(
 }
 
 export function toChatCompletionsStream<E extends boolean = false>(
-  result: StreamTextResult<ToolSet, OutputType.Output>,
+  result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
   wrapErrors?: E,
 ): ReadableStream<ChatCompletionsChunk | (E extends true ? OpenAIError : Error)> {
@@ -431,7 +430,7 @@ export function toChatCompletionsStream<E extends boolean = false>(
 }
 
 export function toChatCompletionsStreamResponse(
-  result: StreamTextResult<ToolSet, OutputType.Output>,
+  result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
   responseInit?: ResponseInit,
 ): Response {
@@ -570,7 +569,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
 }
 
 export const toChatCompletionsAssistantMessage = (
-  result: GenerateTextResult<ToolSet, OutputType.Output>,
+  result: GenerateTextResult<ToolSet, Output.Output>,
 ): ChatCompletionsAssistantMessage => {
   const message: ChatCompletionsAssistantMessage = {
     role: "assistant",
