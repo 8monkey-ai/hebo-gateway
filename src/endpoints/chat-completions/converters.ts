@@ -18,8 +18,8 @@ import type {
   UserModelMessage,
 } from "ai";
 
-import { convertBase64ToUint8Array } from "@ai-sdk/provider-utils";
 import { Output, jsonSchema, tool } from "ai";
+import { z } from "zod";
 
 import type {
   ChatCompletionsToolCall,
@@ -267,12 +267,12 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         return mimeType.startsWith("image/")
           ? {
               type: "image" as const,
-              image: convertBase64ToUint8Array(base64Data),
+              image: z.util.base64ToUint8Array(base64Data),
               mediaType: mimeType,
             }
           : {
               type: "file" as const,
-              data: convertBase64ToUint8Array(base64Data),
+              data: z.util.base64ToUint8Array(base64Data),
               mediaType: mimeType,
             };
       }
@@ -287,12 +287,12 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
       return media_type.startsWith("image/")
         ? {
             type: "image" as const,
-            image: convertBase64ToUint8Array(data),
+            image: z.util.base64ToUint8Array(data),
             mediaType: media_type,
           }
         : {
             type: "file" as const,
-            data: convertBase64ToUint8Array(data),
+            data: z.util.base64ToUint8Array(data),
             filename,
             mediaType: media_type,
           };
@@ -300,7 +300,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
     if (part.type === "input_audio") {
       return {
         type: "file" as const,
-        data: convertBase64ToUint8Array(part.input_audio.data),
+        data: z.util.base64ToUint8Array(part.input_audio.data),
         mediaType: `audio/${part.input_audio.format}`,
       };
     }
