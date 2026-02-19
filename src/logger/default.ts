@@ -30,11 +30,11 @@ function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, u
   const out: Record<string, unknown> = {};
 
   for (const k of Object.getOwnPropertyNames(err)) {
-    if (k in out || (typeof k === "string" && k.startsWith("_"))) continue;
+    if (k.startsWith("_")) continue;
 
     let val: unknown;
     try {
-      val = (err as any)[k as any];
+      val = (err as any)[k];
     } catch {
       val = "[Unreadable]";
     }
