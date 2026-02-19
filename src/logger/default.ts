@@ -36,7 +36,8 @@ export function serializeError(err: unknown, _seen?: WeakSet<object>): Record<st
 
   for (const k of Reflect.ownKeys(err)) {
     if (k in out || (typeof k === "string" && k.startsWith("_"))) continue;
-    out[String(k)] = (err as any)[k];
+    const val = (err as any)[k];
+    out[String(k)] = val instanceof Error ? serializeError(val, seen) : val;
   }
 
   return out;
