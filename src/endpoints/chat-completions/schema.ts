@@ -26,7 +26,8 @@ export const ChatCompletionsContentPartAudioSchema = z.object({
   type: z.literal("input_audio"),
   input_audio: z.object({
     data: z.string(),
-    format: z.union([z.literal("wav"), z.literal("mp3")]),
+    // only wav and mp3 are official, the rest is what Gemini supports
+    format: z.enum(["wav", "mp3", "aiff", "aac", "ogg", "flac"]),
   }),
 });
 
