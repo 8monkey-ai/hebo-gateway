@@ -41,6 +41,7 @@ function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, u
 
     if (typeof val === "bigint") val = `${val}n`;
 
+    // FUTURE: check for circular references within val
     out[String(k)] = val instanceof Error ? serializeError(val, seen) : val;
   }
 
