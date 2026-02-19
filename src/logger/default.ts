@@ -27,21 +27,20 @@ export function serializeError(err: unknown, _seen?: WeakSet<object>): Record<st
   if (seen.has(err)) return { name: err.name, message: err.message, circular: true };
   seen.add(err);
 
-  const out: Record<string, unknown> = {
-    name: err.name,
-    message: err.message,
-    stack: err.stack,
-    ...(err.cause !== undefined && { cause: serializeError(err.cause, seen) }),
-  };
+  const out: Record<string, unknown> = {};
 
   for (const k of Object.getOwnPropertyNames(err)) {
     if (k in out || (typeof k === "string" && k.startsWith("_"))) continue;
+
     let val: unknown;
     try {
       val = (err as any)[k as any];
     } catch {
       val = "[Unreadable]";
     }
+
+    if (typeof val === "bigint") val = `${val}n`;
+
     out[String(k)] = val instanceof Error ? serializeError(val, seen) : val;
   }
 
