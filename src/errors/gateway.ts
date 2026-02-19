@@ -7,8 +7,9 @@ export class GatewayError extends Error {
   constructor(error: unknown, status: number, code?: string, cause?: unknown) {
     const isError = error instanceof Error;
     super(isError ? error.message : String(error));
+
+    this.name = "GatewayError";
     this.cause = cause ?? (isError ? error : undefined);
-    this.name = "Gateway Error";
 
     this.status = status;
     this.code = code ?? STATUS_CODE(status);
