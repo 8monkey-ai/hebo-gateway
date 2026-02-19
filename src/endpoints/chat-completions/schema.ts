@@ -151,12 +151,13 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
 export const ChatCompletionsResponseFormatJsonSchema = z.object({
+  // FUTURE: consider support for legacy json_object (if demand)
   type: z.literal("json_schema"),
   json_schema: z.object({
     name: z.string(),
     description: z.string().optional(),
     schema: z.record(z.string(), z.any()),
-    // FUTURE: we are currently always defaulting to strict
+    // FUTURE: consider support for non-strict mode (for providers that support it)
     strict: z.boolean().optional(),
   }),
 });
