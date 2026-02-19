@@ -34,7 +34,7 @@ export function serializeError(err: unknown, _seen?: WeakSet<object>): Record<st
     ...(err.cause !== undefined && { cause: serializeError(err.cause, seen) }),
   };
 
-  for (const k of Reflect.ownKeys(err)) {
+  for (const k of Object.getOwnPropertyNames(err)) {
     if (k in out || (typeof k === "string" && k.startsWith("_"))) continue;
     let val: unknown;
     try {
