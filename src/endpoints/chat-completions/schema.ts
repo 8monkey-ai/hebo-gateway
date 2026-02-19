@@ -150,6 +150,26 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
 });
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
 
+export const ChatCompletionsResponseFormatJsonSchema = z.object({
+  // FUTURE: consider support for legacy json_object (if demand)
+  type: z.literal("json_schema"),
+  json_schema: z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    schema: z.record(z.string(), z.any()),
+    // FUTURE: consider support for non-strict mode (for providers that support it)
+    strict: z.boolean().optional(),
+  }),
+});
+export const ChatCompletionsResponseFormatTextSchema = z.object({
+  type: z.literal("text"),
+});
+export const ChatCompletionsResponseFormatSchema = z.union([
+  ChatCompletionsResponseFormatJsonSchema,
+  ChatCompletionsResponseFormatTextSchema,
+]);
+export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsResponseFormatSchema>;
+
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z
@@ -167,6 +187,7 @@ const ChatCompletionsInputsSchema = z.object({
   seed: z.int().optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
+  response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   // Extensions
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),

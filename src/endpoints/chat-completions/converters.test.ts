@@ -236,5 +236,53 @@ describe("Chat Completions Converters", () => {
       });
       expect(result.maxOutputTokens).toBeUndefined();
     });
+
+    test("should convert response_format json_schema to output.object", async () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "weather",
+            description: "Structured weather response",
+            schema: {
+              type: "object",
+              properties: {
+                city: { type: "string" },
+              },
+              required: ["city"],
+              additionalProperties: false,
+            },
+            strict: true,
+          },
+        },
+      });
+
+      expect(result.output?.name).toBe("object");
+
+      const parsed = await result.output!.parseCompleteOutput(
+        {
+          text: '{"city":"San Francisco"}',
+        },
+        {
+          response: {} as any,
+          usage: {} as any,
+          finishReason: "stop",
+        },
+      );
+
+      expect(parsed).toEqual({ city: "San Francisco" });
+    });
+
+    test("should treat response_format text as default text output", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        response_format: {
+          type: "text",
+        },
+      });
+
+      expect(result.output).toBeUndefined();
+    });
   });
 });
