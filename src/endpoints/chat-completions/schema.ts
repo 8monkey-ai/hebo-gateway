@@ -22,11 +22,22 @@ export const ChatCompletionsContentPartFileSchema = z.object({
   }),
 });
 
-// FUTURE: missing ContentPartAudio
-export type ChatCompletionsContentPart =
-  | z.infer<typeof ChatCompletionsContentPartTextSchema>
-  | z.infer<typeof ChatCompletionsContentPartImageSchema>
-  | z.infer<typeof ChatCompletionsContentPartFileSchema>;
+export const ChatCompletionsContentPartAudioSchema = z.object({
+  type: z.literal("input_audio"),
+  input_audio: z.object({
+    data: z.string(),
+    // only wav and mp3 are official, the rest is what Gemini supports
+    format: z.enum(["wav", "mp3", "aiff", "aac", "ogg", "flac"]),
+  }),
+});
+
+export const ChatCompletionsContentPartSchema = z.discriminatedUnion("type", [
+  ChatCompletionsContentPartTextSchema,
+  ChatCompletionsContentPartImageSchema,
+  ChatCompletionsContentPartFileSchema,
+  ChatCompletionsContentPartAudioSchema,
+]);
+export type ChatCompletionsContentPart = z.infer<typeof ChatCompletionsContentPartSchema>;
 
 export const ChatCompletionsToolCallSchema = z.object({
   type: z.literal("function"),
@@ -48,16 +59,7 @@ export type ChatCompletionsSystemMessage = z.infer<typeof ChatCompletionsSystemM
 
 export const ChatCompletionsUserMessageSchema = z.object({
   role: z.literal("user"),
-  content: z.union([
-    z.string(),
-    z.array(
-      z.union([
-        ChatCompletionsContentPartTextSchema,
-        ChatCompletionsContentPartImageSchema,
-        ChatCompletionsContentPartFileSchema,
-      ]),
-    ),
-  ]),
+  content: z.union([z.string(), z.array(ChatCompletionsContentPartSchema)]),
   name: z.string().optional(),
 });
 export type ChatCompletionsUserMessage = z.infer<typeof ChatCompletionsUserMessageSchema>;
@@ -99,7 +101,7 @@ export const ChatCompletionsToolMessageSchema = z.object({
 });
 export type ChatCompletionsToolMessage = z.infer<typeof ChatCompletionsToolMessageSchema>;
 
-export const ChatCompletionsMessageSchema = z.union([
+export const ChatCompletionsMessageSchema = z.discriminatedUnion("role", [
   ChatCompletionsSystemMessageSchema,
   ChatCompletionsUserMessageSchema,
   ChatCompletionsAssistantMessageSchema,
@@ -164,7 +166,7 @@ export const ChatCompletionsResponseFormatJsonSchema = z.object({
 export const ChatCompletionsResponseFormatTextSchema = z.object({
   type: z.literal("text"),
 });
-export const ChatCompletionsResponseFormatSchema = z.union([
+export const ChatCompletionsResponseFormatSchema = z.discriminatedUnion("type", [
   ChatCompletionsResponseFormatJsonSchema,
   ChatCompletionsResponseFormatTextSchema,
 ]);

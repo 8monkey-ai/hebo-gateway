@@ -18,8 +18,8 @@ import type {
   UserModelMessage,
 } from "ai";
 
-import { convertBase64ToUint8Array } from "@ai-sdk/provider-utils";
 import { Output, jsonSchema, tool } from "ai";
+import { z } from "zod";
 
 import type {
   ChatCompletionsToolCall,
@@ -170,61 +170,59 @@ export function fromChatCompletionsAssistantMessage(
 
   const parts: AssistantContent = [];
 
-  if (Array.isArray(parts)) {
-    if (reasoning_details?.length) {
-      for (const detail of reasoning_details) {
-        if (detail.text && detail.type === "reasoning.text") {
-          parts.push({
-            type: "reasoning",
-            text: detail.text,
-            providerOptions: detail.signature
-              ? {
-                  unknown: {
-                    signature: detail.signature,
-                  },
-                }
-              : undefined,
-          });
-        } else if (detail.type === "reasoning.encrypted" && detail.data) {
-          parts.push({
-            type: "reasoning",
-            text: "",
-            providerOptions: {
-              unknown: {
-                redactedData: detail.data,
-              },
+  if (reasoning_details?.length) {
+    for (const detail of reasoning_details) {
+      if (detail.text && detail.type === "reasoning.text") {
+        parts.push({
+          type: "reasoning",
+          text: detail.text,
+          providerOptions: detail.signature
+            ? {
+                unknown: {
+                  signature: detail.signature,
+                },
+              }
+            : undefined,
+        });
+      } else if (detail.type === "reasoning.encrypted" && detail.data) {
+        parts.push({
+          type: "reasoning",
+          text: "",
+          providerOptions: {
+            unknown: {
+              redactedData: detail.data,
             },
-          });
-        }
+          },
+        });
       }
-    }
-
-    if (tool_calls?.length) {
-      for (const tc of tool_calls) {
-        // eslint-disable-next-line no-shadow
-        const { id, function: fn, extra_content } = tc;
-        const out: ToolCallPart = {
-          type: "tool-call",
-          toolCallId: id,
-          toolName: fn.name,
-          input: parseToolOutput(fn.arguments).value,
-        };
-        if (extra_content) {
-          out.providerOptions = extra_content;
-        }
-        parts.push(out);
-      }
-    } else if (content !== undefined && content !== null) {
-      parts.push({
-        type: "text",
-        text: content,
-      });
     }
   }
 
+  if (tool_calls?.length) {
+    for (const tc of tool_calls) {
+      // eslint-disable-next-line no-shadow
+      const { id, function: fn, extra_content } = tc;
+      const out: ToolCallPart = {
+        type: "tool-call",
+        toolCallId: id,
+        toolName: fn.name,
+        input: parseToolOutput(fn.arguments).value,
+      };
+      if (extra_content) {
+        out.providerOptions = extra_content;
+      }
+      parts.push(out);
+    }
+  } else if (content !== undefined && content !== null) {
+    parts.push({
+      type: "text",
+      text: content,
+    });
+  }
+
   const out: AssistantModelMessage = {
-    role: role,
-    content: Array.isArray(parts) && parts.length > 0 ? parts : (content ?? ""),
+    role,
+    content: parts.length > 0 ? parts : (content ?? ""),
   };
 
   if (extra_content) {
@@ -259,46 +257,46 @@ export function fromChatCompletionsToolResultMessage(
 
 export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]): UserContent {
   return content.map((part) => {
-    if (part.type === "image_url") {
-      const url = part.image_url.url;
-      if (url.startsWith("data:")) {
-        const { mimeType, base64Data } = parseDataUrl(url);
-
-        return mimeType.startsWith("image/")
-          ? {
-              type: "image" as const,
-              image: convertBase64ToUint8Array(base64Data),
-              mediaType: mimeType,
-            }
-          : {
-              type: "file" as const,
-              data: convertBase64ToUint8Array(base64Data),
-              mediaType: mimeType,
-            };
-      }
-
-      return {
-        type: "image" as const,
-        image: new URL(url),
-      };
+    switch (part.type) {
+      case "image_url":
+        return fromImageUrlPart(part.image_url.url);
+      case "file":
+        return fromFilePart(part.file.data, part.file.media_type, part.file.filename);
+      case "input_audio":
+        return fromFilePart(part.input_audio.data, `audio/${part.input_audio.format}`);
+      default:
+        return part;
     }
-    if (part.type === "file") {
-      let { data, media_type, filename } = part.file;
-      return media_type.startsWith("image/")
-        ? {
-            type: "image" as const,
-            image: convertBase64ToUint8Array(data),
-            mediaType: media_type,
-          }
-        : {
-            type: "file" as const,
-            data: convertBase64ToUint8Array(data),
-            filename,
-            mediaType: media_type,
-          };
-    }
-    return part;
   });
+}
+
+function fromImageUrlPart(url: string) {
+  if (url.startsWith("data:")) {
+    const { mimeType, base64Data } = parseDataUrl(url);
+    return fromFilePart(base64Data, mimeType);
+  }
+
+  return {
+    type: "image" as const,
+    image: new URL(url),
+  };
+}
+
+function fromFilePart(base64Data: string, mediaType: string, filename?: string) {
+  if (mediaType.startsWith("image/")) {
+    return {
+      type: "image" as const,
+      image: z.util.base64ToUint8Array(base64Data),
+      mediaType,
+    };
+  }
+
+  return {
+    type: "file" as const,
+    data: z.util.base64ToUint8Array(base64Data),
+    filename,
+    mediaType,
+  };
 }
 
 export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
@@ -446,6 +444,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
     const reasoningIdToIndex = new Map<string, number>();
+    let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
@@ -528,14 +527,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
           }
 
           case "finish-step": {
-            controller.enqueue(
-              createChunk(
-                {},
-                part.providerMetadata,
-                toChatCompletionsFinishReason(part.finishReason),
-                toChatCompletionsUsage(part.usage),
-              ),
-            );
+            finishProviderMetadata = part.providerMetadata;
             break;
           }
 
@@ -543,7 +535,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
             controller.enqueue(
               createChunk(
                 {},
-                undefined,
+                finishProviderMetadata,
                 toChatCompletionsFinishReason(part.finishReason),
                 toChatCompletionsUsage(part.totalUsage),
               ),

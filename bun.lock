@@ -6,7 +6,6 @@
       "name": "@hebo-ai/gateway",
       "dependencies": {
         "@ai-sdk/provider": "^3.0.7",
-        "@ai-sdk/provider-utils": "^4.0.13",
         "ai": "^6.0.67",
         "zod": "^4.3.6",
       },

@@ -203,6 +203,31 @@ describe("Chat Completions Handler", () => {
     });
   });
 
+  test("should accept input_audio content parts", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_audio",
+              input_audio: {
+                data: "aGVsbG8=",
+                format: "wav",
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse(res);
+    expect(data.model).toBe("openai/gpt-oss-20b");
+  });
+
   test("should generate completion with tool calls successfully", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
