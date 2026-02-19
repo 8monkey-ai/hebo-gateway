@@ -1,5 +1,3 @@
-import { serializeError } from "serialize-error";
-
 import type { LogFn, LogLevel, Logger } from "./index";
 
 import { isProduction, isTest } from "../utils/env";
@@ -22,20 +20,38 @@ const LEVELS = Object.keys(LEVEL) as (keyof typeof LEVEL)[];
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !(value instanceof Error);
 
+export function serializeError(err: unknown): Record<string, unknown> {
+  if (!(err instanceof Error)) return { message: String(err) };
+
+  const out: Record<string, unknown> = {
+    name: err.name,
+    message: err.message,
+    stack: err.stack,
+    ...(err.cause !== undefined && { cause: serializeError(err.cause) }),
+  };
+
+  for (const k of Reflect.ownKeys(err)) {
+    if (k in out || (typeof k === "string" && k.startsWith("_"))) continue;
+    out[String(k)] = (err as any)[k];
+  }
+
+  return out;
+}
+
 const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknown> => {
   if (args.length === 0) return {};
 
   const [first, second] = args;
 
   let obj: Record<string, unknown> | undefined;
-  let err: unknown;
+  let err: Record<string, unknown> | undefined;
   let msg: string | undefined;
 
   if (first instanceof Error) {
-    err = first;
+    err = serializeError(first);
   } else if (isRecord(first)) {
     if (first["err"] !== undefined) {
-      err = first["err"];
+      err = serializeError(first["err"]);
       delete first["err"];
     }
     obj = first;
@@ -48,14 +64,14 @@ const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknow
   }
 
   if (err && msg === undefined) {
-    msg = err instanceof Error ? err.message : String(err);
+    msg = err["message"] as string;
   }
 
   return {
     level,
     time: Date.now(),
     ...(msg ? { msg } : {}),
-    ...(err ? { err: err instanceof Error ? serializeError(err) : err } : {}),
+    ...(err ? { err } : {}),
     ...obj,
   };
 };
