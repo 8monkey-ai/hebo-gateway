@@ -1,4 +1,4 @@
-import { REQUEST_ID_HEADER, resolveRequestId } from "./headers";
+import { REQUEST_ID_HEADER } from "./headers";
 
 const TEXT_ENCODER = new TextEncoder();
 
@@ -15,8 +15,8 @@ class JsonToSseTransformStream extends TransformStream<unknown, string> {
   }
 }
 
-export const prepareResponseInit = (request: Request): ResponseInit => ({
-  headers: { [REQUEST_ID_HEADER]: resolveRequestId(request)! },
+export const prepareResponseInit = (requestId: string): ResponseInit => ({
+  headers: { [REQUEST_ID_HEADER]: requestId },
 });
 
 export const mergeResponseInit = (

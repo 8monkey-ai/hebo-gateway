@@ -29,7 +29,6 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
-import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import {
@@ -51,8 +50,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
-
-    const requestId = resolveRequestId(ctx.request);
 
     // Parse + validate input.
     try {
@@ -107,7 +104,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
       {
-        requestId,
+        requestId: ctx.requestId,
         options: textOptions,
       },
       "[chat] AI SDK options",
@@ -178,7 +175,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       },
       ...textOptions,
     });
-    logger.trace({ requestId, result }, "[chat] AI SDK result");
+    logger.trace({ requestId: ctx.requestId, result }, "[chat] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
     // Transform result.
