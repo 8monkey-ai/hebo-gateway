@@ -65,7 +65,7 @@ export const winterCgHandler = (
       else if (status === 200 && ctx.response?.status) realStatus = ctx.response.status;
 
       if (realStatus !== 200) {
-        (realStatus >= 500 ? logger.error : logger.warn)({
+        logger[realStatus >= 500 ? "error" : "warn"]({
           requestId: resolveRequestId(ctx.request),
           err: reason ?? ctx.request.signal.reason,
         });
