@@ -46,7 +46,10 @@ export const ChatCompletionsToolCallSchema = z.object({
     arguments: z.string(),
     name: z.string(),
   }),
-  extra_content: z.record(z.string(), z.unknown()).optional().meta({ extension: true }),
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsToolCall = z.infer<typeof ChatCompletionsToolCallSchema>;
 
@@ -89,7 +92,10 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
     .array(ChatCompletionsReasoningDetailSchema)
     .optional()
     .meta({ extension: true }),
-  extra_content: z.record(z.string(), z.unknown()).optional().meta({ extension: true }),
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
 
