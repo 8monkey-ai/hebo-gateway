@@ -1,5 +1,4 @@
 import { type TelemetrySignalLevel } from "../types";
-import { resolveRequestId } from "../utils/headers";
 
 const headerArr = (h: Headers, k: string) => (h.has(k) ? [h.get(k)!] : undefined);
 
@@ -29,8 +28,6 @@ export const getRequestAttributes = (request: Request, signalLevel?: TelemetrySi
 
   if (signalLevel !== "required") {
     Object.assign(attrs, {
-      // FUTURE: does ElysiaJS and other frameworks attach request id?
-      "http.request.id": resolveRequestId(request),
       "user_agent.original": request.headers.get("user-agent") ?? undefined,
     });
   }

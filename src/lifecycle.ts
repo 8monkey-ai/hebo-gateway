@@ -15,8 +15,7 @@ import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { recordV8jsMemory } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
 import { wrapStream } from "./telemetry/stream";
-import { resolveRequestId } from "./utils/headers";
-import { maybeApplyRequestPatch, prepareRequestHeaders } from "./utils/request";
+import { resolveOrCreateRequestId } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
 
 export const winterCgHandler = (
@@ -37,15 +36,14 @@ export const winterCgHandler = (
       state: state ?? {},
       providers: parsedConfig.providers,
       models: parsedConfig.models,
+      requestId: resolveOrCreateRequestId(request),
     };
-
-    const headers = prepareRequestHeaders(ctx.request);
-    if (headers) ctx.request = new Request(ctx.request, { headers });
 
     const span = startSpan(ctx.request.url);
     span.setAttributes(getBaggageAttributes(ctx.request));
     if (!span.isExisting) {
       span.setAttributes(getRequestAttributes(ctx.request, parsedConfig.telemetry?.signals?.http));
+      span.setAttributes({ "http.request.id": ctx.requestId });
     }
 
     const finalize = (status: number, reason?: unknown) => {
@@ -66,7 +64,7 @@ export const winterCgHandler = (
 
       if (realStatus !== 200) {
         logger[realStatus >= 500 ? "error" : "warn"]({
-          requestId: resolveRequestId(ctx.request),
+          requestId: ctx.requestId,
           err: reason ?? ctx.request.signal.reason,
         });
 
@@ -86,8 +84,6 @@ export const winterCgHandler = (
 
         if (onRequest instanceof Response) {
           ctx.response = onRequest;
-        } else if (onRequest) {
-          ctx.request = maybeApplyRequestPatch(ctx.request, onRequest);
         }
       }
 
@@ -98,7 +94,7 @@ export const winterCgHandler = (
           ctx.result = wrapStream(ctx.result, { onDone: finalize });
         }
 
-        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.request));
+        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId));
       }
 
       if (parsedConfig.hooks?.onResponse) {
@@ -118,7 +114,7 @@ export const winterCgHandler = (
         ctx.request.signal.aborted
           ? new GatewayError(error ?? ctx.request.signal.reason, 499)
           : error,
-        prepareResponseInit(ctx.request),
+        prepareResponseInit(ctx.requestId),
       );
       finalize(ctx.response.status, error);
     }
