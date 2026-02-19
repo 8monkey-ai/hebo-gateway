@@ -2,7 +2,7 @@ import type { LogFn, LogLevel, Logger } from "./index";
 
 import { isProduction, isTest } from "../utils/env";
 
-export const getDefaultLogLevel = (): LogLevel =>
+const getDefaultLogLevel = (): LogLevel =>
   isTest() ? "silent" : isProduction() ? "info" : "debug";
 
 const noop: LogFn = () => {};
@@ -20,7 +20,7 @@ const LEVELS = Object.keys(LEVEL) as (keyof typeof LEVEL)[];
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !(value instanceof Error);
 
-export function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, unknown> {
+function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, unknown> {
   if (!(err instanceof Error)) return { message: String(err) };
 
   const seen = _seen ?? new WeakSet();
