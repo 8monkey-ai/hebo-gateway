@@ -284,5 +284,34 @@ describe("Chat Completions Converters", () => {
 
       expect(result.output).toBeUndefined();
     });
+
+    test("should convert input_audio content parts to file user content", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_audio",
+                input_audio: {
+                  data: "aGVsbG8=",
+                  format: "wav",
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+      const userMessage = result.messages[0] as any;
+      expect(userMessage.role).toBe("user");
+      expect(Array.isArray(userMessage.content)).toBe(true);
+
+      const [part] = userMessage.content as any[];
+      expect(part.type).toBe("file");
+      expect(part.mediaType).toBe("audio/wav");
+      expect(part.data).toBeInstanceOf(Uint8Array);
+      expect(Array.from(part.data)).toEqual([104, 101, 108, 108, 111]);
+    });
   });
 });

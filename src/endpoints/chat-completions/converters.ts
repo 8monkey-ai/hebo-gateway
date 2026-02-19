@@ -297,6 +297,13 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
             mediaType: media_type,
           };
     }
+    if (part.type === "input_audio") {
+      return {
+        type: "file" as const,
+        data: convertBase64ToUint8Array(part.input_audio.data),
+        mediaType: `audio/${part.input_audio.format}`,
+      };
+    }
     return part;
   });
 }

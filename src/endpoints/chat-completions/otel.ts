@@ -41,6 +41,12 @@ const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown
           parts.push(toTextPart(part.text));
         } else if (part.type === "image_url") {
           parts.push({ type: "image", content: part.image_url.url });
+        } else if (part.type === "input_audio") {
+          parts.push({
+            type: "audio",
+            content: "[REDACTED_BINARY_DATA]",
+            format: part.input_audio.format,
+          });
         } else {
           parts.push({
             type: "file",

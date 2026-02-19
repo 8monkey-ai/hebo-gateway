@@ -22,11 +22,19 @@ export const ChatCompletionsContentPartFileSchema = z.object({
   }),
 });
 
-// FUTURE: missing ContentPartAudio
+export const ChatCompletionsContentPartAudioSchema = z.object({
+  type: z.literal("input_audio"),
+  input_audio: z.object({
+    data: z.string(),
+    format: z.union([z.literal("wav"), z.literal("mp3")]),
+  }),
+});
+
 export type ChatCompletionsContentPart =
   | z.infer<typeof ChatCompletionsContentPartTextSchema>
   | z.infer<typeof ChatCompletionsContentPartImageSchema>
-  | z.infer<typeof ChatCompletionsContentPartFileSchema>;
+  | z.infer<typeof ChatCompletionsContentPartFileSchema>
+  | z.infer<typeof ChatCompletionsContentPartAudioSchema>;
 
 export const ChatCompletionsToolCallSchema = z.object({
   type: z.literal("function"),
@@ -55,6 +63,7 @@ export const ChatCompletionsUserMessageSchema = z.object({
         ChatCompletionsContentPartTextSchema,
         ChatCompletionsContentPartImageSchema,
         ChatCompletionsContentPartFileSchema,
+        ChatCompletionsContentPartAudioSchema,
       ]),
     ),
   ]),
