@@ -13,20 +13,6 @@ import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
 
 /**
- * Request overrides returned from the `onRequest` hook.
- */
-export type RequestPatch = {
-  /**
-   * Headers to merge into the incoming request.
-   */
-  headers?: HeadersInit;
-  /**
-   * Body to replace on the incoming request.
-   */
-  body?: BodyInit;
-};
-
-/**
  * Per-request context shared across handlers and hooks.
  */
 export type GatewayContext = {
@@ -46,6 +32,10 @@ export type GatewayContext = {
    * Incoming request for the handler.
    */
   request: Request;
+  /**
+   * Resolved request ID for logging and telemetry.
+   */
+  requestId: string;
   /**
    * Parsed body from the request.
    */
@@ -95,13 +85,22 @@ export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
   Required<Pick<HookContext, K>>;
 export type OnRequestHookContext = RequiredHookContext<"request">;
-export type BeforeHookContext = RequiredHookContext<"request" | "body" | "operation">;
-export type ResolveModelHookContext = RequiredHookContext<"request" | "body" | "modelId">;
+export type BeforeHookContext = RequiredHookContext<"request" | "operation" | "body">;
+export type ResolveModelHookContext = RequiredHookContext<
+  "request" | "operation" | "body" | "modelId"
+>;
 export type ResolveProviderHookContext = RequiredHookContext<
-  "request" | "body" | "modelId" | "resolvedModelId" | "operation"
+  "request" | "operation" | "body" | "modelId" | "resolvedModelId"
 >;
 export type AfterHookContext = RequiredHookContext<
-  "request" | "result" | "provider" | "resolvedModelId" | "operation"
+  | "request"
+  | "operation"
+  | "body"
+  | "modelId"
+  | "resolvedModelId"
+  | "provider"
+  | "resolvedProviderId"
+  | "result"
 >;
 export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
 
@@ -111,12 +110,9 @@ export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
 export type GatewayHooks = {
   /**
    * Runs before any endpoint handler logic.
-   * @returns Optional RequestPatch to merge into headers / override body,
-   * or Response to short-circuit the request.
+   * @returns Optional Response to short-circuit the request.
    */
-  onRequest?: (
-    ctx: OnRequestHookContext,
-  ) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
+  onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
   /**
    * Runs after request JSON is parsed and validated for chat completions / embeddings.
    * @returns Replacement parsed body, or undefined to keep original.

@@ -22,7 +22,6 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
-import { resolveRequestId } from "../../utils/headers";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import {
@@ -44,8 +43,6 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
-
-    const requestId = resolveRequestId(ctx.request);
 
     // Parse + validate input.
     try {
@@ -98,7 +95,10 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
-    logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
+    logger.trace(
+      { requestId: ctx.requestId, options: embedOptions },
+      "[embeddings] AI SDK options",
+    );
     addSpanEvent("hebo.options.prepared");
     setSpanAttributes(getEmbeddingsRequestAttributes(inputs, genAiSignalLevel));
 
@@ -116,7 +116,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });
-    logger.trace({ requestId, result }, "[embeddings] AI SDK result");
+    logger.trace({ requestId: ctx.requestId, result }, "[embeddings] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
     // Transform result.

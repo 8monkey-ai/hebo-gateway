@@ -286,10 +286,9 @@ const gw = gateway({
     /**
      * Runs before any endpoint handler logic.
      * @param ctx.request Incoming request.
-     * @returns Optional RequestPatch to merge into headers / override body.
-     * Returning a Response stops execution of the endpoint.
+     * @returns Optional Response to short-circuit the request.
      */
-    onRequest: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
+    onRequest: async (ctx: { request: Request }): Promise<Response | void> => {
       // Example Use Cases:
       // - Verify authentication
       // - Enforce rate limits
