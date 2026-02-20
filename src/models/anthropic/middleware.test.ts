@@ -442,6 +442,33 @@ test("claudeReasoningMiddleware > should include effort and max_tokens for Claud
   expect(result.providerOptions?.anthropic?.effort).toBe("medium");
 });
 
+test("claudeReasoningMiddleware > should clamp max_tokens to 128k for Claude Opus 4.6", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "medium",
+          max_tokens: 200000,
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+  });
+
+  expect(result.providerOptions?.anthropic?.thinking).toEqual({
+    type: "adaptive",
+    budgetTokens: 128000,
+  });
+  expect(result.providerOptions?.anthropic?.effort).toBe("medium");
+});
+
 test("claudeReasoningMiddleware > should include effort and max_tokens for Claude Sonnet 4.5", async () => {
   const params = {
     prompt: [],

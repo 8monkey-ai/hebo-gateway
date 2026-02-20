@@ -8,9 +8,6 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
-const CLAUDE_MAX_OUTPUT_TOKENS = 64000;
-const CLAUDE_OPUS_4_MAX_OUTPUT_TOKENS = 32000;
-
 function isClaudeOpus46Model(modelId: string): boolean {
   return modelId.includes("claude-opus-4.6");
 }
@@ -57,11 +54,10 @@ export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort,
 }
 
 function getMaxOutputTokens(modelId: string): number {
-  if (!modelId.includes("opus-4")) return CLAUDE_MAX_OUTPUT_TOKENS;
-  if (modelId.includes("opus-4.5")) {
-    return CLAUDE_MAX_OUTPUT_TOKENS;
-  }
-  return CLAUDE_OPUS_4_MAX_OUTPUT_TOKENS;
+  if (modelId.includes("opus-4.6")) return 128_000;
+  if (modelId.includes("opus-4.5")) return 64_000;
+  if (modelId.includes("opus-4")) return 32_000;
+  return 64_000;
 }
 
 // https://platform.claude.com/docs/en/build-with-claude/effort
