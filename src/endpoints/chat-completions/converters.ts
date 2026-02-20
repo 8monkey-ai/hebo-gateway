@@ -209,7 +209,7 @@ export function fromChatCompletionsAssistantMessage(
         input: parseToolOutput(fn.arguments).value,
       };
       if (extra_content) {
-        out.providerOptions = extra_content;
+        out.providerOptions = extra_content as SharedV3ProviderOptions;
       }
       parts.push(out);
     }
@@ -226,7 +226,7 @@ export function fromChatCompletionsAssistantMessage(
   };
 
   if (extra_content) {
-    out.providerOptions = extra_content;
+    out.providerOptions = extra_content as SharedV3ProviderOptions;
   }
 
   return out;

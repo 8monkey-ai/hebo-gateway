@@ -31,6 +31,6 @@ export const EmbeddingsSchema = z.object({
   model: z.string(),
   usage: EmbeddingsUsageSchema.nullable(),
   // Extensions
-  provider_metadata: z.optional(z.any()).meta({ extension: true }),
+  provider_metadata: z.unknown().optional().meta({ extension: true }),
 });
 export type Embeddings = z.infer<typeof EmbeddingsSchema>;
