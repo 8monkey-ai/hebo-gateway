@@ -603,7 +603,7 @@ const gw = gateway({
 > [!TIP]
 > For production workloads, we recommend `pino` for better logging performance and lower overhead.
 
-### Observablity
+### Observability
 
 Hebo Gateway can forward traces & metrics via the `telemetry` config field.
 
