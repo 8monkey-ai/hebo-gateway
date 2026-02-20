@@ -32,7 +32,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Telemetry](#telemetry-settings)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -540,13 +540,14 @@ Normalization rules:
 
 - `enabled` -> fall-back to model default if none provided
 - `max_tokens`: fall-back to model default if model supports
-- `effort` -> budget = percentage of `max_tokens`
+- `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`
+- Generic `effort` -> budget = percentage of `max_tokens`
   - `none`: 0%
   - `minimal`: 10%
   - `low`: 20%
   - `medium`: 50% (default)
   - `high`: 80%
-  - `xhigh`: 95%
+  - `xhigh` / `max`: 95%
 
 Reasoning output is surfaced as extension to the `completion` object.
 
@@ -602,9 +603,9 @@ const gw = gateway({
 > [!TIP]
 > For production workloads, we recommend `pino` for better logging performance and lower overhead.
 
-### Telemetry Settings
+### Observablity
 
-Hebo Gateway can forward telemetry settings via the `telemetry` config field.
+Hebo Gateway can forward traces & metrics via the `telemetry` config field.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
@@ -633,8 +634,9 @@ const gw = gateway({
 });
 ```
 
-Attribute names and span semantics follow OpenTelemetry GenAI semantic conventions:
+Attribute names and span & metrics semantics follow OpenTelemetry GenAI semantic conventions:
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
+https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 
 > [!TIP]
 > To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
