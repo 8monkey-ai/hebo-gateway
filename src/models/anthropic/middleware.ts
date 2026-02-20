@@ -79,22 +79,20 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["thinking"] = { type: "disabled" };
     } else if (reasoning.effort) {
-      const effort = mapClaudeReasoningEffort(reasoning.effort, modelId);
-
       if (isClaudeOpus46Model(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "adaptive", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
-        target["effort"] = effort;
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else if (isClaudeSonnet46Model(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "enabled", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
-        target["effort"] = effort;
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else if (isClaudeSonnet45Model(modelId)) {
         target["thinking"] = { type: "enabled" };
         if (clampedMaxTokens) target["thinking"]["budgetTokens"] = clampedMaxTokens;
-        target["effort"] = effort;
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else {
         // FUTURE: warn that reasoning.max_tokens was computed
         target["thinking"] = {
