@@ -41,6 +41,7 @@ export function mapGeminiReasoningEffort(
         return "medium";
       case "high":
       case "xhigh":
+      case "max":
         return "high";
     }
   }
@@ -54,6 +55,7 @@ export function mapGeminiReasoningEffort(
       case "medium":
       case "high":
       case "xhigh":
+      case "max":
         return "high";
     }
   }
@@ -69,6 +71,7 @@ export function mapGeminiReasoningEffort(
         return "medium";
       case "high":
       case "xhigh":
+      case "max":
         return "high";
     }
   }

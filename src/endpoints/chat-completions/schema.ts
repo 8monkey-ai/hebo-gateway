@@ -158,6 +158,7 @@ export const ChatCompletionsReasoningEffortSchema = z.enum([
   "medium",
   "high",
   "xhigh",
+  "max",
 ]);
 export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
 
