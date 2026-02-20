@@ -44,6 +44,7 @@ import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningDetail,
   ChatCompletionsResponseFormat,
+  ChatCompletionsContentPartText,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -338,13 +339,27 @@ export const convertToToolChoice = (
     return toolChoice;
   }
 
+  // FUTURE: this is right now google specific, until it is upported by AI SDK, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+  if (toolChoice === "validated") {
+    return "auto";
+  }
+
   return {
     type: "tool",
     toolName: toolChoice.function.name,
   };
 };
 
-function parseToolOutput(content: string) {
+function parseToolOutput(content: string | ChatCompletionsContentPartText[]) {
+  if (Array.isArray(content)) {
+    return {
+      type: "content" as const,
+      value: content.map((part) => ({
+        type: "text" as const,
+        text: part.text,
+      })),
+    };
+  }
   try {
     return { type: "json" as const, value: JSON.parse(content) };
   } catch {
