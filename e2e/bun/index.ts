@@ -1,14 +1,21 @@
-import { createVertex } from "@ai-sdk/google-vertex";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { defineModelCatalog, gateway } from "@hebo-ai/gateway";
-import { gemini } from "@hebo-ai/gateway/models/google";
-import { withCanonicalIdsForVertex } from "@hebo-ai/gateway/providers/vertex";
+import { claude } from "@hebo-ai/gateway/models/anthropic";
+import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
 
 const gw = gateway({
   basePath: "/v1/gateway",
+  logger: { level: "trace" },
   providers: {
-    vertex: withCanonicalIdsForVertex(createVertex()),
+    bedrock: withCanonicalIdsForBedrock(
+      createAmazonBedrock({
+        region: "us-east-1",
+        credentialProvider: fromNodeProviderChain(),
+      }),
+    ),
   },
-  models: defineModelCatalog(gemini["all"]),
+  models: defineModelCatalog(claude["all"]),
 });
 
 const server = Bun.serve({

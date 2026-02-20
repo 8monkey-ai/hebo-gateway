@@ -1,21 +1,66 @@
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
+import type {
+  ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningEffort,
+} from "../../endpoints/chat-completions/schema";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
-const CLAUDE_MAX_OUTPUT_TOKENS = 64000;
-const CLAUDE_OPUS_4_MAX_OUTPUT_TOKENS = 32000;
+const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
+  const dashed = version.replace(".", "-");
 
-function getMaxOutputTokens(modelId: string): number {
-  if (!modelId.includes("opus-4")) return CLAUDE_MAX_OUTPUT_TOKENS;
-  if (modelId.includes("opus-4.5") || modelId.includes("opus-4-5")) {
-    return CLAUDE_MAX_OUTPUT_TOKENS;
+  return (modelId: string) =>
+    modelId.includes(`claude-${family}-${version}`) ||
+    modelId.includes(`claude-${family}-${dashed}`);
+};
+
+const isOpus46 = isClaude("opus", "4.6");
+const isOpus45 = isClaude("opus", "4.5");
+const isOpus4 = isClaude("opus", "4");
+const isSonnet46 = isClaude("sonnet", "4.6");
+const isSonnet45 = isClaude("sonnet", "4.5");
+
+export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort, modelId: string) {
+  if (isOpus46(modelId)) {
+    switch (effort) {
+      case "none":
+      case "minimal":
+      case "low":
+        return "low";
+      case "medium":
+        return "medium";
+      case "high":
+        return "high";
+      case "xhigh":
+      case "max":
+        return "max";
+    }
   }
-  return CLAUDE_OPUS_4_MAX_OUTPUT_TOKENS;
+
+  switch (effort) {
+    case "none":
+    case "minimal":
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+    case "max":
+      return "high";
+  }
 }
 
+function getMaxOutputTokens(modelId: string): number {
+  if (isOpus46(modelId)) return 128_000;
+  if (isOpus45(modelId)) return 64_000;
+  if (isOpus4(modelId)) return 32_000;
+  return 64_000;
+}
+
+// https://platform.claude.com/docs/en/build-with-claude/effort
 export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -27,23 +72,42 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning) return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {});
+    const modelId = model.modelId;
+    const clampedMaxTokens =
+      reasoning.max_tokens && Math.min(reasoning.max_tokens, getMaxOutputTokens(modelId));
 
     if (!reasoning.enabled) {
       target["thinking"] = { type: "disabled" };
-    } else if (reasoning.max_tokens) {
-      target["thinking"] = {
-        type: "enabled",
-        budgetTokens: Math.min(reasoning.max_tokens, getMaxOutputTokens(model.modelId)),
-      };
     } else if (reasoning.effort) {
-      // FUTURE: warn that reasoning.max_tokens was computed
+      if (isOpus46(modelId)) {
+        target["thinking"] = clampedMaxTokens
+          ? { type: "adaptive", budgetTokens: clampedMaxTokens }
+          : { type: "adaptive" };
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
+      } else if (isSonnet46(modelId)) {
+        target["thinking"] = clampedMaxTokens
+          ? { type: "enabled", budgetTokens: clampedMaxTokens }
+          : { type: "adaptive" };
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
+      } else if (isOpus45(modelId) || isSonnet45(modelId)) {
+        target["thinking"] = { type: "enabled" };
+        if (clampedMaxTokens) target["thinking"]["budgetTokens"] = clampedMaxTokens;
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
+      } else {
+        // FUTURE: warn that reasoning.max_tokens was computed
+        target["thinking"] = {
+          type: "enabled",
+          budgetTokens: calculateReasoningBudgetFromEffort(
+            reasoning.effort,
+            params.maxOutputTokens ?? getMaxOutputTokens(modelId),
+            1024,
+          ),
+        };
+      }
+    } else if (clampedMaxTokens) {
       target["thinking"] = {
         type: "enabled",
-        budgetTokens: calculateReasoningBudgetFromEffort(
-          reasoning.effort,
-          params.maxOutputTokens ?? getMaxOutputTokens(model.modelId),
-          1024,
-        ),
+        budgetTokens: clampedMaxTokens,
       };
     } else {
       target["thinking"] = { type: "enabled" };

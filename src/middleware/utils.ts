@@ -23,6 +23,7 @@ export function calculateReasoningBudgetFromEffort(
       percentage = 0.8;
       break;
     case "xhigh":
+    case "max":
       percentage = 0.95;
       break;
     default:

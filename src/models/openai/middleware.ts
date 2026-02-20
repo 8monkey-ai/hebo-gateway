@@ -33,6 +33,7 @@ function mapGptOssReasoningEffort(
       return "medium";
     case "high":
     case "xhigh":
+    case "max":
       return "high";
     default:
       return "low";
