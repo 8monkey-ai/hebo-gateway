@@ -26,10 +26,25 @@ export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
+// https://ai.google.dev/gemini-api/docs/thinking#thinking-levels
 export function mapGeminiReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
   modelId: string,
 ): ChatCompletionsReasoningEffort | undefined {
+  if (modelId.includes("gemini-3.1-pro")) {
+    switch (effort) {
+      case "none":
+      case "minimal":
+      case "low":
+        return "low";
+      case "medium":
+        return "medium";
+      case "high":
+      case "xhigh":
+        return "high";
+    }
+  }
+
   if (modelId.includes("gemini-3-pro")) {
     switch (effort) {
       case "none":
