@@ -8,20 +8,22 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
-function isClaudeOpus46Model(modelId: string): boolean {
-  return modelId.includes("claude-opus-4.6");
-}
+const isClaude = (family: "opus" | "sonnet", version: string) => {
+  const dashed = version.replace(".", "-");
 
-function isClaudeSonnet46Model(modelId: string): boolean {
-  return modelId.includes("claude-sonnet-4.6");
-}
+  return (modelId: string) =>
+    modelId.includes(`claude-${family}-${version}`) ||
+    modelId.includes(`claude-${family}-${dashed}`);
+};
 
-function isClaudeSonnet45Model(modelId: string): boolean {
-  return modelId.includes("claude-sonnet-4.5");
-}
+const isOpus46 = isClaude("opus", "4.6");
+const isOpus45 = isClaude("opus", "4.5");
+const isOpus4 = isClaude("opus", "4");
+const isSonnet46 = isClaude("sonnet", "4.6");
+const isSonnet45 = isClaude("sonnet", "4.5");
 
 export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort, modelId: string) {
-  if (isClaudeOpus46Model(modelId)) {
+  if (isOpus46(modelId)) {
     switch (effort) {
       case "none":
       case "minimal":
@@ -37,26 +39,24 @@ export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort,
     }
   }
 
-  if (isClaudeSonnet46Model(modelId) || isClaudeSonnet45Model(modelId)) {
-    switch (effort) {
-      case "none":
-      case "minimal":
-      case "low":
-        return "low";
-      case "medium":
-        return "medium";
-      case "high":
-      case "xhigh":
-      case "max":
-        return "high";
-    }
+  switch (effort) {
+    case "none":
+    case "minimal":
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+    case "max":
+      return "high";
   }
 }
 
 function getMaxOutputTokens(modelId: string): number {
-  if (modelId.includes("opus-4.6")) return 128_000;
-  if (modelId.includes("opus-4.5")) return 64_000;
-  if (modelId.includes("opus-4")) return 32_000;
+  if (isOpus46(modelId)) return 128_000;
+  if (isOpus45(modelId)) return 64_000;
+  if (isOpus4(modelId)) return 32_000;
   return 64_000;
 }
 
@@ -79,17 +79,17 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["thinking"] = { type: "disabled" };
     } else if (reasoning.effort) {
-      if (isClaudeOpus46Model(modelId)) {
+      if (isOpus46(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "adaptive", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
         target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
-      } else if (isClaudeSonnet46Model(modelId)) {
+      } else if (isSonnet46(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "enabled", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
         target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
-      } else if (isClaudeSonnet45Model(modelId)) {
+      } else if (isOpus45(modelId) || isSonnet45(modelId)) {
         target["thinking"] = { type: "enabled" };
         if (clampedMaxTokens) target["thinking"]["budgetTokens"] = clampedMaxTokens;
         target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);

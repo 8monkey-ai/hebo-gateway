@@ -6,7 +6,7 @@ export const bedrockAnthropicReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
-    if (!model.modelId.startsWith("anthropic/")) return params;
+    if (!model.modelId.includes("claude")) return params;
 
     const bedrock = params.providerOptions?.["bedrock"];
     if (!bedrock || typeof bedrock !== "object") return params;
@@ -38,6 +38,6 @@ export const bedrockAnthropicReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForProvider("bedrock", {
+modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   language: [bedrockAnthropicReasoningMiddleware],
 });

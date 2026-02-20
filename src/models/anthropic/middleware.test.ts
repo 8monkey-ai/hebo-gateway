@@ -568,7 +568,7 @@ test("claudeReasoningMiddleware > should keep xhigh as budget for non-4.6 models
   expect(result.providerOptions?.anthropic?.thinking?.budgetTokens).toBe(60800);
 });
 
-test("claudeReasoningMiddleware > should keep xhigh as budget for Claude Opus 4.5", async () => {
+test("claudeReasoningMiddleware > should map xhigh effort for Claude Opus 4.5 without default budget", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -589,6 +589,6 @@ test("claudeReasoningMiddleware > should keep xhigh as budget for Claude Opus 4.
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
-    budgetTokens: 60800,
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });

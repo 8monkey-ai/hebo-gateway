@@ -8,7 +8,7 @@ test("bedrockAnthropicReasoningMiddleware > matching provider", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
     modelId: "anthropic/claude-opus-4.6",
-    providerId: "bedrock",
+    providerId: "amazon-bedrock",
   });
 
   expect(middleware).toContain(bedrockAnthropicReasoningMiddleware);
