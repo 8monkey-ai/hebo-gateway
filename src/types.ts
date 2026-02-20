@@ -8,24 +8,9 @@ import type {
 } from "./endpoints/chat-completions/schema";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
-import type { OpenAIError } from "./errors/openai";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
-
-/**
- * Request overrides returned from the `onRequest` hook.
- */
-export type RequestPatch = {
-  /**
-   * Headers to merge into the incoming request.
-   */
-  headers?: HeadersInit;
-  /**
-   * Body to replace on the incoming request.
-   */
-  body?: BodyInit;
-};
 
 /**
  * Per-request context shared across handlers and hooks.
@@ -44,9 +29,13 @@ export type GatewayContext = {
    */
   models: ModelCatalog;
   /**
-   * Incoming request for the lifecycle.
+   * Incoming request for the handler.
    */
   request: Request;
+  /**
+   * Resolved request ID for logging and telemetry.
+   */
+  requestId: string;
   /**
    * Parsed body from the request.
    */
@@ -62,7 +51,7 @@ export type GatewayContext = {
   /**
    * Operation type.
    */
-  operation?: "text" | "embeddings";
+  operation?: "chat" | "embeddings" | "models";
   /**
    * Resolved provider instance.
    */
@@ -76,12 +65,12 @@ export type GatewayContext = {
    */
   result?:
     | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | OpenAIError>
+    | ReadableStream<ChatCompletionsChunk | Error>
     | Embeddings
     | Model
     | ModelList;
   /**
-   * Final response returned by the lifecycle.
+   * Response object returned by the handler.
    */
   response?: Response;
 };
@@ -96,13 +85,22 @@ export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
   Required<Pick<HookContext, K>>;
 export type OnRequestHookContext = RequiredHookContext<"request">;
-export type BeforeHookContext = RequiredHookContext<"request" | "body" | "operation">;
-export type ResolveModelHookContext = RequiredHookContext<"request" | "body" | "modelId">;
+export type BeforeHookContext = RequiredHookContext<"request" | "operation" | "body">;
+export type ResolveModelHookContext = RequiredHookContext<
+  "request" | "operation" | "body" | "modelId"
+>;
 export type ResolveProviderHookContext = RequiredHookContext<
-  "request" | "body" | "modelId" | "resolvedModelId" | "operation"
+  "request" | "operation" | "body" | "modelId" | "resolvedModelId"
 >;
 export type AfterHookContext = RequiredHookContext<
-  "request" | "result" | "provider" | "resolvedModelId" | "operation"
+  | "request"
+  | "operation"
+  | "body"
+  | "modelId"
+  | "resolvedModelId"
+  | "provider"
+  | "resolvedProviderId"
+  | "result"
 >;
 export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
 
@@ -112,12 +110,9 @@ export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
 export type GatewayHooks = {
   /**
    * Runs before any endpoint handler logic.
-   * @returns Optional RequestPatch to merge into headers / override body,
-   * or Response to short-circuit the request.
+   * @returns Optional Response to short-circuit the request.
    */
-  onRequest?: (
-    ctx: OnRequestHookContext,
-  ) => void | RequestPatch | Response | Promise<void | RequestPatch | Response>;
+  onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
   /**
    * Runs after request JSON is parsed and validated for chat completions / embeddings.
    * @returns Replacement parsed body, or undefined to keep original.
@@ -150,17 +145,17 @@ export type GatewayHooks = {
   ) =>
     | void
     | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | OpenAIError>
+    | ReadableStream<ChatCompletionsChunk | Error>
     | Embeddings
-    | Promise<
-        void | ChatCompletions | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings
-      >;
+    | Promise<void | ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings>;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.
    */
   onResponse?: (ctx: OnResponseHookContext) => void | Response | Promise<void | Response>;
 };
+
+export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";
 
 /**
  * Main configuration object for the gateway.
@@ -183,6 +178,10 @@ export type GatewayConfig = {
    */
   hooks?: GatewayHooks;
   /**
+   * Preferred logger configuration: custom logger or default logger settings.
+   */
+  logger?: Logger | LoggerConfig | null;
+  /**
    * Optional AI SDK telemetry configuration.
    */
   telemetry?: {
@@ -195,11 +194,19 @@ export type GatewayConfig = {
      * Optional custom OpenTelemetry tracer passed to AI SDK telemetry.
      */
     tracer?: Tracer;
+    /**
+     * Telemetry signal levels by namespace.
+     * - off: disable the namespace
+     * - required: minimal baseline
+     * - recommended: practical defaults
+     * - full: include all available details
+     */
+    signals?: {
+      gen_ai?: TelemetrySignalLevel;
+      http?: TelemetrySignalLevel;
+      hebo?: TelemetrySignalLevel;
+    };
   };
-  /**
-   * Preferred logger configuration: custom logger or default logger settings.
-   */
-  logger?: Logger | LoggerConfig;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");

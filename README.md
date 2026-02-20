@@ -19,6 +19,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
+- 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
 
 ## 📦 Installation
 
@@ -271,7 +272,7 @@ const gw = gateway({
 
 ### Hooks
 
-Hooks allow you to plug-into the lifecycle of the gateway and enrich it with additional functionality, like your actual routing logic. All hooks are available as async and non-async.
+Hooks allow you to plug into the lifecycle of the gateway and enrich it with additional functionality, like your actual routing logic. All hooks are available as async and non-async.
 
 ```ts
 const gw = gateway({
@@ -285,10 +286,9 @@ const gw = gateway({
     /**
      * Runs before any endpoint handler logic.
      * @param ctx.request Incoming request.
-     * @returns Optional RequestPatch to merge into headers / override body.
-     * Returning a Response stops execution of the endpoint.
+     * @returns Optional Response to short-circuit the request.
      */
-    onRequest: async (ctx: { request: Request }): Promise<RequestPatch | Response | void> => {
+    onRequest: async (ctx: { request: Request }): Promise<Response | void> => {
       // Example Use Cases:
       // - Verify authentication
       // - Enforce rate limits
@@ -301,7 +301,7 @@ const gw = gateway({
      */
     before: async (ctx: {
       body: ChatCompletionsBody | EmbeddingsBody;
-      operation: "text" | "embeddings";
+      operation: "chat" | "embeddings";
     }): Promise<ChatCompletionsBody | EmbeddingsBody | void> => {
       // Example Use Cases:
       // - Transform request body
@@ -314,10 +314,10 @@ const gw = gateway({
      * @param ctx.modelId Incoming model ID.
      * @returns Canonical model ID or undefined to keep original.
      */
-    resolveModelId?: (ctx: {
+    resolveModelId: async (ctx: {
       body: ChatCompletionsBody | EmbeddingsBody;
       modelId: ModelId;
-    }) => ModelId | void | Promise<ModelId | void> {
+    }): Promise<ModelId | void> => {
       // Example Use Cases:
       // - Resolve modelAlias to modelId
       return undefined;
@@ -327,16 +327,16 @@ const gw = gateway({
      * @param ctx.providers ProviderRegistry from config.
      * @param ctx.models ModelCatalog from config.
      * @param ctx.body The parsed body object with all call parameters.
-     * @param ctx.modelId Resolved model ID.
-     * @param ctx.operation Operation type ("text" | "embeddings").
+     * @param ctx.resolvedModelId Resolved model ID.
+     * @param ctx.operation Operation type ("chat" | "embeddings").
      * @returns ProviderV3 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
       providers: ProviderRegistry;
       models: ModelCatalog;
       body: ChatCompletionsBody | EmbeddingsBody;
-      modelId: ModelId;
-      operation: "text" | "embeddings";
+      resolvedModelId: ModelId;
+      operation: "chat" | "embeddings";
     }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
@@ -349,8 +349,8 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings
-    }): Promise<ChatCompletions  | ReadableStream<ChatCompletionsChunk | OpenAIError> | Embeddings | void> => {
+      result: ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings;
+    }): Promise<ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
@@ -615,14 +615,57 @@ const gw = gateway({
   telemetry: {
     // default: false
     enabled: true,
-    // default: TraceProivder from @opentelemetry/api singleton
+    // default: TraceProvider from @opentelemetry/api singleton
     tracer: trace.getTracer("my-gateway"),
+    // Telemetry levels by namespace:
+    // "off" | "required" | "recommended" | "full"
+    signals: {
+      // gen_ai.* semantic attributes
+      gen_ai: "full",
+      // http.*, url.*, server.* semantic attributes
+      http: "recommended",
+      // hebo-specific telemetry:
+      // - recommended: hebo.* span events
+      // - full: hebo.* span events + fetch instrumentation
+      hebo: "recommended",
+    },
   },
 });
 ```
 
+Attribute names and span semantics follow OpenTelemetry GenAI semantic conventions:
+https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
+
 > [!TIP]
-> For observability integration that is not otel compliant (for example, Langfuse), you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
+> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
+
+For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
+
+#### Langfuse
+
+Hebo telemetry spans are OpenTelemetry-compatible, so you can send them to Langfuse via `@langfuse/otel`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+import { context } from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
+
+context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+
+const gw = gateway({
+  // ...
+  telemetry: {
+    enabled: true,
+    tracer = new BasicTracerProvider({
+      spanProcessors: [new LangfuseSpanProcessor()],
+    }).getTracer("hebo");,
+  },
+});
+```
+
+Langfuse credentials are read from environment variables by the Langfuse OTel SDK (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`).
 
 ### Passing Framework State to Hooks
 

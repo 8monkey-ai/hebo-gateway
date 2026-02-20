@@ -9,7 +9,7 @@ export const ChatCompletionsContentPartImageSchema = z.object({
   type: z.literal("image_url"),
   image_url: z.object({
     url: z.string(),
-    detail: z.union([z.literal("low"), z.literal("high"), z.literal("auto")]).optional(),
+    detail: z.enum(["low", "high", "auto"]).optional(),
   }),
 });
 
@@ -22,11 +22,35 @@ export const ChatCompletionsContentPartFileSchema = z.object({
   }),
 });
 
-// FUTURE: missing ContentPartAudio
-export type ChatCompletionsContentPart =
-  | z.infer<typeof ChatCompletionsContentPartTextSchema>
-  | z.infer<typeof ChatCompletionsContentPartImageSchema>
-  | z.infer<typeof ChatCompletionsContentPartFileSchema>;
+export const ChatCompletionsContentPartAudioSchema = z.object({
+  type: z.literal("input_audio"),
+  input_audio: z.object({
+    data: z.string(),
+    // only wav and mp3 are official by OpenAI, rest is taken from Gemini support:
+    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/audio-understanding
+    format: z.enum([
+      "x-aac",
+      "flac",
+      "mp3",
+      "m4a",
+      "mpeg",
+      "mpga",
+      "mp4",
+      "ogg",
+      "pcm",
+      "wav",
+      "webm",
+    ]),
+  }),
+});
+
+export const ChatCompletionsContentPartSchema = z.discriminatedUnion("type", [
+  ChatCompletionsContentPartTextSchema,
+  ChatCompletionsContentPartImageSchema,
+  ChatCompletionsContentPartFileSchema,
+  ChatCompletionsContentPartAudioSchema,
+]);
+export type ChatCompletionsContentPart = z.infer<typeof ChatCompletionsContentPartSchema>;
 
 export const ChatCompletionsToolCallSchema = z.object({
   type: z.literal("function"),
@@ -35,7 +59,10 @@ export const ChatCompletionsToolCallSchema = z.object({
     arguments: z.string(),
     name: z.string(),
   }),
-  extra_content: z.record(z.string(), z.any()).optional().meta({ extension: true }),
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsToolCall = z.infer<typeof ChatCompletionsToolCallSchema>;
 
@@ -48,16 +75,7 @@ export type ChatCompletionsSystemMessage = z.infer<typeof ChatCompletionsSystemM
 
 export const ChatCompletionsUserMessageSchema = z.object({
   role: z.literal("user"),
-  content: z.union([
-    z.string(),
-    z.array(
-      z.union([
-        ChatCompletionsContentPartTextSchema,
-        ChatCompletionsContentPartImageSchema,
-        ChatCompletionsContentPartFileSchema,
-      ]),
-    ),
-  ]),
+  content: z.union([z.string(), z.array(ChatCompletionsContentPartSchema)]),
   name: z.string().optional(),
 });
 export type ChatCompletionsUserMessage = z.infer<typeof ChatCompletionsUserMessageSchema>;
@@ -88,7 +106,10 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
     .array(ChatCompletionsReasoningDetailSchema)
     .optional()
     .meta({ extension: true }),
-  extra_content: z.record(z.string(), z.any()).optional().meta({ extension: true }),
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
 
@@ -100,7 +121,7 @@ export const ChatCompletionsToolMessageSchema = z.object({
 });
 export type ChatCompletionsToolMessage = z.infer<typeof ChatCompletionsToolMessageSchema>;
 
-export const ChatCompletionsMessageSchema = z.union([
+export const ChatCompletionsMessageSchema = z.discriminatedUnion("role", [
   ChatCompletionsSystemMessageSchema,
   ChatCompletionsUserMessageSchema,
   ChatCompletionsAssistantMessageSchema,
@@ -113,16 +134,14 @@ export const ChatCompletionsToolSchema = z.object({
   function: z.object({
     name: z.string(),
     description: z.string().optional(),
-    parameters: z.record(z.string(), z.any()),
+    parameters: z.record(z.string(), z.unknown()),
     // Missing strict parameter
   }),
 });
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
 
 export const ChatCompletionsToolChoiceSchema = z.union([
-  z.literal("none"),
-  z.literal("auto"),
-  z.literal("required"),
+  z.enum(["none", "auto", "required"]),
   // FUTURE: missing AllowedTools and CustomToolChoice
   z.object({
     type: z.literal("function"),
@@ -133,13 +152,13 @@ export const ChatCompletionsToolChoiceSchema = z.union([
 ]);
 export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
 
-export const ChatCompletionsReasoningEffortSchema = z.union([
-  z.literal("none"),
-  z.literal("minimal"),
-  z.literal("low"),
-  z.literal("medium"),
-  z.literal("high"),
-  z.literal("xhigh"),
+export const ChatCompletionsReasoningEffortSchema = z.enum([
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
 ]);
 export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
 
@@ -150,6 +169,26 @@ export const ChatCompletionsReasoningConfigSchema = z.object({
   exclude: z.optional(z.boolean()),
 });
 export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
+
+export const ChatCompletionsResponseFormatJsonSchema = z.object({
+  // FUTURE: consider support for legacy json_object (if demand)
+  type: z.literal("json_schema"),
+  json_schema: z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    schema: z.record(z.string(), z.unknown()),
+    // FUTURE: consider support for non-strict mode (for providers that support it)
+    strict: z.boolean().optional(),
+  }),
+});
+export const ChatCompletionsResponseFormatTextSchema = z.object({
+  type: z.literal("text"),
+});
+export const ChatCompletionsResponseFormatSchema = z.discriminatedUnion("type", [
+  ChatCompletionsResponseFormatJsonSchema,
+  ChatCompletionsResponseFormatTextSchema,
+]);
+export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsResponseFormatSchema>;
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
@@ -168,6 +207,7 @@ const ChatCompletionsInputsSchema = z.object({
   seed: z.int().optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
+  response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   // Extensions
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
@@ -181,11 +221,11 @@ export const ChatCompletionsBodySchema = z.looseObject({
 });
 export type ChatCompletionsBody = z.infer<typeof ChatCompletionsBodySchema>;
 
-export const ChatCompletionsFinishReasonSchema = z.union([
-  z.literal("stop"),
-  z.literal("length"),
-  z.literal("content_filter"),
-  z.literal("tool_calls"),
+export const ChatCompletionsFinishReasonSchema = z.enum([
+  "stop",
+  "length",
+  "content_filter",
+  "tool_calls",
 ]);
 export type ChatCompletionsFinishReason = z.infer<typeof ChatCompletionsFinishReasonSchema>;
 
@@ -194,7 +234,7 @@ export const ChatCompletionsChoiceSchema = z.object({
   message: ChatCompletionsAssistantMessageSchema,
   finish_reason: ChatCompletionsFinishReasonSchema,
   // FUTURE: model this out
-  logprobs: z.any().optional(),
+  logprobs: z.unknown().optional(),
 });
 export type ChatCompletionsChoice = z.infer<typeof ChatCompletionsChoiceSchema>;
 
@@ -225,7 +265,7 @@ export const ChatCompletionsSchema = z.object({
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
   // Extensions
-  provider_metadata: z.any().optional().meta({ extension: true }),
+  provider_metadata: z.unknown().optional().meta({ extension: true }),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
@@ -247,7 +287,7 @@ export const ChatCompletionsChoiceDeltaSchema = z.object({
   delta: ChatCompletionsAssistantMessageDeltaSchema,
   finish_reason: ChatCompletionsFinishReasonSchema.nullable(),
   // FUTURE: model this out
-  logprobs: z.any().optional(),
+  logprobs: z.unknown().optional(),
 });
 export type ChatCompletionsChoiceDelta = z.infer<typeof ChatCompletionsChoiceDeltaSchema>;
 
@@ -259,6 +299,6 @@ export const ChatCompletionsChunkSchema = z.object({
   choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
   // Extensions
-  provider_metadata: z.any().optional().meta({ extension: true }),
+  provider_metadata: z.unknown().optional().meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;

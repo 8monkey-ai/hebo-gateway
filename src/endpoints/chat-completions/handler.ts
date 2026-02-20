@@ -1,4 +1,11 @@
-import { generateText, streamText, wrapLanguageModel } from "ai";
+import {
+  generateText,
+  Output,
+  streamText,
+  wrapLanguageModel,
+  type GenerateTextResult,
+  type ToolSet,
+} from "ai";
 import * as z from "zod/mini";
 
 import type {
@@ -16,40 +23,54 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { toAiSdkTelemetry } from "../../telemetry/otel";
-import { markPerf } from "../../telemetry/perf";
-import { resolveRequestId } from "../../utils/headers";
+import {
+  recordRequestDuration,
+  recordTimePerOutputToken,
+  recordTokenUsage,
+} from "../../telemetry/gen-ai";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
+import {
+  getChatGeneralAttributes,
+  getChatRequestAttributes,
+  getChatResponseAttributes,
+} from "./otel";
 import { ChatCompletionsBodySchema } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
+    const start = performance.now();
+    ctx.operation = "chat";
+    addSpanEvent("hebo.handler.started");
+
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
 
-    const requestId = resolveRequestId(ctx.request);
-
     // Parse + validate input.
-    let body;
     try {
-      body = await ctx.request.json();
+      ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
+    addSpanEvent("hebo.request.deserialized");
 
-    const parsed = ChatCompletionsBodySchema.safeParse(body);
+    const parsed = ChatCompletionsBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
-      throw new GatewayError(z.prettifyError(parsed.error), 400);
+      // FUTURE: consider adding body shape to metadata
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
     }
     ctx.body = parsed.data;
+    addSpanEvent("hebo.request.parsed");
 
-    ctx.operation = "text";
-    ctx.body = (await hooks?.before?.(ctx as BeforeHookContext)) ?? ctx.body;
+    if (hooks?.before) {
+      ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
+      addSpanEvent("hebo.hooks.before.completed");
+    }
 
     // Resolve model + provider (hooks may override defaults).
     let inputs, stream;
@@ -58,6 +79,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
+    addSpanEvent("hebo.model.resolved");
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
@@ -72,16 +94,23 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
+    addSpanEvent("hebo.provider.resolved");
+
+    const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
+    const genAiGeneralAttrs = getChatGeneralAttributes(ctx, genAiSignalLevel);
+    setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
     const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
       {
-        requestId,
+        requestId: ctx.requestId,
         options: textOptions,
       },
       "[chat] AI SDK options",
     );
+    addSpanEvent("hebo.options.prepared");
+    setSpanAttributes(getChatRequestAttributes(inputs, genAiSignalLevel));
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -90,26 +119,32 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request (streaming vs. non-streaming).
-    markPerf(ctx.request, "aiSdkStart");
     if (stream) {
+      addSpanEvent("hebo.ai-sdk.started");
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
-        experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
-        // No abort signal here, otherwise we can't detect upstream from client cancellations
-        // abortSignal: ctx.request.signal,
-        onError: ({ error }) => {
-          logger.error({
-            requestId,
-            err: error instanceof Error ? error : new Error(String(error)),
-          });
-          throw error;
-        },
-        onAbort: () => {
-          throw new DOMException("Upstream failed", "AbortError");
-        },
+        abortSignal: ctx.request.signal,
         timeout: {
           totalMs: 5 * 60 * 1000,
+        },
+        onAbort: () => {
+          throw new DOMException("The operation was aborted.", "AbortError");
+        },
+        onError: () => {},
+        onFinish: (res) => {
+          addSpanEvent("hebo.ai-sdk.completed");
+          const streamResult = toChatCompletions(
+            res as unknown as GenerateTextResult<ToolSet, Output.Output>,
+            ctx.resolvedModelId!,
+          );
+          addSpanEvent("hebo.result.transformed");
+
+          const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
+          setSpanAttributes(genAiResponseAttrs);
+          recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
         },
         experimental_include: {
           requestBody: false,
@@ -117,33 +152,48 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         includeRawChunks: false,
         ...textOptions,
       });
-      markPerf(ctx.request, "aiSdkEnd");
 
-      ctx.result = toChatCompletionsStream(result, ctx.modelId);
+      ctx.result = toChatCompletionsStream(result, ctx.resolvedModelId);
 
-      return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
+      if (hooks?.after) {
+        ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
+        addSpanEvent("hebo.hooks.after.completed");
+      }
+
+      return ctx.result;
     }
 
+    addSpanEvent("hebo.ai-sdk.started");
     const result = await generateText({
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
-      experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
-      // FUTURE: currently can't tell whether upstream or downstream abort
       abortSignal: ctx.request.signal,
+      timeout: 5 * 60 * 1000,
       experimental_include: {
         requestBody: false,
         responseBody: false,
       },
-      timeout: 5 * 60 * 1000,
       ...textOptions,
     });
-    markPerf(ctx.request, "aiSdkEnd");
+    logger.trace({ requestId: ctx.requestId, result }, "[chat] AI SDK result");
+    addSpanEvent("hebo.ai-sdk.completed");
 
-    logger.trace({ requestId, result }, "[chat] AI SDK result");
+    // Transform result.
+    ctx.result = toChatCompletions(result, ctx.resolvedModelId);
+    addSpanEvent("hebo.result.transformed");
 
-    ctx.result = toChatCompletions(result, ctx.modelId);
+    const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);
+    setSpanAttributes(genAiResponseAttrs);
+    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
 
-    return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
+    if (hooks?.after) {
+      ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
+      addSpanEvent("hebo.hooks.after.completed");
+    }
+
+    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
+    return ctx.result;
   };
 
   return { handler: winterCgHandler(handler, config) };

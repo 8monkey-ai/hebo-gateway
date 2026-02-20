@@ -11,7 +11,6 @@ import type {
   UserContent,
   AssistantContent,
   LanguageModelUsage,
-  Output,
   TextStreamPart,
   ReasoningOutput,
   AssistantModelMessage,
@@ -19,8 +18,8 @@ import type {
   UserModelMessage,
 } from "ai";
 
-import { convertBase64ToUint8Array } from "@ai-sdk/provider-utils";
-import { jsonSchema, tool } from "ai";
+import { Output, jsonSchema, tool } from "ai";
+import { z } from "zod";
 
 import type {
   ChatCompletionsToolCall,
@@ -44,6 +43,7 @@ import type {
   ChatCompletionsReasoningEffort,
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningDetail,
+  ChatCompletionsResponseFormat,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -54,6 +54,7 @@ export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
+  output?: Output.Output;
   temperature?: number;
   maxOutputTokens?: number;
   frequencyPenalty?: number;
@@ -74,6 +75,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     temperature,
     max_tokens,
     max_completion_tokens,
+    response_format,
     reasoning_effort,
     reasoning,
     frequency_penalty,
@@ -90,6 +92,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     messages: convertToModelMessages(messages),
     tools: convertToToolSet(tools),
     toolChoice: convertToToolChoice(tool_choice),
+    output: convertToOutput(response_format),
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
     frequencyPenalty: frequency_penalty,
@@ -101,6 +104,19 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
       unknown: rest,
     },
   };
+}
+
+function convertToOutput(responseFormat: ChatCompletionsResponseFormat | undefined) {
+  if (!responseFormat || responseFormat.type === "text") {
+    return;
+  }
+
+  const { name, description, schema } = responseFormat.json_schema;
+  return Output.object({
+    name,
+    description,
+    schema: jsonSchema(schema),
+  });
 }
 
 export function convertToModelMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
@@ -202,6 +218,7 @@ export function fromChatCompletionsAssistantMessage(
 
   if (tool_calls?.length) {
     for (const tc of tool_calls) {
+      // eslint-disable-next-line no-shadow
       const { id, function: fn, extra_content } = tc;
       const out: ToolCallPart = {
         type: "tool-call",
@@ -210,7 +227,7 @@ export function fromChatCompletionsAssistantMessage(
         input: parseToolOutput(fn.arguments).value,
       };
       if (extra_content) {
-        out.providerOptions = extra_content;
+        out.providerOptions = extra_content as SharedV3ProviderOptions;
       }
       parts.push(out);
     }
@@ -222,7 +239,7 @@ export function fromChatCompletionsAssistantMessage(
   };
 
   if (extra_content) {
-    out.providerOptions = extra_content;
+    out.providerOptions = extra_content as SharedV3ProviderOptions;
   }
 
   return out;
@@ -253,46 +270,46 @@ export function fromChatCompletionsToolResultMessage(
 
 export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]): UserContent {
   return content.map((part) => {
-    if (part.type === "image_url") {
-      const url = part.image_url.url;
-      if (url.startsWith("data:")) {
-        const { mimeType, base64Data } = parseDataUrl(url);
-
-        return mimeType.startsWith("image/")
-          ? {
-              type: "image" as const,
-              image: convertBase64ToUint8Array(base64Data),
-              mediaType: mimeType,
-            }
-          : {
-              type: "file" as const,
-              data: convertBase64ToUint8Array(base64Data),
-              mediaType: mimeType,
-            };
-      }
-
-      return {
-        type: "image" as const,
-        image: new URL(url),
-      };
+    switch (part.type) {
+      case "image_url":
+        return fromImageUrlPart(part.image_url.url);
+      case "file":
+        return fromFilePart(part.file.data, part.file.media_type, part.file.filename);
+      case "input_audio":
+        return fromFilePart(part.input_audio.data, `audio/${part.input_audio.format}`);
+      default:
+        return part;
     }
-    if (part.type === "file") {
-      let { data, media_type, filename } = part.file;
-      return media_type.startsWith("image/")
-        ? {
-            type: "image" as const,
-            image: convertBase64ToUint8Array(data),
-            mediaType: media_type,
-          }
-        : {
-            type: "file" as const,
-            data: convertBase64ToUint8Array(data),
-            filename,
-            mediaType: media_type,
-          };
-    }
-    return part;
   });
+}
+
+function fromImageUrlPart(url: string) {
+  if (url.startsWith("data:")) {
+    const { mimeType, base64Data } = parseDataUrl(url);
+    return fromFilePart(base64Data, mimeType);
+  }
+
+  return {
+    type: "image" as const,
+    image: new URL(url),
+  };
+}
+
+function fromFilePart(base64Data: string, mediaType: string, filename?: string) {
+  if (mediaType.startsWith("image/")) {
+    return {
+      type: "image" as const,
+      image: z.util.base64ToUint8Array(base64Data),
+      mediaType,
+    };
+  }
+
+  return {
+    type: "file" as const,
+    data: z.util.base64ToUint8Array(base64Data),
+    filename,
+    mediaType,
+  };
 }
 
 export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
@@ -416,11 +433,12 @@ export function toChatCompletionsResponse(
   return toResponse(toChatCompletions(result, model), responseInit);
 }
 
-export function toChatCompletionsStream(
+export function toChatCompletionsStream<E extends boolean = false>(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-): ReadableStream<ChatCompletionsChunk | OpenAIError> {
-  return result.fullStream.pipeThrough(new ChatCompletionsStream(model));
+  wrapErrors?: E,
+): ReadableStream<ChatCompletionsChunk | (E extends true ? OpenAIError : Error)> {
+  return result.fullStream.pipeThrough(new ChatCompletionsStream(model, wrapErrors));
 }
 
 export function toChatCompletionsStreamResponse(
@@ -428,18 +446,19 @@ export function toChatCompletionsStreamResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return toResponse(toChatCompletionsStream(result, model), responseInit);
+  return toResponse(toChatCompletionsStream(result, model, true), responseInit);
 }
 
-export class ChatCompletionsStream extends TransformStream<
+export class ChatCompletionsStream<E extends boolean = false> extends TransformStream<
   TextStreamPart<ToolSet>,
-  ChatCompletionsChunk | OpenAIError
+  ChatCompletionsChunk | (E extends true ? OpenAIError : Error)
 > {
-  constructor(model: string) {
+  constructor(model: string, wrapErrors?: E) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
     const reasoningIdToIndex = new Map<string, number>();
+    let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
@@ -522,14 +541,7 @@ export class ChatCompletionsStream extends TransformStream<
           }
 
           case "finish-step": {
-            controller.enqueue(
-              createChunk(
-                {},
-                part.providerMetadata,
-                toChatCompletionsFinishReason(part.finishReason),
-                toChatCompletionsUsage(part.usage),
-              ),
-            );
+            finishProviderMetadata = part.providerMetadata;
             break;
           }
 
@@ -537,7 +549,7 @@ export class ChatCompletionsStream extends TransformStream<
             controller.enqueue(
               createChunk(
                 {},
-                undefined,
+                finishProviderMetadata,
                 toChatCompletionsFinishReason(part.finishReason),
                 toChatCompletionsUsage(part.totalUsage),
               ),
@@ -546,10 +558,15 @@ export class ChatCompletionsStream extends TransformStream<
           }
 
           case "error": {
-            const error = part.error;
-            // FUTURE mask in production mode and return responseID
-            controller.enqueue(toOpenAIError(error));
-            break;
+            let err: Error | OpenAIError;
+            if (wrapErrors) {
+              err = toOpenAIError(part.error);
+            } else if (part.error instanceof Error) {
+              err = part.error;
+            } else {
+              err = new Error(String(part.error));
+            }
+            controller.enqueue(err as E extends true ? OpenAIError : Error);
           }
         }
       },

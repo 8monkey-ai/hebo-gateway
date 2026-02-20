@@ -16,40 +16,54 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
-import { toAiSdkTelemetry } from "../../telemetry/otel";
-import { markPerf } from "../../telemetry/perf";
-import { resolveRequestId } from "../../utils/headers";
+import {
+  recordRequestDuration,
+  recordTimePerOutputToken,
+  recordTokenUsage,
+} from "../../telemetry/gen-ai";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
+import {
+  getEmbeddingsGeneralAttributes,
+  getEmbeddingsRequestAttributes,
+  getEmbeddingsResponseAttributes,
+} from "./otel";
 import { EmbeddingsBodySchema } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext) => {
+    const start = performance.now();
+    ctx.operation = "embeddings";
+    addSpanEvent("hebo.handler.started");
+
     // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
 
-    const requestId = resolveRequestId(ctx.request);
-
     // Parse + validate input.
-    let body;
     try {
-      body = await ctx.request.json();
+      ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
+    addSpanEvent("hebo.request.deserialized");
 
-    const parsed = EmbeddingsBodySchema.safeParse(body);
+    const parsed = EmbeddingsBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
-      throw new GatewayError(z.prettifyError(parsed.error), 400);
+      // FUTURE: consider adding body shape to metadata
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
     }
     ctx.body = parsed.data;
+    addSpanEvent("hebo.request.parsed");
 
-    ctx.operation = "embeddings";
-    ctx.body = (await hooks?.before?.(ctx as BeforeHookContext)) ?? ctx.body;
+    if (hooks?.before) {
+      ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
+      addSpanEvent("hebo.hooks.before.completed");
+    }
 
     // Resolve model + provider (hooks may override defaults).
     let inputs;
@@ -58,6 +72,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
+    addSpanEvent("hebo.model.resolved");
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
     ctx.provider =
@@ -72,10 +87,20 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = embeddingModel.provider;
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
+    addSpanEvent("hebo.provider.resolved");
+
+    const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
+    const genAiGeneralAttrs = getEmbeddingsGeneralAttributes(ctx, genAiSignalLevel);
+    setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
     const embedOptions = convertToEmbedCallOptions(inputs);
-    logger.trace({ requestId, options: embedOptions }, "[embeddings] AI SDK options");
+    logger.trace(
+      { requestId: ctx.requestId, options: embedOptions },
+      "[embeddings] AI SDK options",
+    );
+    addSpanEvent("hebo.options.prepared");
+    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, genAiSignalLevel));
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -84,21 +109,31 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request.
-    markPerf(ctx.request, "aiSdkStart");
+    addSpanEvent("hebo.ai-sdk.started");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
-      experimental_telemetry: toAiSdkTelemetry(config, ctx.operation),
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });
-    markPerf(ctx.request, "aiSdkEnd");
+    logger.trace({ requestId: ctx.requestId, result }, "[embeddings] AI SDK result");
+    addSpanEvent("hebo.ai-sdk.completed");
 
-    logger.trace({ requestId, result }, "[embeddings] AI SDK result");
-
+    // Transform result.
     ctx.result = toEmbeddings(result, ctx.modelId);
+    addSpanEvent("hebo.result.transformed");
+    const genAiResponseAttrs = getEmbeddingsResponseAttributes(ctx.result, genAiSignalLevel);
+    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    setSpanAttributes(genAiResponseAttrs);
 
-    return (await hooks?.after?.(ctx as AfterHookContext)) ?? ctx.result;
+    if (hooks?.after) {
+      ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
+      addSpanEvent("hebo.hooks.after.completed");
+    }
+
+    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
+    return ctx.result;
   };
 
   return { handler: winterCgHandler(handler, config) };

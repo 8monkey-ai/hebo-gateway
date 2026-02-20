@@ -3,6 +3,7 @@ import type { ProviderId } from "../providers/types";
 export const CANONICAL_MODEL_IDS = [
   // Anthropic
   "anthropic/claude-opus-4.6",
+  "anthropic/claude-sonnet-4.6",
   "anthropic/claude-haiku-4.5",
   "anthropic/claude-sonnet-4.5",
   "anthropic/claude-opus-4.5",
@@ -45,6 +46,7 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-2.5-pro",
   "google/gemini-3-flash-preview",
   "google/gemini-3-pro-preview",
+  "google/gemini-3.1-pro-preview",
   "google/embedding-001",
   // Meta
   "meta/llama-3.1-8b",
@@ -93,7 +95,7 @@ export type CatalogModel = {
   knowledge?: string;
   modalities?: {
     input: readonly ("text" | "image" | "file" | "audio" | "video" | "pdf")[];
-    output: readonly ("text" | "image" | "audio" | "video" | "embeddings")[];
+    output: readonly ("text" | "image" | "audio" | "video" | "embedding")[];
   };
   context?: number;
   capabilities?: readonly (

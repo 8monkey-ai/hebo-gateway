@@ -65,6 +65,18 @@ export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
+export const claudeSonnet46 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-sonnet-4.6" as const,
+  {
+    ...CLAUDE_BASE,
+    ...CLAUDE_PDF_MODALITIES,
+    name: "Claude Sonnet 4.6",
+    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
+    created: "2026-02-17",
+    knowledge: "2025-08",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
 export const claudeSonnet4 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-4" as const,
   {
@@ -149,7 +161,7 @@ export const claudeOpus4 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const claudeAtomic = {
-  "v4.6": [claudeOpus46],
+  "v4.6": [claudeSonnet46, claudeOpus46],
   "v4.5": [claudeHaiku45, claudeSonnet45, claudeOpus45],
   "v4.1": [claudeOpus41],
   v4: [claudeSonnet4, claudeOpus4],
@@ -157,7 +169,7 @@ const claudeAtomic = {
   "v3.5": [claudeSonnet35, claudeHaiku35],
   v3: [claudeHaiku3],
   haiku: [claudeHaiku45, claudeHaiku35, claudeHaiku3],
-  sonnet: [claudeSonnet45, claudeSonnet4, claudeSonnet37, claudeSonnet35],
+  sonnet: [claudeSonnet46, claudeSonnet45, claudeSonnet4, claudeSonnet37, claudeSonnet35],
   opus: [claudeOpus46, claudeOpus45, claudeOpus41, claudeOpus4],
 } as const;
 
