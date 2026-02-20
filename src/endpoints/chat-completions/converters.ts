@@ -13,6 +13,7 @@ import type {
   LanguageModelUsage,
   TextStreamPart,
   ReasoningOutput,
+  JSONValue,
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
@@ -362,7 +363,9 @@ function parseToolResult(
   return parseJsonOrText(content);
 }
 
-function parseJsonOrText(content: string): { type: "json" | "text"; value: any } {
+function parseJsonOrText(
+  content: string,
+): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
   try {
     return { type: "json", value: JSON.parse(content) };
   } catch {
