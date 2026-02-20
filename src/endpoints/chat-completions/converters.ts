@@ -200,19 +200,16 @@ export function fromChatCompletionsAssistantMessage(
   }
 
   if (content !== undefined && content !== null) {
-    if (typeof content === "string") {
-      parts.push({
-        type: "text",
-        text: content,
-      });
-    } else if (Array.isArray(content)) {
-      for (const part of content) {
-        if (part.type === "text") {
-          parts.push({
-            type: "text",
-            text: part.text,
-          });
-        }
+    const inputContent =
+      typeof content === "string"
+        ? ([{ type: "text", text: content }] as ChatCompletionsContentPartText[])
+        : content;
+    for (const part of inputContent) {
+      if (part.type === "text") {
+        parts.push({
+          type: "text",
+          text: part.text,
+        });
       }
     }
   }
@@ -225,7 +222,7 @@ export function fromChatCompletionsAssistantMessage(
         type: "tool-call",
         toolCallId: id,
         toolName: fn.name,
-        input: parseToolOutput(fn.arguments).value,
+        input: parseJsonOrText(fn.arguments).value,
       };
       if (extra_content) {
         out.providerOptions = extra_content as SharedV3ProviderOptions;
@@ -235,7 +232,7 @@ export function fromChatCompletionsAssistantMessage(
   }
 
   const out: AssistantModelMessage = {
-    role: role,
+    role,
     content: parts.length > 0 ? parts : (content ?? ""),
   };
 
@@ -262,7 +259,7 @@ export function fromChatCompletionsToolResultMessage(
       type: "tool-result",
       toolCallId: tc.id,
       toolName: tc.function.name,
-      output: parseToolOutput(toolMsg.content),
+      output: parseToolResult(toolMsg.content),
     });
   }
 
@@ -350,20 +347,26 @@ export const convertToToolChoice = (
   };
 };
 
-function parseToolOutput(content: string | ChatCompletionsContentPartText[]) {
+function parseToolResult(
+  content: string | ChatCompletionsContentPartText[],
+): ToolResultPart["output"] {
   if (Array.isArray(content)) {
     return {
-      type: "content" as const,
+      type: "content",
       value: content.map((part) => ({
-        type: "text" as const,
+        type: "text",
         text: part.text,
       })),
     };
   }
+  return parseJsonOrText(content);
+}
+
+function parseJsonOrText(content: string): { type: "json" | "text"; value: any } {
   try {
-    return { type: "json" as const, value: JSON.parse(content) };
+    return { type: "json", value: JSON.parse(content) };
   } catch {
-    return { type: "text" as const, value: content };
+    return { type: "text", value: content };
   }
 }
 
@@ -421,9 +424,6 @@ export function toChatCompletions(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): ChatCompletions {
-  const finish_reason = toChatCompletionsFinishReason(result.finishReason);
-  const message = toChatCompletionsAssistantMessage(result);
-
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
     object: "chat.completion",
@@ -432,8 +432,8 @@ export function toChatCompletions(
     choices: [
       {
         index: 0,
-        message,
-        finish_reason,
+        message: toChatCompletionsAssistantMessage(result),
+        finish_reason: toChatCompletionsFinishReason(result.finishReason),
       } satisfies ChatCompletionsChoice,
     ],
     usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
