@@ -284,8 +284,8 @@ test("claudeReasoningMiddleware > should pass through max effort for Claude 4.6"
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "adaptive",
-    effort: "max",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("max");
 });
 
 test("claudeReasoningMiddleware > should map xhigh effort to max for Claude Opus 4.6", async () => {
@@ -309,8 +309,8 @@ test("claudeReasoningMiddleware > should map xhigh effort to max for Claude Opus
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "adaptive",
-    effort: "max",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("max");
 });
 
 test("claudeReasoningMiddleware > should map max effort to high for Claude Sonnet 4.6", async () => {
@@ -334,8 +334,8 @@ test("claudeReasoningMiddleware > should map max effort to high for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "adaptive",
-    effort: "high",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
 
 test("claudeReasoningMiddleware > should map minimal effort to low for Claude Sonnet 4.6", async () => {
@@ -359,8 +359,8 @@ test("claudeReasoningMiddleware > should map minimal effort to low for Claude So
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "adaptive",
-    effort: "low",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("low");
 });
 
 test("claudeReasoningMiddleware > should use manual thinking for Claude Sonnet 4.6 when max_tokens is provided", async () => {
@@ -385,9 +385,9 @@ test("claudeReasoningMiddleware > should use manual thinking for Claude Sonnet 4
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
-    effort: "medium",
     budgetTokens: 2000,
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("medium");
 });
 
 test("claudeReasoningMiddleware > should map none effort to low for Claude Sonnet 4.5", async () => {
@@ -411,8 +411,8 @@ test("claudeReasoningMiddleware > should map none effort to low for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
-    effort: "low",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("low");
 });
 
 test("claudeReasoningMiddleware > should include effort and max_tokens for Claude 4.6", async () => {
@@ -437,9 +437,9 @@ test("claudeReasoningMiddleware > should include effort and max_tokens for Claud
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "adaptive",
-    effort: "medium",
     budgetTokens: 2000,
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("medium");
 });
 
 test("claudeReasoningMiddleware > should include effort and max_tokens for Claude Sonnet 4.5", async () => {
@@ -464,9 +464,9 @@ test("claudeReasoningMiddleware > should include effort and max_tokens for Claud
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
-    effort: "medium",
     budgetTokens: 2000,
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("medium");
 });
 
 test("claudeReasoningMiddleware > should map max effort to high for Claude Sonnet 4.5", async () => {
@@ -490,8 +490,8 @@ test("claudeReasoningMiddleware > should map max effort to high for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
-    effort: "high",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
 
 test("claudeReasoningMiddleware > should map xhigh effort to high for Claude Sonnet 4.5", async () => {
@@ -515,8 +515,8 @@ test("claudeReasoningMiddleware > should map xhigh effort to high for Claude Son
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
-    effort: "high",
   });
+  expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
 
 test("claudeReasoningMiddleware > should keep xhigh as budget for non-4.6 models", async () => {

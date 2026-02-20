@@ -76,7 +76,6 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning) return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {});
-
     const modelId = model.modelId;
     const clampedMaxTokens =
       reasoning.max_tokens && Math.min(reasoning.max_tokens, getMaxOutputTokens(modelId));
@@ -88,18 +87,18 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
 
       if (isClaudeOpus46Model(modelId)) {
         target["thinking"] = clampedMaxTokens
-          ? { type: "adaptive", effort, budgetTokens: clampedMaxTokens }
-          : { type: "adaptive", effort };
+          ? { type: "adaptive", budgetTokens: clampedMaxTokens }
+          : { type: "adaptive" };
+        target["effort"] = effort;
       } else if (isClaudeSonnet46Model(modelId)) {
         target["thinking"] = clampedMaxTokens
-          ? { type: "enabled", effort, budgetTokens: clampedMaxTokens }
-          : { type: "adaptive", effort };
+          ? { type: "enabled", budgetTokens: clampedMaxTokens }
+          : { type: "adaptive" };
+        target["effort"] = effort;
       } else if (isClaudeSonnet45Model(modelId)) {
-        target["thinking"] = {
-          type: "enabled",
-          effort,
-        };
+        target["thinking"] = { type: "enabled" };
         if (clampedMaxTokens) target["thinking"]["budgetTokens"] = clampedMaxTokens;
+        target["effort"] = effort;
       } else {
         // FUTURE: warn that reasoning.max_tokens was computed
         target["thinking"] = {
