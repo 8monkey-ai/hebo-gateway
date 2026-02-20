@@ -8,6 +8,7 @@ import { claudeReasoningMiddleware } from "./middleware";
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
     "anthropic/claude-opus-4.6",
+    "anthropic/claude-sonnet-4.6",
     "anthropic/claude-sonnet-3.7",
     "anthropic/claude-opus-4.5",
     "anthropic/claude-sonnet-4.5",

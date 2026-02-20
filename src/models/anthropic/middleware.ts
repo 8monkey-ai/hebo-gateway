@@ -8,7 +8,7 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
-const isClaude = (family: "opus" | "sonnet", version: string) => {
+const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
   const dashed = version.replace(".", "-");
 
   return (modelId: string) =>
