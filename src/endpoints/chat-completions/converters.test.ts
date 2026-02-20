@@ -2,13 +2,116 @@ import type { GenerateTextResult, ToolSet, Output } from "ai";
 
 import { describe, expect, test } from "bun:test";
 
+import type { ChatCompletionsToolMessage } from "./schema";
+
 import {
   convertToTextCallOptions,
   toChatCompletionsAssistantMessage,
   fromChatCompletionsAssistantMessage,
+  fromChatCompletionsToolResultMessage,
 } from "./converters";
 
 describe("Chat Completions Converters", () => {
+  describe("fromChatCompletionsToolResultMessage", () => {
+    test("should handle tool message with string content", () => {
+      const assistantMessage = {
+        role: "assistant" as const,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function" as const,
+            function: { name: "test_tool", arguments: "{}" },
+          },
+        ],
+      };
+      const toolById = new Map<string, ChatCompletionsToolMessage>([
+        ["call_1", { role: "tool", content: "hello world", tool_call_id: "call_1" }],
+      ]);
+
+      const result = fromChatCompletionsToolResultMessage(assistantMessage, toolById);
+      expect(result).toBeDefined();
+      expect(result?.content[0]).toMatchObject({
+        type: "tool-result",
+        toolCallId: "call_1",
+        output: { type: "text", value: "hello world" },
+      });
+    });
+
+    test("should handle tool message with content parts array", () => {
+      const assistantMessage = {
+        role: "assistant" as const,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function" as const,
+            function: { name: "test_tool", arguments: "{}" },
+          },
+        ],
+      };
+      const toolById = new Map<string, ChatCompletionsToolMessage>([
+        [
+          "call_1",
+          {
+            role: "tool",
+            content: [
+              { type: "text", text: "part 1" },
+              { type: "text", text: " part 2" },
+            ],
+            tool_call_id: "call_1",
+          },
+        ],
+      ]);
+
+      const result = fromChatCompletionsToolResultMessage(assistantMessage, toolById);
+      expect(result).toBeDefined();
+      expect(result?.content[0]).toMatchObject({
+        type: "tool-result",
+        toolCallId: "call_1",
+        output: {
+          type: "content",
+          value: [
+            { type: "text", text: "part 1" },
+            { type: "text", text: " part 2" },
+          ],
+        },
+      });
+    });
+
+    test("should handle tool message with content parts array containing JSON string", () => {
+      const assistantMessage = {
+        role: "assistant" as const,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function" as const,
+            function: { name: "test_tool", arguments: "{}" },
+          },
+        ],
+      };
+      const toolById = new Map<string, ChatCompletionsToolMessage>([
+        [
+          "call_1",
+          {
+            role: "tool",
+            content: [{ type: "text", text: '{"result": "success"}' }],
+            tool_call_id: "call_1",
+          },
+        ],
+      ]);
+
+      const result = fromChatCompletionsToolResultMessage(assistantMessage, toolById);
+      expect(result).toBeDefined();
+      expect(result?.content[0]).toMatchObject({
+        type: "tool-result",
+        toolCallId: "call_1",
+        output: {
+          type: "content",
+          value: [{ type: "text", text: '{"result": "success"}' }],
+        },
+      });
+    });
+  });
+
   describe("toChatCompletionsAssistantMessage", () => {
     test("should pass through providerMetadata to extra_content", () => {
       const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
@@ -202,6 +305,37 @@ describe("Chat Completions Converters", () => {
         },
       });
     });
+
+    test("should handle both content and tool_calls", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "I will call a tool.",
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: {
+              name: "my_tool",
+              arguments: "{}",
+            },
+          },
+        ],
+      });
+
+      expect(Array.isArray(message.content)).toBe(true);
+      const content = message.content as any[];
+      expect(content).toHaveLength(2);
+      expect(content[0]).toEqual({
+        type: "text",
+        text: "I will call a tool.",
+      });
+      expect(content[1]).toEqual({
+        type: "tool-call",
+        toolCallId: "call_1",
+        toolName: "my_tool",
+        input: {},
+      });
+    });
   });
 
   describe("convertToTextCallOptions", () => {
@@ -312,6 +446,14 @@ describe("Chat Completions Converters", () => {
       expect(part.mediaType).toBe("audio/wav");
       expect(part.data).toBeInstanceOf(Uint8Array);
       expect(Array.from(part.data)).toEqual([104, 101, 108, 108, 111]);
+    });
+
+    test("should map tool_choice 'validated' to 'auto'", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        tool_choice: "validated",
+      });
+      expect(result.toolChoice).toBe("auto");
     });
   });
 });

@@ -4,6 +4,7 @@ export const ChatCompletionsContentPartTextSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
 });
+export type ChatCompletionsContentPartText = z.infer<typeof ChatCompletionsContentPartTextSchema>;
 
 export const ChatCompletionsContentPartImageSchema = z.object({
   type: z.literal("image_url"),
@@ -94,8 +95,9 @@ export type ChatCompletionsReasoningDetail = z.infer<typeof ChatCompletionsReaso
 
 export const ChatCompletionsAssistantMessageSchema = z.object({
   role: z.literal("assistant"),
-  // FUTURE: this should support arrays of TextContentPart and RefusalContentPart
-  content: z.union([z.string(), z.null()]).optional(),
+  content: z
+    .union([z.string(), z.null(), z.array(ChatCompletionsContentPartTextSchema)])
+    .optional(),
   name: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
@@ -114,8 +116,7 @@ export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssi
 
 export const ChatCompletionsToolMessageSchema = z.object({
   role: z.literal("tool"),
-  // FUTURE: this should also support arrays of TextContentParts
-  content: z.string(),
+  content: z.union([z.string(), z.array(ChatCompletionsContentPartTextSchema)]),
   tool_call_id: z.string(),
 });
 export type ChatCompletionsToolMessage = z.infer<typeof ChatCompletionsToolMessageSchema>;
@@ -140,7 +141,7 @@ export const ChatCompletionsToolSchema = z.object({
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
 
 export const ChatCompletionsToolChoiceSchema = z.union([
-  z.enum(["none", "auto", "required"]),
+  z.enum(["none", "auto", "required", "validated"]),
   // FUTURE: missing AllowedTools and CustomToolChoice
   z.object({
     type: z.literal("function"),

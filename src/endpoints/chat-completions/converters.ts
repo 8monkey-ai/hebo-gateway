@@ -13,6 +13,7 @@ import type {
   LanguageModelUsage,
   TextStreamPart,
   ReasoningOutput,
+  JSONValue,
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
@@ -44,6 +45,7 @@ import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningDetail,
   ChatCompletionsResponseFormat,
+  ChatCompletionsContentPartText,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -198,6 +200,21 @@ export function fromChatCompletionsAssistantMessage(
     }
   }
 
+  if (content !== undefined && content !== null) {
+    const inputContent =
+      typeof content === "string"
+        ? ([{ type: "text", text: content }] as ChatCompletionsContentPartText[])
+        : content;
+    for (const part of inputContent) {
+      if (part.type === "text") {
+        parts.push({
+          type: "text",
+          text: part.text,
+        });
+      }
+    }
+  }
+
   if (tool_calls?.length) {
     for (const tc of tool_calls) {
       // eslint-disable-next-line no-shadow
@@ -206,18 +223,13 @@ export function fromChatCompletionsAssistantMessage(
         type: "tool-call",
         toolCallId: id,
         toolName: fn.name,
-        input: parseToolOutput(fn.arguments).value,
+        input: parseJsonOrText(fn.arguments).value,
       };
       if (extra_content) {
         out.providerOptions = extra_content as SharedV3ProviderOptions;
       }
       parts.push(out);
     }
-  } else if (content !== undefined && content !== null) {
-    parts.push({
-      type: "text",
-      text: content,
-    });
   }
 
   const out: AssistantModelMessage = {
@@ -248,7 +260,7 @@ export function fromChatCompletionsToolResultMessage(
       type: "tool-result",
       toolCallId: tc.id,
       toolName: tc.function.name,
-      output: parseToolOutput(toolMsg.content),
+      output: parseToolResult(toolMsg.content),
     });
   }
 
@@ -325,17 +337,39 @@ export const convertToToolChoice = (
     return toolChoice;
   }
 
+  // FUTURE: this is right now google specific, which is not supported by AI SDK, until then, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+  if (toolChoice === "validated") {
+    return "auto";
+  }
+
   return {
     type: "tool",
     toolName: toolChoice.function.name,
   };
 };
 
-function parseToolOutput(content: string) {
+function parseToolResult(
+  content: string | ChatCompletionsContentPartText[],
+): ToolResultPart["output"] {
+  if (Array.isArray(content)) {
+    return {
+      type: "content",
+      value: content.map((part) => ({
+        type: "text",
+        text: part.text,
+      })),
+    };
+  }
+  return parseJsonOrText(content);
+}
+
+function parseJsonOrText(
+  content: string,
+): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
   try {
-    return { type: "json" as const, value: JSON.parse(content) };
+    return { type: "json", value: JSON.parse(content) };
   } catch {
-    return { type: "text" as const, value: content };
+    return { type: "text", value: content };
   }
 }
 
@@ -393,8 +427,6 @@ export function toChatCompletions(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
 ): ChatCompletions {
-  const finish_reason = toChatCompletionsFinishReason(result.finishReason);
-
   return {
     id: "chatcmpl-" + crypto.randomUUID(),
     object: "chat.completion",
@@ -404,7 +436,7 @@ export function toChatCompletions(
       {
         index: 0,
         message: toChatCompletionsAssistantMessage(result),
-        finish_reason,
+        finish_reason: toChatCompletionsFinishReason(result.finishReason),
       } satisfies ChatCompletionsChoice,
     ],
     usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
