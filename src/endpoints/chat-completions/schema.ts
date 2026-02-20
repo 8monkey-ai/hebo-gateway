@@ -26,8 +26,21 @@ export const ChatCompletionsContentPartAudioSchema = z.object({
   type: z.literal("input_audio"),
   input_audio: z.object({
     data: z.string(),
-    // only wav and mp3 are official, the rest is what Gemini supports
-    format: z.enum(["wav", "mp3", "aiff", "aac", "ogg", "flac"]),
+    // only wav and mp3 are official by OpenAI, rest is taken from Gemini support:
+    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/audio-understanding
+    format: z.enum([
+      "x-aac",
+      "flac",
+      "mp3",
+      "m4a",
+      "mpeg",
+      "mpga",
+      "mp4",
+      "ogg",
+      "pcm",
+      "wav",
+      "webm",
+    ]),
   }),
 });
 
