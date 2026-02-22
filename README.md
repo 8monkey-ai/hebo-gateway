@@ -660,9 +660,9 @@ const gw = gateway({
   // ...
   telemetry: {
     enabled: true,
-    tracer = new BasicTracerProvider({
+    tracer: new BasicTracerProvider({
       spanProcessors: [new LangfuseSpanProcessor()],
-    }).getTracer("hebo");,
+    }).getTracer("hebo"),
   },
 });
 ```
