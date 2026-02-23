@@ -350,12 +350,8 @@ export const convertToToolChoiceOptions = (
   }
 
   if (toolChoice.type === "allowed_tools") {
-    const mode: Extract<
-      ChatCompletionsToolChoice,
-      { type: "allowed_tools" }
-    >["allowed_tools"]["mode"] = toolChoice.allowed_tools.mode;
     return {
-      toolChoice: mode,
+      toolChoice: toolChoice.allowed_tools.mode,
       activeTools: toolChoice.allowed_tools.tools.map((toolRef) => toolRef.function.name),
     };
   }
