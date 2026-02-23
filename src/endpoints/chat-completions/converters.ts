@@ -743,8 +743,8 @@ function normalizeToolName(name: string): string {
   for (let i = 0; i < name.length; i++) {
     if (out.length === 128) break;
 
-    // eslint-ignore-next-line unicorn/prefer-code-point
-    const c = name.codePointAt(i);
+    // eslint-disable-next-line unicorn/prefer-code-point
+    const c = name.charCodeAt(i);
 
     if (
       (c >= 48 && c <= 57) ||
