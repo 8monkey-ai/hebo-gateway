@@ -47,6 +47,27 @@ test("bedrockGptReasoningMiddleware > should map reasoningEffort into reasoningC
   });
 });
 
+test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningEffort: "medium",
+      },
+    },
+  };
+
+  const result = await bedrockGptReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+  });
+
+  expect(result.providerOptions?.bedrock).toEqual({
+    reasoningEffort: "medium",
+  });
+});
+
 test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoningConfig", async () => {
   const params = {
     prompt: [],
