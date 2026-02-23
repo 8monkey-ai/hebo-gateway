@@ -151,7 +151,7 @@ const ChatCompletionsAllowedFunctionToolChoiceSchema = z.object({
   type: z.literal("allowed_tools"),
   allowed_tools: z.object({
     mode: z.enum(["auto", "required"]),
-    tools: z.array(ChatCompletionsNamedFunctionToolChoiceSchema),
+    tools: z.array(ChatCompletionsNamedFunctionToolChoiceSchema).nonempty(),
   }),
 });
 
