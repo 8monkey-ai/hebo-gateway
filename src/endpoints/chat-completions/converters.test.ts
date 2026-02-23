@@ -491,5 +491,27 @@ describe("Chat Completions Converters", () => {
         '{"":{},"city":"San Francisco","nested":{"":{},"country":"US"}}',
       );
     });
+
+    test("should normalize invalid tool names", () => {
+      const call = toChatCompletionsToolCall("call_1", "bad tool name!@", {});
+      expect(call.function.name).toBe("bad_tool_name__");
+    });
+
+    test("should truncate normalized tool names to 128 chars", () => {
+      const call = toChatCompletionsToolCall("call_1", "a".repeat(80), {});
+      expect(call.function.name).toHaveLength(80);
+      expect(call.function.name).toBe("a".repeat(80));
+    });
+
+    test("should truncate tool names longer than 128 chars", () => {
+      const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
+      expect(call.function.name).toHaveLength(128);
+      expect(call.function.name).toBe("a".repeat(128));
+    });
+
+    test("should allow empty tool names", () => {
+      const call = toChatCompletionsToolCall("call_1", "", {});
+      expect(call.function.name).toBe("");
+    });
   });
 });

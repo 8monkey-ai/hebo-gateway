@@ -723,7 +723,7 @@ export function toChatCompletionsToolCall(
     id,
     type: "function",
     function: {
-      name,
+      name: normalizeToolName(name),
       arguments: typeof args === "string" ? args : JSON.stringify(stripEmptyKeys(args)),
     },
   };
@@ -732,6 +732,30 @@ export function toChatCompletionsToolCall(
     out.extra_content = providerMetadata;
   }
 
+  return out;
+}
+
+function normalizeToolName(name: string): string {
+  // some models hallucinate invalid characters
+  // normalize to valid characters [^A-Za-z0-9_-] (non regex for perf)
+  // https://modelcontextprotocol.io/specification/draft/server/tools#tool-names
+  let out = "";
+  for (let i = 0; i < name.length; i++) {
+    if (out.length === 128) break;
+    const c = name.codePointAt(i);
+
+    if (
+      (c >= 48 && c <= 57) ||
+      (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122) ||
+      c === 95 ||
+      c === 45
+    ) {
+      out += name[i];
+    } else {
+      out += "_";
+    }
+  }
   return out;
 }
 
