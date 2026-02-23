@@ -1,5 +1,6 @@
 import { isLogger, logger, setLoggerInstance } from "./logger";
 import { createDefaultLogger } from "./logger/default";
+import { installAiSdkWarningLogger } from "./telemetry/ai-sdk";
 import {
   kParsed,
   type GatewayConfig,
@@ -79,6 +80,8 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
           gen_ai: "off",
           hebo: "off",
         };
+
+  installAiSdkWarningLogger(telemetrySignals.gen_ai);
 
   // Return parsed config.
   return {
