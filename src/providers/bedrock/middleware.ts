@@ -6,7 +6,7 @@ export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
-    if (!model.modelId.startsWith("gpt")) return params;
+    if (!model.modelId.includes("gpt")) return params;
 
     const bedrock = params.providerOptions?.["bedrock"];
     if (!bedrock || typeof bedrock !== "object") return params;
