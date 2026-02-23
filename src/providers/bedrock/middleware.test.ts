@@ -2,19 +2,73 @@ import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { bedrockAnthropicReasoningMiddleware } from "./middleware";
+import { bedrockClaudeReasoningMiddleware, bedrockGptReasoningMiddleware } from "./middleware";
 
-test("bedrockAnthropicReasoningMiddleware > matching provider", () => {
+test("bedrock middlewares > matching provider resolves GPT middleware", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "openai/gpt-oss-20b",
+    providerId: "amazon-bedrock",
+  });
+
+  expect(middleware).toContain(bedrockGptReasoningMiddleware);
+});
+
+test("bedrock middlewares > matching provider resolves Claude middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
     modelId: "anthropic/claude-opus-4.6",
     providerId: "amazon-bedrock",
   });
 
-  expect(middleware).toContain(bedrockAnthropicReasoningMiddleware);
+  expect(middleware).toContain(bedrockClaudeReasoningMiddleware);
 });
 
-test("bedrockAnthropicReasoningMiddleware > should map thinking/effort into reasoningConfig", async () => {
+test("bedrockGptReasoningMiddleware > should map reasoningEffort into reasoningConfig", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningEffort: "high",
+      },
+    },
+  };
+
+  const result = await bedrockGptReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+  });
+
+  expect(result.providerOptions?.bedrock).toEqual({
+    reasoningConfig: {
+      maxReasoningEffort: "high",
+    },
+  });
+});
+
+test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningEffort: "medium",
+      },
+    },
+  };
+
+  const result = await bedrockGptReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+  });
+
+  expect(result.providerOptions?.bedrock).toEqual({
+    reasoningEffort: "medium",
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoningConfig", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -28,7 +82,7 @@ test("bedrockAnthropicReasoningMiddleware > should map thinking/effort into reas
     },
   };
 
-  const result = await bedrockAnthropicReasoningMiddleware.transformParams!({
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
@@ -43,7 +97,7 @@ test("bedrockAnthropicReasoningMiddleware > should map thinking/effort into reas
   });
 });
 
-test("bedrockAnthropicReasoningMiddleware > should skip non-anthropic models", async () => {
+test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -57,7 +111,7 @@ test("bedrockAnthropicReasoningMiddleware > should skip non-anthropic models", a
     },
   };
 
-  const result = await bedrockAnthropicReasoningMiddleware.transformParams!({
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),

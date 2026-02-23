@@ -2,7 +2,28 @@ import type { LanguageModelMiddleware } from "ai";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
-export const bedrockAnthropicReasoningMiddleware: LanguageModelMiddleware = {
+export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    if (!model.modelId.includes("gpt")) return params;
+
+    const bedrock = params.providerOptions?.["bedrock"];
+    if (!bedrock || typeof bedrock !== "object") return params;
+
+    const effort = bedrock["reasoningEffort"];
+    if (effort === undefined) return params;
+
+    const target = (bedrock["reasoningConfig"] ??= {}) as Record<string, unknown>;
+    target["maxReasoningEffort"] = effort;
+
+    delete bedrock["reasoningEffort"];
+
+    return params;
+  },
+};
+
+export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
@@ -11,13 +32,12 @@ export const bedrockAnthropicReasoningMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"];
     if (!bedrock || typeof bedrock !== "object") return params;
 
-    const bedrockOptions = bedrock as Record<string, unknown>;
-    const thinking = bedrockOptions["thinking"];
-    const effort = bedrockOptions["effort"];
+    const thinking = bedrock["thinking"];
+    const effort = bedrock["effort"];
 
     if (!thinking && effort === undefined) return params;
 
-    const target = (bedrockOptions["reasoningConfig"] ??= {}) as Record<string, unknown>;
+    const target = (bedrock["reasoningConfig"] ??= {}) as Record<string, unknown>;
 
     if (thinking && typeof thinking === "object") {
       const thinkingOptions = thinking as Record<string, unknown>;
@@ -31,13 +51,13 @@ export const bedrockAnthropicReasoningMiddleware: LanguageModelMiddleware = {
 
     if (effort !== undefined) target["maxReasoningEffort"] = effort;
 
-    delete bedrockOptions["thinking"];
-    delete bedrockOptions["effort"];
+    delete bedrock["thinking"];
+    delete bedrock["effort"];
 
     return params;
   },
 };
 
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
-  language: [bedrockAnthropicReasoningMiddleware],
+  language: [bedrockGptReasoningMiddleware, bedrockClaudeReasoningMiddleware],
 });
