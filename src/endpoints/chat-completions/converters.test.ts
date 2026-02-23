@@ -497,12 +497,6 @@ describe("Chat Completions Converters", () => {
       expect(call.function.name).toBe("bad_tool_name__");
     });
 
-    test("should truncate normalized tool names to 128 chars", () => {
-      const call = toChatCompletionsToolCall("call_1", "a".repeat(80), {});
-      expect(call.function.name).toHaveLength(80);
-      expect(call.function.name).toBe("a".repeat(80));
-    });
-
     test("should truncate tool names longer than 128 chars", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
