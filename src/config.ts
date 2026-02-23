@@ -29,8 +29,6 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     );
   }
 
-  installAiSdkWarningLogger(config.telemetry?.signals?.gen_ai);
-
   // Strip providers that are not configured.
   for (const id in providers) {
     const provider = providers[id];
@@ -82,6 +80,8 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
           gen_ai: "off",
           hebo: "off",
         };
+
+  installAiSdkWarningLogger(telemetrySignals.gen_ai);
 
   // Return parsed config.
   return {
