@@ -56,6 +56,7 @@ export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
+  activeTools?: Array<keyof ToolSet>;
   output?: Output.Output;
   temperature?: number;
   maxOutputTokens?: number;
@@ -90,10 +91,13 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
 
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
 
+  const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
+
   return {
     messages: convertToModelMessages(messages),
     tools: convertToToolSet(tools),
-    toolChoice: convertToToolChoice(tool_choice),
+    toolChoice,
+    activeTools,
     output: convertToOutput(response_format),
     temperature,
     maxOutputTokens: max_completion_tokens ?? max_tokens,
@@ -326,25 +330,41 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
   return toolSet;
 };
 
-export const convertToToolChoice = (
+export const convertToToolChoiceOptions = (
   toolChoice: ChatCompletionsToolChoice | undefined,
-): ToolChoice<ToolSet> | undefined => {
+): {
+  toolChoice?: ToolChoice<ToolSet>;
+  activeTools?: Array<keyof ToolSet>;
+} => {
   if (!toolChoice) {
-    return undefined;
+    return {};
   }
 
   if (toolChoice === "none" || toolChoice === "auto" || toolChoice === "required") {
-    return toolChoice;
+    return { toolChoice };
   }
 
   // FUTURE: this is right now google specific, which is not supported by AI SDK, until then, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
   if (toolChoice === "validated") {
-    return "auto";
+    return { toolChoice: "auto" };
+  }
+
+  if (toolChoice.type === "allowed_tools") {
+    const mode: Extract<
+      ChatCompletionsToolChoice,
+      { type: "allowed_tools" }
+    >["allowed_tools"]["mode"] = toolChoice.allowed_tools.mode;
+    return {
+      toolChoice: mode,
+      activeTools: toolChoice.allowed_tools.tools.map((toolRef) => toolRef.function.name),
+    };
   }
 
   return {
-    type: "tool",
-    toolName: toolChoice.function.name,
+    toolChoice: {
+      type: "tool",
+      toolName: toolChoice.function.name,
+    },
   };
 };
 

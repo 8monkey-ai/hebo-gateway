@@ -140,15 +140,26 @@ export const ChatCompletionsToolSchema = z.object({
 });
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
 
+const ChatCompletionsNamedFunctionToolChoiceSchema = z.object({
+  type: z.literal("function"),
+  function: z.object({
+    name: z.string(),
+  }),
+});
+
+const ChatCompletionsAllowedFunctionToolChoiceSchema = z.object({
+  type: z.literal("allowed_tools"),
+  allowed_tools: z.object({
+    mode: z.enum(["auto", "required"]),
+    tools: z.array(ChatCompletionsNamedFunctionToolChoiceSchema),
+  }),
+});
+
 export const ChatCompletionsToolChoiceSchema = z.union([
   z.enum(["none", "auto", "required", "validated"]),
-  // FUTURE: missing AllowedTools and CustomToolChoice
-  z.object({
-    type: z.literal("function"),
-    function: z.object({
-      name: z.string(),
-    }),
-  }),
+  ChatCompletionsNamedFunctionToolChoiceSchema,
+  ChatCompletionsAllowedFunctionToolChoiceSchema,
+  // FUTURE: Missing CustomTool
 ]);
 export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
 
@@ -193,12 +204,7 @@ export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsRespon
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
-  tools: z
-    .array(
-      // FUTURE: Missing CustomTool
-      ChatCompletionsToolSchema,
-    )
-    .optional(),
+  tools: z.array(ChatCompletionsToolSchema).optional(),
   tool_choice: ChatCompletionsToolChoiceSchema.optional(),
   temperature: z.number().min(0).max(2).optional(),
   max_tokens: z.int().nonnegative().optional(),
