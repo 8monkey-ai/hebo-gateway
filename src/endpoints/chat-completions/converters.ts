@@ -742,6 +742,7 @@ function normalizeToolName(name: string): string {
   let out = "";
   for (let i = 0; i < name.length; i++) {
     if (out.length === 128) break;
+
     const c = name.codePointAt(i);
 
     if (
