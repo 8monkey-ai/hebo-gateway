@@ -32,13 +32,12 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"];
     if (!bedrock || typeof bedrock !== "object") return params;
 
-    const bedrockOptions = bedrock as Record<string, unknown>;
-    const thinking = bedrockOptions["thinking"];
-    const effort = bedrockOptions["effort"];
+    const thinking = bedrock["thinking"];
+    const effort = bedrock["effort"];
 
     if (!thinking && effort === undefined) return params;
 
-    const target = (bedrockOptions["reasoningConfig"] ??= {}) as Record<string, unknown>;
+    const target = (bedrock["reasoningConfig"] ??= {}) as Record<string, unknown>;
 
     if (thinking && typeof thinking === "object") {
       const thinkingOptions = thinking as Record<string, unknown>;
@@ -52,8 +51,8 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
 
     if (effort !== undefined) target["maxReasoningEffort"] = effort;
 
-    delete bedrockOptions["thinking"];
-    delete bedrockOptions["effort"];
+    delete bedrock["thinking"];
+    delete bedrock["effort"];
 
     return params;
   },
