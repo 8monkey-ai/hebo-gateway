@@ -157,8 +157,10 @@ const ChatCompletionsAllowedFunctionToolChoiceSchema = z.object({
 
 export const ChatCompletionsToolChoiceSchema = z.union([
   z.enum(["none", "auto", "required", "validated"]),
-  ChatCompletionsNamedFunctionToolChoiceSchema,
-  ChatCompletionsAllowedFunctionToolChoiceSchema,
+  z.discriminatedUnion("type", [
+    ChatCompletionsNamedFunctionToolChoiceSchema,
+    ChatCompletionsAllowedFunctionToolChoiceSchema,
+  ]),
   // FUTURE: Missing CustomTool
 ]);
 export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
