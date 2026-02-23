@@ -15,7 +15,6 @@
     "anchor-has-content": "off",
     "max-dependencies": "off",
     "no-inline-comments": "off",
-    "unicorn/prefer-code-point": "warn"
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "e2e/**"]
 }
