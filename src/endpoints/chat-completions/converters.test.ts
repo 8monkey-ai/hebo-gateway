@@ -7,6 +7,7 @@ import type { ChatCompletionsToolMessage } from "./schema";
 import {
   convertToTextCallOptions,
   toChatCompletionsAssistantMessage,
+  toChatCompletionsToolCall,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
@@ -454,6 +455,41 @@ describe("Chat Completions Converters", () => {
         tool_choice: "validated",
       });
       expect(result.toolChoice).toBe("auto");
+    });
+  });
+
+  describe("toChatCompletionsToolCall", () => {
+    test("should filter top-level empty-string keys from object arguments", () => {
+      const call = toChatCompletionsToolCall("call_1", "my_tool", {
+        "": {},
+        city: "San Francisco",
+        nested: {
+          "": {},
+          country: "US",
+        },
+      });
+
+      expect(call.function.arguments).toBe(
+        JSON.stringify({
+          city: "San Francisco",
+          nested: {
+            "": {},
+            country: "US",
+          },
+        }),
+      );
+    });
+
+    test("should pass through JSON string arguments unchanged", () => {
+      const call = toChatCompletionsToolCall(
+        "call_1",
+        "my_tool",
+        '{"":{},"city":"San Francisco","nested":{"":{},"country":"US"}}',
+      );
+
+      expect(call.function.arguments).toBe(
+        '{"":{},"city":"San Francisco","nested":{"":{},"country":"US"}}',
+      );
     });
   });
 });

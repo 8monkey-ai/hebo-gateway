@@ -321,6 +321,7 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
     toolSet[t.function.name] = tool({
       description: t.function.description,
       inputSchema: jsonSchema(t.function.parameters),
+      strict: t.function.strict,
     });
   }
   return toolSet;
@@ -723,7 +724,7 @@ export function toChatCompletionsToolCall(
     type: "function",
     function: {
       name,
-      arguments: typeof args === "string" ? args : JSON.stringify(args),
+      arguments: typeof args === "string" ? args : JSON.stringify(stripEmptyKeys(args)),
     },
   };
 
@@ -732,6 +733,13 @@ export function toChatCompletionsToolCall(
   }
 
   return out;
+}
+
+function stripEmptyKeys(obj: unknown) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  // some models hallucinate empty parameters
+  delete (obj as Record<string, unknown>)[""];
+  return obj;
 }
 
 export const toChatCompletionsFinishReason = (
