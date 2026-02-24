@@ -321,6 +321,7 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
     toolSet[t.function.name] = tool({
       description: t.function.description,
       inputSchema: jsonSchema(t.function.parameters),
+      strict: t.function.strict,
     });
   }
   return toolSet;
@@ -617,9 +618,11 @@ export const toChatCompletionsAssistantMessage = (
     if (part.type === "text") {
       if (message.content === null) {
         message.content = part.text;
-        if (part.providerMetadata) {
-          message.extra_content = part.providerMetadata;
-        }
+      } else {
+        message.content += part.text;
+      }
+      if (part.providerMetadata) {
+        message.extra_content = part.providerMetadata;
       }
     } else if (part.type === "reasoning") {
       reasoningDetails.push(
@@ -644,6 +647,11 @@ export const toChatCompletionsAssistantMessage = (
 
   if (reasoningDetails.length > 0) {
     message.reasoning_details = reasoningDetails;
+  }
+
+  if (!message.content && !message.tool_calls) {
+    // some models return just reasoning without tool calls or content
+    message.content = "";
   }
 
   return message;
@@ -722,8 +730,8 @@ export function toChatCompletionsToolCall(
     id,
     type: "function",
     function: {
-      name,
-      arguments: typeof args === "string" ? args : JSON.stringify(args),
+      name: normalizeToolName(name),
+      arguments: typeof args === "string" ? args : JSON.stringify(stripEmptyKeys(args)),
     },
   };
 
@@ -732,6 +740,40 @@ export function toChatCompletionsToolCall(
   }
 
   return out;
+}
+
+function normalizeToolName(name: string): string {
+  // some models hallucinate invalid characters
+  // normalize to valid characters [^A-Za-z0-9_-.] (non regex for perf)
+  // https://modelcontextprotocol.io/specification/draft/server/tools#tool-names
+  let out = "";
+  for (let i = 0; i < name.length; i++) {
+    if (out.length === 128) break;
+
+    // eslint-disable-next-line unicorn/prefer-code-point
+    const c = name.charCodeAt(i);
+
+    if (
+      (c >= 48 && c <= 57) ||
+      (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122) ||
+      c === 95 ||
+      c === 45 ||
+      c === 46
+    ) {
+      out += name[i];
+    } else {
+      out += "_";
+    }
+  }
+  return out;
+}
+
+function stripEmptyKeys(obj: unknown) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  // some models hallucinate empty parameters
+  delete (obj as Record<string, unknown>)[""];
+  return obj;
 }
 
 export const toChatCompletionsFinishReason = (

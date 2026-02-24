@@ -135,7 +135,7 @@ export const ChatCompletionsToolSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     parameters: z.record(z.string(), z.unknown()),
-    // Missing strict parameter
+    strict: z.boolean().optional(),
   }),
 });
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
