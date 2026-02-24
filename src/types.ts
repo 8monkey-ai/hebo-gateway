@@ -56,7 +56,7 @@ export type GatewayContext = {
   /**
    * Operation type.
    */
-  operation?: "chat" | "embeddings" | "models";
+  operation?: "chat" | "embeddings" | "models" | "conversations";
   /**
    * Resolved provider instance.
    */

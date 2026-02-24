@@ -1,8 +1,16 @@
-import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
+import type { Endpoint, GatewayConfig, GatewayContext, TelemetrySignalLevel } from "../../types";
 
 import { parseConfig } from "../../config";
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
+import { logger } from "../../logger";
+import { recordRequestDuration } from "../../telemetry/gen-ai";
+import { addSpanEvent, setSpanAttributes, withSpan } from "../../telemetry/span";
+import {
+  getConversationAttributes,
+  getConversationGeneralAttributes,
+  getItemAttributes,
+} from "./otel";
 import {
   ConversationCreateBodySchema,
   ConversationItemsAddBodySchema,
@@ -11,8 +19,16 @@ import {
 
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
+  const telemetrySignals = parsedConfig.telemetry?.signals;
 
   const handler = async (ctx: GatewayContext) => {
+    const start = performance.now();
+    ctx.operation = "conversations";
+    addSpanEvent("hebo.handler.started");
+
+    const signalLevel = telemetrySignals?.gen_ai;
+    setSpanAttributes(getConversationGeneralAttributes(ctx, signalLevel));
+
     const url = new URL(ctx.request.url);
     const segments = url.pathname.split("/").filter(Boolean);
 
@@ -22,61 +38,78 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const len = segments.length;
 
+    let result;
+
     // POST /conversations (Create)
     if (len === 1) {
       if (ctx.request.method === "POST") {
-        return await create(ctx);
+        result = await create(ctx, signalLevel);
+      } else {
+        throw new GatewayError("Method Not Allowed", 405);
       }
-      throw new GatewayError("Method Not Allowed", 405);
     }
 
     // GET/POST/DELETE /conversations/{id} (Conversation Instance)
-    if (len === 2) {
-      const conversationId = segments[1];
+    else if (len === 2) {
+      const conversationId = segments[1] as string;
+      logger.debug(`[conversations] resolved conversation ID: ${conversationId}`);
+      setSpanAttributes(getConversationAttributes(conversationId, signalLevel));
+
       if (ctx.request.method === "GET") {
-        return await retrieve(ctx, conversationId);
+        result = await retrieve(ctx, conversationId);
+      } else if (ctx.request.method === "POST") {
+        result = await update(ctx, conversationId);
+      } else if (ctx.request.method === "DELETE") {
+        result = await remove(ctx, conversationId);
+      } else {
+        throw new GatewayError("Method Not Allowed", 405);
       }
-      if (ctx.request.method === "POST") {
-        return await update(ctx, conversationId);
-      }
-      if (ctx.request.method === "DELETE") {
-        return await remove(ctx, conversationId);
-      }
-      throw new GatewayError("Method Not Allowed", 405);
     }
 
     // GET/POST /conversations/{id}/items
-    if (len === 3 && segments[2] === "items") {
-      const conversationId = segments[1];
+    else if (len === 3 && segments[2] === "items") {
+      const conversationId = segments[1] as string;
+      logger.debug(`[conversations] list/add items for conversation ID: ${conversationId}`);
+      setSpanAttributes(getConversationAttributes(conversationId, signalLevel));
+
       if (ctx.request.method === "GET") {
-        return await listItems(ctx, conversationId, url.searchParams);
+        result = await listItems(ctx, conversationId, url.searchParams);
+      } else if (ctx.request.method === "POST") {
+        result = await addItems(ctx, conversationId);
+      } else {
+        throw new GatewayError("Method Not Allowed", 405);
       }
-      if (ctx.request.method === "POST") {
-        return await addItems(ctx, conversationId);
-      }
-      throw new GatewayError("Method Not Allowed", 405);
     }
 
     // GET/DELETE /conversations/{id}/items/{item_id}
-    if (len === 4 && segments[2] === "items") {
-      const conversationId = segments[1];
-      const itemId = segments[3];
+    else if (len === 4 && segments[2] === "items") {
+      const conversationId = segments[1] as string;
+      const itemId = segments[3] as string;
+      logger.debug(
+        `[conversations] item access: conversation ID=${conversationId}, item ID=${itemId}`,
+      );
+      setSpanAttributes(getConversationAttributes(conversationId, signalLevel));
+      setSpanAttributes(getItemAttributes(itemId, signalLevel));
+
       if (ctx.request.method === "GET") {
-        return await retrieveItem(ctx, conversationId, itemId);
+        result = await retrieveItem(ctx, conversationId, itemId);
+      } else if (ctx.request.method === "DELETE") {
+        result = await deleteItem(ctx, conversationId, itemId);
+      } else {
+        throw new GatewayError("Method Not Allowed", 405);
       }
-      if (ctx.request.method === "DELETE") {
-        return await deleteItem(ctx, conversationId, itemId);
-      }
-      throw new GatewayError("Method Not Allowed", 405);
+    } else {
+      throw new GatewayError("Not Found", 404);
     }
 
-    throw new GatewayError("Not Found", 404);
+    recordRequestDuration(start, getConversationGeneralAttributes(ctx, signalLevel), signalLevel);
+    return result;
   };
 
   return { handler: winterCgHandler(handler, parsedConfig) };
 };
 
-async function create(ctx: GatewayContext) {
+async function create(ctx: GatewayContext, signalLevel?: TelemetrySignalLevel) {
   let body = {};
   try {
     if (
@@ -88,17 +121,29 @@ async function create(ctx: GatewayContext) {
   } catch {
     throw new GatewayError("Invalid JSON", 400);
   }
+  addSpanEvent("hebo.request.deserialized");
 
   const parsed = ConversationCreateBodySchema.safeParse(body);
   if (!parsed.success) {
     throw new GatewayError("Invalid Request", 400, undefined, parsed.error);
   }
+  addSpanEvent("hebo.request.parsed");
 
-  return ctx.storage.createConversation(parsed.data);
+  const conversation = await withSpan("storage.createConversation", () =>
+    ctx.storage.createConversation(parsed.data),
+  );
+  logger.trace({ requestId: ctx.requestId, conversation }, "[storage] createConversation result");
+
+  setSpanAttributes(getConversationAttributes(conversation.id, signalLevel));
+  return conversation;
 }
 
 async function retrieve(ctx: GatewayContext, conversationId: string) {
-  const conversation = await ctx.storage.getConversation(conversationId);
+  const conversation = await withSpan("storage.getConversation", () =>
+    ctx.storage.getConversation(conversationId),
+  );
+  logger.trace({ requestId: ctx.requestId, conversation }, "[storage] getConversation result");
+
   if (!conversation) {
     throw new GatewayError("Conversation not found", 404);
   }
@@ -112,17 +157,27 @@ async function update(ctx: GatewayContext, conversationId: string) {
   } catch {
     throw new GatewayError("Invalid JSON", 400);
   }
+  addSpanEvent("hebo.request.deserialized");
 
   const parsed = ConversationUpdateBodySchema.safeParse(body);
   if (!parsed.success) {
     throw new GatewayError("Invalid Request", 400, undefined, parsed.error);
   }
+  addSpanEvent("hebo.request.parsed");
 
-  return ctx.storage.updateConversation(conversationId, parsed.data);
+  const conversation = await withSpan("storage.updateConversation", () =>
+    ctx.storage.updateConversation(conversationId, parsed.data),
+  );
+  logger.trace({ requestId: ctx.requestId, conversation }, "[storage] updateConversation result");
+  return conversation;
 }
 
 async function remove(ctx: GatewayContext, conversationId: string) {
-  const result = await ctx.storage.deleteConversation(conversationId);
+  const result = await withSpan("storage.deleteConversation", () =>
+    ctx.storage.deleteConversation(conversationId),
+  );
+  logger.trace({ requestId: ctx.requestId, result }, "[storage] deleteConversation result");
+
   return {
     id: result.id,
     deleted: result.deleted,
@@ -131,7 +186,9 @@ async function remove(ctx: GatewayContext, conversationId: string) {
 }
 
 async function retrieveItem(ctx: GatewayContext, conversationId: string, itemId: string) {
-  const item = await ctx.storage.getItem(conversationId, itemId);
+  const item = await withSpan("storage.getItem", () => ctx.storage.getItem(conversationId, itemId));
+  logger.trace({ requestId: ctx.requestId, item }, "[storage] getItem result");
+
   if (!item) {
     throw new GatewayError("Item not found", 404);
   }
@@ -144,12 +201,14 @@ async function retrieveItem(ctx: GatewayContext, conversationId: string, itemId:
 }
 
 async function deleteItem(ctx: GatewayContext, conversationId: string, itemId: string) {
-  const conversation = await ctx.storage.getConversation(conversationId);
+  const conversation = await withSpan("storage.getConversation", () =>
+    ctx.storage.getConversation(conversationId),
+  );
   if (!conversation) {
     throw new GatewayError("Conversation not found", 404);
   }
 
-  await ctx.storage.deleteItem(conversationId, itemId);
+  await withSpan("storage.deleteItem", () => ctx.storage.deleteItem(conversationId, itemId));
   return conversation;
 }
 
@@ -165,11 +224,14 @@ async function listItems(
   const order = (searchParams.get("order") as "asc" | "desc") ?? undefined;
 
   // Fetch limit + 1 to determine if there's more
-  const items = await ctx.storage.listItems(conversationId, {
-    limit: requestedLimit + 1,
-    after,
-    order,
-  });
+  const items = await withSpan("storage.listItems", () =>
+    ctx.storage.listItems(conversationId, {
+      limit: requestedLimit + 1,
+      after,
+      order,
+    }),
+  );
+  logger.trace({ requestId: ctx.requestId, items }, "[storage] listItems result");
 
   const has_more = items.length > requestedLimit;
   const data = has_more ? items.slice(0, requestedLimit) : items;
@@ -195,13 +257,18 @@ async function addItems(ctx: GatewayContext, conversationId: string) {
   } catch {
     throw new GatewayError("Invalid JSON", 400);
   }
+  addSpanEvent("hebo.request.deserialized");
 
   const parsed = ConversationItemsAddBodySchema.safeParse(body);
   if (!parsed.success) {
     throw new GatewayError("Invalid Request", 400, undefined, parsed.error);
   }
+  addSpanEvent("hebo.request.parsed");
 
-  const items = await ctx.storage.addItems(conversationId, parsed.data.items);
+  const items = await withSpan("storage.addItems", () =>
+    ctx.storage.addItems(conversationId, parsed.data.items),
+  );
+  logger.trace({ requestId: ctx.requestId, items }, "[storage] addItems result");
 
   return {
     object: "list",
