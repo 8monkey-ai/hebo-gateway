@@ -11,6 +11,7 @@ import type { Model, ModelList } from "./endpoints/models";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
+import type { ConversationStorage } from "./storage/types";
 
 /**
  * Per-request context shared across handlers and hooks.
@@ -28,6 +29,10 @@ export type GatewayContext = {
    * Model catalog from config.
    */
   models: ModelCatalog;
+  /**
+   * Conversation storage backend.
+   */
+  storage: ConversationStorage;
   /**
    * Incoming request for the handler.
    */
@@ -182,6 +187,11 @@ export type GatewayConfig = {
    */
   logger?: Logger | LoggerConfig | null;
   /**
+   * Optional conversation storage backend.
+   * Defaults to an in-memory storage if not provided.
+   */
+  storage?: ConversationStorage;
+  /**
    * Optional AI SDK telemetry configuration.
    */
   telemetry?: {
@@ -210,7 +220,8 @@ export type GatewayConfig = {
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = GatewayConfig & {
+export type GatewayConfigParsed = Omit<GatewayConfig, "storage"> & {
+  storage: ConversationStorage;
   [kParsed]: true;
 };
 

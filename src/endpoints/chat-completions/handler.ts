@@ -73,8 +73,16 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
 
     // Resolve model + provider (hooks may override defaults).
-    let inputs, stream;
-    ({ model: ctx.modelId, stream, ...inputs } = ctx.body);
+    let conversationId, inputs, stream;
+    ({ model: ctx.modelId, stream, conversation_id: conversationId, ...inputs } = ctx.body);
+
+    if (conversationId) {
+      const history = await ctx.storage.listItems(conversationId);
+      const historyMessages = history.map((item) => item.message);
+
+      inputs.messages = [...historyMessages, ...inputs.messages];
+      await ctx.storage.addItems(conversationId, ctx.body.messages);
+    }
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
@@ -132,13 +140,18 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
         onError: () => {},
-        onFinish: (res) => {
+        onFinish: async (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
           addSpanEvent("hebo.result.transformed");
+
+          if (conversationId) {
+            const assistantMessage = streamResult.choices[0].message;
+            await ctx.storage.addItems(conversationId, [assistantMessage]);
+          }
 
           const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
           setSpanAttributes(genAiResponseAttrs);
@@ -181,6 +194,11 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     addSpanEvent("hebo.result.transformed");
+
+    if (conversationId) {
+      const assistantMessage = ctx.result.choices[0].message;
+      await ctx.storage.addItems(conversationId, [assistantMessage]);
+    }
 
     const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);
     setSpanAttributes(genAiResponseAttrs);
