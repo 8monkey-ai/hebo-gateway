@@ -456,6 +456,70 @@ describe("Chat Completions Converters", () => {
       });
       expect(result.toolChoice).toBe("auto");
     });
+
+    test("should map allowed_tools to activeTools and auto mode", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        tool_choice: {
+          type: "allowed_tools",
+          allowed_tools: {
+            mode: "auto",
+            tools: [
+              {
+                type: "function",
+                function: { name: "get_weather" },
+              },
+            ],
+          },
+        },
+      });
+
+      expect(result.toolChoice).toBe("auto");
+      expect(result.activeTools).toEqual(["get_weather"]);
+    });
+
+    test("should map allowed_tools required mode to required", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        tool_choice: {
+          type: "allowed_tools",
+          allowed_tools: {
+            mode: "required",
+            tools: [
+              {
+                type: "function",
+                function: { name: "get_weather" },
+              },
+            ],
+          },
+        },
+      });
+
+      expect(result.toolChoice).toBe("required");
+      expect(result.activeTools).toEqual(["get_weather"]);
+    });
+
+    test("should convert function tools into tool set entries", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "get_weather",
+              description: "Get weather",
+              parameters: {
+                type: "object",
+                properties: {},
+              },
+            },
+          },
+        ],
+      });
+
+      expect(result.tools).toBeDefined();
+      expect(Object.keys(result.tools!)).toEqual(["get_weather"]);
+    });
   });
 
   describe("toChatCompletionsToolCall", () => {
