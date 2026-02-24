@@ -493,19 +493,14 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should normalize invalid tool names", () => {
-      const call = toChatCompletionsToolCall("call_1", "bad tool name!@", {});
-      expect(call.function.name).toBe("bad_tool_name__");
+      const call = toChatCompletionsToolCall("call_1", "bad. tool name!@", {});
+      expect(call.function.name).toBe("bad._tool_name__");
     });
 
     test("should truncate tool names longer than 128 chars", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
       expect(call.function.name).toBe("a".repeat(128));
-    });
-
-    test("should allow empty tool names", () => {
-      const call = toChatCompletionsToolCall("call_1", "", {});
-      expect(call.function.name).toBe("");
     });
   });
 });

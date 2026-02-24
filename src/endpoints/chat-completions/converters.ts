@@ -618,9 +618,11 @@ export const toChatCompletionsAssistantMessage = (
     if (part.type === "text") {
       if (message.content === null) {
         message.content = part.text;
-        if (part.providerMetadata) {
-          message.extra_content = part.providerMetadata;
-        }
+      } else {
+        message.content += part.text;
+      }
+      if (part.providerMetadata) {
+        message.extra_content = part.providerMetadata;
       }
     } else if (part.type === "reasoning") {
       reasoningDetails.push(
@@ -645,6 +647,11 @@ export const toChatCompletionsAssistantMessage = (
 
   if (reasoningDetails.length > 0) {
     message.reasoning_details = reasoningDetails;
+  }
+
+  if (!message.content && !message.tool_calls) {
+    // some models return just reasoning without tool calls or content
+    message.content = "";
   }
 
   return message;
@@ -751,7 +758,8 @@ function normalizeToolName(name: string): string {
       (c >= 65 && c <= 90) ||
       (c >= 97 && c <= 122) ||
       c === 95 ||
-      c === 45
+      c === 45 ||
+      c === 46
     ) {
       out += name[i];
     } else {
