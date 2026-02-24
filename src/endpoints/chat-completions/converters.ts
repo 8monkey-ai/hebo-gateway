@@ -744,7 +744,7 @@ export function toChatCompletionsToolCall(
 
 function normalizeToolName(name: string): string {
   // some models hallucinate invalid characters
-  // normalize to valid characters [^A-Za-z0-9_-] (non regex for perf)
+  // normalize to valid characters [^A-Za-z0-9_-.] (non regex for perf)
   // https://modelcontextprotocol.io/specification/draft/server/tools#tool-names
   let out = "";
   for (let i = 0; i < name.length; i++) {
