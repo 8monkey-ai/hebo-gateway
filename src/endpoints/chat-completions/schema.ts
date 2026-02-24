@@ -226,7 +226,6 @@ export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 export const ChatCompletionsBodySchema = z.looseObject({
   model: z.string(),
   stream: z.boolean().optional(),
-  conversation_id: z.string().optional().meta({ extension: true }),
   ...ChatCompletionsInputsSchema.shape,
 });
 export type ChatCompletionsBody = z.infer<typeof ChatCompletionsBodySchema>;
