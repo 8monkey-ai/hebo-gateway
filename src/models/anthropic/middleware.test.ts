@@ -125,7 +125,7 @@ test("claudeReasoningMiddleware > should transform reasoning object to thinking 
       anthropic: {
         thinking: {
           type: "enabled",
-          budgetTokens: 32000,
+          budgetTokens: 2000,
         },
       },
       unknown: {},
@@ -412,6 +412,7 @@ test("claudeReasoningMiddleware > should map none effort to low for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 1024,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("low");
 });
@@ -518,6 +519,7 @@ test("claudeReasoningMiddleware > should map max effort to high for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 60800,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
@@ -543,6 +545,7 @@ test("claudeReasoningMiddleware > should map xhigh effort to high for Claude Son
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 60800,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
@@ -590,6 +593,7 @@ test("claudeReasoningMiddleware > should map xhigh effort for Claude Opus 4.5 wi
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 60800,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });

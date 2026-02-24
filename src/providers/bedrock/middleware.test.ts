@@ -85,7 +85,7 @@ test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoni
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result.providerOptions?.bedrock).toEqual({
@@ -123,5 +123,61 @@ test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async (
       budgetTokens: 4096,
     },
     effort: "high",
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for Claude 3.x", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "enabled",
+          budgetTokens: 4096,
+        },
+        effort: "high",
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-3.7" }),
+  });
+
+  expect(result.providerOptions?.bedrock).toEqual({
+    reasoningConfig: {
+      type: "enabled",
+      budgetTokens: 4096,
+    },
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for Claude 4.5", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "enabled",
+          budgetTokens: 4096,
+        },
+        effort: "high",
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.5" }),
+  });
+
+  expect(result.providerOptions?.bedrock).toEqual({
+    reasoningConfig: {
+      type: "enabled",
+      budgetTokens: 4096,
+    },
   });
 });
