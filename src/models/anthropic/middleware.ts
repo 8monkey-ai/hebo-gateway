@@ -1,6 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
 import type {
+  ChatCompletionsCacheControl,
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
@@ -123,6 +124,32 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
+// https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const cacheControl = unknown["cache_control"] as ChatCompletionsCacheControl | undefined;
+    const target = (params.providerOptions!["anthropic"] ??= {});
+
+    const anthropicCacheControl: { type: "ephemeral"; ttl?: "5m" | "1h" } = { type: "ephemeral" };
+    if (
+      cacheControl?.type === "ephemeral" &&
+      (cacheControl.ttl === "5m" || cacheControl.ttl === "1h")
+    ) {
+      anthropicCacheControl.ttl = cacheControl.ttl;
+    }
+    target["cacheControl"] = anthropicCacheControl;
+
+    delete unknown["cache_control"];
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForModel(["anthropic/claude-*3*7*", "anthropic/claude-*4*"], {
-  language: [claudeReasoningMiddleware],
+  language: [claudeReasoningMiddleware, claudePromptCachingMiddleware],
 });

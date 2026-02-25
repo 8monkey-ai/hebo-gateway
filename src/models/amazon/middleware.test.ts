@@ -3,7 +3,11 @@ import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware";
+import {
+  novaDimensionsMiddleware,
+  novaPromptCachingMiddleware,
+  novaReasoningMiddleware,
+} from "./middleware";
 
 test("nova middleware > matching patterns", () => {
   const languageMatching = ["amazon/nova-2-lite"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
@@ -18,6 +22,7 @@ test("nova middleware > matching patterns", () => {
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(novaReasoningMiddleware);
+    expect(middleware).toContain(novaPromptCachingMiddleware);
   }
 
   for (const id of languageNonMatching) {
@@ -42,6 +47,99 @@ test("nova middleware > matching patterns", () => {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).not.toContain(novaDimensionsMiddleware);
   }
+});
+
+test("novaPromptCachingMiddleware > should map message cache_control to cache_point", async () => {
+  const params = {
+    prompt: [
+      {
+        role: "system",
+        content: "You are helpful.",
+        providerOptions: {
+          unknown: {
+            cache_control: { type: "ephemeral", ttl: "1h" },
+          },
+        },
+      },
+    ],
+    providerOptions: {
+      unknown: {},
+    },
+  };
+
+  const result = await novaPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params: params as any,
+    model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+  });
+
+  expect((result.prompt[0] as any).providerOptions.unknown.cache_point).toEqual({
+    type: "default",
+    ttl: "1h",
+  });
+  expect((result.prompt[0] as any).providerOptions.unknown.cache_control).toBeUndefined();
+});
+
+test("novaPromptCachingMiddleware > should auto-add cache point when enabled", async () => {
+  const params = {
+    prompt: [
+      {
+        role: "system",
+        content: "Large reusable policy prompt.",
+      },
+      {
+        role: "user",
+        content: [{ type: "text", text: "Summarize this." }],
+      },
+    ],
+    providerOptions: {
+      unknown: {
+        cache_control: { type: "ephemeral", ttl: "5m" },
+      },
+    },
+  };
+
+  const result = await novaPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params: params as any,
+    model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+  });
+
+  expect((result.prompt[0] as any).providerOptions.unknown.cache_point).toEqual({
+    type: "default",
+    ttl: "5m",
+  });
+});
+
+test("novaPromptCachingMiddleware > should use normalized cache_control over non-native fields", async () => {
+  const params = {
+    prompt: [
+      {
+        role: "system",
+        content: "Reusable system context",
+      },
+    ],
+    providerOptions: {
+      unknown: {
+        cache_control: { type: "ephemeral", ttl: "1h" },
+        prompt_cache_retention: "24h",
+        prompt_cache_key: "tenant-key",
+        cached_content: "cachedContents/abc",
+      },
+    },
+  };
+
+  const result = await novaPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params: params as any,
+    model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+  });
+
+  expect((result.prompt[0] as any).providerOptions.unknown.cache_point).toEqual({
+    type: "default",
+    ttl: "1h",
+  });
+  expect(result.providerOptions.unknown).toEqual({});
 });
 
 test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", async () => {

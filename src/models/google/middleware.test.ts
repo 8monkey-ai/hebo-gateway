@@ -4,7 +4,11 @@ import { expect, test } from "bun:test";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { geminiDimensionsMiddleware, geminiReasoningMiddleware } from "./middleware";
+import {
+  geminiDimensionsMiddleware,
+  geminiPromptCachingMiddleware,
+  geminiReasoningMiddleware,
+} from "./middleware";
 
 test("geminiReasoningMiddleware > matching patterns", () => {
   const matching = [
@@ -21,12 +25,61 @@ test("geminiReasoningMiddleware > matching patterns", () => {
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(geminiReasoningMiddleware);
+    expect(middleware).toContain(geminiPromptCachingMiddleware);
   }
 
   for (const id of nonMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(geminiReasoningMiddleware);
   }
+});
+
+test("geminiPromptCachingMiddleware > should map cached_content", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        cached_content: "cachedContents/abc123",
+      },
+    },
+  };
+
+  const result = await geminiPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    google: {
+      cachedContent: "cachedContents/abc123",
+    },
+    unknown: {},
+  });
+});
+
+test("geminiPromptCachingMiddleware > should map normalized cached_content", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        cached_content: "cachedContents/reusable",
+      },
+    },
+  };
+
+  const result = await geminiPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    google: {
+      cachedContent: "cachedContents/reusable",
+    },
+    unknown: {},
+  });
 });
 
 test("geminiDimensionsMiddleware > matching patterns", () => {

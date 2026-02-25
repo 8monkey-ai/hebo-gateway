@@ -197,6 +197,7 @@ describe("Chat Completions Handler", () => {
         },
         prompt_tokens_details: {
           cached_tokens: 20,
+          cache_write_tokens: 0,
         },
       },
       provider_metadata: { provider: { key: "value" } },
@@ -284,6 +285,7 @@ describe("Chat Completions Handler", () => {
         },
         prompt_tokens_details: {
           cached_tokens: 20,
+          cache_write_tokens: 0,
         },
       },
       provider_metadata: { provider: { key: "value" } },

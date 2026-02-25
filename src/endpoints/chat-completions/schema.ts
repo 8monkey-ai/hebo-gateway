@@ -1,8 +1,16 @@
 import * as z from "zod";
 
+export const ChatCompletionsCacheControlSchema = z.object({
+  type: z.string(),
+  ttl: z.string().optional(),
+});
+export type ChatCompletionsCacheControl = z.infer<typeof ChatCompletionsCacheControlSchema>;
+
 export const ChatCompletionsContentPartTextSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
+  // Extension origin: Anthropic/OpenRouter/Vercel
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsContentPartText = z.infer<typeof ChatCompletionsContentPartTextSchema>;
 
@@ -12,6 +20,8 @@ export const ChatCompletionsContentPartImageSchema = z.object({
     url: z.string(),
     detail: z.enum(["low", "high", "auto"]).optional(),
   }),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 
 export const ChatCompletionsContentPartFileSchema = z.object({
@@ -21,6 +31,8 @@ export const ChatCompletionsContentPartFileSchema = z.object({
     media_type: z.string(),
     filename: z.string().optional(),
   }),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 
 export const ChatCompletionsContentPartAudioSchema = z.object({
@@ -43,6 +55,8 @@ export const ChatCompletionsContentPartAudioSchema = z.object({
       "webm",
     ]),
   }),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 
 export const ChatCompletionsContentPartSchema = z.discriminatedUnion("type", [
@@ -60,6 +74,7 @@ export const ChatCompletionsToolCallSchema = z.object({
     arguments: z.string(),
     name: z.string(),
   }),
+  // Extension origin: Gemini
   extra_content: z
     .record(z.string(), z.record(z.string(), z.unknown()))
     .optional()
@@ -71,6 +86,8 @@ export const ChatCompletionsSystemMessageSchema = z.object({
   role: z.literal("system"),
   content: z.string(),
   name: z.string().optional(),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsSystemMessage = z.infer<typeof ChatCompletionsSystemMessageSchema>;
 
@@ -78,6 +95,8 @@ export const ChatCompletionsUserMessageSchema = z.object({
   role: z.literal("user"),
   content: z.union([z.string(), z.array(ChatCompletionsContentPartSchema)]),
   name: z.string().optional(),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsUserMessage = z.infer<typeof ChatCompletionsUserMessageSchema>;
 
@@ -107,10 +126,13 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
     .array(ChatCompletionsReasoningDetailSchema)
     .optional()
     .meta({ extension: true }),
+  // Extension origin: Gemini
   extra_content: z
     .record(z.string(), z.record(z.string(), z.unknown()))
     .optional()
     .meta({ extension: true }),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsAssistantMessage = z.infer<typeof ChatCompletionsAssistantMessageSchema>;
 
@@ -218,7 +240,13 @@ const ChatCompletionsInputsSchema = z.object({
   top_p: z.number().min(0).max(1.0).optional(),
   response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
-  // Extensions
+  prompt_cache_key: z.string().optional(),
+  prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
+  // Extension origin: Gemini explicit cache handle
+  cached_content: z.string().optional().meta({ extension: true }),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
+  // Extension origin: OpenRouter
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
@@ -261,6 +289,8 @@ export const ChatCompletionsUsageSchema = z.object({
     .object({
       // FUTURE: add missing properties
       cached_tokens: z.int().nonnegative().optional(),
+      // Extension origin: OpenRouter
+      cache_write_tokens: z.int().nonnegative().optional().meta({ extension: true }),
     })
     .optional(),
 });
@@ -273,7 +303,7 @@ export const ChatCompletionsSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
-  // Extensions
+  // Extension origin: Vercel AI Gateway
   provider_metadata: z.unknown().optional().meta({ extension: true }),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
@@ -307,7 +337,7 @@ export const ChatCompletionsChunkSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
-  // Extensions
+  // Extension origin: Vercel AI Gateway
   provider_metadata: z.unknown().optional().meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;

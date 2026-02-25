@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { claudeReasoningMiddleware } from "./middleware";
+import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./middleware";
 
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
@@ -27,12 +27,90 @@ test("claudeReasoningMiddleware > matching patterns", () => {
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(claudeReasoningMiddleware);
+    expect(middleware).toContain(claudePromptCachingMiddleware);
   }
 
   for (const id of nonMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(claudeReasoningMiddleware);
   }
+});
+
+test("claudePromptCachingMiddleware > should auto-enable top-level cache control", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {},
+    },
+  };
+
+  const result = await claudePromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.6" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    anthropic: {
+      cacheControl: { type: "ephemeral" },
+    },
+    unknown: {},
+  });
+});
+
+test("claudePromptCachingMiddleware > should map cache_control ttl", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        cache_control: { type: "ephemeral", ttl: "1h" },
+      },
+    },
+  };
+
+  const result = await claudePromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.6" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    anthropic: {
+      cacheControl: { type: "ephemeral", ttl: "1h" },
+    },
+    unknown: {},
+  });
+});
+
+test("claudePromptCachingMiddleware > should use normalized cache_control over non-native fields", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        cache_control: { type: "ephemeral", ttl: "1h" },
+        prompt_cache_retention: "24h",
+        prompt_cache_key: "tenant-key",
+        cached_content: "cachedContents/abc",
+      },
+    },
+  };
+
+  const result = await claudePromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.6" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    anthropic: {
+      cacheControl: { type: "ephemeral", ttl: "1h" },
+    },
+    unknown: {
+      prompt_cache_retention: "24h",
+      prompt_cache_key: "tenant-key",
+      cached_content: "cachedContents/abc",
+    },
+  });
 });
 
 test("claudeReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
