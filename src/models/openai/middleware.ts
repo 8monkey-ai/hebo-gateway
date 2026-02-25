@@ -70,7 +70,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-// https://ai.google.dev/gemini-api/docs/caching
+// https://developers.openai.com/api/docs/guides/prompt-caching/
 export const openAIPromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await

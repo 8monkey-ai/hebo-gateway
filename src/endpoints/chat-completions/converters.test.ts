@@ -1,4 +1,4 @@
-import type { GenerateTextResult, ToolSet, Output } from "ai";
+import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai";
 
 import { describe, expect, test } from "bun:test";
 
@@ -597,7 +597,7 @@ describe("Chat Completions Converters", () => {
           cacheReadTokens: 60,
           cacheWriteTokens: 10,
         },
-      } as any);
+      } as LanguageModelUsage);
 
       expect(usage.prompt_tokens_details).toEqual({
         cached_tokens: 60,

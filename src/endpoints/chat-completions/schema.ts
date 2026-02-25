@@ -1,7 +1,7 @@
 import * as z from "zod";
 
 export const ChatCompletionsCacheControlSchema = z.object({
-  type: z.string(),
+  type: z.literal("ephemeral"),
   ttl: z.string().optional(),
 });
 export type ChatCompletionsCacheControl = z.infer<typeof ChatCompletionsCacheControlSchema>;

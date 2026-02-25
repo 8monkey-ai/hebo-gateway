@@ -34,30 +34,6 @@ test("geminiReasoningMiddleware > matching patterns", () => {
   }
 });
 
-test("geminiPromptCachingMiddleware > should map cached_content", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        cached_content: "cachedContents/abc123",
-      },
-    },
-  };
-
-  const result = await geminiPromptCachingMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
-  });
-
-  expect(result.providerOptions).toEqual({
-    google: {
-      cachedContent: "cachedContents/abc123",
-    },
-    unknown: {},
-  });
-});
-
 test("geminiPromptCachingMiddleware > should map normalized cached_content", async () => {
   const params = {
     prompt: [],

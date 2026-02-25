@@ -572,7 +572,7 @@ The chat completions endpoint supports both implicit (provider-managed) and expl
 Accepted request fields:
 
 - `prompt_cache_key` + `prompt_cache_retention` (OpenAI style)
-- `cache_control` (OpenRouter / Vercel/ Claude style)
+- `cache_control` (OpenRouter / Vercel / Claude style)
 - `cached_content` (Gemini style)
 
 ```json

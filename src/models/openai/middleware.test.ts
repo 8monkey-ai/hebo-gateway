@@ -77,32 +77,6 @@ test("openAIPromptCachingMiddleware > should map key and retention", async () =>
   });
 });
 
-test("openAIPromptCachingMiddleware > should map normalized caching options", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        prompt_cache_key: "cachedContents/shared-context-1",
-        prompt_cache_retention: "24h",
-      },
-    },
-  };
-
-  const result = await openAIPromptCachingMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
-  });
-
-  expect(result.providerOptions).toEqual({
-    openai: {
-      promptCacheKey: "cachedContents/shared-context-1",
-      promptCacheRetention: "24h",
-    },
-    unknown: {},
-  });
-});
-
 test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider options", async () => {
   const params = {
     prompt: [],
