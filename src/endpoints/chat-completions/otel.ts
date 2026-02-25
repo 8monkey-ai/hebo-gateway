@@ -98,6 +98,7 @@ export const getChatRequestAttributes = (
 
   if (signalLevel !== "required") {
     Object.assign(attrs, {
+      // FUTURE: add reasoning info
       "gen_ai.request.stream": inputs.stream,
       "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
       "gen_ai.request.max_tokens": inputs.max_completion_tokens,
