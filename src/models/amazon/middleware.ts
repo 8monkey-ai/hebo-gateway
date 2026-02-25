@@ -1,8 +1,6 @@
-import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type {
-  ChatCompletionsCacheControl,
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
@@ -72,68 +70,10 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-function toBedrockCachePoint(_cacheControl?: ChatCompletionsCacheControl) {
-  // currently only 5 minutes is supported by nova models
-  return {
-    type: "default",
-    ttl: "5m",
-  };
-}
-
-// https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
-export const novaPromptCachingMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // eslint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
-    let hasExplicitCacheControl = false;
-    let firstUser, lastSystem;
-
-    const processCacheControl = (providerOptions?: SharedV3ProviderOptions) => {
-      if (!providerOptions) return;
-
-      const entryUnknown = providerOptions["unknown"];
-      const entryCacheControl = entryUnknown?.["cache_control"] as ChatCompletionsCacheControl;
-      if (!entryUnknown || !entryCacheControl) return;
-
-      hasExplicitCacheControl = true;
-      entryUnknown["cache_point"] = toBedrockCachePoint(entryCacheControl);
-      delete entryUnknown["cache_control"];
-    };
-
-    for (const message of params.prompt) {
-      if (message["role"] === "system") lastSystem = message;
-      if (!firstUser && message["role"] === "user") firstUser = message;
-
-      processCacheControl(message["providerOptions"]);
-
-      if (!Array.isArray(message["content"])) continue;
-      for (const part of message["content"]) {
-        processCacheControl(part["providerOptions"]);
-      }
-    }
-
-    const cacheControl = unknown["cache_control"] as ChatCompletionsCacheControl;
-    if (cacheControl && !hasExplicitCacheControl) {
-      const target = lastSystem ?? firstUser;
-      if (target) {
-        ((target["providerOptions"] ??= {})["unknown"] ??= {})["cache_point"] =
-          toBedrockCachePoint(cacheControl);
-      }
-    }
-
-    delete unknown["cache_control"];
-
-    return params;
-  },
-};
-
 modelMiddlewareMatcher.useForModel("amazon/nova-*embeddings*", {
   embedding: [novaDimensionsMiddleware],
 });
 
 modelMiddlewareMatcher.useForModel("amazon/nova-2-*", {
-  language: [novaReasoningMiddleware, novaPromptCachingMiddleware],
+  language: [novaReasoningMiddleware],
 });

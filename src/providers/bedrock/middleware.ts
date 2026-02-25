@@ -1,5 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
+import type { ChatCompletionsCacheControl } from "../../endpoints/chat-completions/schema";
+
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 const isClaude46 = (modelId: string) => modelId.includes("-4-6");
@@ -63,6 +65,72 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
+function toBedrockCachePoint(cacheControl?: ChatCompletionsCacheControl, modelId?: string) {
+  const out: { type: "default"; ttl?: string } = { type: "default" };
+  if (cacheControl?.ttl) {
+    out.ttl = modelId?.includes("nova") ? "5m" : cacheControl.ttl;
+  }
+  return out;
+}
+
+export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    if (!model.modelId.includes("nova") && !model.modelId.includes("claude")) return params;
+
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    let hasExplicitCacheControl = false;
+    let firstUser;
+    let lastSystem;
+
+    const processCacheControl = (providerOptions?: Record<string, any>) => {
+      if (!providerOptions) return;
+
+      const entryUnknown = providerOptions["unknown"] as Record<string, unknown> | undefined;
+      const entryCacheControl = entryUnknown?.["cacheControl"] as ChatCompletionsCacheControl;
+      if (!entryUnknown || !entryCacheControl) return;
+
+      hasExplicitCacheControl = true;
+      entryUnknown["cachePoint"] = toBedrockCachePoint(entryCacheControl, model.modelId);
+      delete entryUnknown["cacheControl"];
+    };
+
+    for (const message of params.prompt) {
+      if (message["role"] === "system") lastSystem = message;
+      if (!firstUser && message["role"] === "user") firstUser = message;
+
+      processCacheControl(message["providerOptions"] as Record<string, any> | undefined);
+
+      if (!Array.isArray(message["content"])) continue;
+      for (const part of message["content"]) {
+        processCacheControl((part as any)["providerOptions"] as Record<string, any> | undefined);
+      }
+    }
+
+    const cacheControl = unknown["cacheControl"] as ChatCompletionsCacheControl;
+    if (cacheControl && !hasExplicitCacheControl) {
+      const target = lastSystem ?? firstUser;
+      if (target) {
+        ((target["providerOptions"] ??= {})["unknown"] ??= {})["cachePoint"] = toBedrockCachePoint(
+          cacheControl,
+          model.modelId,
+        );
+      }
+    }
+
+    delete unknown["cacheControl"];
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
-  language: [bedrockGptReasoningMiddleware, bedrockClaudeReasoningMiddleware],
+  language: [
+    bedrockGptReasoningMiddleware,
+    bedrockClaudeReasoningMiddleware,
+    bedrockPromptCachingMiddleware,
+  ],
 });

@@ -134,10 +134,7 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
     if (!unknown) return params;
 
     const cacheControl = unknown["cache_control"] as ChatCompletionsCacheControl;
-    if (
-      cacheControl?.type === "ephemeral" &&
-      (cacheControl.ttl === "5m" || cacheControl.ttl === "1h")
-    ) {
+    if (cacheControl) {
       (params.providerOptions!["anthropic"] ??= {})["cacheControl"] = cacheControl;
     }
 
