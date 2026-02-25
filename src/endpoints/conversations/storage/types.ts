@@ -1,4 +1,4 @@
-import type { Conversation, ConversationItem, ConversationItemInput } from "../schema";
+import type { Conversation, ConversationItem } from "../schema";
 
 export interface ListItemsParams {
   limit?: number;
@@ -7,21 +7,15 @@ export interface ListItemsParams {
 }
 
 export interface ConversationStorage {
-  createConversation(params: {
-    items?: ConversationItemInput[];
-    metadata?: Record<string, unknown>;
-  }): Promise<Conversation>;
+  createConversation(conversation: Conversation): Promise<Conversation>;
 
   getConversation(id: string): Promise<Conversation | undefined>;
 
-  updateConversation(
-    id: string,
-    params: { metadata: Record<string, unknown> },
-  ): Promise<Conversation>;
+  updateConversation(conversation: Conversation): Promise<Conversation>;
 
   deleteConversation(id: string): Promise<{ id: string; deleted: boolean }>;
 
-  addItems(conversationId: string, items: ConversationItemInput[]): Promise<ConversationItem[]>;
+  addItems(conversationId: string, items: ConversationItem[]): Promise<ConversationItem[]>;
 
   getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined>;
 

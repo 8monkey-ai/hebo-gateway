@@ -5,6 +5,7 @@ import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
 import { conversations } from "./handler";
 import { InMemoryStorage } from "./storage/memory";
+import { createConversation, createConversationItem } from "./utils";
 
 describe("Conversations Handler", () => {
   const config = {
@@ -69,11 +70,13 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage = endpoint._parsedConfig?.storage ?? config.storage;
 
-    const conv = await storage.createConversation({});
-    const items = await storage.addItems(conv.id, [
-      { type: "message", role: "user", content: "Message 1" },
-      { type: "message", role: "user", content: "Message 2" },
-    ]);
+    const conv = createConversation({});
+    await storage.createConversation(conv);
+    const items = [
+      { type: "message" as const, role: "user" as const, content: "Message 1" },
+      { type: "message" as const, role: "user" as const, content: "Message 2" },
+    ].map((item) => createConversationItem(item));
+    await storage.addItems(conv.id, items);
     const item1Id = items[0].id;
     const item2Id = items[1].id;
 
@@ -117,15 +120,14 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
 
-    const conv = await storage.createConversation({});
-    await storage.addItems(
-      conv.id,
-      Array.from({ length: 5 }, (_, i) => ({
-        type: "message",
-        role: "user",
-        content: `Msg ${i + 1}`,
-      })),
-    );
+    const conv = createConversation({});
+    await storage.createConversation(conv);
+    const items = Array.from({ length: 5 }, (_, i) => ({
+      type: "message" as const,
+      role: "user" as const,
+      content: `Msg ${i + 1}`,
+    })).map((item) => createConversationItem(item));
+    await storage.addItems(conv.id, items);
 
     const res = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=3&order=asc`),
@@ -160,5 +162,25 @@ describe("Conversations Handler", () => {
     });
     const res = await endpoint.handler(request);
     expect(res.status).toBe(400);
+  });
+
+  test("should handle mounted subpaths", async () => {
+    const endpoint = conversations(config);
+
+    // Simulate a request mounted under /api/v1/conversations
+    const createReq = postJson("http://localhost/api/v1/conversations", {
+      metadata: { subpath: "true" },
+    });
+    const createRes = await endpoint.handler(createReq);
+    expect(createRes.status).toBe(200);
+    const conv = await parseResponse(createRes);
+    expect(conv.metadata.subpath).toBe("true");
+
+    const retrieveRes = await endpoint.handler(
+      new Request(`http://localhost/api/v1/conversations/${conv.id}`),
+    );
+    expect(retrieveRes.status).toBe(200);
+    const retrieved = await parseResponse(retrieveRes);
+    expect(retrieved.id).toBe(conv.id);
   });
 });

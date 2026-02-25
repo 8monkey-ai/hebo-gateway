@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+// --- Common ---
+
 export const MetadataSchema = z
   .record(z.string().max(64), z.union([z.string().max(512), z.number(), z.boolean()]))
   .refine((m) => Object.keys(m).length <= 16, {
@@ -8,6 +10,8 @@ export const MetadataSchema = z
 
 export const ItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
 export const ImageDetailSchema = z.enum(["low", "high", "auto"]);
+
+// --- Content ---
 
 export const InputTextContentSchema = z.object({
   type: z.literal("input_text"),
@@ -45,6 +49,8 @@ export const ReasoningTextContentSchema = z.object({
   text: z.string(),
 });
 
+// --- Message ---
+
 const MessageItemBase = z.object({
   type: z.literal("message"),
   status: ItemStatusSchema.optional(),
@@ -72,6 +78,15 @@ const DeveloperMessage = MessageItemBase.extend({
   role: z.literal("developer"),
   content: z.union([z.string(), z.array(InputTextContentSchema)]),
 });
+
+export const MessageItemUnion = z.union([
+  UserMessage,
+  AssistantMessage,
+  SystemMessage,
+  DeveloperMessage,
+]);
+
+// --- Item ---
 
 const FunctionCallItem = z.object({
   type: z.literal("function_call"),
@@ -102,13 +117,7 @@ const ReasoningItem = z.object({
   status: ItemStatusSchema.optional(),
 });
 
-export const MessageItemUnion = z.union([
-  UserMessage,
-  AssistantMessage,
-  SystemMessage,
-  DeveloperMessage,
-]);
-
+// Item: Request
 export const ConversationItemInputSchema = z.union([
   MessageItemUnion,
   FunctionCallItem,
@@ -117,6 +126,12 @@ export const ConversationItemInputSchema = z.union([
 ]);
 export type ConversationItemInput = z.infer<typeof ConversationItemInputSchema>;
 
+export const ConversationItemsAddBodySchema = z.object({
+  items: z.array(ConversationItemInputSchema).max(20),
+});
+export type ConversationItemsAddBody = z.infer<typeof ConversationItemsAddBodySchema>;
+
+// Item: Stored
 const withSystemFields = <T extends z.ZodRawShape>(shape: T) =>
   z.object({
     id: z.string(),
@@ -138,24 +153,24 @@ export const ConversationItemSchema = z.discriminatedUnion("type", [
 ]);
 export type ConversationItem = z.infer<typeof ConversationItemSchema>;
 
+// Item: List
+export const ConversationItemListSchema = z.object({
+  object: z.literal("list"),
+  data: z.array(ConversationItemSchema),
+  has_more: z.boolean(),
+  first_id: z.string().optional(),
+  last_id: z.string().optional(),
+});
+export type ConversationItemList = z.infer<typeof ConversationItemListSchema>;
+
+// --- Conversation ---
+
+// Conversation: Request
 export const ConversationCreateBodySchema = z.object({
   items: z.array(ConversationItemInputSchema).max(20).optional(),
   metadata: MetadataSchema.optional(),
 });
 export type ConversationCreateBody = z.infer<typeof ConversationCreateBodySchema>;
-
-export const ConversationItemsAddBodySchema = z.object({
-  items: z.array(ConversationItemInputSchema).max(20),
-});
-export type ConversationItemsAddBody = z.infer<typeof ConversationItemsAddBodySchema>;
-
-export const ConversationSchema = z.object({
-  id: z.string(),
-  object: z.literal("conversation"),
-  created_at: z.number().int(),
-  metadata: z.record(z.string(), z.unknown()),
-});
-export type Conversation = z.infer<typeof ConversationSchema>;
 
 export const ConversationUpdateBodySchema = z.object({
   metadata: MetadataSchema,
@@ -169,11 +184,11 @@ export const ConversationDeletedSchema = z.object({
 });
 export type ConversationDeleted = z.infer<typeof ConversationDeletedSchema>;
 
-export const ConversationItemListSchema = z.object({
-  object: z.literal("list"),
-  data: z.array(ConversationItemSchema),
-  has_more: z.boolean(),
-  first_id: z.string().optional(),
-  last_id: z.string().optional(),
+// Conversation: Stored
+export const ConversationSchema = z.object({
+  id: z.string(),
+  object: z.literal("conversation"),
+  created_at: z.number().int(),
+  metadata: z.record(z.string(), z.unknown()),
 });
-export type ConversationItemList = z.infer<typeof ConversationItemListSchema>;
+export type Conversation = z.infer<typeof ConversationSchema>;
