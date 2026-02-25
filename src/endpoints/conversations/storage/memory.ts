@@ -1,9 +1,23 @@
+import { LRUCache } from "lru-cache";
+
 import type { Conversation, ConversationItem } from "../schema";
 import type { ConversationStorage, ListItemsParams } from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
-  private conversations = new Map<string, Conversation>();
-  private items = new Map<string, ConversationItem[]>();
+  private conversations: LRUCache<string, Conversation>;
+  private items: LRUCache<string, ConversationItem[]>;
+
+  constructor(options?: { max?: number }) {
+    const max = options?.max ?? 1000;
+
+    this.items = new LRUCache<string, ConversationItem[]>({ max });
+    this.conversations = new LRUCache<string, Conversation>({
+      max,
+      dispose: (_value, key) => {
+        this.items.delete(key);
+      },
+    });
+  }
 
   // eslint-disable-next-line require-await
   async createConversation(conversation: Conversation): Promise<Conversation> {
