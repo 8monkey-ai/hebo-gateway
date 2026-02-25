@@ -83,21 +83,20 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["thinking"] = { type: "disabled" };
     } else if (reasoning.effort) {
+      if (isClaude4(modelId)) {
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
+      }
+
       if (isOpus46(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "adaptive", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
-        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else if (isSonnet46(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "enabled", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
-        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else {
         target["thinking"] = { type: "enabled" };
-        if (isClaude4(modelId)) {
-          target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
-        }
         if (clampedMaxTokens) {
           target["thinking"]["budgetTokens"] = clampedMaxTokens;
         } else {
