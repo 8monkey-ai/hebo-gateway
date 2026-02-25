@@ -124,6 +124,7 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 // https://ai.google.dev/gemini-api/docs/caching
+// FUTURE: auto-create cached_content for message-level cache_control blocks
 export const geminiPromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await

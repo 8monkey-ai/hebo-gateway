@@ -125,6 +125,7 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 // https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+// TODO: ensure this works with works with bedrock
 export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
