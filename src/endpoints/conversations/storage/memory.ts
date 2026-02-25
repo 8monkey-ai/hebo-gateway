@@ -1,17 +1,12 @@
-import type {
-  Conversation,
-  ConversationItem,
-  ConversationStorage,
-  ListItemsParams,
-  StoredItem,
-} from "./types";
+import type { Conversation, ConversationItem, ConversationItemInput } from "../schema";
+import type { ConversationStorage, ListItemsParams } from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
   private conversations = new Map<string, Conversation>();
   private items = new Map<string, ConversationItem[]>();
 
   async createConversation(params: {
-    items?: StoredItem[];
+    items?: ConversationItemInput[];
     metadata?: Record<string, unknown>;
   }): Promise<Conversation> {
     const id = `conv_${crypto.randomUUID()}`;
@@ -66,19 +61,25 @@ export class InMemoryStorage implements ConversationStorage {
   }
 
   // eslint-disable-next-line require-await
-  async addItems(conversationId: string, items: StoredItem[]): Promise<ConversationItem[]> {
+  async addItems(
+    conversationId: string,
+    items: ConversationItemInput[],
+  ): Promise<ConversationItem[]> {
     const conversationItems = this.items.get(conversationId);
     if (!conversationItems) {
       throw new Error(`Conversation not found: ${conversationId}`);
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const newItems: ConversationItem[] = items.map((item) => ({
-      id: `item_${crypto.randomUUID()}`,
-      object: "conversation.item",
-      created_at: now,
-      data: item,
-    }));
+    const newItems: ConversationItem[] = items.map((item) => {
+      const conversationItem: ConversationItem = {
+        id: `item_${crypto.randomUUID()}`,
+        object: "conversation.item",
+        created_at: now,
+        ...item,
+      } as ConversationItem;
+      return conversationItem;
+    });
 
     conversationItems.push(...newItems);
     return newItems;

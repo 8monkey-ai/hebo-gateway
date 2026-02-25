@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
-import { InMemoryStorage } from "../../storage/memory";
 import { conversations } from "./handler";
+import { InMemoryStorage } from "./storage/memory";
 
 describe("Conversations Handler", () => {
   const config = {

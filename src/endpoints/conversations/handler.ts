@@ -15,6 +15,10 @@ import {
   ConversationCreateBodySchema,
   ConversationItemsAddBodySchema,
   ConversationUpdateBodySchema,
+  type Conversation,
+  type ConversationItem,
+  type ConversationDeleted,
+  type ConversationItemList,
 } from "./schema";
 
 export const conversations = (config: GatewayConfig): Endpoint => {
@@ -109,7 +113,10 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   return { handler: winterCgHandler(handler, parsedConfig) };
 };
 
-async function create(ctx: GatewayContext, signalLevel?: TelemetrySignalLevel) {
+async function create(
+  ctx: GatewayContext,
+  signalLevel?: TelemetrySignalLevel,
+): Promise<Conversation> {
   let body = {};
   try {
     if (
@@ -138,7 +145,7 @@ async function create(ctx: GatewayContext, signalLevel?: TelemetrySignalLevel) {
   return conversation;
 }
 
-async function retrieve(ctx: GatewayContext, conversationId: string) {
+async function retrieve(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
   const conversation = await withSpan("storage.getConversation", () =>
     ctx.storage.getConversation(conversationId),
   );
@@ -150,7 +157,7 @@ async function retrieve(ctx: GatewayContext, conversationId: string) {
   return conversation;
 }
 
-async function update(ctx: GatewayContext, conversationId: string) {
+async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
   let body;
   try {
     body = await ctx.request.json();
@@ -172,7 +179,7 @@ async function update(ctx: GatewayContext, conversationId: string) {
   return conversation;
 }
 
-async function remove(ctx: GatewayContext, conversationId: string) {
+async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
   const result = await withSpan("storage.deleteConversation", () =>
     ctx.storage.deleteConversation(conversationId),
   );
@@ -185,22 +192,25 @@ async function remove(ctx: GatewayContext, conversationId: string) {
   };
 }
 
-async function retrieveItem(ctx: GatewayContext, conversationId: string, itemId: string) {
+async function retrieveItem(
+  ctx: GatewayContext,
+  conversationId: string,
+  itemId: string,
+): Promise<ConversationItem> {
   const item = await withSpan("storage.getItem", () => ctx.storage.getItem(conversationId, itemId));
   logger.trace({ requestId: ctx.requestId, item }, "[storage] getItem result");
 
   if (!item) {
     throw new GatewayError("Item not found", 404);
   }
-  return {
-    id: item.id,
-    object: "conversation.item",
-    created_at: item.created_at,
-    ...item.data,
-  };
+  return item;
 }
 
-async function deleteItem(ctx: GatewayContext, conversationId: string, itemId: string) {
+async function deleteItem(
+  ctx: GatewayContext,
+  conversationId: string,
+  itemId: string,
+): Promise<Conversation> {
   const conversation = await withSpan("storage.getConversation", () =>
     ctx.storage.getConversation(conversationId),
   );
@@ -216,7 +226,7 @@ async function listItems(
   ctx: GatewayContext,
   conversationId: string,
   searchParams: URLSearchParams,
-) {
+): Promise<ConversationItemList> {
   const requestedLimit = searchParams.get("limit")
     ? Number.parseInt(searchParams.get("limit")!, 10)
     : 20;
@@ -238,19 +248,17 @@ async function listItems(
 
   return {
     object: "list",
-    data: data.map((item) => ({
-      id: item.id,
-      object: "conversation.item",
-      created_at: item.created_at,
-      ...item.data,
-    })),
+    data,
     has_more,
     first_id: data[0]?.id,
     last_id: data.at(-1)?.id,
   };
 }
 
-async function addItems(ctx: GatewayContext, conversationId: string) {
+async function addItems(
+  ctx: GatewayContext,
+  conversationId: string,
+): Promise<ConversationItemList> {
   let body;
   try {
     body = await ctx.request.json();
@@ -272,12 +280,7 @@ async function addItems(ctx: GatewayContext, conversationId: string) {
 
   return {
     object: "list",
-    data: items.map((item) =>
-      Object.assign(
-        { id: item.id, object: `conversation.item`, created_at: item.created_at },
-        item.data,
-      ),
-    ),
+    data: items,
     has_more: false,
   };
 }

@@ -6,12 +6,12 @@ import type {
   ChatCompletionsBody,
   ChatCompletionsChunk,
 } from "./endpoints/chat-completions/schema";
+import type { ConversationStorage } from "./endpoints/conversations/storage/types";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
-import type { ConversationStorage } from "./storage/types";
 
 /**
  * Per-request context shared across handlers and hooks.

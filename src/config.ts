@@ -1,6 +1,6 @@
+import { InMemoryStorage } from "./endpoints/conversations/storage/memory";
 import { isLogger, logger, setLoggerInstance } from "./logger";
 import { createDefaultLogger } from "./logger/default";
-import { InMemoryStorage } from "./storage/memory";
 import { installAiSdkWarningLogger } from "./telemetry/ai-sdk";
 import {
   kParsed,
