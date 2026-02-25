@@ -57,6 +57,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
+    logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[chat] ChatCompletionsBody");
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ChatCompletionsBodySchema.safeParse(ctx.body);
@@ -139,6 +140,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
           );
+          logger.trace(
+            { requestId: ctx.requestId, result: streamResult },
+            "[chat] ChatCompletions",
+          );
           addSpanEvent("hebo.result.transformed");
 
           const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
@@ -181,6 +186,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
+    logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[chat] ChatCompletions");
     addSpanEvent("hebo.result.transformed");
 
     const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);

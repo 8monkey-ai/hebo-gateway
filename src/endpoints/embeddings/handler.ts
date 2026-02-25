@@ -50,6 +50,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
+    logger.trace({ requestId: ctx.requestId, result: ctx.body }, "[chat] EmbeddingsBody");
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = EmbeddingsBodySchema.safeParse(ctx.body);
@@ -121,6 +122,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Transform result.
     ctx.result = toEmbeddings(result, ctx.modelId);
+    logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[chat] Embeddings");
     addSpanEvent("hebo.result.transformed");
     const genAiResponseAttrs = getEmbeddingsResponseAttributes(ctx.result, genAiSignalLevel);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);

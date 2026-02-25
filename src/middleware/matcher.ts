@@ -6,6 +6,7 @@ import type { ProviderId } from "../providers/types";
 import { logger } from "../logger";
 import { addSpanEvent } from "../telemetry/span";
 import { forwardParamsEmbeddingMiddleware, forwardParamsMiddleware } from "./common";
+import { debugEmbeddingFinalParamsMiddleware, debugLanguageFinalParamsMiddleware } from "./debug";
 
 type MiddlewareEntries = {
   language?: LanguageModelMiddleware[];
@@ -110,6 +111,9 @@ class ModelMiddlewareMatcher {
     if (providerId) {
       out.push(...this.collect(this.provider.match(providerId), kind));
     }
+    out.push(
+      kind === "text" ? debugLanguageFinalParamsMiddleware : debugEmbeddingFinalParamsMiddleware,
+    );
 
     if (this.cache.size >= ModelMiddlewareMatcher.MAX_CACHE) {
       let n = Math.ceil(ModelMiddlewareMatcher.MAX_CACHE * 0.2);
