@@ -127,9 +127,6 @@ export const novaPromptCachingMiddleware: LanguageModelMiddleware = {
     }
 
     delete unknown["cache_control"];
-    delete unknown["prompt_cache_retention"];
-    delete unknown["prompt_cache_key"];
-    delete unknown["cached_content"];
 
     return params;
   },

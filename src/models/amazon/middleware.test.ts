@@ -139,7 +139,11 @@ test("novaPromptCachingMiddleware > should use normalized cache_control over non
     type: "default",
     ttl: "1h",
   });
-  expect(result.providerOptions.unknown).toEqual({});
+  expect(result.providerOptions?.unknown).toEqual({
+    prompt_cache_retention: "24h",
+    prompt_cache_key: "tenant-key",
+    cached_content: "cachedContents/abc",
+  });
 });
 
 test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", async () => {

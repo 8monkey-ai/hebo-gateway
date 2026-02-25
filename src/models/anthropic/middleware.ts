@@ -132,14 +132,12 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const cacheControl = unknown["cache_control"] as ChatCompletionsCacheControl | undefined;
-    const target = (params.providerOptions!["anthropic"] ??= {});
-
+    const cacheControl = unknown["cache_control"] as ChatCompletionsCacheControl;
     if (
       cacheControl?.type === "ephemeral" &&
       (cacheControl.ttl === "5m" || cacheControl.ttl === "1h")
     ) {
-      target["cacheControl"] = cacheControl;
+      (params.providerOptions!["anthropic"] ??= {})["cacheControl"] = cacheControl;
     }
 
     delete unknown["cache_control"];

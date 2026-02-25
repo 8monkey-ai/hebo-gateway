@@ -36,7 +36,7 @@ test("claudeReasoningMiddleware > matching patterns", () => {
   }
 });
 
-test("claudePromptCachingMiddleware > should auto-enable top-level cache control", async () => {
+test("claudePromptCachingMiddleware > should not auto-enable top-level cache control", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -51,9 +51,6 @@ test("claudePromptCachingMiddleware > should auto-enable top-level cache control
   });
 
   expect(result.providerOptions).toEqual({
-    anthropic: {
-      cacheControl: { type: "ephemeral" },
-    },
     unknown: {},
   });
 });
