@@ -72,14 +72,12 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-function toBedrockCachePoint(cacheControl?: ChatCompletionsCacheControl) {
-  const out: { type: "default"; ttl?: "5m" | "1h" } = {
+function toBedrockCachePoint(_cacheControl?: ChatCompletionsCacheControl) {
+  // currently only 5 minutes is supported by nova models
+  return {
     type: "default",
+    ttl: "5m",
   };
-  if (cacheControl?.ttl === "5m" || cacheControl?.ttl === "1h") {
-    out.ttl = cacheControl.ttl;
-  }
-  return out;
 }
 
 // https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
