@@ -86,7 +86,7 @@ export class InMemoryStorage implements ConversationStorage {
 
     let result = existing;
 
-    if (order === "desc") result = result.slice().toReversed();
+    if (order === "desc") result = result.toReversed();
 
     if (after) {
       const i = result.findIndex((item) => item.id === after);

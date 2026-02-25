@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "target": "ES2023",
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
