@@ -2,6 +2,8 @@ import type { LanguageModelMiddleware } from "ai";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
+const isClaude46 = (modelId: string) => modelId.includes("-4-6");
+
 export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -49,7 +51,10 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
       }
     }
 
-    if (effort !== undefined) target["maxReasoningEffort"] = effort;
+    // FUTURE: bedrock currently does not support "effort" for other 4.x models
+    if (effort !== undefined && isClaude46(model.modelId)) {
+      target["maxReasoningEffort"] = effort;
+    }
 
     delete bedrock["thinking"];
     delete bedrock["effort"];

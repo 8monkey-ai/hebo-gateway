@@ -16,11 +16,12 @@ const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
     modelId.includes(`claude-${family}-${dashed}`);
 };
 
+const isClaude4 = (modelId: string) => modelId.includes("claude-") && modelId.includes("-4");
+
 const isOpus46 = isClaude("opus", "4.6");
 const isOpus45 = isClaude("opus", "4.5");
 const isOpus4 = isClaude("opus", "4");
 const isSonnet46 = isClaude("sonnet", "4.6");
-const isSonnet45 = isClaude("sonnet", "4.5");
 
 export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort, modelId: string) {
   if (isOpus46(modelId)) {
@@ -60,7 +61,10 @@ function getMaxOutputTokens(modelId: string): number {
   return 64_000;
 }
 
+// Documentation:
 // https://platform.claude.com/docs/en/build-with-claude/effort
+// https://platform.claude.com/docs/en/build-with-claude/extended-thinking
+// https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking
 export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -79,30 +83,30 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target["thinking"] = { type: "disabled" };
     } else if (reasoning.effort) {
+      if (isClaude4(modelId)) {
+        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
+      }
+
       if (isOpus46(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "adaptive", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
-        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else if (isSonnet46(modelId)) {
         target["thinking"] = clampedMaxTokens
           ? { type: "enabled", budgetTokens: clampedMaxTokens }
           : { type: "adaptive" };
-        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
-      } else if (isOpus45(modelId) || isSonnet45(modelId)) {
-        target["thinking"] = { type: "enabled" };
-        if (clampedMaxTokens) target["thinking"]["budgetTokens"] = clampedMaxTokens;
-        target["effort"] = mapClaudeReasoningEffort(reasoning.effort, modelId);
       } else {
-        // FUTURE: warn that reasoning.max_tokens was computed
-        target["thinking"] = {
-          type: "enabled",
-          budgetTokens: calculateReasoningBudgetFromEffort(
+        target["thinking"] = { type: "enabled" };
+        if (clampedMaxTokens) {
+          target["thinking"]["budgetTokens"] = clampedMaxTokens;
+        } else {
+          // FUTURE: warn that reasoning.max_tokens was computed
+          target["thinking"]["budgetTokens"] = calculateReasoningBudgetFromEffort(
             reasoning.effort,
             params.maxOutputTokens ?? getMaxOutputTokens(modelId),
             1024,
-          ),
-        };
+          );
+        }
       }
     } else if (clampedMaxTokens) {
       target["thinking"] = {
