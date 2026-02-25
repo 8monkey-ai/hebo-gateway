@@ -29,7 +29,7 @@ import {
   getEmbeddingsRequestAttributes,
   getEmbeddingsResponseAttributes,
 } from "./otel";
-import { EmbeddingsBodySchema } from "./schema";
+import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -61,7 +61,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.request.parsed");
 
     if (hooks?.before) {
-      ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
+      ctx.body = ((await hooks.before(ctx as BeforeHookContext)) as EmbeddingsBody) ?? ctx.body;
       addSpanEvent("hebo.hooks.before.completed");
     }
 
@@ -100,7 +100,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       "[embeddings] AI SDK options",
     );
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getEmbeddingsRequestAttributes(inputs, genAiSignalLevel));
+    setSpanAttributes(getEmbeddingsRequestAttributes(ctx.body, genAiSignalLevel));
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
