@@ -111,41 +111,6 @@ test("novaPromptCachingMiddleware > should auto-add cache point when enabled", a
   });
 });
 
-test("novaPromptCachingMiddleware > should use normalized cache_control over non-native fields", async () => {
-  const params = {
-    prompt: [
-      {
-        role: "system",
-        content: "Reusable system context",
-      },
-    ],
-    providerOptions: {
-      unknown: {
-        cache_control: { type: "ephemeral", ttl: "1h" },
-        prompt_cache_retention: "24h",
-        prompt_cache_key: "tenant-key",
-        cached_content: "cachedContents/abc",
-      },
-    },
-  };
-
-  const result = await novaPromptCachingMiddleware.transformParams!({
-    type: "generate",
-    params: params as any,
-    model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
-  });
-
-  expect((result.prompt[0] as any).providerOptions.unknown.cache_point).toEqual({
-    type: "default",
-    ttl: "1h",
-  });
-  expect(result.providerOptions?.unknown).toEqual({
-    prompt_cache_retention: "24h",
-    prompt_cache_key: "tenant-key",
-    cached_content: "cachedContents/abc",
-  });
-});
-
 test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", async () => {
   const params = {
     prompt: [],

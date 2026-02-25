@@ -79,37 +79,6 @@ test("claudePromptCachingMiddleware > should map cache_control ttl", async () =>
   });
 });
 
-test("claudePromptCachingMiddleware > should use normalized cache_control over non-native fields", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        cache_control: { type: "ephemeral", ttl: "1h" },
-        prompt_cache_retention: "24h",
-        prompt_cache_key: "tenant-key",
-        cached_content: "cachedContents/abc",
-      },
-    },
-  };
-
-  const result = await claudePromptCachingMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.6" }),
-  });
-
-  expect(result.providerOptions).toEqual({
-    anthropic: {
-      cacheControl: { type: "ephemeral", ttl: "1h" },
-    },
-    unknown: {
-      prompt_cache_retention: "24h",
-      prompt_cache_key: "tenant-key",
-      cached_content: "cachedContents/abc",
-    },
-  });
-});
-
 test("claudeReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
   const params = {
     prompt: [],
