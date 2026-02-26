@@ -12,7 +12,10 @@ export interface ConversationStorage {
 
   deleteConversation(id: string): Promise<{ id: string; deleted: boolean }>;
 
-  addItems(conversationId: string, items: ConversationItem[]): Promise<ConversationItem[]>;
+  addItems(
+    conversationId: string,
+    items: ConversationItem[],
+  ): Promise<ConversationItem[] | undefined>;
 
   getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined>;
 
@@ -20,6 +23,6 @@ export interface ConversationStorage {
 
   listItems(
     conversationId: string,
-    params?: ConversationItemListParams,
-  ): Promise<ConversationItem[]>;
+    params: ConversationItemListParams,
+  ): Promise<ConversationItem[] | undefined>;
 }

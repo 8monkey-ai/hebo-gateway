@@ -16,11 +16,10 @@ export function createConversation(params: { metadata?: Record<string, unknown> 
  * Creates a new ConversationItem object from input data with generated ID and timestamp.
  */
 export function createConversationItem(input: ResponseInputItem): ConversationItem {
-  const id = input.id ?? `item_${crypto.randomUUID()}`;
   return {
-    ...input,
-    id,
+    id: `item_${crypto.randomUUID()}`,
     object: "conversation.item",
     created_at: Math.floor(Date.now() / 1000),
+    ...input,
   };
 }

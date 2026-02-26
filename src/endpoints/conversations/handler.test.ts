@@ -1,5 +1,5 @@
 import { MockProviderV3 } from "ai/test";
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
@@ -9,19 +9,23 @@ import { InMemoryStorage } from "./storage/memory";
 import { createConversation, createConversationItem } from "./utils";
 
 describe("Conversations Handler", () => {
-  const config = {
-    providers: {
-      groq: new MockProviderV3(),
-    },
-    models: defineModelCatalog({
-      "openai/gpt-oss-20b": {
-        name: "GPT-OSS 20B",
-        modalities: { input: ["text", "file"], output: ["text"] },
-        providers: ["groq"],
+  let config: any;
+
+  beforeEach(() => {
+    config = {
+      providers: {
+        groq: new MockProviderV3(),
       },
-    }),
-    storage: new InMemoryStorage(),
-  };
+      models: defineModelCatalog({
+        "openai/gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text", "file"], output: ["text"] },
+          providers: ["groq"],
+        },
+      }),
+      storage: new InMemoryStorage(),
+    };
+  });
 
   test("should handle full conversation lifecycle", async () => {
     const endpoint = conversations(config);
@@ -159,6 +163,61 @@ describe("Conversations Handler", () => {
     expect(data3.has_more).toBe(false);
   });
 
+  test("should handle pagination with after and order=desc", async () => {
+    const endpoint = conversations(config);
+    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+
+    const conv = createConversation({});
+    await storage.createConversation(conv);
+    const items = Array.from(
+      { length: 5 },
+      (_, i) =>
+        ({
+          type: "message",
+          role: "user",
+          content: `Msg ${i + 1}`,
+        }) as ResponseInputItem,
+    ).map((item) => createConversationItem(item));
+    await storage.addItems(conv.id, items);
+
+    // 1. Get first page (descending)
+    const res1 = await endpoint.handler(
+      new Request(`http://localhost/conversations/${conv.id}/items?limit=2&order=desc`),
+    );
+    const data1 = await parseResponse(res1);
+    expect(data1.data).toHaveLength(2);
+    expect(data1.data[0].content).toBe("Msg 5");
+    expect(data1.data[1].content).toBe("Msg 4");
+    expect(data1.has_more).toBe(true);
+
+    const after = data1.data[1].id; // Last item of first page
+
+    // 2. Get second page using 'after'
+    const res2 = await endpoint.handler(
+      new Request(
+        `http://localhost/conversations/${conv.id}/items?limit=2&order=desc&after=${after}`,
+      ),
+    );
+    const data2 = await parseResponse(res2);
+    expect(data2.data).toHaveLength(2);
+    expect(data2.data[0].content).toBe("Msg 3");
+    expect(data2.data[1].content).toBe("Msg 2");
+    expect(data2.has_more).toBe(true);
+
+    const after2 = data2.data[1].id;
+
+    // 3. Get last page
+    const res3 = await endpoint.handler(
+      new Request(
+        `http://localhost/conversations/${conv.id}/items?limit=2&order=desc&after=${after2}`,
+      ),
+    );
+    const data3 = await parseResponse(res3);
+    expect(data3.data).toHaveLength(1);
+    expect(data3.data[0].content).toBe("Msg 1");
+    expect(data3.has_more).toBe(false);
+  });
+
   test("should enforce limit constraints", async () => {
     const endpoint = conversations(config);
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
@@ -233,6 +292,20 @@ describe("Conversations Handler", () => {
     expect(addItemsRes.status).toBe(200);
     const addItemsData = await parseResponse(addItemsRes);
     expect(addItemsData.data[0].id).toBe(customItemId);
+    expect(addItemsData.first_id).toBe(customItemId);
+    expect(addItemsData.last_id).toBe(customItemId);
+
+    // Test with multiple items
+    const multiAddItemsReq = postJson(`http://localhost/conversations/${conv.id}/items`, {
+      items: [
+        { id: "item1", type: "message", role: "user", content: "One" },
+        { id: "item2", type: "message", role: "user", content: "Two" },
+      ],
+    });
+    const multiAddItemsRes = await endpoint.handler(multiAddItemsReq);
+    const multiAddItemsData = await parseResponse(multiAddItemsRes);
+    expect(multiAddItemsData.first_id).toBe("item1");
+    expect(multiAddItemsData.last_id).toBe("item2");
 
     // 2. Maintain item IDs during conversation create
     const createReq = postJson("http://localhost/conversations", {
@@ -247,5 +320,74 @@ describe("Conversations Handler", () => {
     );
     const listData = await parseResponse(listRes);
     expect(listData.data[0].id).toBe("msg_1");
+  });
+
+  test("should reject empty input_image and input_file payloads", async () => {
+    const endpoint = conversations(config);
+
+    // 1. Create conversation with empty input_image
+    const reqImage = postJson("http://localhost/conversations", {
+      items: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_image" }],
+        },
+      ],
+    });
+    const resImage = await endpoint.handler(reqImage);
+    expect(resImage.status).toBe(400);
+
+    // 2. Create conversation with empty input_file
+    const reqFile = postJson("http://localhost/conversations", {
+      items: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_file" }],
+        },
+      ],
+    });
+    const resFile = await endpoint.handler(reqFile);
+    expect(resFile.status).toBe(400);
+
+    // 3. Add item with empty input_image
+    const conv = createConversation({});
+    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+    await storage.createConversation(conv);
+
+    const reqAdd = postJson(`http://localhost/conversations/${conv.id}/items`, {
+      items: [
+        {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_image", image_url: null, file_id: null }],
+        },
+      ],
+    });
+    const resAdd = await endpoint.handler(reqAdd);
+    expect(resAdd.status).toBe(400);
+  });
+
+  test("should return 404 when conversation not found for items operations", async () => {
+    const endpoint = conversations(config);
+    const nonExistentId = "conv_nonexistent";
+
+    // 1. List items
+    const listRes = await endpoint.handler(
+      new Request(`http://localhost/conversations/${nonExistentId}/items`),
+    );
+    expect(listRes.status).toBe(404);
+    const listData = await parseResponse(listRes);
+    expect(listData.error.message).toBe("Conversation not found");
+
+    // 2. Add items
+    const addReq = postJson(`http://localhost/conversations/${nonExistentId}/items`, {
+      items: [{ type: "message", role: "user", content: "Hello" }],
+    });
+    const addRes = await endpoint.handler(addReq);
+    expect(addRes.status).toBe(404);
+    const addData = await parseResponse(addRes);
+    expect(addData.error.message).toBe("Conversation not found");
   });
 });

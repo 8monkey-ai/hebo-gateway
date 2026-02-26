@@ -89,10 +89,13 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve({ id, deleted });
   }
 
-  addItems(conversationId: string, items: ConversationItem[]): Promise<ConversationItem[]> {
+  addItems(
+    conversationId: string,
+    items: ConversationItem[],
+  ): Promise<ConversationItem[] | undefined> {
     const existing = this.items.get(conversationId);
     if (!existing) {
-      return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
+      return Promise.resolve(undefined as ConversationItem[] | undefined);
     }
 
     for (const item of items) {
@@ -123,11 +126,11 @@ export class InMemoryStorage implements ConversationStorage {
   listItems(
     conversationId: string,
     params: ConversationItemListParams,
-  ): Promise<ConversationItem[]> {
+  ): Promise<ConversationItem[] | undefined> {
     const { after, order, limit } = params;
     const existing = this.items.get(conversationId);
     if (!existing) {
-      return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
+      return Promise.resolve(undefined as ConversationItem[] | undefined);
     }
 
     let result = Array.from(existing.values());

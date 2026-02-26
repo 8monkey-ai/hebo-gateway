@@ -144,7 +144,14 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       after,
       order,
     });
-    logger.trace({ requestId: ctx.requestId, items }, "[storage] listItems result");
+    logger.trace(
+      { requestId: ctx.requestId, conversationId, itemCount: items?.length },
+      "[storage] listItems result",
+    );
+
+    if (!items) {
+      throw new GatewayError("Conversation not found", 404);
+    }
 
     const has_more = items.length > limit;
     const data = has_more ? items.slice(0, limit) : items;
@@ -177,15 +184,24 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.request.parsed");
 
     const items = parsed.data.items.map((item) => createConversationItem(item));
-    await storage.addItems(conversationId, items);
+    const result = await storage.addItems(conversationId, items);
+
+    if (!result) {
+      throw new GatewayError("Conversation not found", 404);
+    }
 
     logger.debug(`[conversations] added ${items.length} items to conversation: ${conversationId}`);
-    logger.trace({ requestId: ctx.requestId, items }, "[storage] addItems result");
+    logger.trace(
+      { requestId: ctx.requestId, conversationId, itemCount: items.length },
+      "[storage] addItems result",
+    );
 
     return {
       object: "list",
       data: items,
       has_more: false,
+      first_id: items[0]?.id,
+      last_id: items.at(-1)?.id,
     };
   }
 

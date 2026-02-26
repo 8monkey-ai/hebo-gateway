@@ -18,20 +18,28 @@ export const ResponseInputTextSchema = z.object({
   text: z.string(),
 });
 
-export const ResponseInputImageSchema = z.object({
-  type: z.literal("input_image"),
-  image_url: z.string().optional(),
-  file_id: z.string().optional(),
-  detail: ImageDetailSchema.optional(),
-});
+export const ResponseInputImageSchema = z
+  .object({
+    type: z.literal("input_image"),
+    image_url: z.string().nullable().optional(),
+    file_id: z.string().nullable().optional(),
+    detail: ImageDetailSchema.optional(),
+  })
+  .refine((data) => data.image_url || data.file_id, {
+    message: "Either 'image_url' or 'file_id' must be provided",
+  });
 
-export const ResponseInputFileSchema = z.object({
-  type: z.literal("input_file"),
-  filename: z.string().optional(),
-  file_data: z.string().optional(),
-  file_id: z.string().optional(),
-  file_url: z.string().optional(),
-});
+export const ResponseInputFileSchema = z
+  .object({
+    type: z.literal("input_file"),
+    filename: z.string().optional(),
+    file_data: z.string().nullable().optional(),
+    file_id: z.string().nullable().optional(),
+    file_url: z.string().nullable().optional(),
+  })
+  .refine((data) => data.file_data || data.file_id || data.file_url, {
+    message: "At least one of 'file_data', 'file_id', or 'file_url' must be provided",
+  });
 
 export const ResponseOutputTextSchema = z.object({
   type: z.literal("output_text"),
