@@ -36,7 +36,7 @@ export const ResponseInputFileSchema = z.object({
 export const ResponseOutputTextSchema = z.object({
   type: z.literal("output_text"),
   text: z.string(),
-  annotations: z.array(z.any()).optional(),
+  annotations: z.array(z.unknown()).optional(),
 });
 
 export const ResponseSummaryTextSchema = z.object({
@@ -145,7 +145,7 @@ export const ConversationItemSchema = z.discriminatedUnion("type", [
   withSystemFields({
     type: z.literal("message"),
     role: z.enum(["user", "assistant", "system", "developer"]),
-    content: z.any(),
+    content: z.unknown(),
     status: ItemStatusSchema.optional(),
   }),
   withSystemFields(ResponseFunctionToolCallSchema.omit({ id: true }).shape),

@@ -5,13 +5,13 @@ import type { ConversationStorage } from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
   private conversations = new Map<string, Conversation>();
-  private items: LRUCache<string, ConversationItem[]>;
+  private items: LRUCache<string, Map<string, ConversationItem>>;
 
   constructor(options?: { maxSize?: number }) {
     // Default to 256MB
     const maxSize = options?.maxSize ?? 256 * 1024 * 1024;
 
-    this.items = new LRUCache<string, ConversationItem[]>({
+    this.items = new LRUCache<string, Map<string, ConversationItem>>({
       maxSize,
       sizeCalculation: (items) => Math.max(1, this.estimateSize(items)),
       dispose: (_value, key) => {
@@ -23,13 +23,20 @@ export class InMemoryStorage implements ConversationStorage {
   private estimateSize(obj: unknown): number {
     if (typeof obj === "string") return obj.length;
     if (obj instanceof Uint8Array) return obj.length;
+    if (obj instanceof Map) {
+      let size = 0;
+      for (const [key, value] of obj) {
+        size += this.estimateSize(key) + this.estimateSize(value);
+      }
+      return size;
+    }
     if (Array.isArray(obj)) {
       return obj.reduce((acc, item) => acc + this.estimateSize(item), 0);
     }
     if (typeof obj === "object" && obj !== null) {
       let size = 0;
       for (const key in obj) {
-        size += this.estimateSize((obj as Record<string, any>)[key]);
+        size += this.estimateSize((obj as Record<string, unknown>)[key]);
       }
       return size;
     }
@@ -40,8 +47,15 @@ export class InMemoryStorage implements ConversationStorage {
     conversation: Conversation,
     items?: ConversationItem[],
   ): Promise<Conversation> {
+    const itemMap = new Map<string, ConversationItem>();
+    if (items) {
+      for (const item of items) {
+        itemMap.set(item.id, item);
+      }
+    }
+
     this.conversations.set(conversation.id, conversation);
-    this.items.set(conversation.id, items ?? []);
+    this.items.set(conversation.id, itemMap);
     return Promise.resolve(conversation);
   }
 
@@ -81,7 +95,9 @@ export class InMemoryStorage implements ConversationStorage {
       return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
     }
 
-    for (const item of items) existing.push(item);
+    for (const item of items) {
+      existing.set(item.id, item);
+    }
     // Recalculate the cache size
     this.items.set(conversationId, existing);
 
@@ -89,16 +105,14 @@ export class InMemoryStorage implements ConversationStorage {
   }
 
   getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined> {
-    return Promise.resolve(this.items.get(conversationId)?.find((item) => item.id === itemId));
+    return Promise.resolve(this.items.get(conversationId)?.get(itemId));
   }
 
   deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined> {
     const existing = this.items.get(conversationId);
     if (!existing) return Promise.resolve(undefined as Conversation | undefined);
 
-    const i = existing.findIndex((item) => item.id === itemId);
-    if (i !== -1) {
-      existing.splice(i, 1);
+    if (existing.delete(itemId)) {
       // Recalculate the cache size
       this.items.set(conversationId, existing);
     }
@@ -116,7 +130,7 @@ export class InMemoryStorage implements ConversationStorage {
       return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
     }
 
-    let result = existing;
+    let result = Array.from(existing.values());
 
     if (order === "desc") result = result.toReversed();
 
