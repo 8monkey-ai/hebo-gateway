@@ -108,11 +108,9 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
 
     const bedrock = params.providerOptions?.["bedrock"];
     const cacheControl = bedrock?.["cacheControl"] as ChatCompletionsCacheControl;
-    if (cacheControl && !hasExplicitCacheControl) {
-      if (lastCacheableBlock) {
-        ((lastCacheableBlock["providerOptions"] ??= {})["bedrock"] ??= {})["cachePoint"] =
-          toBedrockCachePoint(model.modelId, cacheControl);
-      }
+    if (cacheControl && !hasExplicitCacheControl && lastCacheableBlock) {
+      ((lastCacheableBlock["providerOptions"] ??= {})["bedrock"] ??= {})["cachePoint"] =
+        toBedrockCachePoint(model.modelId, cacheControl);
     }
 
     delete bedrock?.["cacheControl"];
