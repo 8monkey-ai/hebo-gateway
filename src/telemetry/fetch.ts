@@ -52,7 +52,7 @@ const otelFetch = (input: RequestInfo | URL, init?: RequestInit) => {
   );
 };
 
-export const initFetch = (level?: TelemetrySignalLevel) => {
+export const instrumentFetch = (level?: TelemetrySignalLevel) => {
   fetchTracingEnabled = level === "full";
   if (!fetchTracingEnabled) return;
   if (g[ORIGINAL_FETCH_KEY]) return;
