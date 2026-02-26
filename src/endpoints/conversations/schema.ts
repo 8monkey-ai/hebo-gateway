@@ -13,19 +13,19 @@ export const ImageDetailSchema = z.enum(["low", "high", "auto"]);
 
 // --- Content ---
 
-export const InputTextContentSchema = z.object({
+export const ResponseInputTextSchema = z.object({
   type: z.literal("input_text"),
   text: z.string(),
 });
 
-export const InputImageContentSchema = z.object({
+export const ResponseInputImageSchema = z.object({
   type: z.literal("input_image"),
   image_url: z.string().optional(),
   file_id: z.string().optional(),
   detail: ImageDetailSchema.optional(),
 });
 
-export const InputFileContentSchema = z.object({
+export const ResponseInputFileSchema = z.object({
   type: z.literal("input_file"),
   filename: z.string().optional(),
   file_data: z.string().optional(),
@@ -33,18 +33,18 @@ export const InputFileContentSchema = z.object({
   file_url: z.string().optional(),
 });
 
-export const OutputTextContentSchema = z.object({
+export const ResponseOutputTextSchema = z.object({
   type: z.literal("output_text"),
   text: z.string(),
   annotations: z.array(z.any()).optional(),
 });
 
-export const SummaryTextContentSchema = z.object({
+export const ResponseSummaryTextSchema = z.object({
   type: z.literal("summary_text"),
   text: z.string(),
 });
 
-export const ReasoningTextContentSchema = z.object({
+export const ResponseReasoningTextSchema = z.object({
   type: z.literal("reasoning_text"),
   text: z.string(),
 });
@@ -53,6 +53,7 @@ export const ReasoningTextContentSchema = z.object({
 
 const MessageItemBase = z.object({
   type: z.literal("message"),
+  id: z.string().optional(),
   status: ItemStatusSchema.optional(),
 });
 
@@ -60,23 +61,23 @@ const UserMessage = MessageItemBase.extend({
   role: z.literal("user"),
   content: z.union([
     z.string(),
-    z.array(z.union([InputTextContentSchema, InputImageContentSchema, InputFileContentSchema])),
+    z.array(z.union([ResponseInputTextSchema, ResponseInputImageSchema, ResponseInputFileSchema])),
   ]),
 });
 
 const AssistantMessage = MessageItemBase.extend({
   role: z.literal("assistant"),
-  content: z.union([z.string(), z.array(OutputTextContentSchema)]),
+  content: z.union([z.string(), z.array(ResponseOutputTextSchema)]),
 });
 
 const SystemMessage = MessageItemBase.extend({
   role: z.literal("system"),
-  content: z.union([z.string(), z.array(InputTextContentSchema)]),
+  content: z.union([z.string(), z.array(ResponseInputTextSchema)]),
 });
 
 const DeveloperMessage = MessageItemBase.extend({
   role: z.literal("developer"),
-  content: z.union([z.string(), z.array(InputTextContentSchema)]),
+  content: z.union([z.string(), z.array(ResponseInputTextSchema)]),
 });
 
 export const MessageItemUnion = z.union([
@@ -88,7 +89,7 @@ export const MessageItemUnion = z.union([
 
 // --- Item ---
 
-const FunctionCallItem = z.object({
+const ResponseFunctionToolCallSchema = z.object({
   type: z.literal("function_call"),
   id: z.string().optional(),
   call_id: z.string(),
@@ -97,37 +98,37 @@ const FunctionCallItem = z.object({
   status: ItemStatusSchema.optional(),
 });
 
-const FunctionCallOutputItem = z.object({
+const FunctionCallOutputSchema = z.object({
   type: z.literal("function_call_output"),
   id: z.string().optional(),
   call_id: z.string(),
   output: z.union([
     z.string(),
-    z.array(z.union([InputTextContentSchema, InputImageContentSchema, InputFileContentSchema])),
+    z.array(z.union([ResponseInputTextSchema, ResponseInputImageSchema, ResponseInputFileSchema])),
   ]),
   status: ItemStatusSchema.optional(),
 });
 
-const ReasoningItem = z.object({
+const ResponseReasoningItemSchema = z.object({
   type: z.literal("reasoning"),
   id: z.string().optional(),
-  summary: z.array(SummaryTextContentSchema),
-  content: z.array(ReasoningTextContentSchema).optional(),
+  summary: z.array(ResponseSummaryTextSchema),
+  content: z.array(ResponseReasoningTextSchema).optional(),
   encrypted_content: z.string().optional(),
   status: ItemStatusSchema.optional(),
 });
 
 // Item: Request
-export const ConversationItemInputSchema = z.union([
+export const ResponseInputItemSchema = z.union([
   MessageItemUnion,
-  FunctionCallItem,
-  FunctionCallOutputItem,
-  ReasoningItem,
+  ResponseFunctionToolCallSchema,
+  FunctionCallOutputSchema,
+  ResponseReasoningItemSchema,
 ]);
-export type ConversationItemInput = z.infer<typeof ConversationItemInputSchema>;
+export type ResponseInputItem = z.infer<typeof ResponseInputItemSchema>;
 
 export const ConversationItemsAddBodySchema = z.object({
-  items: z.array(ConversationItemInputSchema).max(20),
+  items: z.array(ResponseInputItemSchema).max(20),
 });
 export type ConversationItemsAddBody = z.infer<typeof ConversationItemsAddBodySchema>;
 
@@ -147,9 +148,9 @@ export const ConversationItemSchema = z.discriminatedUnion("type", [
     content: z.any(),
     status: ItemStatusSchema.optional(),
   }),
-  withSystemFields(FunctionCallItem.omit({ id: true }).shape),
-  withSystemFields(FunctionCallOutputItem.omit({ id: true }).shape),
-  withSystemFields(ReasoningItem.omit({ id: true }).shape),
+  withSystemFields(ResponseFunctionToolCallSchema.omit({ id: true }).shape),
+  withSystemFields(FunctionCallOutputSchema.omit({ id: true }).shape),
+  withSystemFields(ResponseReasoningItemSchema.omit({ id: true }).shape),
 ]);
 export type ConversationItem = z.infer<typeof ConversationItemSchema>;
 
@@ -163,14 +164,22 @@ export const ConversationItemListSchema = z.object({
 });
 export type ConversationItemList = z.infer<typeof ConversationItemListSchema>;
 
+export const ConversationItemListParamsSchema = z.object({
+  after: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  order: z.enum(["asc", "desc"]).default("desc"),
+  // FUTURE: Add support for "include" array
+});
+export type ConversationItemListParams = z.infer<typeof ConversationItemListParamsSchema>;
+
 // --- Conversation ---
 
 // Conversation: Request
-export const ConversationCreateBodySchema = z.object({
-  items: z.array(ConversationItemInputSchema).max(20).optional(),
+export const ConversationCreateParamsSchema = z.object({
+  items: z.array(ResponseInputItemSchema).max(20).optional(),
   metadata: MetadataSchema.optional(),
 });
-export type ConversationCreateBody = z.infer<typeof ConversationCreateBodySchema>;
+export type ConversationCreateParams = z.infer<typeof ConversationCreateParamsSchema>;
 
 export const ConversationUpdateBodySchema = z.object({
   metadata: MetadataSchema,

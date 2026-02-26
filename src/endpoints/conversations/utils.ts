@@ -1,4 +1,4 @@
-import type { Conversation, ConversationItem, ConversationItemInput } from "./schema";
+import type { Conversation, ConversationItem, ResponseInputItem } from "./schema";
 
 /**
  * Creates a new Conversation object with generated ID and timestamp.
@@ -15,11 +15,12 @@ export function createConversation(params: { metadata?: Record<string, unknown> 
 /**
  * Creates a new ConversationItem object from input data with generated ID and timestamp.
  */
-export function createConversationItem(input: ConversationItemInput): ConversationItem {
+export function createConversationItem(input: ResponseInputItem): ConversationItem {
+  const id = input.id ?? `item_${crypto.randomUUID()}`;
   return {
-    id: `item_${crypto.randomUUID()}`,
+    ...input,
+    id,
     object: "conversation.item",
     created_at: Math.floor(Date.now() / 1000),
-    ...input,
   };
 }

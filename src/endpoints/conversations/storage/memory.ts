@@ -1,7 +1,7 @@
 import { LRUCache } from "lru-cache";
 
-import type { Conversation, ConversationItem } from "../schema";
-import type { ConversationStorage, ListItemsParams } from "./types";
+import type { Conversation, ConversationItem, ConversationItemListParams } from "../schema";
+import type { ConversationStorage } from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
   private conversations = new Map<string, Conversation>();
@@ -13,11 +13,27 @@ export class InMemoryStorage implements ConversationStorage {
 
     this.items = new LRUCache<string, ConversationItem[]>({
       maxSize,
-      sizeCalculation: (items) => JSON.stringify(items).length,
+      sizeCalculation: (items) => Math.max(1, this.estimateSize(items)),
       dispose: (_value, key) => {
         this.conversations.delete(key);
       },
     });
+  }
+
+  private estimateSize(obj: unknown): number {
+    if (typeof obj === "string") return obj.length;
+    if (obj instanceof Uint8Array) return obj.length;
+    if (Array.isArray(obj)) {
+      return obj.reduce((acc, item) => acc + this.estimateSize(item), 0);
+    }
+    if (typeof obj === "object" && obj !== null) {
+      let size = 0;
+      for (const key in obj) {
+        size += this.estimateSize(obj[key]);
+      }
+      return size;
+    }
+    return 0;
   }
 
   createConversation(
@@ -37,7 +53,10 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(this.conversations.get(id));
   }
 
-  updateConversation(id: string, metadata: Record<string, any>): Promise<Conversation | undefined> {
+  updateConversation(
+    id: string,
+    metadata: Record<string, unknown>,
+  ): Promise<Conversation | undefined> {
     // Updates the LRU position
     if (this.items.get(id) === undefined) {
       return Promise.resolve(undefined as Conversation | undefined);
@@ -46,7 +65,6 @@ export class InMemoryStorage implements ConversationStorage {
     const conversation = this.conversations.get(id);
     if (conversation) {
       conversation.metadata = metadata;
-      this.conversations.set(id, conversation);
     }
     return Promise.resolve(conversation);
   }
@@ -88,13 +106,14 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(this.conversations.get(conversationId));
   }
 
-  listItems(conversationId: string, params?: ListItemsParams): Promise<ConversationItem[]> {
+  listItems(
+    conversationId: string,
+    { after, order, limit }: ConversationItemListParams = {},
+  ): Promise<ConversationItem[]> {
     const existing = this.items.get(conversationId);
     if (!existing) {
       return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
     }
-
-    const { after, order = "desc", limit = 20 } = params ?? {};
 
     let result = existing;
 

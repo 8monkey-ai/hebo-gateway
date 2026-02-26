@@ -8,9 +8,10 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { addSpanEvent } from "../../telemetry/span";
 import {
-  ConversationCreateBodySchema,
+  ConversationCreateParamsSchema,
   ConversationItemsAddBodySchema,
   ConversationUpdateBodySchema,
+  ConversationItemListParamsSchema,
   type Conversation,
   type ConversationItem,
   type ConversationDeleted,
@@ -111,7 +112,7 @@ async function create(ctx: GatewayContext): Promise<Conversation> {
   }
   addSpanEvent("hebo.request.deserialized");
 
-  const parsed = ConversationCreateBodySchema.safeParse(body);
+  const parsed = ConversationCreateParamsSchema.safeParse(body);
   if (!parsed.success) {
     throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
   }
@@ -203,22 +204,25 @@ async function listItems(
   conversationId: string,
   searchParams: URLSearchParams,
 ): Promise<ConversationItemList> {
-  const requestedLimit = searchParams.get("limit")
-    ? Number.parseInt(searchParams.get("limit")!, 10)
-    : 20;
-  const after = searchParams.get("after") ?? undefined;
-  const order = (searchParams.get("order") as "asc" | "desc") ?? undefined;
+  const params: Record<string, any> = Object.fromEntries(searchParams.entries());
+
+  const parsed = ConversationItemListParamsSchema.safeParse(params);
+  if (!parsed.success) {
+    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
+  }
+
+  const { limit, after, order } = parsed.data;
 
   // Fetch limit + 1 to determine if there's more
   const items = await ctx.storage.listItems(conversationId, {
-    limit: requestedLimit + 1,
+    limit: limit + 1,
     after,
     order,
   });
   logger.trace({ requestId: ctx.requestId, items }, "[storage] listItems result");
 
-  const has_more = items.length > requestedLimit;
-  const data = has_more ? items.slice(0, requestedLimit) : items;
+  const has_more = items.length > limit;
+  const data = has_more ? items.slice(0, limit) : items;
 
   return {
     object: "list",

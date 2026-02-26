@@ -1,17 +1,14 @@
-import type { Conversation, ConversationItem } from "../schema";
-
-export interface ListItemsParams {
-  limit?: number;
-  order?: "asc" | "desc";
-  after?: string;
-}
+import type { Conversation, ConversationItem, ConversationItemListParams } from "../schema";
 
 export interface ConversationStorage {
   createConversation(conversation: Conversation, items?: ConversationItem[]): Promise<Conversation>;
 
   getConversation(id: string): Promise<Conversation | undefined>;
 
-  updateConversation(id: string, metadata: Record<string, any>): Promise<Conversation | undefined>;
+  updateConversation(
+    id: string,
+    metadata: Record<string, unknown>,
+  ): Promise<Conversation | undefined>;
 
   deleteConversation(id: string): Promise<{ id: string; deleted: boolean }>;
 
@@ -21,5 +18,8 @@ export interface ConversationStorage {
 
   deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined>;
 
-  listItems(conversationId: string, params?: ListItemsParams): Promise<ConversationItem[]>;
+  listItems(
+    conversationId: string,
+    params?: ConversationItemListParams,
+  ): Promise<ConversationItem[]>;
 }
