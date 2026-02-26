@@ -160,6 +160,7 @@ export const ChatCompletionsToolSchema = z.object({
     parameters: z.record(z.string(), z.unknown()),
     strict: z.boolean().optional(),
   }),
+  // FUTURE: cache_control support on tools
 });
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
 
