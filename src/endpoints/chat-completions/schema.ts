@@ -190,11 +190,13 @@ export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoice
 
 export const ChatCompletionsReasoningEffortSchema = z.enum([
   "none",
+  // Extension origin: Gemini
   "minimal",
   "low",
   "medium",
   "high",
   "xhigh",
+  // Extension origin: Anthropic
   "max",
 ]);
 export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;

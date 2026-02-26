@@ -68,11 +68,13 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
 function toBedrockCachePoint(cacheControl?: ChatCompletionsCacheControl, modelId?: string) {
   const out: { type: "default"; ttl?: string } = { type: "default" };
   if (cacheControl?.ttl) {
+    // Nova currently only supports 5m
     out.ttl = modelId?.includes("nova") ? "5m" : cacheControl.ttl;
   }
   return out;
 }
 
+// https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
 export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await

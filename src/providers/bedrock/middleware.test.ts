@@ -224,7 +224,7 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
         ],
         providerOptions: {
           unknown: {
-            cacheControl: { type: "ephemeral", ttl: "5m" },
+            cacheControl: { type: "ephemeral", ttl: "1h" },
           },
         },
       },
