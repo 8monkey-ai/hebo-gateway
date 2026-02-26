@@ -190,18 +190,18 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       throw new GatewayError("Conversation not found", 404);
     }
 
-    logger.debug(`[conversations] added ${items.length} items to conversation: ${conversationId}`);
+    logger.debug(`[conversations] added ${result.length} items to conversation: ${conversationId}`);
     logger.trace(
-      { requestId: ctx.requestId, conversationId, itemCount: items.length },
+      { requestId: ctx.requestId, conversationId, itemCount: result.length },
       "[storage] addItems result",
     );
 
     return {
       object: "list",
-      data: items,
+      data: result,
       has_more: false,
-      first_id: items[0]?.id,
-      last_id: items.at(-1)?.id,
+      first_id: result[0]?.id,
+      last_id: result.at(-1)?.id,
     };
   }
 
