@@ -1,5 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
+import type { ChatCompletionsCacheControl } from "../../endpoints/chat-completions/schema";
+
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 const isClaude46 = (modelId: string) => modelId.includes("-4-6");
@@ -63,6 +65,66 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
+function toBedrockCachePoint(modelId: string, cacheControl?: ChatCompletionsCacheControl) {
+  const out: { type: "default"; ttl?: string } = { type: "default" };
+  // Nova currently only supports 5m
+  if (cacheControl?.ttl && !modelId.includes("nova")) {
+    out.ttl = cacheControl.ttl;
+  }
+  return out;
+}
+
+// https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
+export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    if (!model.modelId.includes("nova") && !model.modelId.includes("claude")) return params;
+
+    let hasExplicitCacheControl = false;
+    let lastCacheableBlock;
+
+    const processCacheControl = (providerOptions?: Record<string, any>) => {
+      if (!providerOptions) return;
+
+      const entryBedrock = providerOptions["bedrock"] as Record<string, unknown> | undefined;
+      const entryCacheControl = entryBedrock?.["cacheControl"] as ChatCompletionsCacheControl;
+      if (!entryBedrock || !entryCacheControl) return;
+
+      hasExplicitCacheControl = true;
+      entryBedrock["cachePoint"] = toBedrockCachePoint(model.modelId, entryCacheControl);
+      delete entryBedrock["cacheControl"];
+    };
+
+    for (const message of params.prompt) {
+      processCacheControl(message["providerOptions"]);
+
+      if (!Array.isArray(message["content"])) continue;
+      for (const part of message["content"]) {
+        processCacheControl(part["providerOptions"]);
+      }
+      lastCacheableBlock = message;
+    }
+
+    const bedrock = params.providerOptions?.["bedrock"];
+    const cacheControl = bedrock?.["cacheControl"] as ChatCompletionsCacheControl;
+    if (cacheControl && !hasExplicitCacheControl) {
+      if (lastCacheableBlock) {
+        ((lastCacheableBlock["providerOptions"] ??= {})["bedrock"] ??= {})["cachePoint"] =
+          toBedrockCachePoint(model.modelId, cacheControl);
+      }
+    }
+
+    delete bedrock?.["cacheControl"];
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
-  language: [bedrockGptReasoningMiddleware, bedrockClaudeReasoningMiddleware],
+  language: [
+    bedrockGptReasoningMiddleware,
+    bedrockClaudeReasoningMiddleware,
+    bedrockPromptCachingMiddleware,
+  ],
 });

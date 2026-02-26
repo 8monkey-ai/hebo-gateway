@@ -2,7 +2,11 @@ import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { bedrockClaudeReasoningMiddleware, bedrockGptReasoningMiddleware } from "./middleware";
+import {
+  bedrockClaudeReasoningMiddleware,
+  bedrockGptReasoningMiddleware,
+  bedrockPromptCachingMiddleware,
+} from "./middleware";
 
 test("bedrock middlewares > matching provider resolves GPT middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
@@ -22,6 +26,26 @@ test("bedrock middlewares > matching provider resolves Claude middleware", () =>
   });
 
   expect(middleware).toContain(bedrockClaudeReasoningMiddleware);
+});
+
+test("bedrock middlewares > matching provider resolves prompt caching middleware for Claude", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "anthropic/claude-opus-4.6",
+    providerId: "amazon-bedrock",
+  });
+
+  expect(middleware).toContain(bedrockPromptCachingMiddleware);
+});
+
+test("bedrock middlewares > matching provider resolves prompt caching middleware for Nova", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "amazon/nova-2-lite",
+    providerId: "amazon-bedrock",
+  });
+
+  expect(middleware).toContain(bedrockPromptCachingMiddleware);
 });
 
 test("bedrockGptReasoningMiddleware > should map reasoningEffort into reasoningConfig", async () => {
@@ -180,4 +204,100 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
       budgetTokens: 4096,
     },
   });
+});
+
+test("bedrockPromptCachingMiddleware > should map message and part cacheControl to cachePoint", async () => {
+  const params = {
+    prompt: [
+      {
+        role: "system",
+        content: [
+          {
+            type: "text",
+            text: "Policy",
+            providerOptions: {
+              bedrock: {
+                cacheControl: { type: "ephemeral", ttl: "1h" },
+              },
+            },
+          },
+        ],
+        providerOptions: {
+          bedrock: {
+            cacheControl: { type: "ephemeral", ttl: "1h" },
+          },
+        },
+      },
+    ],
+    providerOptions: {
+      bedrock: {},
+    },
+  };
+
+  const result = await bedrockPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params: params as any,
+    model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+  });
+
+  expect((result.prompt[0] as any).providerOptions.bedrock.cachePoint).toEqual({
+    type: "default",
+  });
+  expect((result.prompt[0] as any).providerOptions.bedrock.cacheControl).toBeUndefined();
+  expect((result.prompt[0] as any).content[0].providerOptions.bedrock.cachePoint).toEqual({
+    type: "default",
+  });
+  expect((result.prompt[0] as any).content[0].providerOptions.bedrock.cacheControl).toBeUndefined();
+});
+
+test("bedrockPromptCachingMiddleware > should fallback from top-level cacheControl", async () => {
+  const params = {
+    prompt: [
+      {
+        role: "system",
+        content: "Reusable context",
+      },
+      {
+        role: "user",
+        content: "Question",
+      },
+    ],
+    providerOptions: {
+      bedrock: {
+        cacheControl: { type: "ephemeral", ttl: "1h" },
+      },
+    },
+  };
+
+  const result = await bedrockPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params: params as any,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+  });
+
+  expect((result.prompt[1] as any).providerOptions).toBeUndefined();
+  expect((result.providerOptions as any).bedrock.cacheControl).toBeUndefined();
+});
+
+test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", async () => {
+  const params = {
+    prompt: [{ role: "user", content: "Hello" }],
+    providerOptions: {
+      bedrock: {
+        cacheControl: { type: "ephemeral", ttl: "1h" },
+      },
+    },
+  };
+
+  const result = await bedrockPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params: params as any,
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+  });
+
+  expect((result.providerOptions as any).bedrock.cacheControl).toEqual({
+    type: "ephemeral",
+    ttl: "1h",
+  });
+  expect((result.prompt[0] as any).providerOptions).toBeUndefined();
 });

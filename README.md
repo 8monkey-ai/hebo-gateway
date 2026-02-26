@@ -38,7 +38,7 @@ bun install @hebo-ai/gateway
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
 - OpenAI Extensions
-  - [Reasoning](#reasoning)
+  - [Reasoning](#reasoning) | [Prompt Caching](#prompt-caching)
 - Advanced Usage
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
@@ -564,6 +564,37 @@ Advanced models (like Anthropic Claude 3.7 or Gemini 3) surface structured reaso
 - **extra_content**: Provider-specific extensions, such as **Google's thought signatures** on Vertex AI.
 
 For **Gemini 3** models, returning the thought signature via `extra_content` is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance.
+
+### Prompt Caching
+
+The chat completions endpoint supports both implicit (provider-managed) and explicit prompt caching across OpenAI-compatible providers.
+
+Accepted request fields:
+
+- `prompt_cache_key` + `prompt_cache_retention` (OpenAI style)
+- `cache_control` (OpenRouter / Vercel / Claude style)
+- `cached_content` (Gemini style)
+
+```json
+{
+  "model": "anthropic/claude-sonnet-4.6",
+  "messages": [
+    {
+      "role": "system",
+      "content": "Reusable policy and instructions",
+      "cache_control": { "type": "ephemeral", "ttl": "1h" }
+    },
+    { "role": "user", "content": "Apply policy to this request." }
+  ]
+}
+```
+
+Provider behavior:
+
+- **OpenAI-compatible**: forwards `prompt_cache_key` and `prompt_cache_retention` as native provider options.
+- **Anthropic Claude**: maps top-level caching to Anthropic cache control, while message/part `cache_control` breakpoints are preserved.
+- **Google Gemini**: maps `cached_content` to Gemini `cachedContent`.
+- **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 
 ## 🧪 Advanced Usage
 

@@ -3,7 +3,11 @@ import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { openAIDimensionsMiddleware, openAIReasoningMiddleware } from "./middleware";
+import {
+  openAIDimensionsMiddleware,
+  openAIPromptCachingMiddleware,
+  openAIReasoningMiddleware,
+} from "./middleware";
 
 test("openAI middleware > matching patterns", () => {
   const languageMatching = [
@@ -21,6 +25,7 @@ test("openAI middleware > matching patterns", () => {
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(openAIReasoningMiddleware);
+    expect(middleware).toContain(openAIPromptCachingMiddleware);
   }
 
   for (const id of languageNonMatching) {
@@ -44,6 +49,32 @@ test("openAI middleware > matching patterns", () => {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).not.toContain(openAIDimensionsMiddleware);
   }
+});
+
+test("openAIPromptCachingMiddleware > should map key and retention", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        prompt_cache_key: "tenant:shared:legal-v1",
+        prompt_cache_retention: "24h",
+      },
+    },
+  };
+
+  const result = await openAIPromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    openai: {
+      promptCacheKey: "tenant:shared:legal-v1",
+      promptCacheRetention: "24h",
+    },
+    unknown: {},
+  });
 });
 
 test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider options", async () => {
