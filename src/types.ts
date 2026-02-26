@@ -8,6 +8,7 @@ import type {
 } from "./endpoints/chat-completions/schema";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
+import type { Responses, ResponsesBody, ResponsesStreamEvent } from "./endpoints/responses/schema";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
@@ -39,7 +40,7 @@ export type GatewayContext = {
   /**
    * Parsed body from the request.
    */
-  body?: ChatCompletionsBody | EmbeddingsBody;
+  body?: ChatCompletionsBody | ResponsesBody | EmbeddingsBody;
   /**
    * Incoming model ID.
    */
@@ -51,7 +52,7 @@ export type GatewayContext = {
   /**
    * Operation type.
    */
-  operation?: "chat" | "embeddings" | "models";
+  operation?: "chat" | "responses" | "embeddings" | "models";
   /**
    * Resolved provider instance.
    */
@@ -66,6 +67,8 @@ export type GatewayContext = {
   result?:
     | ChatCompletions
     | ReadableStream<ChatCompletionsChunk | Error>
+    | Responses
+    | ReadableStream<ResponsesStreamEvent | Error>
     | Embeddings
     | Model
     | ModelList;
@@ -114,7 +117,7 @@ export type GatewayHooks = {
    */
   onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
   /**
-   * Runs after request JSON is parsed and validated for chat completions / embeddings.
+   * Runs after request JSON is parsed and validated for chat completions / responses / embeddings.
    * @returns Replacement parsed body, or undefined to keep original.
    */
   before?: (
@@ -122,8 +125,9 @@ export type GatewayHooks = {
   ) =>
     | void
     | ChatCompletionsBody
+    | ResponsesBody
     | EmbeddingsBody
-    | Promise<void | ChatCompletionsBody | EmbeddingsBody>;
+    | Promise<void | ChatCompletionsBody | ResponsesBody | EmbeddingsBody>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @returns Canonical model ID or undefined to keep original.
@@ -146,8 +150,17 @@ export type GatewayHooks = {
     | void
     | ChatCompletions
     | ReadableStream<ChatCompletionsChunk | Error>
+    | Responses
+    | ReadableStream<ResponsesStreamEvent | Error>
     | Embeddings
-    | Promise<void | ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings>;
+    | Promise<
+        | void
+        | ChatCompletions
+        | ReadableStream<ChatCompletionsChunk | Error>
+        | Responses
+        | ReadableStream<ResponsesStreamEvent | Error>
+        | Embeddings
+      >;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.

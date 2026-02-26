@@ -4,6 +4,7 @@ import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
+import { responses } from "./endpoints/responses/handler";
 import { GatewayError } from "./errors/gateway";
 import { winterCgHandler } from "./lifecycle";
 import { logger } from "./logger";
@@ -18,6 +19,7 @@ export function gateway(config: GatewayConfig) {
 
   const routes = {
     ["/chat/completions"]: chatCompletions(parsedConfig),
+    ["/responses"]: responses(parsedConfig),
     ["/embeddings"]: embeddings(parsedConfig),
     ["/models"]: models(parsedConfig),
   } as const satisfies Record<string, Endpoint>;

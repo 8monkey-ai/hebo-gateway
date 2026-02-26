@@ -12,7 +12,7 @@ export const resolveProvider = (args: {
   providers: ProviderRegistry;
   models: ModelCatalog;
   modelId: ModelId;
-  operation: "chat" | "embeddings";
+  operation: "chat" | "responses" | "embeddings";
 }): ProviderV3 => {
   const { providers, models, modelId, operation } = args;
 

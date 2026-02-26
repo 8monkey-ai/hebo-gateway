@@ -6,6 +6,17 @@ class JsonToSseTransformStream extends TransformStream<unknown, string> {
   constructor() {
     super({
       transform(part, controller) {
+        const eventType =
+          part &&
+          typeof part === "object" &&
+          "type" in part &&
+          typeof (part as Record<string, unknown>)["type"] === "string"
+            ? ((part as Record<string, unknown>)["type"] as string)
+            : undefined;
+
+        if (eventType) {
+          controller.enqueue(`event: ${eventType}\n`);
+        }
         controller.enqueue(`data: ${JSON.stringify(part)}\n\n`);
       },
       flush(controller) {
