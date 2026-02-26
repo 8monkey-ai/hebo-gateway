@@ -30,10 +30,6 @@ export type GatewayContext = {
    */
   models: ModelCatalog;
   /**
-   * Conversation storage backend.
-   */
-  storage: ConversationStorage;
-  /**
    * Incoming request for the handler.
    */
   request: Request;

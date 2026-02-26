@@ -29,7 +29,7 @@ export class InMemoryStorage implements ConversationStorage {
     if (typeof obj === "object" && obj !== null) {
       let size = 0;
       for (const key in obj) {
-        size += this.estimateSize(obj[key]);
+        size += this.estimateSize((obj as Record<string, any>)[key]);
       }
       return size;
     }
@@ -108,8 +108,9 @@ export class InMemoryStorage implements ConversationStorage {
 
   listItems(
     conversationId: string,
-    { after, order, limit }: ConversationItemListParams = {},
+    params: ConversationItemListParams,
   ): Promise<ConversationItem[]> {
+    const { after, order, limit } = params;
     const existing = this.items.get(conversationId);
     if (!existing) {
       return Promise.reject(new Error(`Conversation not found: ${conversationId}`));

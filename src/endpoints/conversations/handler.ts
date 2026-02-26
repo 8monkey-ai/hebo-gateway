@@ -21,6 +21,173 @@ import { createConversation, createConversationItem } from "./utils";
 
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
+  const storage = parsedConfig.storage;
+
+  async function create(ctx: GatewayContext): Promise<Conversation> {
+    let body = {};
+    try {
+      body = await ctx.request.json();
+    } catch {
+      throw new GatewayError("Invalid JSON", 400);
+    }
+    addSpanEvent("hebo.request.deserialized");
+
+    const parsed = ConversationCreateParamsSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
+    }
+    addSpanEvent("hebo.request.parsed");
+
+    const conversation = createConversation({ metadata: parsed.data.metadata });
+    const items = parsed.data.items?.map((item) => createConversationItem(item));
+
+    await storage.createConversation(conversation, items);
+
+    logger.debug(`[conversations] created conversation: ${conversation.id}`);
+    logger.trace({ requestId: ctx.requestId, conversation }, "[storage] createConversation result");
+
+    return conversation;
+  }
+
+  async function retrieve(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
+    const conversation = await storage.getConversation(conversationId);
+    logger.trace({ requestId: ctx.requestId, conversation }, "[storage] getConversation result");
+
+    if (!conversation) {
+      throw new GatewayError("Conversation not found", 404);
+    }
+    return conversation;
+  }
+
+  async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
+    let body;
+    try {
+      body = await ctx.request.json();
+    } catch {
+      throw new GatewayError("Invalid JSON", 400);
+    }
+    addSpanEvent("hebo.request.deserialized");
+
+    const parsed = ConversationUpdateBodySchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
+    }
+    addSpanEvent("hebo.request.parsed");
+
+    const conversation = await storage.updateConversation(conversationId, parsed.data.metadata);
+    if (!conversation) {
+      throw new GatewayError("Conversation not found", 404);
+    }
+
+    logger.debug(`[conversations] updated conversation: ${conversationId}`);
+    logger.trace({ requestId: ctx.requestId, conversation }, "[storage] updateConversation result");
+    return conversation;
+  }
+
+  async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
+    const result = await storage.deleteConversation(conversationId);
+    logger.debug(`[conversations] deleted conversation: ${conversationId}`);
+    logger.trace({ requestId: ctx.requestId, result }, "[storage] deleteConversation result");
+
+    return {
+      id: result.id,
+      deleted: result.deleted,
+      object: "conversation.deleted",
+    };
+  }
+
+  async function retrieveItem(
+    ctx: GatewayContext,
+    conversationId: string,
+    itemId: string,
+  ): Promise<ConversationItem> {
+    const item = await storage.getItem(conversationId, itemId);
+    logger.trace({ requestId: ctx.requestId, item }, "[storage] getItem result");
+
+    if (!item) {
+      throw new GatewayError("Item not found", 404);
+    }
+    return item;
+  }
+
+  async function deleteItem(
+    ctx: GatewayContext,
+    conversationId: string,
+    itemId: string,
+  ): Promise<Conversation> {
+    const conversation = await storage.deleteItem(conversationId, itemId);
+    logger.debug(`[conversations] deleted item ${itemId} from conversation: ${conversationId}`);
+    logger.trace({ requestId: ctx.requestId, conversation }, "[storage] deleteItem result");
+    if (!conversation) {
+      throw new GatewayError("Conversation not found", 404);
+    }
+    return conversation;
+  }
+
+  async function listItems(
+    ctx: GatewayContext,
+    conversationId: string,
+    searchParams: URLSearchParams,
+  ): Promise<ConversationItemList> {
+    const params: Record<string, any> = Object.fromEntries(searchParams.entries());
+
+    const parsed = ConversationItemListParamsSchema.safeParse(params);
+    if (!parsed.success) {
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
+    }
+
+    const { limit, after, order } = parsed.data;
+
+    // Fetch limit + 1 to determine if there's more
+    const items = await storage.listItems(conversationId, {
+      limit: limit + 1,
+      after,
+      order,
+    });
+    logger.trace({ requestId: ctx.requestId, items }, "[storage] listItems result");
+
+    const has_more = items.length > limit;
+    const data = has_more ? items.slice(0, limit) : items;
+
+    return {
+      object: "list",
+      data,
+      has_more,
+      first_id: data[0]?.id,
+      last_id: data.at(-1)?.id,
+    };
+  }
+
+  async function addItems(
+    ctx: GatewayContext,
+    conversationId: string,
+  ): Promise<ConversationItemList> {
+    let body;
+    try {
+      body = await ctx.request.json();
+    } catch {
+      throw new GatewayError("Invalid JSON", 400);
+    }
+    addSpanEvent("hebo.request.deserialized");
+
+    const parsed = ConversationItemsAddBodySchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
+    }
+    addSpanEvent("hebo.request.parsed");
+
+    const items = parsed.data.items.map((item) => createConversationItem(item));
+    await storage.addItems(conversationId, items);
+
+    logger.debug(`[conversations] added ${items.length} items to conversation: ${conversationId}`);
+    logger.trace({ requestId: ctx.requestId, items }, "[storage] addItems result");
+
+    return {
+      object: "list",
+      data: items,
+      has_more: false,
+    };
+  }
 
   const handler = async (ctx: GatewayContext) => {
     ctx.operation = "conversations";
@@ -102,163 +269,3 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
   return { handler: winterCgHandler(handler, parsedConfig) };
 };
-
-async function create(ctx: GatewayContext): Promise<Conversation> {
-  let body = {};
-  try {
-    body = await ctx.request.json();
-  } catch {
-    throw new GatewayError("Invalid JSON", 400);
-  }
-  addSpanEvent("hebo.request.deserialized");
-
-  const parsed = ConversationCreateParamsSchema.safeParse(body);
-  if (!parsed.success) {
-    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
-  }
-  addSpanEvent("hebo.request.parsed");
-
-  const conversation = createConversation({ metadata: parsed.data.metadata });
-  const items = parsed.data.items?.map((item) => createConversationItem(item));
-
-  await ctx.storage.createConversation(conversation, items);
-
-  logger.trace({ requestId: ctx.requestId, conversation }, "[storage] createConversation result");
-
-  return conversation;
-}
-
-async function retrieve(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
-  const conversation = await ctx.storage.getConversation(conversationId);
-  logger.trace({ requestId: ctx.requestId, conversation }, "[storage] getConversation result");
-
-  if (!conversation) {
-    throw new GatewayError("Conversation not found", 404);
-  }
-  return conversation;
-}
-
-async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
-  let body;
-  try {
-    body = await ctx.request.json();
-  } catch {
-    throw new GatewayError("Invalid JSON", 400);
-  }
-  addSpanEvent("hebo.request.deserialized");
-
-  const parsed = ConversationUpdateBodySchema.safeParse(body);
-  if (!parsed.success) {
-    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
-  }
-  addSpanEvent("hebo.request.parsed");
-
-  const conversation = await ctx.storage.updateConversation(conversationId, parsed.data.metadata);
-  if (!conversation) {
-    throw new GatewayError("Conversation not found", 404);
-  }
-
-  logger.trace({ requestId: ctx.requestId, conversation }, "[storage] updateConversation result");
-  return conversation;
-}
-
-async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
-  const result = await ctx.storage.deleteConversation(conversationId);
-  logger.trace({ requestId: ctx.requestId, result }, "[storage] deleteConversation result");
-
-  return {
-    id: result.id,
-    deleted: result.deleted,
-    object: "conversation.deleted",
-  };
-}
-
-async function retrieveItem(
-  ctx: GatewayContext,
-  conversationId: string,
-  itemId: string,
-): Promise<ConversationItem> {
-  const item = await ctx.storage.getItem(conversationId, itemId);
-  logger.trace({ requestId: ctx.requestId, item }, "[storage] getItem result");
-
-  if (!item) {
-    throw new GatewayError("Item not found", 404);
-  }
-  return item;
-}
-
-async function deleteItem(
-  ctx: GatewayContext,
-  conversationId: string,
-  itemId: string,
-): Promise<Conversation> {
-  const conversation = await ctx.storage.deleteItem(conversationId, itemId);
-  if (!conversation) {
-    throw new GatewayError("Conversation not found", 404);
-  }
-  return conversation;
-}
-
-async function listItems(
-  ctx: GatewayContext,
-  conversationId: string,
-  searchParams: URLSearchParams,
-): Promise<ConversationItemList> {
-  const params: Record<string, any> = Object.fromEntries(searchParams.entries());
-
-  const parsed = ConversationItemListParamsSchema.safeParse(params);
-  if (!parsed.success) {
-    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
-  }
-
-  const { limit, after, order } = parsed.data;
-
-  // Fetch limit + 1 to determine if there's more
-  const items = await ctx.storage.listItems(conversationId, {
-    limit: limit + 1,
-    after,
-    order,
-  });
-  logger.trace({ requestId: ctx.requestId, items }, "[storage] listItems result");
-
-  const has_more = items.length > limit;
-  const data = has_more ? items.slice(0, limit) : items;
-
-  return {
-    object: "list",
-    data,
-    has_more,
-    first_id: data[0]?.id,
-    last_id: data.at(-1)?.id,
-  };
-}
-
-async function addItems(
-  ctx: GatewayContext,
-  conversationId: string,
-): Promise<ConversationItemList> {
-  let body;
-  try {
-    body = await ctx.request.json();
-  } catch {
-    throw new GatewayError("Invalid JSON", 400);
-  }
-  addSpanEvent("hebo.request.deserialized");
-
-  const parsed = ConversationItemsAddBodySchema.safeParse(body);
-  if (!parsed.success) {
-    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
-  }
-  addSpanEvent("hebo.request.parsed");
-
-  const items = parsed.data.items.map((item) => createConversationItem(item));
-  await ctx.storage.addItems(conversationId, items);
-
-  logger.trace({ requestId: ctx.requestId, items }, "[storage] addItems result");
-
-  return {
-    object: "list",
-    data: items,
-    has_more: false,
-  };
-}

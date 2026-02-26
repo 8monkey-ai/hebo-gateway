@@ -36,7 +36,6 @@ export const winterCgHandler = (
       state: state ?? {},
       providers: parsedConfig.providers,
       models: parsedConfig.models,
-      storage: parsedConfig.storage,
       requestId: resolveOrCreateRequestId(request),
     };
 
