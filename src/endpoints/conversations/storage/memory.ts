@@ -4,82 +4,84 @@ import type { Conversation, ConversationItem } from "../schema";
 import type { ConversationStorage, ListItemsParams } from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
-  private conversations: LRUCache<string, Conversation>;
+  private conversations = new Map<string, Conversation>();
   private items: LRUCache<string, ConversationItem[]>;
 
-  constructor(options?: { max?: number }) {
-    const max = options?.max ?? 1000;
+  constructor(options?: { maxSize?: number }) {
+    // Default to 256MB
+    const maxSize = options?.maxSize ?? 256 * 1024 * 1024;
 
-    this.items = new LRUCache<string, ConversationItem[]>({ max });
-    this.conversations = new LRUCache<string, Conversation>({
-      max,
+    this.items = new LRUCache<string, ConversationItem[]>({
+      maxSize,
+      sizeCalculation: (items) => JSON.stringify(items).length,
       dispose: (_value, key) => {
-        this.items.delete(key);
+        this.conversations.delete(key);
       },
     });
   }
 
-  // eslint-disable-next-line require-await
-  async createConversation(conversation: Conversation): Promise<Conversation> {
+  createConversation(conversation: Conversation): Promise<Conversation> {
     this.conversations.set(conversation.id, conversation);
     this.items.set(conversation.id, []);
-    return conversation;
+    return Promise.resolve(conversation);
   }
 
-  // eslint-disable-next-line require-await
-  async getConversation(id: string): Promise<Conversation | undefined> {
-    return this.conversations.get(id);
+  getConversation(id: string): Promise<Conversation | undefined> {
+    // Touching the items cache updates the LRU position for the entire conversation
+    if (this.items.get(id) === undefined) {
+      return Promise.resolve(undefined as Conversation | undefined);
+    }
+    return Promise.resolve(this.conversations.get(id));
   }
 
-  // eslint-disable-next-line require-await
-  async updateConversation(conversation: Conversation): Promise<Conversation> {
-    this.conversations.set(conversation.id, conversation);
-    return conversation;
+  updateConversation(conversation: Conversation): Promise<Conversation> {
+    if (this.items.get(conversation.id) !== undefined) {
+      this.conversations.set(conversation.id, conversation);
+    }
+    return Promise.resolve(conversation);
   }
 
-  // eslint-disable-next-line require-await
-  async deleteConversation(id: string): Promise<{ id: string; deleted: boolean }> {
-    const deleted = this.conversations.delete(id);
-    this.items.delete(id);
-    return { id, deleted };
+  deleteConversation(id: string): Promise<{ id: string; deleted: boolean }> {
+    // this.items.delete triggers the dispose handler which cleans up this.conversations
+    const deleted = this.items.delete(id);
+    return Promise.resolve({ id, deleted });
   }
 
-  // eslint-disable-next-line require-await
-  async addItems(conversationId: string, items: ConversationItem[]): Promise<ConversationItem[]> {
+  addItems(conversationId: string, items: ConversationItem[]): Promise<ConversationItem[]> {
     const existing = this.items.get(conversationId);
     if (!existing) {
-      throw new Error(`Conversation not found: ${conversationId}`);
+      return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
     }
 
-    existing.push(...items);
-    return items;
+    for (const item of items) existing.push(item);
+    // Re-set to recalculate the size based on JSON string length
+    this.items.set(conversationId, existing);
+
+    return Promise.resolve(items);
   }
 
-  // eslint-disable-next-line require-await
-  async getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined> {
-    return this.items.get(conversationId)?.find((item) => item.id === itemId);
+  getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined> {
+    return Promise.resolve(this.items.get(conversationId)?.find((item) => item.id === itemId));
   }
 
-  // eslint-disable-next-line require-await
-  async deleteItem(
-    conversationId: string,
-    itemId: string,
-  ): Promise<{ id: string; deleted: boolean }> {
+  deleteItem(conversationId: string, itemId: string): Promise<{ id: string; deleted: boolean }> {
     const existing = this.items.get(conversationId);
-    if (!existing) return { id: itemId, deleted: false };
+    if (!existing) return Promise.resolve({ id: itemId, deleted: false });
 
     const i = existing.findIndex((item) => item.id === itemId);
-    if (i === -1) return { id: itemId, deleted: false };
-    existing.splice(i, 1);
+    if (i === -1) return Promise.resolve({ id: itemId, deleted: false });
 
-    return { id: itemId, deleted: true };
+    existing.splice(i, 1);
+    // Re-set to update the LRU cache size tracking after removal
+    this.items.set(conversationId, existing);
+
+    return Promise.resolve({ id: itemId, deleted: true });
   }
 
-  // eslint-disable-next-line require-await
-  async listItems(conversationId: string, params?: ListItemsParams): Promise<ConversationItem[]> {
+  listItems(conversationId: string, params?: ListItemsParams): Promise<ConversationItem[]> {
     const existing = this.items.get(conversationId);
     if (!existing) {
-      throw new Error(`Conversation not found: ${conversationId}`);
+      return Promise.reject(new Error(`Conversation not found: ${conversationId}`));
     }
 
     const { after, order = "desc", limit = 20 } = params ?? {};
@@ -93,6 +95,6 @@ export class InMemoryStorage implements ConversationStorage {
       if (i !== -1) result = result.slice(i + 1);
     }
 
-    return result.slice(0, limit);
+    return Promise.resolve(result.slice(0, limit));
   }
 }

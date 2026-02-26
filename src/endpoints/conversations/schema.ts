@@ -147,9 +147,9 @@ export const ConversationItemSchema = z.discriminatedUnion("type", [
     content: z.any(),
     status: ItemStatusSchema.optional(),
   }),
-  withSystemFields(FunctionCallItem.shape),
-  withSystemFields(FunctionCallOutputItem.shape),
-  withSystemFields(ReasoningItem.shape),
+  withSystemFields(FunctionCallItem.omit({ id: true }).shape),
+  withSystemFields(FunctionCallOutputItem.omit({ id: true }).shape),
+  withSystemFields(ReasoningItem.omit({ id: true }).shape),
 ]);
 export type ConversationItem = z.infer<typeof ConversationItemSchema>;
 

@@ -21,5 +21,5 @@ export function createConversationItem(input: ConversationItemInput): Conversati
     object: "conversation.item",
     created_at: Math.floor(Date.now() / 1000),
     ...input,
-  } as ConversationItem;
+  };
 }

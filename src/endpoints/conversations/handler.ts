@@ -113,7 +113,7 @@ async function create(ctx: GatewayContext): Promise<Conversation> {
 
   const parsed = ConversationCreateBodySchema.safeParse(body);
   if (!parsed.success) {
-    throw new GatewayError("Invalid Request", 400, undefined, z.prettifyError(parsed.error));
+    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
   }
   addSpanEvent("hebo.request.parsed");
 
@@ -151,7 +151,7 @@ async function update(ctx: GatewayContext, conversationId: string): Promise<Conv
 
   const parsed = ConversationUpdateBodySchema.safeParse(body);
   if (!parsed.success) {
-    throw new GatewayError("Invalid Request", 400, undefined, z.prettifyError(parsed.error));
+    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
   }
   addSpanEvent("hebo.request.parsed");
 
@@ -247,7 +247,7 @@ async function addItems(
 
   const parsed = ConversationItemsAddBodySchema.safeParse(body);
   if (!parsed.success) {
-    throw new GatewayError("Invalid Request", 400, undefined, z.prettifyError(parsed.error));
+    throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
   }
   addSpanEvent("hebo.request.parsed");
 
