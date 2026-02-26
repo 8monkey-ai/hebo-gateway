@@ -79,9 +79,6 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
   transformParams: async ({ params, model }) => {
     if (!model.modelId.includes("nova") && !model.modelId.includes("claude")) return params;
 
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
     let hasExplicitCacheControl = false;
     let firstUser;
     let lastSystem;
@@ -110,7 +107,8 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
       }
     }
 
-    const cacheControl = unknown["cacheControl"] as ChatCompletionsCacheControl;
+    const unknown = params.providerOptions?.["unknown"];
+    const cacheControl = unknown?.["cacheControl"] as ChatCompletionsCacheControl;
     if (cacheControl && !hasExplicitCacheControl) {
       const target = lastSystem ?? firstUser;
       if (target) {
@@ -121,7 +119,7 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
       }
     }
 
-    delete unknown["cacheControl"];
+    delete unknown?.["cacheControl"];
 
     return params;
   },
