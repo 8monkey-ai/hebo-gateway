@@ -65,11 +65,11 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-function toBedrockCachePoint(cacheControl?: ChatCompletionsCacheControl, modelId?: string) {
+function toBedrockCachePoint(modelId: string, cacheControl?: ChatCompletionsCacheControl) {
   const out: { type: "default"; ttl?: string } = { type: "default" };
-  if (cacheControl?.ttl) {
-    // Nova currently only supports 5m
-    out.ttl = modelId?.includes("nova") ? "5m" : cacheControl.ttl;
+  // Nova currently only supports 5m
+  if (cacheControl?.ttl && !modelId.includes("nova")) {
+    out.ttl = cacheControl.ttl;
   }
   return out;
 }
@@ -82,46 +82,40 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
     if (!model.modelId.includes("nova") && !model.modelId.includes("claude")) return params;
 
     let hasExplicitCacheControl = false;
-    let firstUser;
-    let lastSystem;
+    let lastCacheableBlock;
 
     const processCacheControl = (providerOptions?: Record<string, any>) => {
       if (!providerOptions) return;
 
-      const entryUnknown = providerOptions["unknown"] as Record<string, unknown> | undefined;
-      const entryCacheControl = entryUnknown?.["cacheControl"] as ChatCompletionsCacheControl;
-      if (!entryUnknown || !entryCacheControl) return;
+      const entryBedrock = providerOptions["bedrock"] as Record<string, unknown> | undefined;
+      const entryCacheControl = entryBedrock?.["cacheControl"] as ChatCompletionsCacheControl;
+      if (!entryBedrock || !entryCacheControl) return;
 
       hasExplicitCacheControl = true;
-      entryUnknown["cachePoint"] = toBedrockCachePoint(entryCacheControl, model.modelId);
-      delete entryUnknown["cacheControl"];
+      entryBedrock["cachePoint"] = toBedrockCachePoint(model.modelId, entryCacheControl);
+      delete entryBedrock["cacheControl"];
     };
 
     for (const message of params.prompt) {
-      if (message["role"] === "system") lastSystem = message;
-      if (!firstUser && message["role"] === "user") firstUser = message;
-
-      processCacheControl(message["providerOptions"] as Record<string, any> | undefined);
+      processCacheControl(message["providerOptions"]);
 
       if (!Array.isArray(message["content"])) continue;
       for (const part of message["content"]) {
-        processCacheControl((part as any)["providerOptions"] as Record<string, any> | undefined);
+        processCacheControl(part["providerOptions"]);
       }
+      lastCacheableBlock = message;
     }
 
-    const unknown = params.providerOptions?.["unknown"];
-    const cacheControl = unknown?.["cacheControl"] as ChatCompletionsCacheControl;
+    const bedrock = params.providerOptions?.["bedrock"];
+    const cacheControl = bedrock?.["cacheControl"] as ChatCompletionsCacheControl;
     if (cacheControl && !hasExplicitCacheControl) {
-      const target = lastSystem ?? firstUser;
-      if (target) {
-        ((target["providerOptions"] ??= {})["unknown"] ??= {})["cachePoint"] = toBedrockCachePoint(
-          cacheControl,
-          model.modelId,
-        );
+      if (lastCacheableBlock) {
+        ((lastCacheableBlock["providerOptions"] ??= {})["bedrock"] ??= {})["cachePoint"] =
+          toBedrockCachePoint(model.modelId, cacheControl);
       }
     }
 
-    delete unknown?.["cacheControl"];
+    delete bedrock?.["cacheControl"];
 
     return params;
   },

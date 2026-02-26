@@ -216,21 +216,21 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
             type: "text",
             text: "Policy",
             providerOptions: {
-              unknown: {
+              bedrock: {
                 cacheControl: { type: "ephemeral", ttl: "1h" },
               },
             },
           },
         ],
         providerOptions: {
-          unknown: {
+          bedrock: {
             cacheControl: { type: "ephemeral", ttl: "1h" },
           },
         },
       },
     ],
     providerOptions: {
-      unknown: {},
+      bedrock: {},
     },
   };
 
@@ -240,16 +240,14 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
     model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
   });
 
-  expect((result.prompt[0] as any).providerOptions.unknown.cachePoint).toEqual({
+  expect((result.prompt[0] as any).providerOptions.bedrock.cachePoint).toEqual({
     type: "default",
-    ttl: "5m",
   });
-  expect((result.prompt[0] as any).providerOptions.unknown.cacheControl).toBeUndefined();
-  expect((result.prompt[0] as any).content[0].providerOptions.unknown.cachePoint).toEqual({
+  expect((result.prompt[0] as any).providerOptions.bedrock.cacheControl).toBeUndefined();
+  expect((result.prompt[0] as any).content[0].providerOptions.bedrock.cachePoint).toEqual({
     type: "default",
-    ttl: "5m",
   });
-  expect((result.prompt[0] as any).content[0].providerOptions.unknown.cacheControl).toBeUndefined();
+  expect((result.prompt[0] as any).content[0].providerOptions.bedrock.cacheControl).toBeUndefined();
 });
 
 test("bedrockPromptCachingMiddleware > should fallback from top-level cacheControl", async () => {
@@ -265,7 +263,7 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
       },
     ],
     providerOptions: {
-      unknown: {
+      bedrock: {
         cacheControl: { type: "ephemeral", ttl: "1h" },
       },
     },
@@ -277,18 +275,15 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
   });
 
-  expect((result.prompt[0] as any).providerOptions.unknown.cachePoint).toEqual({
-    type: "default",
-    ttl: "1h",
-  });
-  expect((result.providerOptions as any).unknown.cacheControl).toBeUndefined();
+  expect((result.prompt[1] as any).providerOptions).toBeUndefined();
+  expect((result.providerOptions as any).bedrock.cacheControl).toBeUndefined();
 });
 
 test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", async () => {
   const params = {
     prompt: [{ role: "user", content: "Hello" }],
     providerOptions: {
-      unknown: {
+      bedrock: {
         cacheControl: { type: "ephemeral", ttl: "1h" },
       },
     },
@@ -300,7 +295,7 @@ test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", 
     model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
   });
 
-  expect((result.providerOptions as any).unknown.cacheControl).toEqual({
+  expect((result.providerOptions as any).bedrock.cacheControl).toEqual({
     type: "ephemeral",
     ttl: "1h",
   });
