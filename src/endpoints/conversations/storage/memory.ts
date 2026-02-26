@@ -20,29 +20,39 @@ export class InMemoryStorage implements ConversationStorage {
     });
   }
 
-  createConversation(conversation: Conversation): Promise<Conversation> {
+  createConversation(
+    conversation: Conversation,
+    items?: ConversationItem[],
+  ): Promise<Conversation> {
     this.conversations.set(conversation.id, conversation);
-    this.items.set(conversation.id, []);
+    this.items.set(conversation.id, items ?? []);
     return Promise.resolve(conversation);
   }
 
   getConversation(id: string): Promise<Conversation | undefined> {
-    // Touching the items cache updates the LRU position for the entire conversation
+    // Updates the LRU position
     if (this.items.get(id) === undefined) {
       return Promise.resolve(undefined as Conversation | undefined);
     }
     return Promise.resolve(this.conversations.get(id));
   }
 
-  updateConversation(conversation: Conversation): Promise<Conversation> {
-    if (this.items.get(conversation.id) !== undefined) {
-      this.conversations.set(conversation.id, conversation);
+  updateConversation(id: string, metadata: Record<string, any>): Promise<Conversation | undefined> {
+    // Updates the LRU position
+    if (this.items.get(id) === undefined) {
+      return Promise.resolve(undefined as Conversation | undefined);
+    }
+
+    const conversation = this.conversations.get(id);
+    if (conversation) {
+      conversation.metadata = metadata;
+      this.conversations.set(id, conversation);
     }
     return Promise.resolve(conversation);
   }
 
   deleteConversation(id: string): Promise<{ id: string; deleted: boolean }> {
-    // this.items.delete triggers the dispose handler which cleans up this.conversations
+    // Triggers the dispose handler which cleans up this.conversations
     const deleted = this.items.delete(id);
     return Promise.resolve({ id, deleted });
   }
@@ -54,7 +64,7 @@ export class InMemoryStorage implements ConversationStorage {
     }
 
     for (const item of items) existing.push(item);
-    // Re-set to recalculate the size based on JSON string length
+    // Recalculate the cache size
     this.items.set(conversationId, existing);
 
     return Promise.resolve(items);
@@ -64,18 +74,18 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(this.items.get(conversationId)?.find((item) => item.id === itemId));
   }
 
-  deleteItem(conversationId: string, itemId: string): Promise<{ id: string; deleted: boolean }> {
+  deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined> {
     const existing = this.items.get(conversationId);
-    if (!existing) return Promise.resolve({ id: itemId, deleted: false });
+    if (!existing) return Promise.resolve(undefined as Conversation | undefined);
 
     const i = existing.findIndex((item) => item.id === itemId);
-    if (i === -1) return Promise.resolve({ id: itemId, deleted: false });
+    if (i !== -1) {
+      existing.splice(i, 1);
+      // Recalculate the cache size
+      this.items.set(conversationId, existing);
+    }
 
-    existing.splice(i, 1);
-    // Re-set to update the LRU cache size tracking after removal
-    this.items.set(conversationId, existing);
-
-    return Promise.resolve({ id: itemId, deleted: true });
+    return Promise.resolve(this.conversations.get(conversationId));
   }
 
   listItems(conversationId: string, params?: ListItemsParams): Promise<ConversationItem[]> {

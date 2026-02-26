@@ -118,12 +118,9 @@ async function create(ctx: GatewayContext): Promise<Conversation> {
   addSpanEvent("hebo.request.parsed");
 
   const conversation = createConversation({ metadata: parsed.data.metadata });
-  await ctx.storage.createConversation(conversation);
+  const items = parsed.data.items?.map((item) => createConversationItem(item));
 
-  if (parsed.data.items && parsed.data.items.length > 0) {
-    const items = parsed.data.items.map((item) => createConversationItem(item));
-    await ctx.storage.addItems(conversation.id, items);
-  }
+  await ctx.storage.createConversation(conversation, items);
 
   logger.trace({ requestId: ctx.requestId, conversation }, "[storage] createConversation result");
 
@@ -155,10 +152,11 @@ async function update(ctx: GatewayContext, conversationId: string): Promise<Conv
   }
   addSpanEvent("hebo.request.parsed");
 
-  const conversation = await retrieve(ctx, conversationId);
-  conversation.metadata = parsed.data.metadata;
+  const conversation = await ctx.storage.updateConversation(conversationId, parsed.data.metadata);
+  if (!conversation) {
+    throw new GatewayError("Conversation not found", 404);
+  }
 
-  await ctx.storage.updateConversation(conversation);
   logger.trace({ requestId: ctx.requestId, conversation }, "[storage] updateConversation result");
   return conversation;
 }
@@ -193,12 +191,10 @@ async function deleteItem(
   conversationId: string,
   itemId: string,
 ): Promise<Conversation> {
-  const conversation = await ctx.storage.getConversation(conversationId);
+  const conversation = await ctx.storage.deleteItem(conversationId, itemId);
   if (!conversation) {
     throw new GatewayError("Conversation not found", 404);
   }
-
-  await ctx.storage.deleteItem(conversationId, itemId);
   return conversation;
 }
 
