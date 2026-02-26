@@ -70,10 +70,34 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
+// https://developers.openai.com/api/docs/guides/prompt-caching/
+export const openAIPromptCachingMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const key = unknown["prompt_cache_key"] as string | undefined;
+    const retention = unknown["prompt_cache_retention"] as "in_memory" | "24h" | undefined;
+
+    if (key || retention) {
+      const target = (params.providerOptions!["openai"] ??= {});
+      if (key) target["promptCacheKey"] = key;
+      if (retention) target["promptCacheRetention"] = retention;
+    }
+
+    delete unknown["prompt_cache_key"];
+    delete unknown["prompt_cache_retention"];
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
   embedding: [openAIDimensionsMiddleware],
 });
 
 modelMiddlewareMatcher.useForModel("openai/gpt-*", {
-  language: [openAIReasoningMiddleware],
+  language: [openAIReasoningMiddleware, openAIPromptCachingMiddleware],
 });

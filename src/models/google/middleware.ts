@@ -123,10 +123,29 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
+// https://ai.google.dev/gemini-api/docs/caching
+// FUTURE: auto-create cached_content for message-level cache_control blocks
+export const geminiPromptCachingMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    const cachedContent = unknown["cached_content"] as string | undefined;
+    if (cachedContent) {
+      (params.providerOptions!["google"] ??= {})["cachedContent"] = cachedContent;
+    }
+
+    delete unknown["cached_content"];
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
   embedding: [geminiDimensionsMiddleware],
 });
 
 modelMiddlewareMatcher.useForModel(["google/gemini-2*", "google/gemini-3*"], {
-  language: [geminiReasoningMiddleware],
+  language: [geminiReasoningMiddleware, geminiPromptCachingMiddleware],
 });

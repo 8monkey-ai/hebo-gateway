@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { claudeReasoningMiddleware } from "./middleware";
+import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./middleware";
 
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
@@ -27,12 +27,56 @@ test("claudeReasoningMiddleware > matching patterns", () => {
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(claudeReasoningMiddleware);
+    expect(middleware).toContain(claudePromptCachingMiddleware);
   }
 
   for (const id of nonMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).not.toContain(claudeReasoningMiddleware);
   }
+});
+
+test("claudePromptCachingMiddleware > should not auto-enable top-level cache control", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {},
+    },
+  };
+
+  const result = await claudePromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.6" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    unknown: {},
+  });
+});
+
+test("claudePromptCachingMiddleware > should map cache_control ttl", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        cache_control: { type: "ephemeral", ttl: "1h" },
+      },
+    },
+  };
+
+  const result = await claudePromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.6" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    anthropic: {
+      cacheControl: { type: "ephemeral", ttl: "1h" },
+    },
+    unknown: {},
+  });
 });
 
 test("claudeReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
@@ -125,7 +169,7 @@ test("claudeReasoningMiddleware > should transform reasoning object to thinking 
       anthropic: {
         thinking: {
           type: "enabled",
-          budgetTokens: 32000,
+          budgetTokens: 2000,
         },
       },
       unknown: {},
@@ -412,6 +456,7 @@ test("claudeReasoningMiddleware > should map none effort to low for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 1024,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("low");
 });
@@ -518,6 +563,7 @@ test("claudeReasoningMiddleware > should map max effort to high for Claude Sonne
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 60800,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
@@ -543,6 +589,7 @@ test("claudeReasoningMiddleware > should map xhigh effort to high for Claude Son
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 60800,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });
@@ -590,6 +637,7 @@ test("claudeReasoningMiddleware > should map xhigh effort for Claude Opus 4.5 wi
 
   expect(result.providerOptions?.anthropic?.thinking).toEqual({
     type: "enabled",
+    budgetTokens: 60800,
   });
   expect(result.providerOptions?.anthropic?.effort).toBe("high");
 });

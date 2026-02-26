@@ -36,7 +36,7 @@ import {
   getChatRequestAttributes,
   getChatResponseAttributes,
 } from "./otel";
-import { ChatCompletionsBodySchema } from "./schema";
+import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -57,6 +57,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
+    logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[chat] ChatCompletionsBody");
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ChatCompletionsBodySchema.safeParse(ctx.body);
@@ -68,7 +69,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.request.parsed");
 
     if (hooks?.before) {
-      ctx.body = (await hooks.before(ctx as BeforeHookContext)) ?? ctx.body;
+      ctx.body =
+        ((await hooks.before(ctx as BeforeHookContext)) as ChatCompletionsBody) ?? ctx.body;
       addSpanEvent("hebo.hooks.before.completed");
     }
 
@@ -110,7 +112,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       "[chat] AI SDK options",
     );
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getChatRequestAttributes(inputs, genAiSignalLevel));
+    setSpanAttributes(getChatRequestAttributes(ctx.body, genAiSignalLevel));
 
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
@@ -137,6 +139,10 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           const streamResult = toChatCompletions(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
+          );
+          logger.trace(
+            { requestId: ctx.requestId, result: streamResult },
+            "[chat] ChatCompletions",
           );
           addSpanEvent("hebo.result.transformed");
 
@@ -180,6 +186,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
+    logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[chat] ChatCompletions");
     addSpanEvent("hebo.result.transformed");
 
     const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);

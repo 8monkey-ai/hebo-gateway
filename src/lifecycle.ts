@@ -10,7 +10,7 @@ import { GatewayError } from "./errors/gateway";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
-import { initFetch } from "./telemetry/fetch";
+import { instrumentFetch } from "./telemetry/fetch";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { recordV8jsMemory } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
@@ -27,7 +27,7 @@ export const winterCgHandler = (
   if (parsedConfig.telemetry?.enabled) {
     setSpanTracer(parsedConfig.telemetry?.tracer);
     setSpanEventsEnabled(parsedConfig.telemetry?.signals?.hebo);
-    initFetch(parsedConfig.telemetry?.signals?.hebo);
+    instrumentFetch(parsedConfig.telemetry?.signals?.hebo);
   }
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {

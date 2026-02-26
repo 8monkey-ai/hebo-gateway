@@ -1,4 +1,4 @@
-import type { GenerateTextResult, ToolSet, Output } from "ai";
+import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai";
 
 import { describe, expect, test } from "bun:test";
 
@@ -8,6 +8,7 @@ import {
   convertToTextCallOptions,
   toChatCompletionsAssistantMessage,
   toChatCompletionsToolCall,
+  toChatCompletionsUsage,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
@@ -519,6 +520,89 @@ describe("Chat Completions Converters", () => {
 
       expect(result.tools).toBeDefined();
       expect(Object.keys(result.tools!)).toEqual(["get_weather"]);
+    });
+
+    test("should map prompt cache options into providerOptions.unknown", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "system", content: "You are concise." }],
+        prompt_cache_key: "tenant:docs:v1",
+        prompt_cache_retention: "24h",
+      });
+
+      expect(result.providerOptions).toEqual({
+        unknown: {
+          prompt_cache_key: "tenant:docs:v1",
+          prompt_cache_retention: "24h",
+          cached_content: "tenant:docs:v1",
+          cache_control: {
+            type: "ephemeral",
+            ttl: "24h",
+          },
+        },
+      });
+    });
+
+    test("should sync retention from cache_control ttl", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "system", content: "You are concise." }],
+        cache_control: {
+          type: "ephemeral",
+          ttl: "5m",
+        },
+      });
+
+      expect(result.providerOptions).toEqual({
+        unknown: {
+          prompt_cache_retention: "in_memory",
+          cache_control: {
+            type: "ephemeral",
+            ttl: "5m",
+          },
+        },
+      });
+    });
+
+    test("should preserve cache_control on message and content parts", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "system",
+            content: "Policy block",
+            cache_control: { type: "ephemeral", ttl: "1h" },
+          },
+          {
+            role: "user",
+            content: [{ type: "text", text: "Question", cache_control: { type: "ephemeral" } }],
+          },
+        ],
+      });
+
+      expect((result.messages[0] as any).providerOptions.unknown.cache_control).toEqual({
+        type: "ephemeral",
+        ttl: "1h",
+      });
+      expect((result.messages[1] as any).content[0].providerOptions.unknown.cache_control).toEqual({
+        type: "ephemeral",
+      });
+    });
+  });
+
+  describe("toChatCompletionsUsage", () => {
+    test("should include cached token details", () => {
+      const usage = toChatCompletionsUsage({
+        inputTokens: 100,
+        outputTokens: 20,
+        totalTokens: 120,
+        inputTokenDetails: {
+          cacheReadTokens: 60,
+          cacheWriteTokens: 10,
+        },
+      } as LanguageModelUsage);
+
+      expect(usage.prompt_tokens_details).toEqual({
+        cached_tokens: 60,
+        cache_write_tokens: 10,
+      });
     });
   });
 

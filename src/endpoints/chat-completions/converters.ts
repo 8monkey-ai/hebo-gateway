@@ -17,6 +17,9 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
+  TextPart,
+  ImagePart,
+  FilePart,
 } from "ai";
 
 import { Output, jsonSchema, tool } from "ai";
@@ -28,7 +31,6 @@ import type {
   ChatCompletionsToolChoice,
   ChatCompletionsContentPart,
   ChatCompletionsMessage,
-  ChatCompletionsSystemMessage,
   ChatCompletionsUserMessage,
   ChatCompletionsAssistantMessage,
   ChatCompletionsToolMessage,
@@ -46,6 +48,7 @@ import type {
   ChatCompletionsReasoningDetail,
   ChatCompletionsResponseFormat,
   ChatCompletionsContentPartText,
+  ChatCompletionsCacheControl,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -81,6 +84,10 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     response_format,
     reasoning_effort,
     reasoning,
+    prompt_cache_key,
+    prompt_cache_retention,
+    cached_content,
+    cache_control,
     frequency_penalty,
     presence_penalty,
     seed,
@@ -90,6 +97,15 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
   } = params;
 
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
+  Object.assign(
+    rest,
+    parsePromptCachingOptions(
+      prompt_cache_key,
+      prompt_cache_retention,
+      cached_content,
+      cache_control,
+    ),
+  );
 
   const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
 
@@ -133,7 +149,12 @@ export function convertToModelMessages(messages: ChatCompletionsMessage[]): Mode
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
-      modelMessages.push(message satisfies ChatCompletionsSystemMessage);
+      if (message.cache_control) {
+        (message as ModelMessage).providerOptions = {
+          unknown: { cache_control: message.cache_control },
+        };
+      }
+      modelMessages.push(message);
       continue;
     }
 
@@ -161,18 +182,24 @@ function indexToolMessages(messages: ChatCompletionsMessage[]) {
 export function fromChatCompletionsUserMessage(
   message: ChatCompletionsUserMessage,
 ): UserModelMessage {
-  return {
+  const out: UserModelMessage = {
     role: "user",
     content: Array.isArray(message.content)
       ? fromChatCompletionsContent(message.content)
       : message.content,
   };
+  if (message.cache_control) {
+    out.providerOptions = {
+      unknown: { cache_control: message.cache_control },
+    };
+  }
+  return out;
 }
 
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
 ): AssistantModelMessage {
-  const { tool_calls, role, content, extra_content, reasoning_details } = message;
+  const { tool_calls, role, content, extra_content, reasoning_details, cache_control } = message;
 
   const parts: AssistantContent = [];
 
@@ -211,10 +238,16 @@ export function fromChatCompletionsAssistantMessage(
         : content;
     for (const part of inputContent) {
       if (part.type === "text") {
-        parts.push({
+        const textPart: TextPart = {
           type: "text",
           text: part.text,
-        });
+        };
+        if (part.cache_control) {
+          textPart.providerOptions = {
+            unknown: { cache_control: part.cache_control },
+          };
+        }
+        parts.push(textPart);
       }
     }
   }
@@ -243,6 +276,10 @@ export function fromChatCompletionsAssistantMessage(
 
   if (extra_content) {
     out.providerOptions = extra_content as SharedV3ProviderOptions;
+  }
+
+  if (cache_control) {
+    ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] = cache_control;
   }
 
   return out;
@@ -275,44 +312,87 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
   return content.map((part) => {
     switch (part.type) {
       case "image_url":
-        return fromImageUrlPart(part.image_url.url);
+        return fromImageUrlPart(part.image_url.url, part.cache_control);
       case "file":
-        return fromFilePart(part.file.data, part.file.media_type, part.file.filename);
+        return fromFilePart(
+          part.file.data,
+          part.file.media_type,
+          part.file.filename,
+          part.cache_control,
+        );
       case "input_audio":
-        return fromFilePart(part.input_audio.data, `audio/${part.input_audio.format}`);
-      default:
-        return part;
+        return fromFilePart(
+          part.input_audio.data,
+          `audio/${part.input_audio.format}`,
+          undefined,
+          part.cache_control,
+        );
+      default: {
+        const out: TextPart = {
+          type: "text" as const,
+          text: part.text,
+        };
+        if (part.cache_control) {
+          out.providerOptions = {
+            unknown: { cache_control: part.cache_control },
+          };
+        }
+        return out;
+      }
     }
   });
 }
 
-function fromImageUrlPart(url: string) {
+function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
   if (url.startsWith("data:")) {
     const { mimeType, base64Data } = parseDataUrl(url);
-    return fromFilePart(base64Data, mimeType);
+    return fromFilePart(base64Data, mimeType, undefined, cacheControl);
   }
 
-  return {
+  const out: ImagePart = {
     type: "image" as const,
     image: new URL(url),
   };
+  if (cacheControl) {
+    out.providerOptions = {
+      unknown: { cache_control: cacheControl },
+    };
+  }
+  return out;
 }
 
-function fromFilePart(base64Data: string, mediaType: string, filename?: string) {
+function fromFilePart(
+  base64Data: string,
+  mediaType: string,
+  filename?: string,
+  cacheControl?: ChatCompletionsCacheControl,
+) {
   if (mediaType.startsWith("image/")) {
-    return {
+    const out: ImagePart = {
       type: "image" as const,
       image: z.util.base64ToUint8Array(base64Data),
       mediaType,
     };
+    if (cacheControl) {
+      out.providerOptions = {
+        unknown: { cache_control: cacheControl },
+      };
+    }
+    return out;
   }
 
-  return {
+  const out: FilePart = {
     type: "file" as const,
     data: z.util.base64ToUint8Array(base64Data),
     filename,
     mediaType,
   };
+  if (cacheControl) {
+    out.providerOptions = {
+      unknown: { cache_control: cacheControl },
+    };
+  }
+  return out;
 }
 
 export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
@@ -434,6 +514,38 @@ function parseReasoningOptions(
   if (out.reasoning.enabled) {
     out.reasoning.exclude = reasoning?.exclude;
   }
+
+  return out;
+}
+
+function parsePromptCachingOptions(
+  prompt_cache_key: string | undefined,
+  prompt_cache_retention: "in_memory" | "24h" | undefined,
+  cached_content: string | undefined,
+  cache_control: ChatCompletionsCacheControl | undefined,
+) {
+  const out: Record<string, unknown> = {};
+
+  const syncedCacheKey = prompt_cache_key ?? cached_content;
+  const syncedCachedContent = cached_content ?? prompt_cache_key;
+
+  let syncedCacheRetention = prompt_cache_retention;
+  if (!syncedCacheRetention && cache_control?.ttl) {
+    syncedCacheRetention = cache_control.ttl === "24h" ? "24h" : "in_memory";
+  }
+
+  let syncedCacheControl = cache_control;
+  if (!syncedCacheControl && syncedCacheRetention) {
+    syncedCacheControl = {
+      type: "ephemeral",
+      ttl: syncedCacheRetention === "24h" ? "24h" : "5m",
+    };
+  }
+
+  if (syncedCacheKey) out["prompt_cache_key"] = syncedCacheKey;
+  if (syncedCacheRetention) out["prompt_cache_retention"] = syncedCacheRetention;
+  if (syncedCachedContent) out["cached_content"] = syncedCachedContent;
+  if (syncedCacheControl) out["cache_control"] = syncedCacheControl;
 
   return out;
 }
@@ -731,7 +843,16 @@ export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletio
   if (reasoning !== undefined) out.completion_tokens_details = { reasoning_tokens: reasoning };
 
   const cached = usage.inputTokenDetails?.cacheReadTokens;
-  if (cached !== undefined) out.prompt_tokens_details = { cached_tokens: cached };
+  const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens;
+  if (cached !== undefined || cacheWrite !== undefined) {
+    out.prompt_tokens_details = {};
+    if (cached !== undefined) {
+      out.prompt_tokens_details.cached_tokens = cached;
+    }
+    if (cacheWrite !== undefined) {
+      out.prompt_tokens_details.cache_write_tokens = cacheWrite;
+    }
+  }
 
   return out;
 }
