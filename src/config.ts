@@ -1,3 +1,4 @@
+import { InMemoryStorage } from "./endpoints/conversations/storage/memory";
 import { isLogger, logger, setLoggerInstance } from "./logger";
 import { createDefaultLogger } from "./logger/default";
 import { installAiSdkWarningLogger } from "./telemetry/ai-sdk";
@@ -15,6 +16,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const providers = config.providers ?? {};
   const parsedProviders = {} as typeof providers;
   const models = config.models ?? {};
+  const storage = config.storage ?? new InMemoryStorage();
 
   // Set the global logger instance.
   if (config.logger === undefined) {
@@ -93,6 +95,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     },
     providers: parsedProviders,
     models: parsedModels,
+    storage,
     [kParsed]: true,
   };
 };
