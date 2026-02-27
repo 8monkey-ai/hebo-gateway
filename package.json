@@ -1,6 +1,6 @@
 {
   "name": "@hebo-ai/gateway",
-  "version": "0.6.0-rc1",
+  "version": "0.6.0",
   "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI-compatible /chat/completions, /embeddings & /models.",
   "keywords": [
     "ai",
@@ -160,17 +160,17 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.8",
-    "ai": "^6.0.101",
+    "ai": "^6.0.103",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@ai-sdk/amazon-bedrock": "^4.0.65",
-    "@ai-sdk/anthropic": "^3.0.47",
+    "@ai-sdk/amazon-bedrock": "^4.0.67",
+    "@ai-sdk/anthropic": "^3.0.48",
     "@ai-sdk/cohere": "^3.0.21",
-    "@ai-sdk/google-vertex": "^4.0.63",
-    "@ai-sdk/groq": "^3.0.24",
-    "@ai-sdk/openai": "^3.0.34",
-    "@aws-sdk/credential-providers": "^3.998.0",
+    "@ai-sdk/google-vertex": "^4.0.66",
+    "@ai-sdk/groq": "^3.0.25",
+    "@ai-sdk/openai": "^3.0.36",
+    "@aws-sdk/credential-providers": "^3.999.0",
     "@langfuse/otel": "^4.6.1",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@opentelemetry/api": "^1.9.0",
@@ -182,7 +182,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "elysia": "^1.4.26",
-    "hono": "^4.12.2",
+    "hono": "^4.12.3",
     "lefthook": "^2.1.1",
     "next": "^16.1.6",
     "oxfmt": "^0.24.0",
@@ -194,12 +194,12 @@
     "voyage-ai-provider": "^3.0.0"
   },
   "peerDependencies": {
-    "@ai-sdk/amazon-bedrock": "^4.0.41",
-    "@ai-sdk/anthropic": "^3.0.31",
-    "@ai-sdk/cohere": "^3.0.16",
-    "@ai-sdk/google-vertex": "^4.0.37",
-    "@ai-sdk/groq": "^3.0.19",
-    "@ai-sdk/openai": "^3.0.23",
+    "@ai-sdk/amazon-bedrock": "^4.0.67",
+    "@ai-sdk/anthropic": "^3.0.48",
+    "@ai-sdk/cohere": "^3.0.21",
+    "@ai-sdk/google-vertex": "^4.0.66",
+    "@ai-sdk/groq": "^3.0.25",
+    "@ai-sdk/openai": "^3.0.36",
     "@opentelemetry/api": "^1.9.0",
     "typescript": "^5.9.3",
     "voyage-ai-provider": "^3.0.0"
