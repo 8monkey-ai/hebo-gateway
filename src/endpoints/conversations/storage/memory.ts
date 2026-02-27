@@ -151,15 +151,15 @@ export class InMemoryStorage implements ConversationStorage {
       return Promise.resolve(undefined as ConversationItem[] | undefined);
     }
 
-    let result = Array.from(existing.values());
+    const all = Array.from(existing.values());
+    const pivot = after ? all.findIndex((item) => item.id === after) : -1;
 
-    if (order === "desc") result = result.toReversed();
-
-    if (after) {
-      const i = result.findIndex((item) => item.id === after);
-      if (i !== -1) result = result.slice(i + 1);
+    if (order === "asc") {
+      const start = pivot !== -1 ? pivot + 1 : 0;
+      return Promise.resolve(all.slice(start, start + limit));
     }
 
-    return Promise.resolve(result.slice(0, limit));
+    const end = pivot !== -1 ? pivot : all.length;
+    return Promise.resolve(all.slice(Math.max(0, end - limit), end).toReversed());
   }
 }
