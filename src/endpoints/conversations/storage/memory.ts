@@ -20,27 +20,45 @@ export class InMemoryStorage implements ConversationStorage {
     });
   }
 
-  private estimateSize(obj: unknown): number {
-    if (typeof obj === "string") return obj.length;
-    if (obj instanceof Uint8Array) return obj.length;
-    if (obj instanceof Map) {
-      let size = 0;
-      for (const [key, value] of obj) {
-        size += this.estimateSize(key) + this.estimateSize(value);
+  private estimateSize(root: unknown): number {
+    let total = 0;
+    const stack: unknown[] = [root];
+
+    while (stack.length > 0) {
+      const obj = stack.pop();
+      if (obj == null) continue;
+
+      const t = typeof obj;
+      if (t === "string") {
+        total += (obj as string).length * 2;
+        continue;
       }
-      return size;
-    }
-    if (Array.isArray(obj)) {
-      return obj.reduce((acc, item) => acc + this.estimateSize(item), 0);
-    }
-    if (typeof obj === "object" && obj !== null) {
-      let size = 0;
-      for (const key in obj) {
-        size += this.estimateSize((obj as Record<string, unknown>)[key]);
+      if (t !== "object") continue;
+
+      if (ArrayBuffer.isView(obj)) {
+        total += (obj as ArrayBufferView).byteLength;
+        continue;
       }
-      return size;
+
+      if (Array.isArray(obj)) {
+        const arr = obj as unknown[];
+        for (let i = 0, n = arr.length; i < n; i++) stack.push(arr[i]);
+        continue;
+      }
+
+      if (obj instanceof Map) {
+        for (const [k, v] of obj as Map<unknown, unknown>) {
+          stack.push(k);
+          stack.push(v);
+        }
+        continue;
+      }
+
+      const rec = obj as Record<string, unknown>;
+      for (const k in rec) stack.push(rec[k]);
     }
-    return 0;
+
+    return total;
   }
 
   createConversation(

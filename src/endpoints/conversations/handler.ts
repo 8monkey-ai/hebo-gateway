@@ -138,9 +138,9 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const { limit, after, order } = parsed.data;
 
-    // Fetch limit + 1 to determine if there's more
+    // Treat limit 0 as unlimited (up to 100,000 items)
     const items = await storage.listItems(conversationId, {
-      limit: limit + 1,
+      limit: limit ? limit + 1 : 100000,
       after,
       order,
     });
@@ -149,12 +149,10 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       "[storage] listItems result",
     );
 
-    if (!items) {
-      throw new GatewayError("Conversation not found", 404);
-    }
+    if (!items) throw new GatewayError("Conversation not found", 404);
 
-    const has_more = items.length > limit;
-    const data = has_more ? items.slice(0, limit) : items;
+    const has_more = limit !== 0 && items.length > limit;
+    const data = items.slice(0, limit || items.length);
 
     return {
       object: "list",

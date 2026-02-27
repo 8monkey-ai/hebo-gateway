@@ -2,11 +2,10 @@ import * as z from "zod";
 
 // --- Common ---
 
-export const MetadataSchema = z
-  .record(z.string().max(64), z.union([z.string().max(512), z.number(), z.boolean()]))
-  .refine((m) => Object.keys(m).length <= 16, {
-    message: "Metadata can have at most 16 keys",
-  });
+export const MetadataSchema = z.record(
+  z.string().max(64),
+  z.union([z.string().max(512), z.number(), z.boolean()]),
+);
 
 export const ItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
 export const ImageDetailSchema = z.enum(["low", "high", "auto"]);
@@ -18,28 +17,44 @@ export const ResponseInputTextSchema = z.object({
   text: z.string(),
 });
 
-export const ResponseInputImageSchema = z
-  .object({
+export const ResponseInputImageSchema = z.union([
+  z.object({
     type: z.literal("input_image"),
-    image_url: z.string().nullable().optional(),
+    image_url: z.string(),
     file_id: z.string().nullable().optional(),
     detail: ImageDetailSchema.optional(),
-  })
-  .refine((data) => data.image_url || data.file_id, {
-    message: "Either 'image_url' or 'file_id' must be provided",
-  });
+  }),
+  z.object({
+    type: z.literal("input_image"),
+    image_url: z.string().nullable().optional(),
+    file_id: z.string(),
+    detail: ImageDetailSchema.optional(),
+  }),
+]);
 
-export const ResponseInputFileSchema = z
-  .object({
+export const ResponseInputFileSchema = z.union([
+  z.object({
+    type: z.literal("input_file"),
+    filename: z.string().optional(),
+    file_data: z.string(),
+    file_id: z.string().nullable().optional(),
+    file_url: z.string().nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("input_file"),
+    filename: z.string().optional(),
+    file_data: z.string().nullable().optional(),
+    file_id: z.string(),
+    file_url: z.string().nullable().optional(),
+  }),
+  z.object({
     type: z.literal("input_file"),
     filename: z.string().optional(),
     file_data: z.string().nullable().optional(),
     file_id: z.string().nullable().optional(),
-    file_url: z.string().nullable().optional(),
-  })
-  .refine((data) => data.file_data || data.file_id || data.file_url, {
-    message: "At least one of 'file_data', 'file_id', or 'file_url' must be provided",
-  });
+    file_url: z.string(),
+  }),
+]);
 
 export const ResponseOutputTextSchema = z.object({
   type: z.literal("output_text"),
@@ -136,7 +151,7 @@ export const ResponseInputItemSchema = z.union([
 export type ResponseInputItem = z.infer<typeof ResponseInputItemSchema>;
 
 export const ConversationItemsAddBodySchema = z.object({
-  items: z.array(ResponseInputItemSchema).max(20),
+  items: z.array(ResponseInputItemSchema).max(1000),
 });
 export type ConversationItemsAddBody = z.infer<typeof ConversationItemsAddBodySchema>;
 
@@ -174,7 +189,7 @@ export type ConversationItemList = z.infer<typeof ConversationItemListSchema>;
 
 export const ConversationItemListParamsSchema = z.object({
   after: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(0).max(1000).default(20),
   order: z.enum(["asc", "desc"]).default("desc"),
   // FUTURE: Add support for "include" array
 });
@@ -184,7 +199,7 @@ export type ConversationItemListParams = z.infer<typeof ConversationItemListPara
 
 // Conversation: Request
 export const ConversationCreateParamsSchema = z.object({
-  items: z.array(ResponseInputItemSchema).max(20).optional(),
+  items: z.array(ResponseInputItemSchema).max(1000).optional(),
   metadata: MetadataSchema.optional(),
 });
 export type ConversationCreateParams = z.infer<typeof ConversationCreateParamsSchema>;

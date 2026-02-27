@@ -227,33 +227,23 @@ describe("Conversations Handler", () => {
 
     // Limit too high
     const resHigh = await endpoint.handler(
-      new Request(`http://localhost/conversations/${conv.id}/items?limit=101`),
+      new Request(`http://localhost/conversations/${conv.id}/items?limit=1001`),
     );
     expect(resHigh.status).toBe(400);
-
-    // Limit too low
-    const resLow = await endpoint.handler(
-      new Request(`http://localhost/conversations/${conv.id}/items?limit=0`),
-    );
-    expect(resLow.status).toBe(400);
 
     // Limit not a number
     const resNan = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=abc`),
     );
     expect(resNan.status).toBe(400);
-  });
 
-  test("should enforce metadata limits", async () => {
-    const endpoint = conversations(config);
-    const tooManyMetadata: Record<string, string> = {};
-    for (let i = 0; i < 17; i++) tooManyMetadata[`key${i}`] = "value";
-
-    const request = postJson("http://localhost/conversations", {
-      metadata: tooManyMetadata,
-    });
-    const res = await endpoint.handler(request);
-    expect(res.status).toBe(400);
+    // Limit 0 should be allowed and return everything
+    const resZero = await endpoint.handler(
+      new Request(`http://localhost/conversations/${conv.id}/items?limit=0`),
+    );
+    expect(resZero.status).toBe(200);
+    const dataZero = await parseResponse(resZero);
+    expect(dataZero.has_more).toBe(false);
   });
 
   test("should handle mounted subpaths", async () => {
