@@ -761,16 +761,6 @@ export const toChatCompletionsAssistantMessage = (
 
   if (result.reasoningText) {
     message.reasoning = result.reasoningText;
-
-    if (reasoningDetails.length === 0) {
-      reasoningDetails.push(
-        toReasoningDetail(
-          { type: "reasoning", text: result.reasoningText },
-          `reasoning-${crypto.randomUUID()}`,
-          0,
-        ),
-      );
-    }
   }
 
   if (reasoningDetails.length > 0) {
