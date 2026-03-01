@@ -123,7 +123,9 @@ export const getChatRequestAttributes = (
       "gen_ai.input.messages": inputs.messages
         //.filter((m) => m.role !== "system")
         .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
-      "gen_ai.tool.definitions": JSON.stringify(inputs.tools),
+      "gen_ai.tool.definitions": inputs.tools?.map((toolDefinition) =>
+        JSON.stringify(toolDefinition),
+      ),
     });
   }
 
