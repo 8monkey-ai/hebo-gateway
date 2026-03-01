@@ -652,7 +652,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
             controller.enqueue(
               createChunk(
                 {
-                  reasoning_content: part.text,
+                  reasoning: part.text,
                   reasoning_details: [
                     toReasoningDetail(
                       {
@@ -760,7 +760,7 @@ export const toChatCompletionsAssistantMessage = (
   }
 
   if (result.reasoningText) {
-    message.reasoning_content = result.reasoningText;
+    message.reasoning = result.reasoningText;
 
     if (reasoningDetails.length === 0) {
       reasoningDetails.push(

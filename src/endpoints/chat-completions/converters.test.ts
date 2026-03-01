@@ -185,7 +185,7 @@ describe("Chat Completions Converters", () => {
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
-      expect(message.reasoning_content).toBe("I am thinking...");
+      expect(message.reasoning).toBe("I am thinking...");
       expect(message.reasoning_details![0]).toMatchObject({
         type: "reasoning.text",
         text: "I am thinking...",
@@ -211,7 +211,7 @@ describe("Chat Completions Converters", () => {
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
-      expect(message.reasoning_content).toBe("Thinking via text...");
+      expect(message.reasoning).toBe("Thinking via text...");
       expect(message.reasoning_details![0]).toMatchObject({
         type: "reasoning.text",
         text: "Thinking via text...",
