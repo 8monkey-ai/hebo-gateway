@@ -80,11 +80,12 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         parts.push({ type: "text", content: part.text });
         break;
       case "image_url": {
-        const { mimeType } = parseDataUrl(part.image_url.url);
-        if (mimeType) {
-          parts.push(toBlobPart("image", mimeType));
+        const url = part.image_url.url;
+        if (url.startsWith("data:")) {
+          const { mimeType } = parseDataUrl(url);
+          parts.push(toBlobPart("image", mimeType || undefined));
         } else {
-          parts.push({ type: "uri", modality: "image", uri: part.image_url.url });
+          parts.push({ type: "uri", modality: "image", uri: url });
         }
         break;
       }
