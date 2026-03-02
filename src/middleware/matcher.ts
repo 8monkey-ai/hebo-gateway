@@ -6,7 +6,7 @@ import type { ProviderId } from "../providers/types";
 import { logger } from "../logger";
 import { addSpanEvent } from "../telemetry/span";
 import { forwardParamsEmbeddingMiddleware, forwardParamsMiddleware } from "./common";
-import { debugEmbeddingFinalParamsMiddleware, debugLanguageFinalParamsMiddleware } from "./debug";
+import { debugEmbeddingFinalParamsMiddleware, debugFinalParamsMiddleware } from "./debug";
 
 type MiddlewareEntries = {
   language?: LanguageModelMiddleware[];
@@ -74,6 +74,7 @@ class ModelMiddlewareMatcher {
       modelId,
       providerId,
       forward: () => forwardParamsMiddleware(providerId),
+      debug: debugFinalParamsMiddleware,
     }) as LanguageModelMiddleware[];
   }
 
@@ -83,6 +84,7 @@ class ModelMiddlewareMatcher {
       modelId,
       providerId,
       forward: () => forwardParamsEmbeddingMiddleware(providerId),
+      debug: debugEmbeddingFinalParamsMiddleware,
     }) as EmbeddingModelMiddleware[];
   }
 
@@ -91,8 +93,9 @@ class ModelMiddlewareMatcher {
     modelId?: ModelId;
     providerId?: ProviderId;
     forward?: ModelMiddleware | (() => ModelMiddleware);
+    debug?: ModelMiddleware;
   }): ModelMiddleware[] {
-    const { kind, modelId, providerId, forward } = options;
+    const { kind, modelId, providerId, forward, debug } = options;
 
     const key = `${kind}-${modelId}:${providerId}`;
     const cached = this.cache.get(key);
@@ -111,9 +114,9 @@ class ModelMiddlewareMatcher {
     if (providerId) {
       out.push(...this.collect(this.provider.match(providerId), kind));
     }
-    out.push(
-      kind === "text" ? debugLanguageFinalParamsMiddleware : debugEmbeddingFinalParamsMiddleware,
-    );
+    if (debug) {
+      out.push(debug);
+    }
 
     if (this.cache.size >= ModelMiddlewareMatcher.MAX_CACHE) {
       let n = Math.ceil(ModelMiddlewareMatcher.MAX_CACHE * 0.2);
