@@ -255,4 +255,42 @@ describe("Chat Completions OTEL", () => {
       }),
     ]);
   });
+
+  test("should map usage token attributes with cache_read_input/reasoning_output names", () => {
+    const completions: ChatCompletions = {
+      id: "chatcmpl_123",
+      object: "chat.completion",
+      created: 1700000000,
+      model: "openai/gpt-oss-20b",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "done",
+          },
+          finish_reason: "stop",
+        },
+      ],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+        prompt_tokens_details: {
+          cached_tokens: 4,
+        },
+        completion_tokens_details: {
+          reasoning_tokens: 6,
+        },
+      },
+    };
+
+    const attrs = getChatResponseAttributes(completions, "recommended");
+
+    expect(attrs["gen_ai.usage.input_tokens"]).toBe(10);
+    expect(attrs["gen_ai.usage.output_tokens"]).toBe(20);
+    expect(attrs["gen_ai.usage.total_tokens"]).toBe(30);
+    expect(attrs["gen_ai.usage.cache_read.input_tokens"]).toBe(4);
+    expect(attrs["gen_ai.usage.reasoning.output_tokens"]).toBe(6);
+  });
 });
