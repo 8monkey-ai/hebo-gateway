@@ -8,6 +8,8 @@ import { GatewayError } from "./errors/gateway";
 import { winterCgHandler } from "./lifecycle";
 import { logger } from "./logger";
 
+let inflight = 0;
+
 export function gateway(config: GatewayConfig) {
   const basePath = (config.basePath ?? "").replace(/\/+$/, "");
   const parsedConfig = parseConfig(config);
@@ -30,10 +32,14 @@ export function gateway(config: GatewayConfig) {
       pathname = pathname.slice(basePath.length);
     }
 
-    logger.info(`[gateway] ${req.method} ${pathname}`);
+    logger.info(`[gateway] ${req.method} ${pathname} (${++inflight})`);
     for (const [route, endpoint] of routeEntries) {
       if (pathname === route || pathname.startsWith(route + "/")) {
-        return endpoint.handler(req, state);
+        try {
+          return endpoint.handler(req, state);
+        } finally {
+          inflight--;
+        }
       }
     }
 
