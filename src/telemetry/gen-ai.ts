@@ -1,6 +1,8 @@
 import { metrics, type Attributes } from "@opentelemetry/api";
 
-import type { TelemetrySignalLevel } from "../types";
+import type { GatewayContext, TelemetrySignalLevel } from "../types";
+
+import { STATUS_CODE } from "../errors/utils";
 
 const meter = metrics.getMeter("@hebo/gateway");
 
@@ -35,15 +37,37 @@ const tokenUsageHistogram = meter.createHistogram("gen_ai.client.token.usage", {
   },
 });
 
-// FUTURE: record unsuccessful calls
+export const getGenAiGeneralAttributes = (
+  ctx: GatewayContext,
+  signalLevel?: TelemetrySignalLevel,
+): Attributes => {
+  if (!signalLevel || signalLevel === "off") return {};
+
+  const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
+
+  return {
+    "gen_ai.operation.name": ctx.operation,
+    "gen_ai.request.model": requestModel,
+    "gen_ai.response.model": ctx.resolvedModelId,
+    "gen_ai.provider.name": ctx.resolvedProviderId,
+  };
+};
+
 export const recordRequestDuration = (
-  start: number,
-  attrs: Attributes,
+  duration: number,
+  status: number,
+  ctx: GatewayContext,
   signalLevel?: TelemetrySignalLevel,
 ) => {
   if (!signalLevel || signalLevel === "off") return;
 
-  requestDurationHistogram.record((performance.now() - start) / 1000, attrs);
+  const attrs = getGenAiGeneralAttributes(ctx, signalLevel);
+
+  if (status !== 200) {
+    attrs["error.type"] = `${status} ${STATUS_CODE(status).toLowerCase()}`;
+  }
+
+  requestDurationHistogram.record(duration / 1000, attrs);
 };
 
 // FUTURE: record unsuccessful calls
@@ -83,7 +107,7 @@ export const recordTokenUsage = (
   record(tokenAttrs["gen_ai.usage.input_tokens"], "input");
   record(tokenAttrs["gen_ai.usage.output_tokens"], "output");
 
-  // Monitor otel issues for emerging cached / reasoning tokens standard:
+  // FUTURE: Monitor otel for emerging cached / reasoning tokens standard:
   // https://github.com/open-telemetry/semantic-conventions/issues/1959
   // https://github.com/open-telemetry/semantic-conventions/issues/3341
 };
