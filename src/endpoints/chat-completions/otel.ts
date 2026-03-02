@@ -61,6 +61,7 @@ const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown
   }
 
   // FUTURE: remove once Langfuse supports gen_ai.system_instructions
+  // https://github.com/langfuse/langfuse/issues/11607
   if (message.role === "system") {
     return [toTextPart(message.content)];
   }
