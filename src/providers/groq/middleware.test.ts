@@ -1,7 +1,17 @@
 import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
 
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { groqServiceTierMiddleware } from "./middleware";
+
+test("groq middlewares > matching provider resolves service tier middleware", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    providerId: "groq.chat",
+  });
+
+  expect(middleware).toContain(groqServiceTierMiddleware);
+});
 
 const groqServiceTierCases = [
   { tier: "auto", expected: "auto" },

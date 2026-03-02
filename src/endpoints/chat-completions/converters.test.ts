@@ -599,7 +599,7 @@ describe("Chat Completions Converters", () => {
             warnings: [],
             providerMetadata: {
               [provider]: {
-                serviceTier: value,
+                service_tier: value,
               },
             },
           } as any,
@@ -630,8 +630,8 @@ describe("Chat Completions Converters", () => {
             warnings: [],
             providerMetadata: {
               vertex: {
-                usageMetadata: {
-                  trafficType,
+                usage_metadata: {
+                  traffic_type: trafficType,
                 },
               },
             },
