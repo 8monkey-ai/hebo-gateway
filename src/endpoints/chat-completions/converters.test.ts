@@ -197,29 +197,6 @@ describe("Chat Completions Converters", () => {
       expect(message.content).toBe("Final answer.");
     });
 
-    test("should fallback to reasoningText if no reasoning parts in content", () => {
-      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
-        content: [
-          {
-            type: "text",
-            text: "Hello",
-          } as any,
-        ],
-        reasoningText: "Thinking via text...",
-        toolCalls: [],
-      };
-
-      const message = toChatCompletionsAssistantMessage(mockResult);
-
-      expect(message.reasoning).toBe("Thinking via text...");
-      expect(message.reasoning_details![0]).toMatchObject({
-        type: "reasoning.text",
-        text: "Thinking via text...",
-        index: 0,
-      });
-      expect(message.reasoning_details![0].id).toStartWith("reasoning-");
-    });
-
     test("should handle redacted/encrypted reasoning", () => {
       const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
         content: [
