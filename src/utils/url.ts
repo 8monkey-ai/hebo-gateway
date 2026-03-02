@@ -1,5 +1,5 @@
 export const parseDataUrl = (url: string): { mimeType: string; dataStart: number } => {
-  if (!url.startsWith("data:")) {
+  if (url.slice(0, 5).toLowerCase() !== "data:") {
     return { mimeType: "", dataStart: 0 };
   }
 

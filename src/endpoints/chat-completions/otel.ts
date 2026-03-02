@@ -81,7 +81,7 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         break;
       case "image_url": {
         const url = part.image_url.url;
-        if (url.startsWith("data:")) {
+        if (url.slice(0, 5).toLowerCase() !== "data:") {
           const { mimeType } = parseDataUrl(url);
           parts.push(toBlobPart("image", mimeType || undefined));
         } else {
