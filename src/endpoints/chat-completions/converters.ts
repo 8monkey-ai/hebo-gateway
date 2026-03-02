@@ -727,8 +727,8 @@ function resolveResponseServiceTier(
 
   for (const metadata of Object.values(providerMetadata)) {
     const tier = parseReturnedServiceTier(
-      metadata["serviceTier"] ??
-        (metadata["usageMetadata"] as JSONObject | undefined)?.["trafficType"],
+      metadata["service_tier"] ??
+        (metadata["usage_metadata"] as JSONObject | undefined)?.["traffic_type"],
     );
     if (tier) return tier;
   }
@@ -750,18 +750,15 @@ function parseReturnedServiceTier(value: unknown): ChatCompletionsServiceTier | 
       return "default";
 
     case "on_demand_flex":
-    case "on-demand-flex":
     case "flex":
       return "flex";
 
     case "on_demand_priority":
-    case "on-demand-priority":
     case "priority":
     case "performance":
       return "priority";
 
     case "provisioned_throughput":
-    case "provisioned-throughput":
     case "scale":
     case "reserved":
     case "dedicated":
