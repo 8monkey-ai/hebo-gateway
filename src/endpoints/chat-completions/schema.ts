@@ -232,6 +232,14 @@ export const ChatCompletionsMetadataSchema = z.record(
   z.string().max(512),
 );
 export type ChatCompletionsMetadata = z.infer<typeof ChatCompletionsMetadataSchema>;
+export const ChatCompletionsServiceTierSchema = z.enum([
+  "auto",
+  "default",
+  "flex",
+  "scale",
+  "priority",
+]);
+export type ChatCompletionsServiceTier = z.infer<typeof ChatCompletionsServiceTierSchema>;
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
@@ -248,6 +256,7 @@ const ChatCompletionsInputsSchema = z.object({
   metadata: ChatCompletionsMetadataSchema.optional(),
   response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   prompt_cache_key: z.string().optional(),
   prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
   // Extension origin: OpenRouter/Vercel/Anthropic
@@ -315,6 +324,7 @@ export const ChatCompletionsSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
   provider_metadata: z
     .record(z.string(), z.record(z.string(), z.unknown()))
@@ -352,6 +362,7 @@ export const ChatCompletionsChunkSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
   provider_metadata: z
     .record(z.string(), z.record(z.string(), z.unknown()))

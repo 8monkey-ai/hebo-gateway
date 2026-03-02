@@ -38,7 +38,7 @@ bun install @hebo-ai/gateway
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
 - OpenAI Extensions
-  - [Reasoning](#reasoning) | [Prompt Caching](#prompt-caching)
+  - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching)
 - Advanced Usage
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
@@ -560,6 +560,25 @@ Advanced models (like Anthropic Claude 3.7 or Gemini 3) surface structured reaso
 - **extra_content**: Provider-specific extensions, such as **Google's thought signatures** on Vertex AI.
 
 For **Gemini 3** models, returning the thought signature via `extra_content` is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance.
+
+### Service Tier
+
+The chat completions endpoint accepts a provider-agnostic `service_tier` extension:
+
+- `auto`, `default`, `flex`, `scale`, `priority`
+
+Provider-specific mapping:
+
+- **OpenAI**: forwards as OpenAI `serviceTier` (no middleware remap).
+- **Groq**: maps to Groq `serviceTier` (`default` -> `on_demand`, `scale`/`priority` -> `performance`).
+- **Google Vertex**: maps to request headers via middleware:
+  - `flex` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: flex`
+  - `priority` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: priority`
+  - `scale` -> `x-vertex-ai-llm-request-type: dedicated`
+  - `default` -> `x-vertex-ai-llm-request-type: shared`
+- **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
+
+When available, the resolved value is echoed back on response as `service_tier`.
 
 ### Prompt Caching
 
