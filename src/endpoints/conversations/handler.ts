@@ -152,7 +152,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!items) throw new GatewayError("Conversation not found", 404);
 
     const has_more = limit !== 0 && items.length > limit;
-    const data = items.slice(0, limit || items.length);
+    const data = items.slice(0, limit > 0 ? limit : items.length);
 
     return {
       object: "list",

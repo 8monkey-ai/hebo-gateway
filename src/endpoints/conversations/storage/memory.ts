@@ -14,6 +14,7 @@ export class InMemoryStorage implements ConversationStorage {
     this.items = new LRUCache<string, Map<string, ConversationItem>>({
       maxSize,
       sizeCalculation: (items) => Math.max(1, this.estimateSize(items)),
+      noDisposeOnSet: true,
       dispose: (_value, key) => {
         this.conversations.delete(key);
       },
@@ -26,7 +27,7 @@ export class InMemoryStorage implements ConversationStorage {
 
     while (stack.length > 0) {
       const obj = stack.pop();
-      if (obj == null) continue;
+      if (obj === null || obj === undefined) continue;
 
       const t = typeof obj;
       if (t === "string") {
@@ -147,19 +148,32 @@ export class InMemoryStorage implements ConversationStorage {
   ): Promise<ConversationItem[] | undefined> {
     const { after, order, limit } = params;
     const existing = this.items.get(conversationId);
-    if (!existing) {
-      return Promise.resolve(undefined as ConversationItem[] | undefined);
-    }
+    if (!existing) return Promise.resolve(undefined as ConversationItem[] | undefined);
+    if (limit <= 0) return Promise.resolve([]);
 
-    const all = Array.from(existing.values());
-    const pivot = after ? all.findIndex((item) => item.id === after) : -1;
+    const out: ConversationItem[] = [];
 
     if (order === "asc") {
-      const start = pivot !== -1 ? pivot + 1 : 0;
-      return Promise.resolve(all.slice(start, start + limit));
+      let seen = after === null || after === undefined;
+      for (const item of existing.values()) {
+        if (!seen) {
+          if (item.id === after) seen = true;
+          continue;
+        }
+        out.push(item);
+        if (out.length === limit) break;
+      }
+      return Promise.resolve(out);
     }
 
-    const end = pivot !== -1 ? pivot : all.length;
-    return Promise.resolve(all.slice(Math.max(0, end - limit), end).toReversed());
+    // desc
+    for (const item of existing.values()) {
+      if (after !== null && after !== undefined && item.id === after) break;
+      out.push(item);
+      if (out.length > limit) out.shift(); // bounded buffer
+    }
+
+    out.reverse();
+    return Promise.resolve(out);
   }
 }

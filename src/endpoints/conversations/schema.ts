@@ -1,118 +1,142 @@
 import * as z from "zod";
 
-// --- Common ---
+/**
+ * --- Metadata ---
+ */
 
 export const MetadataSchema = z.record(
   z.string().max(64),
   z.union([z.string().max(512), z.number(), z.boolean()]),
 );
+export type Metadata = z.infer<typeof MetadataSchema>;
 
 export const ItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
-export const ImageDetailSchema = z.enum(["low", "high", "auto"]);
+export type ItemStatus = z.infer<typeof ItemStatusSchema>;
 
-// --- Content ---
+export const ImageDetailSchema = z.enum(["low", "high", "auto"]);
+export type ImageDetail = z.infer<typeof ImageDetailSchema>;
+
+/**
+ * --- Messaging Content & Items ---
+ */
+
+// Content Parts
 
 export const ResponseInputTextSchema = z.object({
   type: z.literal("input_text"),
   text: z.string(),
 });
+export type ResponseInputText = z.infer<typeof ResponseInputTextSchema>;
+
+const ResponseInputImageURLSchema = z.object({
+  type: z.literal("input_image"),
+  image_url: z.string(),
+  file_id: z.string().optional(),
+  detail: ImageDetailSchema.optional(),
+});
+
+const ResponseInputImageIDSchema = z.object({
+  type: z.literal("input_image"),
+  file_id: z.string(),
+  image_url: z.string().optional(),
+  detail: ImageDetailSchema.optional(),
+});
 
 export const ResponseInputImageSchema = z.union([
-  z.object({
-    type: z.literal("input_image"),
-    image_url: z.string(),
-    file_id: z.string().nullable().optional(),
-    detail: ImageDetailSchema.optional(),
-  }),
-  z.object({
-    type: z.literal("input_image"),
-    image_url: z.string().nullable().optional(),
-    file_id: z.string(),
-    detail: ImageDetailSchema.optional(),
-  }),
+  ResponseInputImageURLSchema,
+  ResponseInputImageIDSchema,
 ]);
+export type ResponseInputImage = z.infer<typeof ResponseInputImageSchema>;
+
+const ResponseInputFileDataSchema = z.object({
+  type: z.literal("input_file"),
+  file_data: z.string(),
+  file_id: z.string().optional(),
+  file_url: z.string().optional(),
+  filename: z.string().optional(),
+});
+
+const ResponseInputFileIDSchema = z.object({
+  type: z.literal("input_file"),
+  file_id: z.string(),
+  file_data: z.string().optional(),
+  file_url: z.string().optional(),
+  filename: z.string().optional(),
+});
+
+const ResponseInputFileURLSchema = z.object({
+  type: z.literal("input_file"),
+  file_url: z.string(),
+  file_data: z.string().optional(),
+  file_id: z.string().optional(),
+  filename: z.string().optional(),
+});
 
 export const ResponseInputFileSchema = z.union([
-  z.object({
-    type: z.literal("input_file"),
-    filename: z.string().optional(),
-    file_data: z.string(),
-    file_id: z.string().nullable().optional(),
-    file_url: z.string().nullable().optional(),
-  }),
-  z.object({
-    type: z.literal("input_file"),
-    filename: z.string().optional(),
-    file_data: z.string().nullable().optional(),
-    file_id: z.string(),
-    file_url: z.string().nullable().optional(),
-  }),
-  z.object({
-    type: z.literal("input_file"),
-    filename: z.string().optional(),
-    file_data: z.string().nullable().optional(),
-    file_id: z.string().nullable().optional(),
-    file_url: z.string(),
-  }),
+  ResponseInputFileDataSchema,
+  ResponseInputFileIDSchema,
+  ResponseInputFileURLSchema,
 ]);
+export type ResponseInputFile = z.infer<typeof ResponseInputFileSchema>;
+
+export const ResponseInputContentSchema = z.discriminatedUnion("type", [
+  ResponseInputTextSchema,
+  ResponseInputImageURLSchema,
+  ResponseInputImageIDSchema,
+  ResponseInputFileDataSchema,
+  ResponseInputFileIDSchema,
+  ResponseInputFileURLSchema,
+]);
+export type ResponseInputContent = z.infer<typeof ResponseInputContentSchema>;
 
 export const ResponseOutputTextSchema = z.object({
   type: z.literal("output_text"),
   text: z.string(),
   annotations: z.array(z.unknown()).optional(),
 });
+export type ResponseOutputText = z.infer<typeof ResponseOutputTextSchema>;
 
-export const ResponseSummaryTextSchema = z.object({
-  type: z.literal("summary_text"),
-  text: z.string(),
-});
+// Message Items
 
-export const ResponseReasoningTextSchema = z.object({
-  type: z.literal("reasoning_text"),
-  text: z.string(),
-});
-
-// --- Message ---
-
-const MessageItemBase = z.object({
+const MessageItemBaseSchema = z.object({
   type: z.literal("message"),
   id: z.string().optional(),
   status: ItemStatusSchema.optional(),
 });
 
-const UserMessage = MessageItemBase.extend({
+const UserMessageSchema = MessageItemBaseSchema.extend({
   role: z.literal("user"),
-  content: z.union([
-    z.string(),
-    z.array(z.union([ResponseInputTextSchema, ResponseInputImageSchema, ResponseInputFileSchema])),
-  ]),
+  content: z.union([z.string(), z.array(ResponseInputContentSchema)]),
 });
 
-const AssistantMessage = MessageItemBase.extend({
+const AssistantMessageSchema = MessageItemBaseSchema.extend({
   role: z.literal("assistant"),
   content: z.union([z.string(), z.array(ResponseOutputTextSchema)]),
 });
 
-const SystemMessage = MessageItemBase.extend({
+const SystemMessageSchema = MessageItemBaseSchema.extend({
   role: z.literal("system"),
-  content: z.union([z.string(), z.array(ResponseInputTextSchema)]),
+  content: z.union([z.string(), z.array(ResponseInputContentSchema)]),
 });
 
-const DeveloperMessage = MessageItemBase.extend({
+const DeveloperMessageSchema = MessageItemBaseSchema.extend({
   role: z.literal("developer"),
-  content: z.union([z.string(), z.array(ResponseInputTextSchema)]),
+  content: z.union([z.string(), z.array(ResponseInputContentSchema)]),
 });
 
-export const MessageItemUnion = z.union([
-  UserMessage,
-  AssistantMessage,
-  SystemMessage,
-  DeveloperMessage,
+export const MessageItemUnionSchema = z.discriminatedUnion("role", [
+  UserMessageSchema,
+  AssistantMessageSchema,
+  SystemMessageSchema,
+  DeveloperMessageSchema,
 ]);
+export type MessageItemUnion = z.infer<typeof MessageItemUnionSchema>;
 
-// --- Item ---
+/**
+ * --- Tools ---
+ */
 
-const ResponseFunctionToolCallSchema = z.object({
+export const ResponseFunctionToolCallSchema = z.object({
   type: z.literal("function_call"),
   id: z.string().optional(),
   call_id: z.string(),
@@ -120,19 +144,34 @@ const ResponseFunctionToolCallSchema = z.object({
   arguments: z.string(),
   status: ItemStatusSchema.optional(),
 });
+export type ResponseFunctionToolCall = z.infer<typeof ResponseFunctionToolCallSchema>;
 
-const FunctionCallOutputSchema = z.object({
+export const FunctionCallOutputSchema = z.object({
   type: z.literal("function_call_output"),
   id: z.string().optional(),
   call_id: z.string(),
-  output: z.union([
-    z.string(),
-    z.array(z.union([ResponseInputTextSchema, ResponseInputImageSchema, ResponseInputFileSchema])),
-  ]),
+  output: z.union([z.string(), z.array(ResponseInputContentSchema)]),
   status: ItemStatusSchema.optional(),
 });
+export type FunctionCallOutput = z.infer<typeof FunctionCallOutputSchema>;
 
-const ResponseReasoningItemSchema = z.object({
+/**
+ * --- Reasoning ---
+ */
+
+export const ResponseSummaryTextSchema = z.object({
+  type: z.literal("summary_text"),
+  text: z.string(),
+});
+export type ResponseSummaryText = z.infer<typeof ResponseSummaryTextSchema>;
+
+export const ResponseReasoningTextSchema = z.object({
+  type: z.literal("reasoning_text"),
+  text: z.string(),
+});
+export type ResponseReasoningText = z.infer<typeof ResponseReasoningTextSchema>;
+
+export const ResponseReasoningItemSchema = z.object({
   type: z.literal("reasoning"),
   id: z.string().optional(),
   summary: z.array(ResponseSummaryTextSchema),
@@ -140,44 +179,64 @@ const ResponseReasoningItemSchema = z.object({
   encrypted_content: z.string().optional(),
   status: ItemStatusSchema.optional(),
 });
+export type ResponseReasoningItem = z.infer<typeof ResponseReasoningItemSchema>;
 
-// Item: Request
+/**
+ * --- Entities ---
+ */
+
 export const ResponseInputItemSchema = z.union([
-  MessageItemUnion,
+  MessageItemUnionSchema,
   ResponseFunctionToolCallSchema,
   FunctionCallOutputSchema,
   ResponseReasoningItemSchema,
 ]);
 export type ResponseInputItem = z.infer<typeof ResponseInputItemSchema>;
 
+export const ConversationItemSchema = z
+  .object({
+    id: z.string(),
+    object: z.literal("conversation.item"),
+    created_at: z.number().int(),
+  })
+  .and(ResponseInputItemSchema);
+export type ConversationItem = z.infer<typeof ConversationItemSchema>;
+
+export const ConversationSchema = z.object({
+  id: z.string(),
+  object: z.literal("conversation"),
+  created_at: z.number().int(),
+  metadata: z.record(z.string(), z.unknown()),
+});
+export type Conversation = z.infer<typeof ConversationSchema>;
+
+export const ConversationDeletedSchema = z.object({
+  id: z.string(),
+  deleted: z.boolean(),
+  object: z.literal("conversation.deleted"),
+});
+export type ConversationDeleted = z.infer<typeof ConversationDeletedSchema>;
+
+/**
+ * --- API ---
+ */
+
+export const ConversationCreateParamsSchema = z.object({
+  items: z.array(ResponseInputItemSchema).max(1000).optional(),
+  metadata: MetadataSchema.optional(),
+});
+export type ConversationCreateParams = z.infer<typeof ConversationCreateParamsSchema>;
+
+export const ConversationUpdateBodySchema = z.object({
+  metadata: MetadataSchema,
+});
+export type ConversationUpdateBody = z.infer<typeof ConversationUpdateBodySchema>;
+
 export const ConversationItemsAddBodySchema = z.object({
   items: z.array(ResponseInputItemSchema).max(1000),
 });
 export type ConversationItemsAddBody = z.infer<typeof ConversationItemsAddBodySchema>;
 
-// Item: Stored
-const withSystemFields = <T extends z.ZodRawShape>(shape: T) =>
-  z.object({
-    id: z.string(),
-    object: z.literal("conversation.item"),
-    created_at: z.number().int(),
-    ...shape,
-  });
-
-export const ConversationItemSchema = z.discriminatedUnion("type", [
-  withSystemFields({
-    type: z.literal("message"),
-    role: z.enum(["user", "assistant", "system", "developer"]),
-    content: z.unknown(),
-    status: ItemStatusSchema.optional(),
-  }),
-  withSystemFields(ResponseFunctionToolCallSchema.omit({ id: true }).shape),
-  withSystemFields(FunctionCallOutputSchema.omit({ id: true }).shape),
-  withSystemFields(ResponseReasoningItemSchema.omit({ id: true }).shape),
-]);
-export type ConversationItem = z.infer<typeof ConversationItemSchema>;
-
-// Item: List
 export const ConversationItemListSchema = z.object({
   object: z.literal("list"),
   data: z.array(ConversationItemSchema),
@@ -191,36 +250,5 @@ export const ConversationItemListParamsSchema = z.object({
   after: z.string().optional(),
   limit: z.coerce.number().int().min(0).max(1000).default(20),
   order: z.enum(["asc", "desc"]).default("desc"),
-  // FUTURE: Add support for "include" array
 });
 export type ConversationItemListParams = z.infer<typeof ConversationItemListParamsSchema>;
-
-// --- Conversation ---
-
-// Conversation: Request
-export const ConversationCreateParamsSchema = z.object({
-  items: z.array(ResponseInputItemSchema).max(1000).optional(),
-  metadata: MetadataSchema.optional(),
-});
-export type ConversationCreateParams = z.infer<typeof ConversationCreateParamsSchema>;
-
-export const ConversationUpdateBodySchema = z.object({
-  metadata: MetadataSchema,
-});
-export type ConversationUpdateBody = z.infer<typeof ConversationUpdateBodySchema>;
-
-export const ConversationDeletedSchema = z.object({
-  id: z.string(),
-  deleted: z.boolean(),
-  object: z.literal("conversation.deleted"),
-});
-export type ConversationDeleted = z.infer<typeof ConversationDeletedSchema>;
-
-// Conversation: Stored
-export const ConversationSchema = z.object({
-  id: z.string(),
-  object: z.literal("conversation"),
-  created_at: z.number().int(),
-  metadata: z.record(z.string(), z.unknown()),
-});
-export type Conversation = z.infer<typeof ConversationSchema>;

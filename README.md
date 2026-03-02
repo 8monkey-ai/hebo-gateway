@@ -33,7 +33,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Conversation Storage](#conversation-storage) | [Logger](#logger-settings) | [Observability](#observability)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -376,6 +376,53 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
+
+### Conversation Storage
+
+The `/conversations` endpoint stores conversation history and associated items. By default, the gateway uses an in-memory storage, which is suitable for development but not for production as data is lost when the server restarts.
+
+#### In-Memory Storage
+
+You can configure the size of the in-memory storage (default is 256MB).
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { InMemoryStorage } from "@hebo-ai/gateway/storage/memory";
+
+const gw = gateway({
+  // ...
+  storage: new InMemoryStorage({
+    maxSize: 512 * 1024 * 1024, // 512MB
+  }),
+});
+```
+
+#### Custom Storage Backend
+
+For production, you should implement your own storage backend by implementing the `ConversationStorage` interface. This allows you to persist data to a database like PostgreSQL, Redis, or MongoDB.
+
+```ts
+import { gateway, ConversationStorage } from "@hebo-ai/gateway";
+
+const myStorage: ConversationStorage = {
+  async createConversation(conversation, items) {
+    // Save to your DB
+    return conversation;
+  },
+  async getConversation(id) {
+    // Retrieve from your DB
+    return undefined;
+  },
+  // ... implement other methods
+};
+
+const gw = gateway({
+  // ...
+  storage: myStorage,
+});
+```
+
+Refer to the `ConversationStorage` interface in `@hebo-ai/gateway` for the full set of methods to implement.
 
 ## 🧩 Framework Support
 

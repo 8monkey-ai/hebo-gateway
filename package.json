@@ -1,7 +1,7 @@
 {
   "name": "@hebo-ai/gateway",
   "version": "0.6.0-rc1",
-  "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI-compatible /chat/completions, /embeddings & /models. Support for /conversations.",
+  "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI-compatible /chat/completions, /embeddings & /models.",
   "keywords": [
     "ai",
     "ai-gateway",
@@ -70,6 +70,11 @@
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
+    },
+    "./storage/memory": {
+      "types": "./dist/endpoints/conversations/storage/memory.d.ts",
+      "import": "./dist/endpoints/conversations/storage/memory.js",
+      "dev-source": "./src/endpoints/conversations/storage/memory.ts"
     },
     "./errors/openai": {
       "types": "./dist/errors/openai.d.ts",
