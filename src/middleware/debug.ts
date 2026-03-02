@@ -2,7 +2,7 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import { logger } from "../logger";
 
-export const debugLanguageFinalParamsMiddleware: LanguageModelMiddleware = {
+export const debugFinalParamsMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params, model }) => {

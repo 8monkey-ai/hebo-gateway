@@ -722,6 +722,48 @@ https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 
 For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
+#### Metrics
+
+The Gateway also emits `gen_ai` metrics:
+
+- `gen_ai.server.request.duration` (histogram, seconds)
+- `gen_ai.server.time_per_output_token` (histogram, seconds)
+- `gen_ai.client.token.usage` (histogram, tokens; tagged with `gen_ai.token.type=input|output`)
+
+To capture them, configure a global `MeterProvider` before creating the gateway:
+
+```ts
+import { metrics } from "@opentelemetry/api";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
+import { gateway } from "@hebo-ai/gateway";
+
+metrics.setGlobalMeterProvider(
+  new MeterProvider({
+    readers: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({
+          url: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
+        }),
+      }),
+    ],
+  }),
+);
+
+const gw = gateway({
+  // ...
+  telemetry: {
+    enabled: true,
+    signals: {
+      gen_ai: "recommended",
+    },
+  },
+});
+```
+
+> [!NOTE]
+> `telemetry.tracer` controls traces; metrics export is controlled by the global `MeterProvider`.
+
 #### Langfuse
 
 Hebo telemetry spans are OpenTelemetry-compatible, so you can send them to Langfuse via `@langfuse/otel`.

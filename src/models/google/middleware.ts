@@ -46,20 +46,6 @@ export function mapGeminiReasoningEffort(
     }
   }
 
-  if (modelId.includes("gemini-3-pro")) {
-    switch (effort) {
-      case "none":
-      case "minimal":
-      case "low":
-        return "low";
-      case "medium":
-      case "high":
-      case "xhigh":
-      case "max":
-        return "high";
-    }
-  }
-
   if (modelId.includes("gemini-3-flash")) {
     switch (effort) {
       case "none":

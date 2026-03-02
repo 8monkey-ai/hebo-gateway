@@ -120,8 +120,8 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
   name: z.string().optional(),
   // FUTURE: This should also support Custom Tool Calls
   tool_calls: z.array(ChatCompletionsToolCallSchema).optional(),
-  // Extension origin: OpenRouter/Vercel - TODO: should be "reasoning"?
-  reasoning_content: z.string().optional().meta({ extension: true }),
+  // Extension origin: OpenRouter/Vercel
+  reasoning: z.string().optional().meta({ extension: true }),
   // Extension origin: OpenRouter/Vercel
   reasoning_details: z
     .array(ChatCompletionsReasoningDetailSchema)

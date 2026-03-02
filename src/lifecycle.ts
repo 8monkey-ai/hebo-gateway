@@ -11,6 +11,7 @@ import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
+import { recordRequestDuration } from "./telemetry/gen-ai";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { recordV8jsMemory } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
@@ -31,6 +32,7 @@ export const winterCgHandler = (
   }
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
+    const start = performance.now();
     const ctx: GatewayContext = {
       request,
       state: state ?? {},
@@ -68,9 +70,18 @@ export const winterCgHandler = (
           err: reason ?? ctx.request.signal.reason,
         });
 
-        if (realStatus >= 500) span.recordError(reason);
+        span.recordError(reason);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
+
+      if (ctx.operation === "chat" || ctx.operation === "embeddings") {
+        recordRequestDuration(
+          performance.now() - start,
+          realStatus,
+          ctx,
+          parsedConfig.telemetry?.signals?.gen_ai,
+        );
+      }
 
       recordV8jsMemory(parsedConfig.telemetry?.signals?.hebo);
 

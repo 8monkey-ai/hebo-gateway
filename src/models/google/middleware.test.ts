@@ -16,7 +16,6 @@ test("geminiReasoningMiddleware > matching patterns", () => {
     "google/gemini-2.5-flash",
     "google/gemini-2.5-pro",
     "google/gemini-3-flash-preview",
-    "google/gemini-3-pro-preview",
     "google/gemini-3.1-pro-preview",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
@@ -101,36 +100,6 @@ test("geminiReasoningMiddleware > should enable thinking for Gemini 3 Flash effo
         thinkingConfig: {
           includeThoughts: true,
           thinkingLevel: "medium",
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("geminiReasoningMiddleware > should map effort for Gemini 3 Pro", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "minimal" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3-pro-preview" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: true,
-          thinkingLevel: "low",
         },
       },
       unknown: {},

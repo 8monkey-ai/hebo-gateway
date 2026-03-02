@@ -17,18 +17,14 @@ import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import {
-  recordRequestDuration,
+  getGenAiGeneralAttributes,
   recordTimePerOutputToken,
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
-import {
-  getEmbeddingsGeneralAttributes,
-  getEmbeddingsRequestAttributes,
-  getEmbeddingsResponseAttributes,
-} from "./otel";
+import { getEmbeddingsRequestAttributes, getEmbeddingsResponseAttributes } from "./otel";
 import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
@@ -91,7 +87,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.provider.resolved");
 
     const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
-    const genAiGeneralAttrs = getEmbeddingsGeneralAttributes(ctx, genAiSignalLevel);
+    const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
@@ -134,7 +130,6 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-    recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 

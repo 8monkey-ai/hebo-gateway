@@ -46,11 +46,17 @@ export function deepMerge<A extends object, B extends object>(base: A, override?
   return out as unknown as A & B;
 }
 
+export type Preset<
+  Id extends string,
+  T extends Record<string, unknown>,
+  Base extends DeepPartial<T>,
+> = <O extends DeepPartial<T>>(override?: O) => Record<Id, Base & O>;
+
 export function presetFor<Ids extends string, T extends Record<string, unknown>>() {
   return function preset<const Id extends Ids, const Base extends DeepPartial<T>>(
     id: Id,
     base: Base,
-  ) {
+  ): Preset<Id, T, Base> {
     return <const O extends DeepPartial<T>>(override?: O) => {
       const merged = deepMerge(base, override ?? ({} as O));
       return { [id]: merged } as Record<Id, Base & O>;

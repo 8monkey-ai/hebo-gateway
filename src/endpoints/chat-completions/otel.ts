@@ -1,87 +1,124 @@
 import type { Attributes } from "@opentelemetry/api";
 
 import type {
+  ChatCompletionsAssistantMessage,
   ChatCompletions,
   ChatCompletionsBody,
   ChatCompletionsContentPart,
+  ChatCompletionsContentPartText,
   ChatCompletionsMessage,
 } from "./schema";
 
-import { type GatewayContext, type TelemetrySignalLevel } from "../../types";
+import { type TelemetrySignalLevel } from "../../types";
+import { parseDataUrl } from "../../utils/url";
 
-const toTextPart = (content: string): Record<string, unknown> => ({ type: "text", content });
+const toTextParts = (content: string | ChatCompletionsContentPart[] | null | undefined) => {
+  if (typeof content === "string") {
+    return [{ type: "text", content }];
+  }
 
-const toMessageParts = (message: ChatCompletionsMessage): Record<string, unknown>[] => {
-  if (message.role === "assistant") {
-    const parts: Record<string, unknown>[] = [];
-    if (typeof message.content === "string") parts.push(toTextPart(message.content));
-    if (Array.isArray(message.tool_calls)) {
-      for (const call of message.tool_calls) {
-        parts.push({
-          type: "tool_call",
-          id: call.id,
-          name: call.function.name,
-          arguments: call.function.arguments,
-        });
+  const result = [];
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      if (part.type === "text") {
+        result.push({ type: "text", content: part.text });
       }
     }
-    return parts;
   }
-
-  if (message.role === "tool") {
-    return [{ type: "tool_call_response", id: message.tool_call_id, content: message.content }];
-  }
-
-  if (message.role === "user") {
-    const parts: Record<string, unknown>[] = [];
-    if (typeof message.content === "string") parts.push(toTextPart(message.content));
-    if (Array.isArray(message.content)) {
-      for (const part of message.content as ChatCompletionsContentPart[]) {
-        if (part.type === "text") {
-          parts.push(toTextPart(part.text));
-        } else if (part.type === "image_url") {
-          parts.push({ type: "image", content: part.image_url.url });
-        } else if (part.type === "input_audio") {
-          parts.push({
-            type: "audio",
-            content: "[REDACTED_BINARY_DATA]",
-            format: part.input_audio.format,
-          });
-        } else {
-          parts.push({
-            type: "file",
-            // FUTURE: optionally expose safe metadata without raw binary payloads.
-            content: part.file.filename ?? "[REDACTED_BINARY_DATA]",
-            media_type: part.file.media_type,
-          });
-        }
-      }
-    }
-    return parts;
-  }
-
-  // FUTURE: remove once Langfuse supports gen_ai.system_instructions
-  if (message.role === "system") {
-    return [toTextPart(message.content)];
-  }
-
-  return [];
+  return result;
 };
 
-export const getChatGeneralAttributes = (
-  ctx: GatewayContext,
-  signalLevel?: TelemetrySignalLevel,
-): Attributes => {
-  if (!signalLevel || signalLevel === "off") return {};
-
-  const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
-
-  return {
-    "gen_ai.operation.name": ctx.operation,
-    "gen_ai.request.model": requestModel,
-    "gen_ai.response.model": ctx.resolvedModelId,
-    "gen_ai.provider.name": ctx.resolvedProviderId,
+const toBlobPart = (modality: string, mimeType?: string) => {
+  const part: Record<string, unknown> = {
+    type: "blob",
+    modality,
+    content: "[REDACTED_BINARY_DATA]",
   };
+  if (mimeType) part["mime_type"] = mimeType;
+  return part;
+};
+
+const toToolResponsePart = (id: string, content: string | ChatCompletionsContentPartText[]) => ({
+  type: "tool_call_response" as const,
+  id,
+  response: typeof content === "string" ? content : content.map((p) => p.text).join(""),
+});
+
+const toAssistantParts = (message: ChatCompletionsAssistantMessage) => {
+  const parts: Record<string, unknown>[] = [];
+
+  if (typeof message.reasoning === "string") {
+    parts.push({ type: "reasoning", content: message.reasoning });
+  }
+
+  for (const part of toTextParts(message.content)) {
+    parts.push(part);
+  }
+
+  if (Array.isArray(message.tool_calls)) {
+    for (const call of message.tool_calls) {
+      parts.push({
+        type: "tool_call",
+        id: call.id,
+        name: call.function.name,
+        arguments: call.function.arguments,
+      });
+    }
+  }
+
+  return parts;
+};
+
+const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
+  if (typeof content === "string") return [{ type: "text", content }];
+
+  const parts: Record<string, unknown>[] = [];
+
+  for (const part of content) {
+    switch (part.type) {
+      case "text":
+        parts.push({ type: "text", content: part.text });
+        break;
+      case "image_url": {
+        const url = part.image_url.url;
+        if (url.slice(0, 5).toLowerCase() === "data:") {
+          const { mimeType } = parseDataUrl(url);
+          parts.push(toBlobPart("image", mimeType || undefined));
+        } else {
+          parts.push({ type: "uri", modality: "image", uri: url });
+        }
+        break;
+      }
+      case "input_audio":
+        parts.push(toBlobPart("audio", `audio/${part.input_audio.format}`));
+        break;
+      case "file": {
+        const filePart = toBlobPart("file", part.file.media_type);
+        if (part.file.filename) filePart["file_name"] = part.file.filename;
+        parts.push(filePart);
+        break;
+      }
+    }
+  }
+
+  return parts;
+};
+
+const toMessageParts = (message: ChatCompletionsMessage) => {
+  switch (message.role) {
+    case "assistant":
+      return toAssistantParts(message);
+    case "tool":
+      return [toToolResponsePart(message.tool_call_id, message.content)];
+    case "user":
+      return toUserParts(message.content);
+    // FUTURE: remove once Langfuse supports gen_ai.system_instructions
+    // https://github.com/langfuse/langfuse/issues/11607
+    case "system":
+      return toTextParts(message.content);
+    default:
+      return [];
+  }
 };
 
 export const getChatRequestAttributes = (
@@ -123,7 +160,9 @@ export const getChatRequestAttributes = (
       "gen_ai.input.messages": inputs.messages
         //.filter((m) => m.role !== "system")
         .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
-      "gen_ai.tool.definitions": JSON.stringify(inputs.tools),
+      "gen_ai.tool.definitions": inputs.tools?.map((toolDefinition) =>
+        JSON.stringify(toolDefinition),
+      ),
     });
   }
 
@@ -145,9 +184,10 @@ export const getChatResponseAttributes = (
       "gen_ai.response.finish_reasons": completions.choices?.map((c) => c.finish_reason),
       "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
       "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
-      "gen_ai.usage.cached_tokens": completions.usage?.prompt_tokens_details?.cached_tokens,
+      "gen_ai.usage.cache_read.input_tokens":
+        completions.usage?.prompt_tokens_details?.cached_tokens,
       "gen_ai.usage.output_tokens": completions.usage?.completion_tokens,
-      "gen_ai.usage.reasoning_tokens":
+      "gen_ai.usage.reasoning.output_tokens":
         completions.usage?.completion_tokens_details?.reasoning_tokens,
     });
   }
