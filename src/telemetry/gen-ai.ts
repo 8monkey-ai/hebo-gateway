@@ -83,7 +83,7 @@ export const recordTokenUsage = (
   record(tokenAttrs["gen_ai.usage.input_tokens"], "input");
   record(tokenAttrs["gen_ai.usage.output_tokens"], "output");
 
-  // Monitor otel issuse for emerging cached / resoning tokens standard:
+  // Monitor otel issues for emerging cached / reasoning tokens standard:
   // https://github.com/open-telemetry/semantic-conventions/issues/1959
   // https://github.com/open-telemetry/semantic-conventions/issues/3341
 };
