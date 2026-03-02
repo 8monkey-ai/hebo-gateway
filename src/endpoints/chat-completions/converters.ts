@@ -54,6 +54,7 @@ import type {
 import { GatewayError } from "../../errors/gateway";
 import { OpenAIError, toOpenAIError } from "../../errors/openai";
 import { toResponse } from "../../utils/response";
+import { parseDataUrl } from "../../utils/url";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -345,8 +346,11 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
 
 function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
   if (url.startsWith("data:")) {
-    const { mimeType, base64Data } = parseDataUrl(url);
-    return fromFilePart(base64Data, mimeType, undefined, cacheControl);
+    const { mimeType, dataStart } = parseDataUrl(url);
+    if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
+      throw new GatewayError("Invalid data URL", 400);
+    }
+    return fromFilePart(url.slice(dataStart), mimeType, undefined, cacheControl);
   }
 
   const out: ImagePart = {
@@ -468,24 +472,6 @@ function parseJsonOrText(
   } catch {
     return { type: "text", value: content };
   }
-}
-
-function parseDataUrl(url: string): { mimeType: string; base64Data: string } {
-  const commaIndex = url.indexOf(",");
-  if (commaIndex <= "data:".length || commaIndex === url.length - 1) {
-    throw new GatewayError("Invalid data URL: missing metadata or data", 400);
-  }
-
-  const metadata = url.slice("data:".length, commaIndex);
-  const base64Data = url.slice(commaIndex + 1);
-
-  const semicolonIndex = metadata.indexOf(";");
-  const mimeType = (semicolonIndex === -1 ? metadata : metadata.slice(0, semicolonIndex)).trim();
-  if (!mimeType) {
-    throw new GatewayError("Invalid data URL: missing MIME type", 400);
-  }
-
-  return { mimeType, base64Data };
 }
 
 function parseReasoningOptions(

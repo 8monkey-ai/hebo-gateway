@@ -24,18 +24,14 @@ import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import {
-  recordRequestDuration,
+  getGenAiGeneralAttributes,
   recordTimePerOutputToken,
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
-import {
-  getChatGeneralAttributes,
-  getChatRequestAttributes,
-  getChatResponseAttributes,
-} from "./otel";
+import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
 import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
@@ -99,7 +95,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.provider.resolved");
 
     const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
-    const genAiGeneralAttrs = getChatGeneralAttributes(ctx, genAiSignalLevel);
+    const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
@@ -150,7 +146,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-          recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
         },
         experimental_include: {
           requestBody: false,
@@ -199,7 +194,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
 
     recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-    recordRequestDuration(start, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 
