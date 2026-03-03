@@ -670,7 +670,8 @@ https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 
 > [!TIP]
-> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
+> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.  
+> For `/chat/completions`, request `metadata` (`Record<string, string>`, key 1-64 chars, value up to 512 chars) is also forwarded to spans as `gen_ai.request.metadata.<key>`.
 
 For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
