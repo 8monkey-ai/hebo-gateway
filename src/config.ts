@@ -2,6 +2,7 @@ import { isLogger, logger, setLoggerInstance } from "./logger";
 import { createDefaultLogger } from "./logger/default";
 import { installAiSdkWarningLogger } from "./telemetry/ai-sdk";
 import {
+  DEFAULT_CHAT_TIMEOUT_MS,
   kParsed,
   type GatewayConfig,
   type GatewayConfigParsed,
@@ -83,9 +84,24 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
   installAiSdkWarningLogger(telemetrySignals.gen_ai);
 
+  // Default timeouts
+  const baseTimeout =
+    typeof config.timeouts === "number"
+      ? config.timeouts
+      : (config.timeouts?.normal ?? DEFAULT_CHAT_TIMEOUT_MS);
+
+  const parsedTimeouts = {
+    normal: baseTimeout,
+    flex:
+      typeof config.timeouts === "number"
+        ? baseTimeout * 3
+        : (config.timeouts?.flex ?? baseTimeout * 3),
+  };
+
   // Return parsed config.
   return {
     ...config,
+    timeouts: parsedTimeouts,
     telemetry: {
       ...config.telemetry,
       enabled: telemetryEnabled,

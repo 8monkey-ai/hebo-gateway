@@ -32,7 +32,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -755,6 +755,34 @@ const gw = gateway({
 ```
 
 Langfuse credentials are read from environment variables by the Langfuse OTel SDK (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`).
+
+### Timeout Settings
+
+You can configure request timeouts via the `timeouts` field:
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  // default timeout is 300_000 (5 minutes).
+  // You can set one timeout for all tiers...
+  timeouts: 60_000,
+  // ...or split by service tier:
+  // - normal: all non-flex tiers
+  // - flex: defaults to 2x normal when omitted
+  // timeouts: { normal: 30_000, flex: 60_000 },
+});
+```
+
+> [!NOTE]
+> **Runtime/engine timeout limits**
+> Runtime-level `fetch()` clients may enforce their own timeouts. Depending on your environment (Bun, Node.js with Undici, Cloudflare Workers, Vercel Edge, AWS Lambda), configure those runtime/platform timeouts in addition to gateway `timeouts`.
+> - Node.js / Undici context: https://github.com/nodejs/undici/issues/1373
+> - Bun context: https://github.com/oven-sh/bun/issues/16682
+>
+> **Provider/service timeout limits**
+> Upstream provider or platform limits can also terminate requests (or streams) independently of gateway `timeouts`. Configure those service-side limits where available.
 
 ### Passing Framework State to Hooks
 

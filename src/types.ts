@@ -157,6 +157,21 @@ export type GatewayHooks = {
 
 export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";
 
+export const DEFAULT_CHAT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+export type GatewayTimeout =
+  | number
+  | {
+      /**
+       * Default timeout used.
+       */
+      normal?: number;
+      /**
+       * Timeout used when `service_tier=flex`.
+       * Defaults to 3x `normal` when omitted.
+       */
+      flex?: number;
+    };
+
 /**
  * Main configuration object for the gateway.
  */
@@ -207,10 +222,16 @@ export type GatewayConfig = {
       hebo?: TelemetrySignalLevel;
     };
   };
+  /**
+   * Optional timeout for server responses.
+   * Supports a number in milliseconds, or tiered config.
+   */
+  timeouts?: GatewayTimeout;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = GatewayConfig & {
+export type GatewayConfigParsed = Omit<GatewayConfig, "timeouts"> & {
+  timeouts: Exclude<GatewayTimeout, number>;
   [kParsed]: true;
 };
 
