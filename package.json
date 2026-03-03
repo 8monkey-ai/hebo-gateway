@@ -71,7 +71,7 @@
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
     },
-    "./storage/memory": {
+    "./endpoints/conversations/storage/memory": {
       "types": "./dist/endpoints/conversations/storage/memory.d.ts",
       "import": "./dist/endpoints/conversations/storage/memory.js",
       "dev-source": "./src/endpoints/conversations/storage/memory.ts"

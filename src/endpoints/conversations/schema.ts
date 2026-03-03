@@ -79,7 +79,7 @@ export const ResponseInputFileSchema = z.union([
 ]);
 export type ResponseInputFile = z.infer<typeof ResponseInputFileSchema>;
 
-export const ResponseInputContentSchema = z.discriminatedUnion("type", [
+export const ResponseInputContentSchema = z.union([
   ResponseInputTextSchema,
   ResponseInputImageURLSchema,
   ResponseInputImageIDSchema,
@@ -133,7 +133,7 @@ export const MessageItemUnionSchema = z.discriminatedUnion("role", [
 export type MessageItemUnion = z.infer<typeof MessageItemUnionSchema>;
 
 /**
- * --- Tools ---
+ * --- Function ---
  */
 
 export const ResponseFunctionToolCallSchema = z.object({
@@ -185,7 +185,7 @@ export type ResponseReasoningItem = z.infer<typeof ResponseReasoningItemSchema>;
  * --- Entities ---
  */
 
-export const ResponseInputItemSchema = z.union([
+export const ResponseInputItemSchema = z.discriminatedUnion("type", [
   MessageItemUnionSchema,
   ResponseFunctionToolCallSchema,
   FunctionCallOutputSchema,
