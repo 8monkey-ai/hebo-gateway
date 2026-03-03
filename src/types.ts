@@ -168,7 +168,7 @@ export type GatewayTimeout =
       normal?: number | null;
       /**
        * Timeout used when `service_tier=flex`.
-       * Defaults to 2x `normal` when omitted.
+       * Defaults to 3x `normal` when omitted.
        */
       flex?: number | null;
     };
