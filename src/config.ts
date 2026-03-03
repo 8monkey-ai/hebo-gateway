@@ -85,18 +85,26 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   installAiSdkWarningLogger(telemetrySignals.gen_ai);
 
   // Default timeouts
-  const baseTimeout =
-    typeof config.timeouts === "number"
-      ? config.timeouts
-      : (config.timeouts?.normal ?? DEFAULT_CHAT_TIMEOUT_MS);
+  let normal: number | undefined;
+  let flex: number | undefined;
 
-  const parsedTimeouts = {
-    normal: baseTimeout,
-    flex:
-      typeof config.timeouts === "number"
-        ? baseTimeout * 3
-        : (config.timeouts?.flex ?? baseTimeout * 3),
-  };
+  const t = config.timeouts;
+  if (t === null) {
+    normal = flex = undefined;
+  } else if (typeof t === "number") {
+    normal = t;
+    flex = t * 3;
+  } else {
+    if (t?.normal === null) normal = undefined;
+    else if (t?.normal === undefined) normal = DEFAULT_CHAT_TIMEOUT_MS;
+    else normal = t.normal;
+
+    if (t?.flex === null) flex = undefined;
+    else if (t?.flex === undefined) flex = normal === undefined ? undefined : normal * 3;
+    else flex = t.flex;
+  }
+
+  const parsedTimeouts = { normal, flex };
 
   // Return parsed config.
   return {
