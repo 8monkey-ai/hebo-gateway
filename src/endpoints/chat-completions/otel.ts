@@ -137,6 +137,7 @@ export const getChatRequestAttributes = (
     Object.assign(attrs, {
       // FUTURE: add reasoning info
       "gen_ai.request.stream": inputs.stream,
+      "gen_ai.request.service_tier": inputs.service_tier,
       "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
       "gen_ai.request.max_tokens": inputs.max_completion_tokens,
       "gen_ai.request.presence_penalty": inputs.presence_penalty,
@@ -182,6 +183,7 @@ export const getChatResponseAttributes = (
   if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.response.finish_reasons": completions.choices?.map((c) => c.finish_reason),
+      "gen_ai.response.service_tier": completions.service_tier,
       "gen_ai.usage.total_tokens": completions.usage?.total_tokens,
       "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
       "gen_ai.usage.cache_read.input_tokens":
