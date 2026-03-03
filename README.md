@@ -782,12 +782,11 @@ const gw = gateway({
 
 > [!NOTE]
 > **Runtime/engine timeout limits**
-> Runtime-level `fetch()` clients may enforce their own timeouts. Depending on your environment (Bun, Node.js with Undici, Cloudflare Workers, Vercel Edge, AWS Lambda), configure those runtime/platform timeouts in addition to gateway `timeouts`.
-> - Node.js / Undici context: https://github.com/nodejs/undici/issues/1373
+> Runtime-level `fetch()` clients may enforce their own timeouts. Configure those runtime/platform limits in addition to gateway `timeouts`.
+> - Node.js runtimes (Node.js, Vercel Serverless Functions, AWS Lambda Node runtime) use Undici behavior: https://github.com/nodejs/undici/issues/1373
 > - Bun context: https://github.com/oven-sh/bun/issues/16682
->
 > **Provider/service timeout limits**
-> Upstream provider or platform limits can also terminate requests (or streams) independently of gateway `timeouts`. Configure those service-side limits where available.
+> Serverless platforms (e.g. Cloudflare Workers, Vercel Edge/Serverless, AWS Lambda) also enforce platform time limits (roughly ~25-100s on edge paths, ~300s for streaming, and up to ~900s configurable for some).
 
 ### Passing Framework State to Hooks
 
