@@ -150,8 +150,8 @@ export const getChatRequestAttributes = (
     });
 
     if (inputs.metadata) {
-      for (const [key, value] of Object.entries(inputs.metadata)) {
-        attrs[`gen_ai.request.metadata.${key}`] = value;
+      for (const key in inputs.metadata) {
+        attrs[`gen_ai.request.metadata.${key}`] = inputs.metadata[key];
       }
     }
   }
