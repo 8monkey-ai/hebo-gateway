@@ -1,5 +1,6 @@
 import type {
   GatewayConfig,
+  GatewayConfigParsed,
   GatewayContext,
   OnRequestHookContext,
   OnResponseHookContext,
@@ -20,7 +21,7 @@ import { resolveOrCreateRequestId } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
 
 export const winterCgHandler = (
-  run: (ctx: GatewayContext) => Promise<object | ReadableStream<object>>,
+  run: (ctx: GatewayContext, cfg: GatewayConfigParsed) => Promise<object | ReadableStream<object>>,
   config: GatewayConfig,
 ) => {
   const parsedConfig = parseConfig(config);
@@ -99,7 +100,7 @@ export const winterCgHandler = (
       }
 
       if (!ctx.response) {
-        ctx.result = (await span.runWithContext(() => run(ctx))) as typeof ctx.result;
+        ctx.result = (await span.runWithContext(() => run(ctx, parsedConfig))) as typeof ctx.result;
 
         if (ctx.result instanceof ReadableStream) {
           ctx.result = wrapStream(ctx.result, { onDone: finalize });
