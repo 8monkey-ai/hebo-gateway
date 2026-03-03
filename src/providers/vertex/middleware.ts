@@ -56,6 +56,6 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForProvider(["google.vertex.*", "vertex.*", "*.vertex.*"], {
+modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
   language: [vertexServiceTierMiddleware],
 });

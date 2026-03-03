@@ -565,17 +565,17 @@ For **Gemini 3** models, returning the thought signature via `extra_content` is 
 
 The chat completions endpoint accepts a provider-agnostic `service_tier` extension:
 
-- `auto`, `default`, `flex`, `scale`, `priority`
+- `auto`, `default`, `flex`, `priority`, `scale`
 
 Provider-specific mapping:
 
 - **OpenAI**: forwards as OpenAI `serviceTier` (no middleware remap).
 - **Groq**: maps to Groq `serviceTier` (`default` -> `on_demand`, `scale`/`priority` -> `performance`).
 - **Google Vertex**: maps to request headers via middleware:
+  - `default` -> `x-vertex-ai-llm-request-type: shared`
   - `flex` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: flex`
   - `priority` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: priority`
   - `scale` -> `x-vertex-ai-llm-request-type: dedicated`
-  - `default` -> `x-vertex-ai-llm-request-type: shared`
 - **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
 
 When available, the resolved value is echoed back on response as `service_tier`.

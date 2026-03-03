@@ -94,7 +94,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     prompt_cache_retention,
     extra_body,
     cache_control,
-    service_tier,
     frequency_penalty,
     presence_penalty,
     seed,
@@ -108,7 +107,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     rest,
     parsePromptCachingOptions(prompt_cache_key, prompt_cache_retention, cache_control),
   );
-  if (service_tier) Object.assign(rest, { service_tier });
 
   if (extra_body) {
     for (const v of Object.values(extra_body)) {
