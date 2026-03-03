@@ -94,7 +94,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     prompt_cache_retention,
     cached_content,
     cache_control,
-    service_tier,
     frequency_penalty,
     presence_penalty,
     seed,
@@ -113,7 +112,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
       cache_control,
     ),
   );
-  if (service_tier) Object.assign(rest, { service_tier });
 
   const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
 
