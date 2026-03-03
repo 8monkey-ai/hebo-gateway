@@ -1,4 +1,8 @@
-import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
+import type {
+  SharedV3ProviderOptions,
+  SharedV3ProviderMetadata,
+  JSONObject,
+} from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -49,6 +53,7 @@ import type {
   ChatCompletionsResponseFormat,
   ChatCompletionsContentPartText,
   ChatCompletionsCacheControl,
+  ChatCompletionsServiceTier,
 } from "./schema";
 
 import { GatewayError } from "../../errors/gateway";
@@ -556,6 +561,7 @@ export function toChatCompletions(
     ],
     usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
     provider_metadata: result.providerMetadata,
+    service_tier: resolveResponseServiceTier(result.providerMetadata),
   };
 }
 export function toChatCompletionsResponse(
@@ -602,6 +608,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
       if (provider_metadata) {
         delta.extra_content = provider_metadata;
       }
+
       return {
         id: streamId,
         object: "chat.completion.chunk",
@@ -615,6 +622,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
           } satisfies ChatCompletionsChoiceDelta,
         ],
         usage: usage ?? null,
+        service_tier: resolveResponseServiceTier(provider_metadata),
       };
     };
 
@@ -704,6 +712,57 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
         }
       },
     });
+  }
+}
+
+function resolveResponseServiceTier(
+  providerMetadata: SharedV3ProviderMetadata | undefined,
+): ChatCompletionsServiceTier | undefined {
+  if (!providerMetadata) return;
+
+  for (const metadata of Object.values(providerMetadata)) {
+    const tier = parseReturnedServiceTier(
+      metadata["service_tier"] ??
+        (metadata["usage_metadata"] as JSONObject | undefined)?.["traffic_type"],
+    );
+    if (tier) return tier;
+  }
+}
+
+function parseReturnedServiceTier(value: unknown): ChatCompletionsServiceTier | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const n = value.toLowerCase();
+  switch (n) {
+    case "traffic_type_unspecified":
+    case "auto":
+      return "auto";
+
+    case "default":
+    case "on_demand":
+    case "on-demand":
+    case "shared":
+      return "default";
+
+    case "on_demand_flex":
+    case "flex":
+      return "flex";
+
+    case "on_demand_priority":
+    case "priority":
+    case "performance":
+      return "priority";
+
+    case "provisioned_throughput":
+    case "scale":
+    case "reserved":
+    case "dedicated":
+    case "provisioned":
+    case "throughput":
+      return "scale";
+
+    default:
+      return undefined;
   }
 }
 

@@ -32,13 +32,13 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
 - OpenAI Extensions
-  - [Reasoning](#reasoning) | [Prompt Caching](#prompt-caching)
+  - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching)
 - Advanced Usage
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
@@ -565,6 +565,25 @@ Advanced models (like Anthropic Claude 3.7 or Gemini 3) surface structured reaso
 
 For **Gemini 3** models, returning the thought signature via `extra_content` is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance.
 
+### Service Tier
+
+The chat completions endpoint accepts a provider-agnostic `service_tier` extension:
+
+- `auto`, `default`, `flex`, `priority`, `scale`
+
+Provider-specific mapping:
+
+- **OpenAI**: forwards as OpenAI `serviceTier` (no middleware remap).
+- **Groq**: maps to Groq `serviceTier` (`default` -> `on_demand`, `scale`/`priority` -> `performance`).
+- **Google Vertex**: maps to request headers via middleware:
+  - `default` -> `x-vertex-ai-llm-request-type: shared`
+  - `flex` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: flex`
+  - `priority` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: priority`
+  - `scale` -> `x-vertex-ai-llm-request-type: dedicated`
+- **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
+
+When available, the resolved value is echoed back on response as `service_tier`.
+
 ### Prompt Caching
 
 The chat completions endpoint supports both implicit (provider-managed) and explicit prompt caching across OpenAI-compatible providers.
@@ -741,6 +760,37 @@ const gw = gateway({
 ```
 
 Langfuse credentials are read from environment variables by the Langfuse OTel SDK (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`).
+
+### Timeout Settings
+
+You can configure request timeouts via the `timeouts` field:
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  // default timeout is 300_000 (5 minutes).
+  // You can set one timeout for all tiers...
+  timeouts: 60_000,
+  // ...disable timeouts completely:
+  // timeouts: null,
+  // ...or split by service tier:
+  // - normal: all non-flex tiers (set null to disable)
+  // - flex: defaults to 3x normal when omitted (set null to disable)
+  // timeouts: { normal: 30_000, flex: null },
+});
+```
+
+> [!NOTE]
+> **Runtime/engine timeout limits**
+> Runtime-level `fetch()` clients may enforce their own timeouts. Configure those runtime/platform limits in addition to gateway `timeouts`.
+>
+> - Node.js runtimes use Undici: https://github.com/nodejs/undici/issues/1373 (Node.js, Vercel Serverless Functions, AWS Lambda)
+> - Bun context: https://github.com/oven-sh/bun/issues/16682
+>
+> **Provider/service timeout limits**
+> Serverless platforms (e.g. Cloudflare Workers, Vercel Edge/Serverless, AWS Lambda) also enforce platform time limits (roughly ~25-100s on edge paths, ~300s for streaming, and up to ~900s configurable for some).
 
 ### Passing Framework State to Hooks
 

@@ -6,6 +6,7 @@ import type { ChatCompletionsToolMessage } from "./schema";
 
 import {
   convertToTextCallOptions,
+  toChatCompletions,
   toChatCompletionsAssistantMessage,
   toChatCompletionsToolCall,
   toChatCompletionsUsage,
@@ -561,6 +562,101 @@ describe("Chat Completions Converters", () => {
       expect((result.messages[1] as any).content[0].providerOptions.unknown.cache_control).toEqual({
         type: "ephemeral",
       });
+    });
+
+    test("should map service_tier into providerOptions.unknown", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        service_tier: "priority",
+      });
+
+      expect(result.providerOptions).toEqual({
+        unknown: {
+          service_tier: "priority",
+        },
+      });
+    });
+  });
+
+  describe("toChatCompletions", () => {
+    const returnedServiceTierCases = [
+      { provider: "openai", value: "auto", expected: "auto" },
+      { provider: "openai", value: "flex", expected: "flex" },
+      { provider: "groq", value: "on_demand", expected: "default" },
+      { provider: "groq", value: "performance", expected: "priority" },
+      { provider: "bedrock", value: "reserved", expected: "scale" },
+    ] as const;
+
+    for (const { provider, value, expected } of returnedServiceTierCases) {
+      test(`should normalize returned ${provider} service tier ${value}`, () => {
+        const completion = toChatCompletions(
+          {
+            finishReason: "stop",
+            text: "hello",
+            content: [{ type: "text", text: "hello" }],
+            toolCalls: [],
+            usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+            warnings: [],
+            providerMetadata: {
+              [provider]: {
+                service_tier: value,
+              },
+            },
+          } as any,
+          "openai/gpt-5",
+        );
+
+        expect(completion.service_tier).toBe(expected);
+      });
+    }
+
+    const geminiTrafficTypeCases = [
+      { trafficType: "ON_DEMAND", expected: "default" },
+      { trafficType: "ON_DEMAND_FLEX", expected: "flex" },
+      { trafficType: "ON_DEMAND_PRIORITY", expected: "priority" },
+      { trafficType: "PROVISIONED_THROUGHPUT", expected: "scale" },
+      { trafficType: "TRAFFIC_TYPE_UNSPECIFIED", expected: "auto" },
+    ] as const;
+
+    for (const { trafficType, expected } of geminiTrafficTypeCases) {
+      test(`should parse Gemini trafficType fallback ${trafficType}`, () => {
+        const completion = toChatCompletions(
+          {
+            finishReason: "stop",
+            text: "hello",
+            content: [{ type: "text", text: "hello" }],
+            toolCalls: [],
+            usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+            warnings: [],
+            providerMetadata: {
+              vertex: {
+                usage_metadata: {
+                  traffic_type: trafficType,
+                },
+              },
+            },
+          } as any,
+          "google/gemini-2.5-pro",
+        );
+
+        expect(completion.service_tier).toBe(expected);
+      });
+    }
+
+    test("should not set service_tier when metadata is missing", () => {
+      const completion = toChatCompletions(
+        {
+          finishReason: "stop",
+          text: "hello",
+          content: [{ type: "text", text: "hello" }],
+          toolCalls: [],
+          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+          warnings: [],
+        } as any,
+        "openai/gpt-5",
+      );
+
+      expect(completion.service_tier).toBeUndefined();
     });
   });
 

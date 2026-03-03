@@ -9,6 +9,7 @@ import type {
   GatewayContext,
   ResolveProviderHookContext,
   ResolveModelHookContext,
+  GatewayConfigParsed,
 } from "../../types";
 
 import { GatewayError } from "../../errors/gateway";
@@ -30,7 +31,7 @@ import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema";
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
-  const handler = async (ctx: GatewayContext) => {
+  const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
     ctx.operation = "embeddings";
     addSpanEvent("hebo.handler.started");
@@ -86,7 +87,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
+    const genAiSignalLevel = cfg.telemetry?.signals?.gen_ai;
     const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(genAiGeneralAttrs);
 

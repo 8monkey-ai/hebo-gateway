@@ -230,6 +230,15 @@ export const ChatCompletionsResponseFormatSchema = z.discriminatedUnion("type", 
 ]);
 export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsResponseFormatSchema>;
 
+export const ChatCompletionsServiceTierSchema = z.enum([
+  "auto",
+  "default",
+  "flex",
+  "scale",
+  "priority",
+]);
+export type ChatCompletionsServiceTier = z.infer<typeof ChatCompletionsServiceTierSchema>;
+
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z.array(ChatCompletionsToolSchema).optional(),
@@ -244,6 +253,7 @@ const ChatCompletionsInputsSchema = z.object({
   top_p: z.number().min(0).max(1.0).optional(),
   response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   prompt_cache_key: z.string().optional(),
   prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
   // Extension origin: Gemini explicit cache handle
@@ -307,6 +317,7 @@ export const ChatCompletionsSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
   provider_metadata: z.unknown().optional().meta({ extension: true }),
 });
@@ -341,6 +352,7 @@ export const ChatCompletionsChunkSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
   provider_metadata: z.unknown().optional().meta({ extension: true }),
 });

@@ -6,6 +6,7 @@ import {
   bedrockClaudeReasoningMiddleware,
   bedrockGptReasoningMiddleware,
   bedrockPromptCachingMiddleware,
+  bedrockServiceTierMiddleware,
 } from "./middleware";
 
 test("bedrock middlewares > matching provider resolves GPT middleware", () => {
@@ -16,6 +17,7 @@ test("bedrock middlewares > matching provider resolves GPT middleware", () => {
   });
 
   expect(middleware).toContain(bedrockGptReasoningMiddleware);
+  expect(middleware).toContain(bedrockServiceTierMiddleware);
 });
 
 test("bedrock middlewares > matching provider resolves Claude middleware", () => {
@@ -26,7 +28,37 @@ test("bedrock middlewares > matching provider resolves Claude middleware", () =>
   });
 
   expect(middleware).toContain(bedrockClaudeReasoningMiddleware);
+  expect(middleware).toContain(bedrockServiceTierMiddleware);
 });
+
+const bedrockServiceTierCases = [
+  { tier: "auto", expected: {} },
+  { tier: "default", expected: { serviceTier: { type: "default" } } },
+  { tier: "flex", expected: { serviceTier: { type: "flex" } } },
+  { tier: "priority", expected: { serviceTier: { type: "priority" } } },
+  { tier: "scale", expected: { serviceTier: { type: "reserved" } } },
+] as const;
+
+for (const { tier, expected } of bedrockServiceTierCases) {
+  test(`bedrockServiceTierMiddleware > should map ${tier} tier`, async () => {
+    const params = {
+      prompt: [],
+      providerOptions: {
+        bedrock: {
+          serviceTier: tier,
+        },
+      },
+    };
+
+    const result = await bedrockServiceTierMiddleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+    });
+
+    expect(result.providerOptions?.bedrock).toEqual(expected);
+  });
+}
 
 test("bedrock middlewares > matching provider resolves prompt caching middleware for Claude", () => {
   const middleware = modelMiddlewareMatcher.resolve({

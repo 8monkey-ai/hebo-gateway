@@ -6,6 +6,34 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 const isClaude46 = (modelId: string) => modelId.includes("-4-6");
 
+// https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
+export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const bedrock = params.providerOptions?.["bedrock"];
+    if (!bedrock || typeof bedrock !== "object") return params;
+
+    const tier = bedrock["serviceTier"];
+    switch (tier) {
+      case "auto":
+        // Bedrock uses its default tier when omitted.
+        delete bedrock["serviceTier"];
+        return params;
+      case "scale":
+        bedrock["serviceTier"] = { type: "reserved" };
+        return params;
+      case "default":
+      case "flex":
+      case "priority":
+        bedrock["serviceTier"] = { type: tier };
+        return params;
+      default:
+        return params;
+    }
+  },
+};
+
 export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -121,6 +149,7 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
 
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   language: [
+    bedrockServiceTierMiddleware,
     bedrockGptReasoningMiddleware,
     bedrockClaudeReasoningMiddleware,
     bedrockPromptCachingMiddleware,
