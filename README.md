@@ -768,17 +768,20 @@ const gw = gateway({
   // default timeout is 300_000 (5 minutes).
   // You can set one timeout for all tiers...
   timeouts: 60_000,
+  // ...disable timeouts completely:
+  // timeouts: null,
   // ...or split by service tier:
-  // - normal: all non-flex tiers
-  // - flex: defaults to 2x normal when omitted
-  // timeouts: { normal: 30_000, flex: 60_000 },
+  // - normal: all non-flex tiers (set null to disable)
+  // - flex: defaults to 3x normal when omitted (set null to disable)
+  // timeouts: { normal: 30_000, flex: null },
 });
 ```
 
 > [!NOTE]
 > **Runtime/engine timeout limits**
 > Runtime-level `fetch()` clients may enforce their own timeouts. Configure those runtime/platform limits in addition to gateway `timeouts`.
-> - Node.js runtimes use Undici: https://github.com/nodejs/undici/issues/1373 (Node.js, Vercel Serverless Functions, AWS Lambda) 
+>
+> - Node.js runtimes use Undici: https://github.com/nodejs/undici/issues/1373 (Node.js, Vercel Serverless Functions, AWS Lambda)
 > - Bun context: https://github.com/oven-sh/bun/issues/16682
 >
 > **Provider/service timeout limits**

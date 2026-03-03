@@ -160,16 +160,17 @@ export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";
 export const DEFAULT_CHAT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 export type GatewayTimeout =
   | number
+  | null
   | {
       /**
        * Default timeout used.
        */
-      normal?: number;
+      normal?: number | null;
       /**
        * Timeout used when `service_tier=flex`.
-       * Defaults to 3x `normal` when omitted.
+       * Defaults to 2x `normal` when omitted.
        */
-      flex?: number;
+      flex?: number | null;
     };
 
 /**
@@ -231,7 +232,10 @@ export type GatewayConfig = {
 
 export const kParsed = Symbol("hebo.gateway.parsed");
 export type GatewayConfigParsed = Omit<GatewayConfig, "timeouts"> & {
-  timeouts: Exclude<GatewayTimeout, number>;
+  timeouts: {
+    normal?: number;
+    flex?: number;
+  };
   [kParsed]: true;
 };
 
