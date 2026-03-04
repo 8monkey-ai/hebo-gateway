@@ -14,7 +14,9 @@
     "max-lines": "off",
     "anchor-has-content": "off",
     "max-dependencies": "off",
-    "no-inline-comments": "off"
+    "no-inline-comments": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/prefer-array-to-reversed": "off"
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "e2e/**"]
 }

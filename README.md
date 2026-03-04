@@ -13,6 +13,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 ## 🍌 Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
+- 💬 /conversations endpoint built on top of the Responses API.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
@@ -32,7 +33,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Storage](#storage) | [Logger](#logger-settings) | [Observability](#observability)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -370,6 +371,104 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
+
+### Storage
+
+The `/conversations` endpoint stores conversation history and associated items. By default, the gateway uses an in-memory storage, which is suitable for development but not for production as data is lost when the server restarts.
+
+#### In-Memory Storage
+
+You can configure the size of the in-memory storage (default is 256MB).
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { InMemoryStorage } from "@hebo-ai/gateway/storage/memory";
+
+const gw = gateway({
+  // ...
+  storage: new InMemoryStorage({
+    maxSize: 512 * 1024 * 1024, // 512MB
+  }),
+});
+```
+
+#### SQL Storage
+
+Hebo Gateway provides high-performance SQL adapters.
+
+##### SQLite
+
+Supports `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createBetterSqlite3Storage } from "@hebo-ai/gateway/endpoints/conversations/storage/sqlite";
+import Database from "better-sqlite3";
+
+// 1. Setup connection
+const db = new Database("conv.db");
+
+// 2. Setup storage
+const storage = createBetterSqlite3Storage(db);
+await storage.init(); // Creates tables & indexes
+
+const gw = gateway({ storage });
+```
+
+##### PostgreSQL
+
+Supports `pg`, `postgres.js`, and `Bun.SQL`. Includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createPgStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/postgres";
+import { Pool } from "pg";
+
+// 1. Setup pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// 2. Setup storage
+const storage = createPgStorage(pool);
+await storage.init();
+
+const gw = gateway({ storage });
+```
+
+##### MySQL
+
+Supports `mysql2` and `Bun.SQL`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createMysql2Storage } from "@hebo-ai/gateway/endpoints/conversations/storage/mysql";
+import mysql from "mysql2/promise";
+
+// 1. Setup pool
+const pool = mysql.createPool(process.env.DATABASE_URL);
+
+// 2. Setup storage
+const storage = createMysql2Storage(pool);
+await storage.init();
+
+const gw = gateway({ storage });
+```
+
+##### GrepTimeDB
+
+Specialized adapter for GrepTimeDB.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createGrepTimeBunStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/greptime";
+import { sql } from "bun";
+
+const storage = createGrepTimeBunStorage(sql);
+await storage.init();
+
+const gw = gateway({ storage });
+```
 
 ## 🧩 Framework Support
 
@@ -838,7 +937,7 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `conversations`, `embeddings` and `models` endpoints.
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.

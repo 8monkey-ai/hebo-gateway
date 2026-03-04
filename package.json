@@ -56,6 +56,11 @@
       "import": "./dist/endpoints/chat-completions/index.js",
       "dev-source": "./src/endpoints/chat-completions/index.ts"
     },
+    "./endpoints/conversations": {
+      "types": "./dist/endpoints/conversations/index.d.ts",
+      "import": "./dist/endpoints/conversations/index.js",
+      "dev-source": "./src/endpoints/conversations/index.ts"
+    },
     "./endpoints/embeddings": {
       "types": "./dist/endpoints/embeddings/index.d.ts",
       "import": "./dist/endpoints/embeddings/index.js",
@@ -65,6 +70,31 @@
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js",
       "dev-source": "./src/endpoints/models/index.ts"
+    },
+    "./endpoints/conversations/storage/memory": {
+      "types": "./dist/endpoints/conversations/storage/memory.d.ts",
+      "import": "./dist/endpoints/conversations/storage/memory.js",
+      "dev-source": "./src/endpoints/conversations/storage/memory.ts"
+    },
+    "./endpoints/conversations/storage/sqlite": {
+      "types": "./dist/endpoints/conversations/storage/sqlite.d.ts",
+      "import": "./dist/endpoints/conversations/storage/sqlite.js",
+      "dev-source": "./src/endpoints/conversations/storage/sqlite.ts"
+    },
+    "./endpoints/conversations/storage/postgres": {
+      "types": "./dist/endpoints/conversations/storage/postgres.d.ts",
+      "import": "./dist/endpoints/conversations/storage/postgres.js",
+      "dev-source": "./src/endpoints/conversations/storage/postgres.ts"
+    },
+    "./endpoints/conversations/storage/greptime": {
+      "types": "./dist/endpoints/conversations/storage/greptime.d.ts",
+      "import": "./dist/endpoints/conversations/storage/greptime.js",
+      "dev-source": "./src/endpoints/conversations/storage/greptime.ts"
+    },
+    "./endpoints/conversations/storage/mysql": {
+      "types": "./dist/endpoints/conversations/storage/mysql.d.ts",
+      "import": "./dist/endpoints/conversations/storage/mysql.js",
+      "dev-source": "./src/endpoints/conversations/storage/mysql.ts"
     },
     "./errors/openai": {
       "types": "./dist/errors/openai.d.ts",
@@ -161,6 +191,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^3.0.8",
     "ai": "^6.0.108",
+    "lru-cache": "^11.2.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -172,22 +203,29 @@
     "@ai-sdk/openai": "^3.0.39",
     "@aws-sdk/credential-providers": "^3.1000.0",
     "@langfuse/otel": "^4.6.1",
+    "@libsql/client": "^0.17.0",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-async-hooks": "^2.5.1",
     "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@tanstack/react-router": "^1.163.3",
     "@tanstack/react-start": "^1.166.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "latest",
+    "@types/pg": "^8.18.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "better-sqlite3": "^12.6.2",
     "elysia": "^1.4.27",
     "hono": "^4.12.3",
     "lefthook": "^2.1.2",
+    "mysql2": "^3.18.2",
     "next": "^16.1.6",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.51.0",
+    "pg": "^8.19.0",
     "pino": "^10.3.1",
+    "postgres": "^3.4.8",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^6.1.1",
@@ -201,6 +239,11 @@
     "@ai-sdk/groq": "^3.0.27",
     "@ai-sdk/openai": "^3.0.39",
     "@opentelemetry/api": "^1.9.0",
+    "@libsql/client": "^0.14.0",
+    "better-sqlite3": "^11.0.0",
+    "mysql2": "^3.11.0",
+    "pg": "^8.13.0",
+    "postgres": "^3.4.0",
     "typescript": "^5.9.3",
     "voyage-ai-provider": "^3.0.0"
   },
@@ -224,6 +267,21 @@
       "optional": true
     },
     "voyage-ai-provider": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "postgres": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "@libsql/client": {
       "optional": true
     }
   }
