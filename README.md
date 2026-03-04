@@ -397,6 +397,84 @@ const gw = gateway({
 });
 ```
 
+#### SQL Storage
+
+Hebo Gateway provides high-performance SQL adapters.
+
+##### SQLite
+
+Supports `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createBetterSqlite3Storage } from "@hebo-ai/gateway/endpoints/conversations/storage/sqlite";
+import Database from "better-sqlite3";
+
+// 1. Setup connection
+const db = new Database("conv.db");
+
+// 2. Setup storage
+const storage = createBetterSqlite3Storage(db);
+await storage.init(); // Creates tables & indexes
+
+const gw = gateway({ storage });
+```
+
+##### PostgreSQL
+
+Supports `pg`, `postgres.js`, and `Bun.SQL`. Includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createPgStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/postgres";
+import { Pool } from "pg";
+
+// 1. Setup pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// 2. Setup storage
+const storage = createPgStorage(pool);
+await storage.init();
+
+const gw = gateway({ storage });
+```
+
+##### MySQL
+
+Supports `mysql2` and `Bun.SQL`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createMysql2Storage } from "@hebo-ai/gateway/endpoints/conversations/storage/mysql";
+import mysql from "mysql2/promise";
+
+// 1. Setup pool
+const pool = mysql.createPool(process.env.DATABASE_URL);
+
+// 2. Setup storage
+const storage = createMysql2Storage(pool);
+await storage.init();
+
+const gw = gateway({ storage });
+```
+
+##### GrepTimeDB
+
+Specialized adapter for GrepTimeDB.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { createGrepTimeBunStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/greptime";
+import { sql } from "bun";
+
+const storage = createGrepTimeBunStorage(sql);
+await storage.init();
+
+const gw = gateway({ storage });
+```
+
 ## 🧩 Framework Support
 
 Hebo Gateway exposes **WinterCG-compatible** handlers that integrate with almost any existing framework.
