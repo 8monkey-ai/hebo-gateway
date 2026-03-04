@@ -255,7 +255,7 @@ export function fromChatCompletionsAssistantMessage(
 
   if (tool_calls?.length) {
     for (const tc of tool_calls) {
-      // eslint-disable-next-line no-shadow
+      // oxlint-disable-next-line no-shadow
       const { id, function: fn, extra_content } = tc;
       const out: ToolCallPart = {
         type: "tool-call",
@@ -863,7 +863,7 @@ function normalizeToolName(name: string): string {
   for (let i = 0; i < name.length; i++) {
     if (out.length === 128) break;
 
-    // eslint-disable-next-line unicorn/prefer-code-point
+    // oxlint-disable-next-line unicorn/prefer-code-point
     const c = name.charCodeAt(i);
 
     if (

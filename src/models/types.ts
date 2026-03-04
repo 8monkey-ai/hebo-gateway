@@ -85,7 +85,7 @@ export const CANONICAL_MODEL_IDS = [
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
-// eslint-disable-next-line ban-types
+// oxlint-disable-next-line ban-types
 export type ModelId = CanonicalModelId | (string & {});
 
 export type CatalogModel = {

@@ -10,7 +10,7 @@ const baseUrl = "http://localhost/chat/completions";
 
 describe("Chat Completions Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
-    // eslint-disable-next-line require-await
+    // oxlint-disable-next-line require-await
     doGenerate: async (options) => {
       const isStructuredOutput = options.responseFormat?.type === "json";
       const isToolCall = options.tools && options.tools.length > 0;
@@ -69,7 +69,7 @@ describe("Chat Completions Handler", () => {
         warnings: [],
       };
     },
-    // eslint-disable-next-line require-await
+    // oxlint-disable-next-line require-await
     doStream: async () => ({
       stream: simulateReadableStream({
         chunks: [
