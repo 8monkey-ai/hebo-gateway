@@ -46,7 +46,7 @@ export function mapGeminiReasoningEffort(
     }
   }
 
-  if (modelId.includes("gemini-3-flash")) {
+  if (modelId.includes("gemini-3-flash") || modelId.includes("gemini-3.1-flash")) {
     switch (effort) {
       case "none":
       case "minimal":
