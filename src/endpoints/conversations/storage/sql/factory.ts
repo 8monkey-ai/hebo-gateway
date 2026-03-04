@@ -38,16 +38,19 @@ function mapRow<T>(row: BaseRow): T {
   return Object.assign(out, parsedData) as T;
 }
 
-const defaultIndexSql = (table: string, name: string, columns: string[]) =>
-  `CREATE INDEX IF NOT EXISTS ${name} ON ${table} (${columns.join(", ")})`;
-
 export function createSqlStorage(
   executor: QueryExecutor,
   dialect: DialectConfig,
 ): ConversationStorage & { init(): Promise<void> } {
-  const { placeholder, idType, objectType, jsonType, createdAtType, createIndexSql } = dialect;
+  const { placeholder, idType, objectType, jsonType, createdAtType, sequentialIndexUsing } =
+    dialect;
 
-  const indexSql = createIndexSql ?? defaultIndexSql;
+  async function createIndex(table: string, name: string, columns: string[], sequential = false) {
+    const using = sequential && sequentialIndexUsing ? `USING ${sequentialIndexUsing}` : "";
+    await executor.run(
+      `CREATE INDEX IF NOT EXISTS ${name} ON ${table} ${using} (${columns.join(", ")})`,
+    );
+  }
 
   /**
    * Helper to perform a bulk insert of conversation items.
@@ -97,16 +100,21 @@ export function createSqlStorage(
         )
       `);
 
-      await executor.run(
-        indexSql("conversations", "idx_conversations_created_at", ["created_at DESC"]),
-      );
-      await executor.run(
-        indexSql("conversation_items", "idx_items_conv_id_created_at", [
-          "conversation_id",
-          "created_at DESC",
-          "id DESC",
-        ]),
-      );
+      if (dialect.supportsIndex !== false) {
+        await createIndex(
+          "conversations",
+          "idx_conversations_created_at",
+          ["created_at DESC"],
+          true,
+        );
+
+        await createIndex(
+          "conversation_items",
+          "idx_items_conv_id",
+          ["conversation_id", "created_at DESC", "id DESC"],
+          false,
+        );
+      }
     },
 
     async createConversation(conversation, items) {

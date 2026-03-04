@@ -12,6 +12,7 @@ export const GrepTimeDialect: DialectConfig = {
   objectType: "VARCHAR(64)",
   jsonType: "JSON",
   createdAtType: "TIMESTAMP",
+  supportsIndex: false,
 };
 
 export function createGrepTimePgStorage(pool: PgPool) {

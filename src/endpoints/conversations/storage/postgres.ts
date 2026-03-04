@@ -15,12 +15,7 @@ export const PostgresDialect: DialectConfig = {
   objectType: "VARCHAR(64)",
   jsonType: "JSONB",
   createdAtType: "BIGINT",
-  createIndexSql: (table, name, columns) => {
-    if (columns.some((c) => c.includes("created_at") && !c.includes("conversation_id"))) {
-      return `CREATE INDEX IF NOT EXISTS ${name} ON ${table} USING BRIN (${columns.join(", ")})`;
-    }
-    return `CREATE INDEX IF NOT EXISTS ${name} ON ${table} (${columns.join(", ")})`;
-  },
+  sequentialIndexUsing: "BRIN",
 };
 
 export function createPgStorage(pool: Pool, dialect: DialectConfig = PostgresDialect) {

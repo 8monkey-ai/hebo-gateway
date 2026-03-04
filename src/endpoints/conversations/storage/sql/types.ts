@@ -10,9 +10,6 @@ export interface DialectConfig {
   objectType: string;
   jsonType: string;
   createdAtType: string;
-  /**
-   * Optional index creation logic.
-   * Default uses standard BTREE.
-   */
-  createIndexSql?: (table: string, name: string, columns: string[]) => string;
+  supportsIndex?: boolean;
+  sequentialIndexUsing?: string;
 }
