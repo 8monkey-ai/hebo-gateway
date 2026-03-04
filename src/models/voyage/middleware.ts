@@ -5,7 +5,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 // Convert `dimensions` (OpenAI) to `outputDimension` (Voyage)
 export const voyageDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;

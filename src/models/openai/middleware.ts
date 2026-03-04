@@ -10,7 +10,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
 export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
@@ -42,7 +42,7 @@ function mapGptOssReasoningEffort(
 
 export const openAIReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
@@ -73,7 +73,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
 // https://developers.openai.com/api/docs/guides/prompt-caching/
 export const openAIPromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;

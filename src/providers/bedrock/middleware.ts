@@ -8,7 +8,7 @@ const isClaude46 = (modelId: string) => modelId.includes("-4-6");
 
 export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     if (!model.modelId.includes("gpt")) return params;
 
@@ -29,7 +29,7 @@ export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
 
 export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     if (!model.modelId.includes("claude")) return params;
 
@@ -77,7 +77,7 @@ function toBedrockCachePoint(modelId: string, cacheControl?: ChatCompletionsCach
 // https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
 export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     if (!model.modelId.includes("nova") && !model.modelId.includes("claude")) return params;
 

@@ -71,10 +71,10 @@ export const gw = gateway({
     // Choose a pre-configured preset for common SOTA models
     gptOss20b,
     // Or add a whole model family with your own provider list
-    gptOss["all"].map(
-      preset => preset({
+    gptOss["all"].map((preset) =>
+      preset({
         providers: ["groq"],
-      })
+      }),
     ),
   ),
 });
@@ -149,20 +149,19 @@ If an adapter is not yet provided, you can create your own by wrapping the provi
 
 ```ts
 import { createAzure } from "@ai-sdk/openai";
-import {
-  gateway,
-  withCanonicalIds,
-} from "@hebo-ai/gateway";
+import { gateway, withCanonicalIds } from "@hebo-ai/gateway";
 
 const azure = withCanonicalIds(
   createAzure({
     resourceName: process.env["AZURE_RESOURCE_NAME"],
-    apiKey: process.env["AZURE_API_KEY"]
-  }), {
-  mapping: {
-    "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
-    "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
-  }},
+    apiKey: process.env["AZURE_API_KEY"],
+  }),
+  {
+    mapping: {
+      "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
+      "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
+    },
+  },
 );
 
 const gw = gateway({
@@ -250,18 +249,12 @@ const gw = gateway({
         output: ["text"],
       },
       context: 400000,
-      capabilities: [
-        "attachments",
-        "reasoning",
-        "tool_call",
-        "structured_output",
-        "temperature",
-      ],
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
       providers: ["openai"],
       // Additional properties are merged into the model object
       additionalProperties: {
         customProperty: "customValue",
-      }
+      },
     },
     // ...
   },
@@ -351,7 +344,9 @@ const gw = gateway({
      */
     after: async (ctx: {
       result: ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings;
-    }): Promise<ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings | void> => {
+    }): Promise<
+      ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings | void
+    > => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
@@ -516,7 +511,8 @@ const gw = gateway({
   // ...
 });
 
-export const POST = gw.handler, GET = gw.handler;
+export const POST = gw.handler,
+  GET = gw.handler;
 ```
 
 #### Pages Router
@@ -722,11 +718,9 @@ import { gateway } from "@hebo-ai/gateway";
 
 const gw = gateway({
   // ...
-  logger: pino(
-    {
-      level: "info"
-    }
-  ),
+  logger: pino({
+    level: "info",
+  }),
 });
 ```
 
@@ -769,7 +763,8 @@ https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 
 > [!TIP]
-> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.
+> To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.  
+> For `/chat/completions`, request `metadata` (`Record<string, string>`, key 1-64 chars, value up to 512 chars) is also forwarded to spans as `gen_ai.request.metadata.<key>`.
 
 For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
@@ -878,7 +873,7 @@ const app = new Elysia()
       userId: headers["x-user-id"],
     },
   }))
-  .all(`${basePath}/*`, ({ request, auth }) => gw.handler(request, { auth }), { parse: 'none' })
+  .all(`${basePath}/*`, ({ request, auth }) => gw.handler(request, { auth }), { parse: "none" })
   .listen(3000);
 ```
 
@@ -919,7 +914,6 @@ import { forwardParamsMiddleware } from "@hebo-ai/gateway/middleware/common";
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function handler(req: Request): Promise<Response> {
-
   const body = await req.json();
 
   const parsed = ChatCompletionsBodySchema.safeParse(body);
@@ -936,7 +930,7 @@ export async function handler(req: Request): Promise<Response> {
       model: groq(model),
       middleware: forwardParamsMiddleware("groq"),
     }),
-    ...textOptions
+    ...textOptions,
   });
 
   return toChatCompletionsStreamResponse(result, model);

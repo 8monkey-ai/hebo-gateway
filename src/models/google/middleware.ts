@@ -11,7 +11,7 @@ import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
@@ -46,7 +46,7 @@ export function mapGeminiReasoningEffort(
     }
   }
 
-  if (modelId.includes("gemini-3-flash")) {
+  if (modelId.includes("gemini-3-flash") || modelId.includes("gemini-3.1-flash")) {
     switch (effort) {
       case "none":
       case "minimal":
@@ -70,7 +70,7 @@ export const GEMINI_2_5_PRO_MIN_THINKING_BUDGET = 128;
 
 export const geminiReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
@@ -113,7 +113,7 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
 // FUTURE: auto-create cached_content for message-level cache_control blocks
 export const geminiPromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;

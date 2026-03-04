@@ -49,7 +49,7 @@ export type BedrockInferenceProfileOptions = {
   /** @default "preferred" */
   mode?: "preferred" | "avoid";
   /** @default "us" */
-  // eslint-disable-next-line ban-types
+  // oxlint-disable-next-line ban-types
   geo?: "global" | "us" | "eu" | "apac" | "au" | "ca" | "jp" | "us-gov" | (string & {});
   arn?: { region: string; accountId: string };
 };

@@ -68,7 +68,7 @@ function getMaxOutputTokens(modelId: string): number {
 // https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking
 export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
@@ -127,7 +127,7 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
 // https://platform.claude.com/docs/en/build-with-claude/prompt-caching
 export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;

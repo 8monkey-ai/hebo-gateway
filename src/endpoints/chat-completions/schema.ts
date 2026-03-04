@@ -230,6 +230,12 @@ export const ChatCompletionsResponseFormatSchema = z.discriminatedUnion("type", 
 ]);
 export type ChatCompletionsResponseFormat = z.infer<typeof ChatCompletionsResponseFormatSchema>;
 
+export const ChatCompletionsMetadataSchema = z.record(
+  z.string().min(1).max(64),
+  z.string().max(512),
+);
+export type ChatCompletionsMetadata = z.infer<typeof ChatCompletionsMetadataSchema>;
+
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z.array(ChatCompletionsToolSchema).optional(),
@@ -242,6 +248,7 @@ const ChatCompletionsInputsSchema = z.object({
   seed: z.int().optional(),
   stop: z.union([z.string(), z.array(z.string())]).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
+  metadata: ChatCompletionsMetadataSchema.optional(),
   response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   prompt_cache_key: z.string().optional(),

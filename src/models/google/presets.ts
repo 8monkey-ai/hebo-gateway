@@ -47,6 +47,16 @@ export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
+export const gemini31FlashLitePreview = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-3.1-flash-lite-preview" as const,
+  {
+    ...GEMINI_BASE,
+    name: "Gemini 3.1 Flash-Lite (Preview)",
+    created: "2026-03-03",
+    knowledge: "2025-01",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
 export const gemini31ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.1-pro-preview" as const,
   {
@@ -89,7 +99,7 @@ export const gemini25Pro = presetFor<CanonicalModelId, CatalogModel>()(
 
 const geminiAtomic = {
   "v2.5": [gemini25FlashLite, gemini25Flash, gemini25Pro],
-  "v3-preview": [gemini3FlashPreview, gemini31ProPreview],
+  "v3-preview": [gemini3FlashPreview, gemini31FlashLitePreview, gemini31ProPreview],
   embeddings: [geminiEmbedding001],
 } as const;
 

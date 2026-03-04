@@ -45,6 +45,7 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-2.5-flash",
   "google/gemini-2.5-pro",
   "google/gemini-3-flash-preview",
+  "google/gemini-3.1-flash-lite-preview",
   "google/gemini-3.1-pro-preview",
   "google/embedding-001",
   // Meta
@@ -85,7 +86,7 @@ export const CANONICAL_MODEL_IDS = [
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
-// eslint-disable-next-line ban-types
+// oxlint-disable-next-line ban-types
 export type ModelId = CanonicalModelId | (string & {});
 
 export type CatalogModel = {

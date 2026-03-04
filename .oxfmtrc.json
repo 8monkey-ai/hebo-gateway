@@ -1,12 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "experimentalSortImports": {
+  "sortImports": {
     "internalPattern": ["#"]
-  },
-  "experimentalTailwindcss": {
-    "enabled": true,
-    "attributes": ["class", "className"],
-    "functions": ["clsx", "cn", "cva", "tw"],
-    "stylesheet": "app/app.css"
   }
 }

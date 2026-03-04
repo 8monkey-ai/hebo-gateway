@@ -5,7 +5,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { toModels, toModel } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   const handler = async (ctx: GatewayContext) => {
     ctx.operation = "models";
 

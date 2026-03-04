@@ -4,7 +4,7 @@ import { logger } from "../logger";
 
 export const debugFinalParamsMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     logger.trace(
       {
@@ -21,7 +21,7 @@ export const debugFinalParamsMiddleware: LanguageModelMiddleware = {
 
 export const debugEmbeddingFinalParamsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     logger.trace(
       {

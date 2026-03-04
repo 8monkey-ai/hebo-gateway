@@ -44,7 +44,7 @@ describe("forwardParamsMiddleware", () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
-      // eslint-disable-next-line @typescript-eslint/require-await
+      // oxlint-disable-next-line require-await
       doGenerate: async () => ({
         content: [{ type: "text", text: "hi" }],
         finishReason: "stop",
@@ -76,7 +76,7 @@ describe("forwardParamsMiddleware", () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
-      // eslint-disable-next-line @typescript-eslint/require-await
+      // oxlint-disable-next-line require-await
       doGenerate: async () => ({
         content: [
           {
@@ -109,7 +109,7 @@ describe("forwardParamsMiddleware", () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV3({
       modelId: "google/gemini-2.5-flash",
-      // eslint-disable-next-line @typescript-eslint/require-await
+      // oxlint-disable-next-line require-await
       doStream: async () => ({
         stream: new ReadableStream({
           start(controller) {

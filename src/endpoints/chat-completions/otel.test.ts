@@ -5,6 +5,25 @@ import type { ChatCompletions, ChatCompletionsBody } from "./schema";
 import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
 
 describe("Chat Completions OTEL", () => {
+  test("should map request metadata into per-key attributes", () => {
+    const metadata = {
+      tenant: "acme",
+      "Org ID": "o-123",
+    };
+
+    const inputs: ChatCompletionsBody = {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "hi" }],
+      metadata,
+    };
+
+    const attrs = getChatRequestAttributes(inputs, "recommended");
+
+    expect(attrs["gen_ai.request.metadata"]).toBeUndefined();
+    expect(attrs["gen_ai.request.metadata.tenant"]).toBe("acme");
+    expect(attrs["gen_ai.request.metadata.Org ID"]).toBe("o-123");
+  });
+
   test("should stringify each tool definition individually", () => {
     const tool1 = {
       type: "function" as const,

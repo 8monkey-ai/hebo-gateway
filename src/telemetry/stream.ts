@@ -28,7 +28,7 @@ export const wrapStream = (
 
       try {
         for (;;) {
-          // eslint-disable-next-line no-await-in-loop
+          // oxlint-disable-next-line no-await-in-loop
           const { value, done: eof } = await reader.read();
           if (eof) break;
 

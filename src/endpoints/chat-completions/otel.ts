@@ -148,6 +148,12 @@ export const getChatRequestAttributes = (
       "gen_ai.request.temperature": inputs.temperature,
       "gen_ai.request.top_p": inputs.top_p,
     });
+
+    if (inputs.metadata) {
+      for (const key in inputs.metadata) {
+        attrs[`gen_ai.request.metadata.${key}`] = inputs.metadata[key];
+      }
+    }
   }
 
   if (signalLevel === "full") {

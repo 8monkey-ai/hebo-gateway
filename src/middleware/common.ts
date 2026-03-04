@@ -86,7 +86,7 @@ function processMetadata(metadata: Record<string, JSONObject>) {
 export function forwardLanguageParams(providerName: ProviderId): LanguageModelMiddleware {
   return {
     specificationVersion: "v3",
-    // eslint-disable-next-line require-await
+    // oxlint-disable-next-line require-await
     transformParams: async ({ params }) => {
       if (params.providerOptions) processOptions(params.providerOptions, providerName);
 
@@ -133,7 +133,7 @@ export function forwardLanguageParams(providerName: ProviderId): LanguageModelMi
 export function forwardEmbeddingParams(providerName: ProviderId): EmbeddingModelMiddleware {
   return {
     specificationVersion: "v3",
-    // eslint-disable-next-line require-await
+    // oxlint-disable-next-line require-await
     transformParams: async ({ params }) => {
       if (params.providerOptions) processOptions(params.providerOptions, providerName);
       return params;

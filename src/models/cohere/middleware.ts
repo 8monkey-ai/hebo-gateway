@@ -8,7 +8,7 @@ import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 // Convert `dimensions` (OpenAI) to `outputDimension` (Cohere)
 export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
@@ -35,7 +35,7 @@ export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
 const COHERE_MAX_OUTPUT_TOKENS = 32000;
 export const cohereReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
-  // eslint-disable-next-line require-await
+  // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
