@@ -12,24 +12,30 @@ interface BaseRow {
   data: string | Record<string, unknown>;
 }
 
+/**
+ * Maps a raw database row to a clean conversation or item object.
+ */
 function mapRow<T>(row: BaseRow): T {
-  const { conversation_id: _, data, metadata, ...rest } = row;
-
   const parsedData =
-    typeof data === "string"
-      ? (JSON.parse(data) as Record<string, unknown>)
-      : (data as unknown as Record<string, unknown>);
+    typeof row.data === "string"
+      ? (JSON.parse(row.data) as Record<string, unknown>)
+      : (row.data as unknown as Record<string, unknown>);
 
   const parsedMetadata =
-    typeof metadata === "string"
-      ? (JSON.parse(metadata) as Record<string, unknown>)
-      : (metadata as Record<string, unknown>);
+    typeof row.metadata === "string"
+      ? (JSON.parse(row.metadata) as Record<string, unknown>)
+      : (row.metadata as Record<string, unknown>);
 
-  return {
-    ...rest,
-    ...(parsedMetadata ? { metadata: parsedMetadata } : {}),
-    ...parsedData,
-  } as T;
+  const out: Record<string, unknown> = {
+    id: row.id,
+    object: row.object,
+    created_at: row.created_at,
+  };
+
+  if (row.type) out["type"] = row.type;
+  if (parsedMetadata) out["metadata"] = parsedMetadata;
+
+  return Object.assign(out, parsedData) as T;
 }
 
 const defaultIndexSql = (table: string, name: string, columns: string[]) =>
@@ -42,6 +48,32 @@ export function createSqlStorage(
   const { placeholder, idType, objectType, jsonType, createdAtType, createIndexSql } = dialect;
 
   const indexSql = createIndexSql ?? defaultIndexSql;
+
+  /**
+   * Helper to perform a bulk insert of conversation items.
+   */
+  async function insertItems(convId: string, items: ConversationItem[]) {
+    if (items.length === 0) return;
+
+    const columns = ["id", "conversation_id", "object", "created_at", "type", "data"];
+    const placeholders: string[] = [];
+    const params: unknown[] = [];
+
+    for (const item of items) {
+      const rowPlaceholders: string[] = [];
+      const { id, object, created_at, type, ...rest } = item;
+
+      const values = [id, convId, object, created_at, type, rest];
+      for (const val of values) {
+        rowPlaceholders.push(placeholder(params.length));
+        params.push(val);
+      }
+      placeholders.push(`(${rowPlaceholders.join(", ")})`);
+    }
+
+    const sql = `INSERT INTO conversation_items (${columns.join(", ")}) VALUES ${placeholders.join(", ")}`;
+    await executor.run(sql, params);
+  }
 
   return {
     async init() {
@@ -77,27 +109,17 @@ export function createSqlStorage(
       );
     },
 
-    createConversation(conversation, items) {
-      return executor.transaction(async (tx) => {
-        await tx.run(
-          `INSERT INTO conversations (id, object, created_at, metadata) VALUES (${placeholder(0)}, ${placeholder(1)}, ${placeholder(2)}, ${placeholder(3)})`,
-          [conversation.id, conversation.object, conversation.created_at, conversation.metadata],
-        );
+    async createConversation(conversation, items) {
+      await executor.run(
+        `INSERT INTO conversations (id, object, created_at, metadata) VALUES (${placeholder(0)}, ${placeholder(1)}, ${placeholder(2)}, ${placeholder(3)})`,
+        [conversation.id, conversation.object, conversation.created_at, conversation.metadata],
+      );
 
-        if (items && items.length > 0) {
-          await Promise.all(
-            items.map((item) => {
-              const { id, object, created_at, ...rest } = item;
-              return tx.run(
-                `INSERT INTO conversation_items (id, conversation_id, object, created_at, type, data) VALUES (${placeholder(0)}, ${placeholder(1)}, ${placeholder(2)}, ${placeholder(3)}, ${placeholder(4)}, ${placeholder(5)})`,
-                [id, conversation.id, object, created_at, item.type, rest],
-              );
-            }),
-          );
-        }
+      if (items && items.length > 0) {
+        await insertItems(conversation.id, items);
+      }
 
-        return conversation;
-      });
+      return conversation;
     },
 
     async getConversation(id) {
@@ -128,17 +150,7 @@ export function createSqlStorage(
       const conversation = await this.getConversation(conversationId);
       if (!conversation) return;
 
-      await executor.transaction(async (tx) => {
-        await Promise.all(
-          items.map((item) => {
-            const { id, object, created_at, ...rest } = item;
-            return tx.run(
-              `INSERT INTO conversation_items (id, conversation_id, object, created_at, type, data) VALUES (${placeholder(0)}, ${placeholder(1)}, ${placeholder(2)}, ${placeholder(3)}, ${placeholder(4)}, ${placeholder(5)})`,
-              [id, conversationId, object, created_at, item.type, rest],
-            );
-          }),
-        );
-      });
+      await insertItems(conversationId, items);
       return items;
     },
 

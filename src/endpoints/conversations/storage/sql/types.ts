@@ -2,7 +2,6 @@ export interface QueryExecutor {
   all<T>(sql: string, params?: unknown[]): Promise<T[]>;
   get<T>(sql: string, params?: unknown[]): Promise<T | undefined>;
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;
-  transaction<T>(cb: (executor: QueryExecutor) => Promise<T>): Promise<T>;
 }
 
 export interface DialectConfig {
@@ -11,5 +10,9 @@ export interface DialectConfig {
   objectType: string;
   jsonType: string;
   createdAtType: string;
+  /**
+   * Optional index creation logic.
+   * Default uses standard BTREE.
+   */
   createIndexSql?: (table: string, name: string, columns: string[]) => string;
 }
