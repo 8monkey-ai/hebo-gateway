@@ -71,6 +71,17 @@ describe("Conversations Handler", () => {
     expect(finalRetrieveRes.status).toBe(404);
   });
 
+  test("should reject invalid metadata", async () => {
+    const endpoint = conversations(config);
+
+    // 1. Invalid value type (number)
+    const req1 = postJson("http://localhost/conversations", {
+      metadata: { count: 123 },
+    });
+    const res1 = await endpoint.handler(req1);
+    expect(res1.status).toBe(400);
+  });
+
   test("should manage individual items", async () => {
     const endpoint = conversations(config);
     const storage = endpoint._parsedConfig?.storage ?? config.storage;

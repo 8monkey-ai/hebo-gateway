@@ -4,10 +4,8 @@ import * as z from "zod";
  * --- Metadata ---
  */
 
-export const MetadataSchema = z.record(
-  z.string().max(64),
-  z.union([z.string().max(512), z.number(), z.boolean()]),
-);
+// Note: The 16-key limit is not currently validated.
+export const MetadataSchema = z.record(z.string().max(64), z.string().max(512));
 export type Metadata = z.infer<typeof MetadataSchema>;
 
 export const ItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
@@ -206,7 +204,7 @@ export const ConversationSchema = z.object({
   id: z.string(),
   object: z.literal("conversation"),
   created_at: z.number().int(),
-  metadata: z.record(z.string(), z.unknown()),
+  metadata: MetadataSchema,
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
 

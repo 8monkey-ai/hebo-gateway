@@ -1,6 +1,11 @@
 import { LRUCache } from "lru-cache";
 
-import type { Conversation, ConversationItem, ConversationItemListParams } from "../schema";
+import type {
+  Conversation,
+  ConversationItem,
+  ConversationItemListParams,
+  Metadata,
+} from "../schema";
 import type { ConversationStorage } from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
@@ -86,10 +91,7 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(this.conversations.get(id));
   }
 
-  updateConversation(
-    id: string,
-    metadata: Record<string, unknown>,
-  ): Promise<Conversation | undefined> {
+  updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined> {
     // Updates the LRU position
     if (this.items.get(id) === undefined) {
       return Promise.resolve(undefined as Conversation | undefined);

@@ -1,9 +1,9 @@
-import type { Conversation, ConversationItem, ResponseInputItem } from "./schema";
+import type { Conversation, ConversationItem, Metadata, ResponseInputItem } from "./schema";
 
 /**
  * Creates a new Conversation object with generated ID and timestamp.
  */
-export function createConversation(params: { metadata?: Record<string, unknown> }): Conversation {
+export function createConversation(params: { metadata?: Metadata }): Conversation {
   return {
     id: `conv_${crypto.randomUUID()}`,
     object: "conversation",

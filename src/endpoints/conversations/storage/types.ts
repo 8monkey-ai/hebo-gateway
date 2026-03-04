@@ -1,14 +1,16 @@
-import type { Conversation, ConversationItem, ConversationItemListParams } from "../schema";
+import type {
+  Conversation,
+  ConversationItem,
+  ConversationItemListParams,
+  Metadata,
+} from "../schema";
 
 export interface ConversationStorage {
   createConversation(conversation: Conversation, items?: ConversationItem[]): Promise<Conversation>;
 
   getConversation(id: string): Promise<Conversation | undefined>;
 
-  updateConversation(
-    id: string,
-    metadata: Record<string, unknown>,
-  ): Promise<Conversation | undefined>;
+  updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined>;
 
   deleteConversation(id: string): Promise<{ id: string; deleted: boolean }>;
 
