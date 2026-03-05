@@ -203,17 +203,28 @@ export class SqlStorage implements ConversationStorage {
     let query: string;
     let args: unknown[];
 
+    let cursor: ConversationItem | undefined;
     if (after) {
+      // Prefetch cursor to enable GreptimeDB time-index pruning
+      cursor = await this.getItem(conversationId, after);
+    }
+
+    if (cursor) {
+      const sqlParams: unknown[] = [];
+      const p = (val: unknown) => {
+        const idx = sqlParams.length;
+        sqlParams.push(val);
+        return placeholder(idx);
+      };
+
       query = `
-          SELECT t1.*
-          FROM conversation_items t1
-          LEFT JOIN conversation_items t2 ON t2.id = ${placeholder(0)} AND t2.conversation_id = ${placeholder(1)}
-          WHERE t1.conversation_id = ${placeholder(2)}
-          AND (t2.id IS NULL OR (t1.created_at ${comp} t2.created_at OR (t1.created_at = t2.created_at AND t1.id ${comp} t2.id)))
-          ORDER BY t1.created_at ${orderDir}, t1.id ${orderDir}
-          LIMIT ${placeholder(3)}
+          SELECT * FROM conversation_items
+          WHERE conversation_id = ${p(conversationId)}
+          AND (created_at ${comp} ${p(cursor.created_at)} OR (created_at = ${p(cursor.created_at)} AND id ${comp} ${p(cursor.id)}))
+          ORDER BY created_at ${orderDir}, id ${orderDir}
+          LIMIT ${p(limit)}
         `;
-      args = [after, conversationId, conversationId, limit];
+      args = sqlParams;
     } else {
       query = `
           SELECT * FROM conversation_items
