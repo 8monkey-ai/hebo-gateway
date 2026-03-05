@@ -99,7 +99,7 @@ export class InMemoryStorage implements ConversationStorage {
 
     const conversation = this.conversations.get(id);
     if (conversation) {
-      conversation.metadata = metadata;
+      conversation.metadata = metadata ?? null;
     }
     return Promise.resolve(conversation);
   }

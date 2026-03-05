@@ -6,7 +6,7 @@ interface BaseRow {
   id: string;
   object: string;
   created_at: number;
-  metadata?: string | Record<string, unknown>;
+  metadata?: string | Record<string, unknown> | null;
   conversation_id?: string;
   type?: string;
   data: string | Record<string, unknown>;
@@ -33,7 +33,7 @@ function mapRow<T>(row: BaseRow): T {
   };
 
   if (row.type) out["type"] = row.type;
-  if (parsedMetadata) out["metadata"] = parsedMetadata;
+  if (parsedMetadata !== undefined) out["metadata"] = parsedMetadata;
 
   return Object.assign(out, parsedData) as T;
 }
@@ -41,15 +41,26 @@ function mapRow<T>(row: BaseRow): T {
 export function createSqlStorage(
   executor: QueryExecutor,
   dialect: DialectConfig,
-): ConversationStorage & { init(): Promise<void> } {
-  const { placeholder, idType, objectType, jsonType, createdAtType, sequentialIndexUsing } =
-    dialect;
+): ConversationStorage & { migrate(): Promise<void> } {
+  const { placeholder, types, partitioned } = dialect;
+
+  const varchar = (len: number) => (types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`);
 
   async function createIndex(table: string, name: string, columns: string[], sequential = false) {
-    const using = sequential && sequentialIndexUsing ? `USING ${sequentialIndexUsing}` : "";
+    if (types.index === "none") return;
+    const using = sequential && types.index !== "B-TREE" ? `USING ${types.index}` : "";
     await executor.run(
       `CREATE INDEX IF NOT EXISTS ${name} ON ${table} ${using} (${columns.join(", ")})`,
     );
+  }
+
+  function getPartitionSql(column: string) {
+    if (!partitioned) return "";
+    const ranges = "123456789abcdef"
+      .split("")
+      .map((h) => `${column} < '${h}'`)
+      .join(", ");
+    return `PARTITION ON COLUMNS (${column}) (${ranges})`;
   }
 
   /**
@@ -79,42 +90,43 @@ export function createSqlStorage(
   }
 
   return {
-    async init() {
+    async migrate() {
+      const timeIndex = types.timeIndex ? `, TIME INDEX (created_at)` : "";
+
       await executor.run(`
         CREATE TABLE IF NOT EXISTS conversations (
-          id ${idType} PRIMARY KEY,
-          object ${objectType},
-          created_at ${createdAtType},
-          metadata ${jsonType}
+          id ${varchar(255)},
+          object ${varchar(64)},
+          created_at ${types.int64},
+          metadata ${types.json},
+          PRIMARY KEY (id)
+          ${timeIndex}
         )
+        ${getPartitionSql("id")}
       `);
 
       await executor.run(`
         CREATE TABLE IF NOT EXISTS conversation_items (
-          id ${idType} PRIMARY KEY,
-          conversation_id ${idType},
-          object ${objectType},
-          created_at ${createdAtType},
-          type ${objectType},
-          data ${jsonType}
+          id ${varchar(255)},
+          conversation_id ${varchar(255)},
+          object ${varchar(64)},
+          created_at ${types.int64},
+          type ${varchar(64)},
+          data ${types.json},
+          PRIMARY KEY (conversation_id, id)
+          ${timeIndex}
         )
+        ${getPartitionSql("conversation_id")}
       `);
 
-      if (dialect.supportsIndex !== false) {
-        await createIndex(
-          "conversations",
-          "idx_conversations_created_at",
-          ["created_at DESC"],
-          true,
-        );
+      await createIndex("conversations", "idx_conversations_created_at", ["created_at DESC"], true);
 
-        await createIndex(
-          "conversation_items",
-          "idx_items_conv_id",
-          ["conversation_id", "created_at DESC", "id DESC"],
-          false,
-        );
-      }
+      await createIndex(
+        "conversation_items",
+        "idx_items_conv_id",
+        ["conversation_id", "created_at DESC", "id DESC"],
+        false,
+      );
     },
 
     async createConversation(conversation, items) {
@@ -141,7 +153,7 @@ export function createSqlStorage(
     async updateConversation(id, metadata) {
       await executor.run(
         `UPDATE conversations SET metadata = ${placeholder(0)} WHERE id = ${placeholder(1)}`,
-        [metadata, id],
+        [metadata ?? null, id],
       );
       return this.getConversation(id);
     },
@@ -164,40 +176,55 @@ export function createSqlStorage(
 
     async getItem(conversationId, itemId) {
       const row = await executor.get<BaseRow>(
-        `SELECT * FROM conversation_items WHERE conversation_id = ${placeholder(0)} AND id = ${placeholder(1)}`,
-        [conversationId, itemId],
+        `SELECT * FROM conversation_items WHERE id = ${placeholder(0)} AND conversation_id = ${placeholder(1)}`,
+        [itemId, conversationId],
       );
       return row ? mapRow<ConversationItem>(row) : undefined;
     },
 
     async deleteItem(conversationId, itemId) {
       await executor.run(
-        `DELETE FROM conversation_items WHERE conversation_id = ${placeholder(0)} AND id = ${placeholder(1)}`,
-        [conversationId, itemId],
+        `DELETE FROM conversation_items WHERE id = ${placeholder(0)} AND conversation_id = ${placeholder(1)}`,
+        [itemId, conversationId],
       );
       return this.getConversation(conversationId);
     },
 
     async listItems(conversationId, params) {
       const { after, order, limit } = params;
-      let query = `SELECT * FROM conversation_items WHERE conversation_id = ${placeholder(0)}`;
-      const args: unknown[] = [conversationId];
+      const orderDir = order === "asc" ? "ASC" : "DESC";
+      const comp = order === "asc" ? ">" : "<";
+
+      let query: string;
+      let args: unknown[];
 
       if (after) {
-        const afterItem = await this.getItem(conversationId, after);
-        if (afterItem) {
-          const comp = order === "asc" ? ">" : "<";
-          query += ` AND (created_at ${comp} ${placeholder(args.length)} OR (created_at = ${placeholder(args.length + 1)} AND id ${comp} ${placeholder(args.length + 2)}))`;
-          args.push(afterItem.created_at, afterItem.created_at, afterItem.id);
-        }
+        query = `
+          SELECT t1.*
+          FROM conversation_items t1
+          LEFT JOIN conversation_items t2 ON t2.id = ${placeholder(0)} AND t2.conversation_id = ${placeholder(1)}
+          WHERE t1.conversation_id = ${placeholder(2)}
+          AND (t2.id IS NULL OR (t1.created_at ${comp} t2.created_at OR (t1.created_at = t2.created_at AND t1.id ${comp} t2.id)))
+          ORDER BY t1.created_at ${orderDir}, t1.id ${orderDir}
+          LIMIT ${placeholder(3)}
+        `;
+        args = [after, conversationId, conversationId, limit];
+      } else {
+        query = `
+          SELECT * FROM conversation_items
+          WHERE conversation_id = ${placeholder(0)}
+          ORDER BY created_at ${orderDir}, id ${orderDir}
+          LIMIT ${placeholder(1)}
+        `;
+        args = [conversationId, limit];
       }
 
-      query += ` ORDER BY created_at ${order === "asc" ? "ASC" : "DESC"}, id ${order === "asc" ? "ASC" : "DESC"}`;
-      query += ` LIMIT ${placeholder(args.length)}`;
-      args.push(limit);
-
       const rows = await executor.all<BaseRow>(query, args);
-      return rows.map((row) => mapRow<ConversationItem>(row));
+      const items: ConversationItem[] = [];
+      for (const row of rows) {
+        items.push(mapRow<ConversationItem>(row));
+      }
+      return items;
     },
   };
 }

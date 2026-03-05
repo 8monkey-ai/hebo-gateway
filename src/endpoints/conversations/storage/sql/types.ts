@@ -6,10 +6,12 @@ export interface QueryExecutor {
 
 export interface DialectConfig {
   placeholder: (index: number) => string;
-  idType: string;
-  objectType: string;
-  jsonType: string;
-  createdAtType: string;
-  supportsIndex?: boolean;
-  sequentialIndexUsing?: string;
+  partitioned?: boolean;
+  types: {
+    varchar: string;
+    json: string;
+    int64: string;
+    index: "BRIN" | "B-TREE" | "none";
+    timeIndex?: boolean;
+  };
 }

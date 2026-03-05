@@ -1,24 +1,24 @@
-import type { SQL } from "bun";
-import type { Pool } from "pg";
-import type { Sql } from "postgres";
+import type { SQL as BunSql } from "bun";
+import type { Pool as PgPool } from "pg";
+import type { Sql as PostgresJsSql } from "postgres";
 
 import type { DialectConfig } from "./sql/types";
 
 import { createSqlStorage } from "./sql/factory";
 
-export type PostgresJsSql = Sql;
-export type PgPool = Pool;
+export type { PostgresJsSql, PgPool };
 
 export const PostgresDialect: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
-  idType: "VARCHAR(255)",
-  objectType: "VARCHAR(64)",
-  jsonType: "JSONB",
-  createdAtType: "BIGINT",
-  sequentialIndexUsing: "BRIN",
+  types: {
+    varchar: "VARCHAR",
+    json: "JSONB",
+    int64: "BIGINT",
+    index: "BRIN",
+  },
 };
 
-export function createPgStorage(pool: Pool, dialect: DialectConfig = PostgresDialect) {
+export function createPgStorage(pool: PgPool, dialect: DialectConfig = PostgresDialect) {
   return createSqlStorage(
     {
       async all<T>(sql: string, params?: unknown[]) {
@@ -38,18 +38,30 @@ export function createPgStorage(pool: Pool, dialect: DialectConfig = PostgresDia
   );
 }
 
-export function createPostgresJsStorage(sql: Sql, dialect: DialectConfig = PostgresDialect) {
+export function createPostgresJsStorage(
+  sql: PostgresJsSql,
+  dialect: DialectConfig = PostgresDialect,
+) {
   return createSqlStorage(
     {
       async all<T>(query: string, params?: unknown[]) {
-        return (await sql.unsafe(query, (params ?? []) as Parameters<Sql["unsafe"]>[1])) as T[];
+        return (await sql.unsafe(
+          query,
+          (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        )) as T[];
       },
       async get<T>(query: string, params?: unknown[]) {
-        const rows = await sql.unsafe(query, (params ?? []) as Parameters<Sql["unsafe"]>[1]);
+        const rows = await sql.unsafe(
+          query,
+          (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        );
         return rows[0] as T | undefined;
       },
       async run(query: string, params?: unknown[]) {
-        const res = await sql.unsafe(query, (params ?? []) as Parameters<Sql["unsafe"]>[1]);
+        const res = await sql.unsafe(
+          query,
+          (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        );
         const result = res as unknown as { count: number };
         return { changes: Number(result.count ?? 0) };
       },
@@ -58,7 +70,7 @@ export function createPostgresJsStorage(sql: Sql, dialect: DialectConfig = Postg
   );
 }
 
-export function createBunPostgresStorage(sql: SQL, dialect: DialectConfig = PostgresDialect) {
+export function createBunPostgresStorage(sql: BunSql, dialect: DialectConfig = PostgresDialect) {
   return createSqlStorage(
     {
       async all<T>(query: string, params?: unknown[]) {

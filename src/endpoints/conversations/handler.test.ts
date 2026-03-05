@@ -56,7 +56,23 @@ describe("Conversations Handler", () => {
     const updated = await parseResponse(updateRes);
     expect(updated.metadata.updated).toBe("true");
 
-    // 4. Delete
+    // 4. Update with null metadata
+    const updateNullReq = postJson(`http://localhost/conversations/${convId}`, {
+      metadata: null,
+    });
+    const updateNullRes = await endpoint.handler(updateNullReq);
+    expect(updateNullRes.status).toBe(200);
+    const updatedNull = await parseResponse(updateNullRes);
+    expect(updatedNull.metadata).toBeNull();
+
+    // 5. Update with missing metadata (should default to null)
+    const updateMissingReq = postJson(`http://localhost/conversations/${convId}`, {});
+    const updateMissingRes = await endpoint.handler(updateMissingReq);
+    expect(updateMissingRes.status).toBe(200);
+    const updatedMissing = await parseResponse(updateMissingRes);
+    expect(updatedMissing.metadata).toBeNull();
+
+    // 6. Delete
     const deleteRes = await endpoint.handler(
       new Request(`http://localhost/conversations/${convId}`, { method: "DELETE" }),
     );

@@ -410,7 +410,7 @@ const db = new Database("conv.db");
 
 // 2. Setup storage
 const storage = createBetterSqlite3Storage(db);
-await storage.init(); // Creates tables & indexes
+await storage.migrate(); // Creates tables & indexes
 
 const gw = gateway({ storage });
 ```
@@ -431,7 +431,7 @@ const pool = new Pool({
 
 // 2. Setup storage
 const storage = createPgStorage(pool);
-await storage.init();
+await storage.migrate();
 
 const gw = gateway({ storage });
 ```
@@ -450,7 +450,7 @@ const pool = mysql.createPool(process.env.DATABASE_URL);
 
 // 2. Setup storage
 const storage = createMysql2Storage(pool);
-await storage.init();
+await storage.migrate();
 
 const gw = gateway({ storage });
 ```
@@ -465,7 +465,7 @@ import { createGrepTimeBunStorage } from "@hebo-ai/gateway/endpoints/conversatio
 import { sql } from "bun";
 
 const storage = createGrepTimeBunStorage(sql);
-await storage.init();
+await storage.migrate();
 
 const gw = gateway({ storage });
 ```

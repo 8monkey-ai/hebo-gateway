@@ -1,6 +1,6 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import type { Database as BetterSqlite3Database } from "better-sqlite3";
-import type { SQL } from "bun";
+import type { SQL as BunSql } from "bun";
 
 import type { DialectConfig } from "./sql/types";
 
@@ -8,10 +8,12 @@ import { createSqlStorage } from "./sql/factory";
 
 export const SQLiteDialect: DialectConfig = {
   placeholder: () => "?",
-  idType: "TEXT",
-  objectType: "TEXT",
-  jsonType: "TEXT",
-  createdAtType: "INTEGER",
+  types: {
+    varchar: "TEXT",
+    json: "TEXT",
+    int64: "INTEGER",
+    index: "B-TREE",
+  },
 };
 
 const mapParams = (params?: unknown[]) =>
@@ -60,7 +62,7 @@ export function createLibsqlStorage(client: LibsqlClient) {
   );
 }
 
-export function createBunSqliteStorage(sql: SQL) {
+export function createBunSqliteStorage(sql: BunSql) {
   return createSqlStorage(
     {
       async all<T>(query: string, params?: unknown[]) {

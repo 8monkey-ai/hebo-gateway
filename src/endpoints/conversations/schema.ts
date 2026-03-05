@@ -5,7 +5,10 @@ import * as z from "zod";
  */
 
 // Note: The 16-key limit is not currently validated.
-export const MetadataSchema = z.record(z.string().max(64), z.string().max(512));
+export const MetadataSchema = z
+  .record(z.string().max(64), z.string().max(512))
+  .nullable()
+  .optional();
 export type Metadata = z.infer<typeof MetadataSchema>;
 
 export const ItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
