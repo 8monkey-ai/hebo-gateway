@@ -402,14 +402,16 @@ Supports `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createBetterSqlite3Storage } from "@hebo-ai/gateway/endpoints/conversations/storage/sqlite";
+import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
+import { createBetterSqlite3Dialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/sqlite";
 import Database from "better-sqlite3";
 
 // 1. Setup connection
 const db = new Database("conv.db");
 
 // 2. Setup storage
-const storage = createBetterSqlite3Storage(db);
+const dialect = createBetterSqlite3Dialect(db);
+const storage = createSqlStorage(dialect);
 await storage.migrate(); // Creates tables & indexes
 
 const gw = gateway({ storage });
@@ -421,7 +423,8 @@ Supports `pg`, `postgres.js`, and `Bun.SQL`. Includes optimized `JSONB` storage 
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createPgStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/postgres";
+import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
+import { createPgDialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/postgres";
 import { Pool } from "pg";
 
 // 1. Setup pool
@@ -430,7 +433,8 @@ const pool = new Pool({
 });
 
 // 2. Setup storage
-const storage = createPgStorage(pool);
+const dialect = createPgDialect(pool);
+const storage = createSqlStorage(dialect);
 await storage.migrate();
 
 const gw = gateway({ storage });
@@ -442,14 +446,16 @@ Supports `mysql2` and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createMysql2Storage } from "@hebo-ai/gateway/endpoints/conversations/storage/mysql";
+import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
+import { createMysql2Dialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/mysql";
 import mysql from "mysql2/promise";
 
 // 1. Setup pool
 const pool = mysql.createPool(process.env.DATABASE_URL);
 
 // 2. Setup storage
-const storage = createMysql2Storage(pool);
+const dialect = createMysql2Dialect(pool);
+const storage = createSqlStorage(dialect);
 await storage.migrate();
 
 const gw = gateway({ storage });
@@ -461,10 +467,12 @@ Specialized adapter for GrepTimeDB.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createGrepTimeBunStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/greptime";
+import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
+import { createGrepTimeBunPostgresDialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/greptime";
 import { sql } from "bun";
 
-const storage = createGrepTimeBunStorage(sql);
+const dialect = createGrepTimeBunPostgresDialect(sql);
+const storage = createSqlStorage(dialect);
 await storage.migrate();
 
 const gw = gateway({ storage });

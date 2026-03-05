@@ -1,9 +1,7 @@
 import type { SQL as BunSql } from "bun";
 import type { Pool as Mysql2Pool, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import type { DialectConfig } from "./sql/types";
-
-import { createSqlStorage } from "./sql/factory";
+import type { DialectConfig, SqlDialect } from "./types";
 
 export type { Mysql2Pool };
 
@@ -12,7 +10,7 @@ export const MySQLDialect: DialectConfig = {
   types: {
     varchar: "VARCHAR",
     json: "JSON",
-    int64: "BIGINT",
+    timestamp: "BIGINT",
     index: "B-TREE",
   },
 };
@@ -30,9 +28,12 @@ const mapParams = (params?: unknown[]) =>
     | null
   )[];
 
-export function createMysql2Storage(pool: Mysql2Pool, dialect: DialectConfig = MySQLDialect) {
-  return createSqlStorage(
-    {
+export function createMysql2Dialect(
+  pool: Mysql2Pool,
+  config: DialectConfig = MySQLDialect,
+): SqlDialect {
+  return {
+    executor: {
       async all<T>(sql: string, params?: unknown[]) {
         const [rows] = await pool.query(sql, mapParams(params));
         return rows as T[];
@@ -47,13 +48,16 @@ export function createMysql2Storage(pool: Mysql2Pool, dialect: DialectConfig = M
         return { changes: Number(header.affectedRows ?? 0) };
       },
     },
-    dialect,
-  );
+    config,
+  };
 }
 
-export function createBunMysqlStorage(sql: BunSql, dialect: DialectConfig = MySQLDialect) {
-  return createSqlStorage(
-    {
+export function createBunMysqlDialect(
+  sql: BunSql,
+  config: DialectConfig = MySQLDialect,
+): SqlDialect {
+  return {
+    executor: {
       async all<T>(query: string, params?: unknown[]) {
         return (await sql.unsafe(query, params)) as T[];
       },
@@ -67,6 +71,6 @@ export function createBunMysqlStorage(sql: BunSql, dialect: DialectConfig = MySQ
         return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
       },
     },
-    dialect,
-  );
+    config,
+  };
 }

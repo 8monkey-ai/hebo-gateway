@@ -2,9 +2,7 @@ import type { SQL as BunSql } from "bun";
 import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql } from "postgres";
 
-import type { DialectConfig } from "./sql/types";
-
-import { createSqlStorage } from "./sql/factory";
+import type { DialectConfig, SqlDialect } from "./types";
 
 export type { PostgresJsSql, PgPool };
 
@@ -13,14 +11,14 @@ export const PostgresDialect: DialectConfig = {
   types: {
     varchar: "VARCHAR",
     json: "JSONB",
-    int64: "BIGINT",
+    timestamp: "BIGINT",
     index: "BRIN",
   },
 };
 
-export function createPgStorage(pool: PgPool, dialect: DialectConfig = PostgresDialect) {
-  return createSqlStorage(
-    {
+export function createPgDialect(pool: PgPool, config: DialectConfig = PostgresDialect): SqlDialect {
+  return {
+    executor: {
       async all<T>(sql: string, params?: unknown[]) {
         const res = await pool.query(sql, params);
         return res.rows as T[];
@@ -34,16 +32,16 @@ export function createPgStorage(pool: PgPool, dialect: DialectConfig = PostgresD
         return { changes: Number(res.rowCount ?? 0) };
       },
     },
-    dialect,
-  );
+    config,
+  };
 }
 
-export function createPostgresJsStorage(
+export function createPostgresJsDialect(
   sql: PostgresJsSql,
-  dialect: DialectConfig = PostgresDialect,
-) {
-  return createSqlStorage(
-    {
+  config: DialectConfig = PostgresDialect,
+): SqlDialect {
+  return {
+    executor: {
       async all<T>(query: string, params?: unknown[]) {
         return (await sql.unsafe(
           query,
@@ -66,13 +64,16 @@ export function createPostgresJsStorage(
         return { changes: Number(result.count ?? 0) };
       },
     },
-    dialect,
-  );
+    config,
+  };
 }
 
-export function createBunPostgresStorage(sql: BunSql, dialect: DialectConfig = PostgresDialect) {
-  return createSqlStorage(
-    {
+export function createBunPostgresDialect(
+  sql: BunSql,
+  config: DialectConfig = PostgresDialect,
+): SqlDialect {
+  return {
+    executor: {
       async all<T>(query: string, params?: unknown[]) {
         return (await sql.unsafe(query, params)) as T[];
       },
@@ -86,6 +87,6 @@ export function createBunPostgresStorage(sql: BunSql, dialect: DialectConfig = P
         return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
       },
     },
-    dialect,
-  );
+    config,
+  };
 }

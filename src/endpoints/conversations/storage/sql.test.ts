@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { createBetterSqlite3Storage } from "./sqlite";
+import { createBetterSqlite3Dialect } from "./dialects/sqlite";
+import { SqlStorage } from "./sql";
 import { createConversation, createConversationItem } from "../utils";
 
 describe("SQLite Storage (In-Memory)", () => {
   test("should handle full lifecycle and complex queries", async () => {
     const db = new Database(":memory:");
-    const storage = createBetterSqlite3Storage(db as any);
+    const dialect = createBetterSqlite3Dialect(db as any);
+    const storage = new SqlStorage(dialect);
     await storage.migrate();
 
     // 1. Create Conversation
@@ -34,8 +36,8 @@ describe("SQLite Storage (In-Memory)", () => {
 
     // 4. List Items (Basic)
     const allItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
-    expect(allItems.length).toBe(3);
-    expect(allItems[0].id).toBe(items[0].id);
+    expect(allItems?.length).toBe(3);
+    expect(allItems?.[0].id).toBe(items[0].id);
 
     // 5. List Items (Pagination: after)
     const page2 = await storage.listItems(conv.id, {
@@ -43,19 +45,19 @@ describe("SQLite Storage (In-Memory)", () => {
       order: "asc",
       after: items[0].id,
     });
-    expect(page2.length).toBe(2);
-    expect(page2[0].id).toBe(items[1].id);
-    expect(page2[1].id).toBe(items[2].id);
+    expect(page2?.length).toBe(2);
+    expect(page2?.[0].id).toBe(items[1].id);
+    expect(page2?.[1].id).toBe(items[2].id);
 
     // 6. List Items (Pagination: order desc)
     const descItems = await storage.listItems(conv.id, { limit: 10, order: "desc" });
-    expect(descItems[0].id).toBe(items[2].id);
+    expect(descItems?.[0].id).toBe(items[2].id);
 
     // 7. Delete Item
     await storage.deleteItem(conv.id, items[1].id);
     const afterDeleteItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
-    expect(afterDeleteItems.length).toBe(2);
-    expect(afterDeleteItems.find((i) => i.id === items[1].id)).toBeUndefined();
+    expect(afterDeleteItems?.length).toBe(2);
+    expect(afterDeleteItems?.find((i) => i.id === items[1].id)).toBeUndefined();
 
     // 8. Delete Conversation
     const deleteRes = await storage.deleteConversation(conv.id);
@@ -68,7 +70,8 @@ describe("SQLite Storage (In-Memory)", () => {
 
   test("should handle non-existent after ID by returning first page", async () => {
     const db = new Database(":memory:");
-    const storage = createBetterSqlite3Storage(db as any);
+    const dialect = createBetterSqlite3Dialect(db as any);
+    const storage = new SqlStorage(dialect);
     await storage.migrate();
 
     const conv = createConversation({});
@@ -90,15 +93,16 @@ describe("SQLite Storage (In-Memory)", () => {
     });
 
     // Should return both items (ignoring 'after' filter)
-    expect(results.length).toBe(2);
-    expect(results[0].id).toBe(items[0].id);
+    expect(results?.length).toBe(2);
+    expect(results?.[0].id).toBe(items[0].id);
 
     db.close();
   });
 
   test("should handle null and undefined metadata", async () => {
     const db = new Database(":memory:");
-    const storage = createBetterSqlite3Storage(db as any);
+    const dialect = createBetterSqlite3Dialect(db as any);
+    const storage = new SqlStorage(dialect);
     await storage.migrate();
 
     // Test null metadata

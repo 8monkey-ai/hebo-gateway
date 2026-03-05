@@ -10,8 +10,13 @@ export interface DialectConfig {
   types: {
     varchar: string;
     json: string;
-    int64: string;
+    timestamp: string;
     index: "BRIN" | "B-TREE" | "none";
     timeIndex?: boolean;
   };
+}
+
+export interface SqlDialect {
+  executor: QueryExecutor;
+  config: DialectConfig;
 }
