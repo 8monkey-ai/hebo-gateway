@@ -58,7 +58,7 @@ export class SqlStorage implements ConversationStorage {
     const { types, partitioned } = this.config;
     const varchar = (len: number) =>
       types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`;
-    const timeIndex = types.timeIndex ? ", TIME INDEX (created_at)" : "";
+    const timeIndex = types.index === "TIME" ? ", TIME INDEX (created_at)" : "";
 
     const getPartitionSql = (column: string) => {
       if (!partitioned) return "";
@@ -68,7 +68,7 @@ export class SqlStorage implements ConversationStorage {
     };
 
     const createIndex = async (table: string, name: string, cols: string[], seq = false) => {
-      if (types.index === "none") return;
+      if (types.index === "TIME") return;
       const using = seq && types.index !== "B-TREE" ? `USING ${types.index}` : "";
       await this.executor.run(
         `CREATE INDEX IF NOT EXISTS ${name} ON ${table} ${using} (${cols.join(", ")})`,

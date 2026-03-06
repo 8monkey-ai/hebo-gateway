@@ -14,8 +14,7 @@ const GrepTimeBase: Pick<DialectConfig, "partitioned" | "types"> = {
     varchar: "VARCHAR",
     json: "JSON",
     timestamp: "TIMESTAMP",
-    index: "none",
-    timeIndex: true,
+    index: "TIME",
   },
 };
 

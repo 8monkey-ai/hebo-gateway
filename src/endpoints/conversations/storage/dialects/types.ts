@@ -12,8 +12,7 @@ export interface DialectConfig {
     varchar: string;
     json: string;
     timestamp: string;
-    index: "BRIN" | "B-TREE" | "none";
-    timeIndex?: boolean;
+    index: "BRIN" | "B-TREE" | "TIME";
   };
 }
 
