@@ -155,7 +155,7 @@
     "format:staged": "oxfmt --no-error-on-unmatched-pattern",
     "lint": "oxlint",
     "lint:staged": "oxlint --fix",
-    "type-check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {
