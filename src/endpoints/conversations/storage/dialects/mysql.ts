@@ -5,7 +5,7 @@ import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 
 export type { Mysql2Pool };
 
-export const MySQLDialect: DialectConfig = {
+export const MySQLDialectConfig: DialectConfig = {
   placeholder: () => "?",
   types: {
     varchar: "VARCHAR",
@@ -28,10 +28,15 @@ const mapParams = (params?: unknown[]) =>
     | null
   )[];
 
-export function createMysql2Dialect(
-  pool: Mysql2Pool,
-  config: DialectConfig = MySQLDialect,
-): SqlDialect {
+function isMysql2(client: any): client is Mysql2Pool {
+  return typeof client.execute === "function" && typeof client.getConnection === "function";
+}
+
+function isBunSql(client: any): client is BunSql {
+  return typeof client.unsafe === "function" && typeof client.transaction === "function";
+}
+
+function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(sql: string, params?: unknown[]) {
       const [rows] = await pool.execute(sql, mapParams(params));
@@ -77,16 +82,10 @@ export function createMysql2Dialect(
     },
   };
 
-  return {
-    executor,
-    config,
-  };
+  return executor;
 }
 
-export function createBunMysqlDialect(
-  sql: BunSql,
-  config: DialectConfig = MySQLDialect,
-): SqlDialect {
+function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(query, params)) as T[];
@@ -105,8 +104,23 @@ export function createBunMysqlDialect(
     },
   };
 
-  return {
-    executor,
-    config,
-  };
+  return executor;
+}
+
+export class MysqlDialect implements SqlDialect {
+  readonly executor: QueryExecutor;
+  readonly config: DialectConfig;
+
+  constructor(options: { client: Mysql2Pool | BunSql | any; config?: DialectConfig }) {
+    const { client, config = MySQLDialectConfig } = options;
+    this.config = config;
+
+    if (isMysql2(client)) {
+      this.executor = createMysql2Executor(client);
+    } else if (isBunSql(client)) {
+      this.executor = createBunMysqlExecutor(client);
+    } else {
+      throw new Error("Unsupported MySQL client");
+    }
+  }
 }

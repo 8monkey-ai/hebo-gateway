@@ -37,7 +37,15 @@ function mapRow<T>(row: BaseRow): T {
 }
 
 export class SqlStorage implements ConversationStorage {
-  constructor(private dialect: SqlDialect) {}
+  private dialect: SqlDialect;
+
+  constructor(options: SqlDialect | { dialect: SqlDialect }) {
+    if ("executor" in options) {
+      this.dialect = options;
+    } else {
+      this.dialect = options.dialect;
+    }
+  }
 
   private get executor() {
     return this.dialect.executor;
@@ -224,13 +232,6 @@ export class SqlStorage implements ConversationStorage {
       }
     });
   }
-}
-
-/**
- * Helper to create a new SqlStorage instance.
- */
-export function createSqlStorage(dialect: SqlDialect) {
-  return new SqlStorage(dialect);
 }
 
 export * from "./dialects/greptime";

@@ -6,7 +6,7 @@ import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 
 export type { PostgresJsSql, PgPool };
 
-export const PostgresDialect: DialectConfig = {
+export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
   types: {
     varchar: "VARCHAR",
@@ -18,7 +18,19 @@ export const PostgresDialect: DialectConfig = {
 
 const MAX_CACHE_SIZE = 100;
 
-export function createPgDialect(pool: PgPool, config: DialectConfig = PostgresDialect): SqlDialect {
+function isPgPool(client: any): client is PgPool {
+  return typeof client.query === "function" && typeof client.connect === "function";
+}
+
+function isPostgresJs(client: any): client is PostgresJsSql {
+  return typeof client.unsafe === "function" && typeof client.begin === "function";
+}
+
+function isBunSql(client: any): client is BunSql {
+  return typeof client.unsafe === "function" && typeof client.transaction === "function";
+}
+
+function createPgExecutor(pool: PgPool): QueryExecutor {
   const cache = new Map<string, string>();
   let count = 0;
 
@@ -78,16 +90,10 @@ export function createPgDialect(pool: PgPool, config: DialectConfig = PostgresDi
     },
   };
 
-  return {
-    executor,
-    config,
-  };
+  return executor;
 }
 
-export function createPostgresJsDialect(
-  sql: PostgresJsSql,
-  config: DialectConfig = PostgresDialect,
-): SqlDialect {
+function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(
@@ -111,16 +117,10 @@ export function createPostgresJsDialect(
       return (await sql.begin(() => fn(executor))) as T;
     },
   };
-  return {
-    executor,
-    config,
-  };
+  return executor;
 }
 
-export function createBunPostgresDialect(
-  sql: BunSql,
-  config: DialectConfig = PostgresDialect,
-): SqlDialect {
+function createBunPostgresExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(query, params)) as T[];
@@ -138,8 +138,25 @@ export function createBunPostgresDialect(
       return await sql.transaction(() => fn(executor));
     },
   };
-  return {
-    executor,
-    config,
-  };
+  return executor;
+}
+
+export class PostgresDialect implements SqlDialect {
+  readonly executor: QueryExecutor;
+  readonly config: DialectConfig;
+
+  constructor(options: { client: PgPool | PostgresJsSql | BunSql | any; config?: DialectConfig }) {
+    const { client, config = PostgresDialectConfig } = options;
+    this.config = config;
+
+    if (isPgPool(client)) {
+      this.executor = createPgExecutor(client);
+    } else if (isPostgresJs(client)) {
+      this.executor = createPostgresJsExecutor(client);
+    } else if (isBunSql(client)) {
+      this.executor = createBunPostgresExecutor(client);
+    } else {
+      throw new Error("Unsupported Postgres client");
+    }
+  }
 }

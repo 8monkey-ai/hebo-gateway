@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { createBetterSqlite3Dialect } from "./dialects/sqlite";
+import { SqliteDialect } from "./dialects/sqlite";
 import { SqlStorage } from "./sql";
 import { createConversation, createConversationItem } from "../utils";
 
 describe("SQLite Storage (In-Memory)", () => {
   test("should handle full lifecycle and complex queries", async () => {
     const db = new Database(":memory:");
-    const dialect = createBetterSqlite3Dialect(db as any);
-    const storage = new SqlStorage(dialect);
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
     await storage.migrate();
 
     // 1. Create Conversation
@@ -70,8 +70,8 @@ describe("SQLite Storage (In-Memory)", () => {
 
   test("should handle non-existent after ID by returning first page", async () => {
     const db = new Database(":memory:");
-    const dialect = createBetterSqlite3Dialect(db as any);
-    const storage = new SqlStorage(dialect);
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
     await storage.migrate();
 
     const conv = createConversation({});
@@ -101,8 +101,8 @@ describe("SQLite Storage (In-Memory)", () => {
 
   test("should handle null and undefined metadata", async () => {
     const db = new Database(":memory:");
-    const dialect = createBetterSqlite3Dialect(db as any);
-    const storage = new SqlStorage(dialect);
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
     await storage.migrate();
 
     // Test null metadata

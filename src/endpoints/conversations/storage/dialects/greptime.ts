@@ -1,16 +1,14 @@
 import type { SQL as BunSql } from "bun";
 import type { Pool as Mysql2Pool } from "mysql2/promise";
 
-import { createBunMysqlDialect, createMysql2Dialect, MySQLDialect } from "./mysql";
+import { MySQLDialectConfig, MysqlDialect } from "./mysql";
 import {
-  createBunPostgresDialect,
-  createPgDialect,
-  createPostgresJsDialect,
   PostgresDialect,
+  PostgresDialectConfig,
   type PgPool,
   type PostgresJsSql,
 } from "./postgres";
-import { type DialectConfig, type SqlDialect } from "./types";
+import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
 
 const GrepTimeBase: Pick<DialectConfig, "partitioned" | "types"> = {
   partitioned: true,
@@ -23,32 +21,48 @@ const GrepTimeBase: Pick<DialectConfig, "partitioned" | "types"> = {
   },
 };
 
-export const GrepTimePostgresDialect: DialectConfig = {
-  ...PostgresDialect,
+export const GrepTimePostgresDialectConfig: DialectConfig = {
+  ...PostgresDialectConfig,
   ...GrepTimeBase,
 };
 
-export const GrepTimeMySQLDialect: DialectConfig = {
-  ...MySQLDialect,
+export const GrepTimeMySQLDialectConfig: DialectConfig = {
+  ...MySQLDialectConfig,
   ...GrepTimeBase,
 };
 
-export function createGrepTimePgDialect(pool: PgPool): SqlDialect {
-  return createPgDialect(pool, GrepTimePostgresDialect);
-}
+export class GrepTimeDialect implements SqlDialect {
+  readonly executor: QueryExecutor;
+  readonly config: DialectConfig;
 
-export function createGrepTimePostgresJsDialect(sql: PostgresJsSql): SqlDialect {
-  return createPostgresJsDialect(sql, GrepTimePostgresDialect);
-}
+  constructor(options: { client: PgPool | PostgresJsSql | Mysql2Pool | BunSql | any }) {
+    const { client } = options;
 
-export function createGrepTimeBunPostgresDialect(sql: BunSql): SqlDialect {
-  return createBunPostgresDialect(sql, GrepTimePostgresDialect);
-}
+    // Detect if it's a Postgres or MySQL client to use the correct dialect
+    // GrepTimeDB supports both protocols.
+    let dialect: SqlDialect;
 
-export function createGrepTimeMysql2Dialect(pool: Mysql2Pool): SqlDialect {
-  return createMysql2Dialect(pool, GrepTimeMySQLDialect);
-}
+    // Check for Postgres methods
+    if (
+      typeof client.query === "function" ||
+      (typeof client.unsafe === "function" && typeof client.begin === "function")
+    ) {
+      dialect = new PostgresDialect({ client, config: GrepTimePostgresDialectConfig });
+    }
+    // Check for MySQL methods
+    else if (
+      typeof client.execute === "function" ||
+      (typeof client.unsafe === "function" && typeof client.transaction === "function")
+    ) {
+      // Note: BunSql could be either, but since we are in GrepTime context,
+      // we check for transaction/begin differences.
+      // Most GrepTime users use the Postgres protocol.
+      dialect = new MysqlDialect({ client, config: GrepTimeMySQLDialectConfig });
+    } else {
+      throw new Error("Unsupported GrepTimeDB client protocol");
+    }
 
-export function createGrepTimeBunMysqlDialect(sql: BunSql): SqlDialect {
-  return createBunMysqlDialect(sql, GrepTimeMySQLDialect);
+    this.executor = dialect.executor;
+    this.config = dialect.config;
+  }
 }

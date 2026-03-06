@@ -4,7 +4,7 @@ import type { SQL as BunSql } from "bun";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 
-export const SQLiteDialect: DialectConfig = {
+export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   types: {
     varchar: "TEXT",
@@ -24,7 +24,19 @@ const mapParams = (params?: unknown[]) =>
 
 const MAX_CACHE_SIZE = 100;
 
-export function createBetterSqlite3Dialect(db: BetterSqlite3Database): SqlDialect {
+function isBetterSqlite3(client: any): client is BetterSqlite3Database {
+  return typeof client.prepare === "function" && typeof client.transaction === "function";
+}
+
+function isLibsql(client: any): client is LibsqlClient {
+  return typeof client.execute === "function" && typeof client.batch === "function";
+}
+
+function isBunSql(client: any): client is BunSql {
+  return typeof client.unsafe === "function" && typeof client.transaction === "function";
+}
+
+function createBetterSqlite3Executor(db: BetterSqlite3Database): QueryExecutor {
   const cache = new Map<string, Statement>();
 
   const getStmt = (sql: string) => {
@@ -53,17 +65,14 @@ export function createBetterSqlite3Dialect(db: BetterSqlite3Database): SqlDialec
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const res = db.transaction(() => fn(executor))();
-      return Promise.resolve(res);
+      return Promise.resolve(res as T);
     },
   };
 
-  return {
-    executor,
-    config: SQLiteDialect,
-  };
+  return executor;
 }
 
-export function createLibsqlDialect(client: LibsqlClient): SqlDialect {
+function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(sql: string, params?: unknown[]) {
       const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
@@ -104,13 +113,10 @@ export function createLibsqlDialect(client: LibsqlClient): SqlDialect {
     },
   };
 
-  return {
-    executor,
-    config: SQLiteDialect,
-  };
+  return executor;
 }
 
-export function createBunSqliteDialect(sql: BunSql): SqlDialect {
+function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(query, params)) as T[];
@@ -128,8 +134,24 @@ export function createBunSqliteDialect(sql: BunSql): SqlDialect {
       return await sql.transaction(() => fn(executor));
     },
   };
-  return {
-    executor,
-    config: SQLiteDialect,
-  };
+  return executor;
+}
+
+export class SqliteDialect implements SqlDialect {
+  readonly executor: QueryExecutor;
+  readonly config: DialectConfig = SQLiteDialectConfig;
+
+  constructor(options: { client: BetterSqlite3Database | LibsqlClient | BunSql | any }) {
+    const { client } = options;
+
+    if (isBetterSqlite3(client)) {
+      this.executor = createBetterSqlite3Executor(client);
+    } else if (isLibsql(client)) {
+      this.executor = createLibsqlExecutor(client);
+    } else if (isBunSql(client)) {
+      this.executor = createBunSqliteExecutor(client);
+    } else {
+      throw new Error("Unsupported SQLite client");
+    }
+  }
 }

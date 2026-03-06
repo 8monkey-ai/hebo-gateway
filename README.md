@@ -402,15 +402,16 @@ Supports `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage, createBetterSqlite3Dialect } from "@hebo-ai/gateway/storage/sql";
+import { SqlStorage, SqliteDialect } from "@hebo-ai/gateway/storage/sql";
 import Database from "better-sqlite3";
 
 // 1. Setup connection
 const db = new Database("conv.db");
 
 // 2. Setup storage
-const dialect = createBetterSqlite3Dialect(db);
-const storage = createSqlStorage(dialect);
+const storage = new SqlStorage({
+  dialect: new SqliteDialect({ client: db }),
+});
 await storage.migrate(); // Creates tables & indexes
 
 const gw = gateway({ storage });
@@ -422,7 +423,7 @@ Supports `pg`, `postgres.js`, and `Bun.SQL`. Includes optimized `JSONB` storage 
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage, createPgDialect } from "@hebo-ai/gateway/storage/sql";
+import { SqlStorage, PostgresDialect } from "@hebo-ai/gateway/storage/sql";
 import { Pool } from "pg";
 
 // 1. Setup pool
@@ -431,8 +432,9 @@ const pool = new Pool({
 });
 
 // 2. Setup storage
-const dialect = createPgDialect(pool);
-const storage = createSqlStorage(dialect);
+const storage = new SqlStorage({
+  dialect: new PostgresDialect({ client: pool }),
+});
 await storage.migrate();
 
 const gw = gateway({ storage });
@@ -444,15 +446,16 @@ Supports `mysql2` and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage, createMysql2Dialect } from "@hebo-ai/gateway/storage/sql";
+import { SqlStorage, MysqlDialect } from "@hebo-ai/gateway/storage/sql";
 import mysql from "mysql2/promise";
 
 // 1. Setup pool
 const pool = mysql.createPool(process.env.DATABASE_URL);
 
 // 2. Setup storage
-const dialect = createMysql2Dialect(pool);
-const storage = createSqlStorage(dialect);
+const storage = new SqlStorage({
+  dialect: new MysqlDialect({ client: pool }),
+});
 await storage.migrate();
 
 const gw = gateway({ storage });
@@ -464,11 +467,12 @@ Specialized adapter for GrepTimeDB.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage, createGrepTimeBunPostgresDialect } from "@hebo-ai/gateway/storage/sql";
+import { SqlStorage, GrepTimeDialect } from "@hebo-ai/gateway/storage/sql";
 import { sql } from "bun";
 
-const dialect = createGrepTimeBunPostgresDialect(sql);
-const storage = createSqlStorage(dialect);
+const storage = new SqlStorage({
+  dialect: new GrepTimeDialect({ client: sql }),
+});
 await storage.migrate();
 
 const gw = gateway({ storage });
