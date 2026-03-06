@@ -463,7 +463,7 @@ const gw = gateway({ storage });
 
 ##### GrepTimeDB
 
-Specialized adapter for GrepTimeDB.
+Specialized adapter for GrepTimeDB (Postgres protocol).
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
