@@ -80,7 +80,7 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
     },
     async get<T>(sql: string, params?: unknown[]) {
       const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
-      return rs.rows[0] as unknown as T | undefined;
+      return rs.rows?.[0] as unknown as T | undefined;
     },
     async run(sql: string, params?: unknown[]) {
       const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
@@ -96,7 +96,7 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
           },
           async get<R>(sql: string, params?: unknown[]) {
             const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
-            return rs.rows[0] as unknown as R | undefined;
+            return rs.rows?.[0] as unknown as R | undefined;
           },
           async run(sql: string, params?: unknown[]) {
             const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
@@ -123,7 +123,7 @@ function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
     },
     async get<T>(query: string, params?: unknown[]) {
       const rows = await sql.unsafe(query, params);
-      return rows[0] as T | undefined;
+      return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
       const res = await sql.unsafe(query, params);

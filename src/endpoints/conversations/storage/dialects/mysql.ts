@@ -44,7 +44,7 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
     },
     async get<T>(sql: string, params?: unknown[]) {
       const [rows] = await pool.execute(sql, mapParams(params));
-      return (rows as RowDataPacket[])[0] as T | undefined;
+      return (rows as RowDataPacket[])?.[0] as T | undefined;
     },
     async run(sql: string, params?: unknown[]) {
       const [res] = await pool.execute(sql, mapParams(params));
@@ -62,7 +62,7 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
           },
           async get<R>(sql: string, params?: unknown[]) {
             const [rows] = await conn.execute(sql, mapParams(params));
-            return (rows as RowDataPacket[])[0] as R | undefined;
+            return (rows as RowDataPacket[])?.[0] as R | undefined;
           },
           async run(sql: string, params?: unknown[]) {
             const [res] = await conn.execute(sql, mapParams(params));
@@ -92,7 +92,7 @@ function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
     },
     async get<T>(query: string, params?: unknown[]) {
       const rows = await sql.unsafe(query, params);
-      return rows[0] as T | undefined;
+      return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
       const res = await sql.unsafe(query, params);

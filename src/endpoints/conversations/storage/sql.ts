@@ -22,7 +22,12 @@ interface BaseRow {
  */
 function mapRow<T>(row: BaseRow): T {
   const parsedData = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
-  const parsedMetadata = typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata;
+  let parsedMetadata = row.metadata;
+
+  if (typeof parsedMetadata === "string") {
+    parsedMetadata =
+      parsedMetadata === "" || parsedMetadata === "{}" ? {} : JSON.parse(parsedMetadata);
+  }
 
   const out: Record<string, unknown> = {
     id: row.id,

@@ -54,7 +54,7 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
     },
     async get<T>(sql: string, params?: unknown[]) {
       const res = await pool.query({ ...getQuery(sql), values: params });
-      return res.rows[0] as T | undefined;
+      return res.rows?.[0] as T | undefined;
     },
     async run(sql: string, params?: unknown[]) {
       const res = await pool.query({ ...getQuery(sql), values: params });
@@ -71,7 +71,7 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
           },
           async get<R>(sql: string, params?: unknown[]) {
             const res = await client.query({ ...getQuery(sql), values: params });
-            return res.rows[0] as R | undefined;
+            return res.rows?.[0] as R | undefined;
           },
           async run(sql: string, params?: unknown[]) {
             const res = await client.query({ ...getQuery(sql), values: params });
@@ -106,7 +106,7 @@ function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
         query,
         (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
       );
-      return rows[0] as T | undefined;
+      return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
       const res = await sql.unsafe(query, (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1]);
@@ -127,7 +127,7 @@ function createBunPostgresExecutor(sql: BunSql): QueryExecutor {
     },
     async get<T>(query: string, params?: unknown[]) {
       const rows = await sql.unsafe(query, params);
-      return rows[0] as T | undefined;
+      return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
       const res = await sql.unsafe(query, params);
