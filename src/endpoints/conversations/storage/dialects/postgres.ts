@@ -16,19 +16,37 @@ export const PostgresDialect: DialectConfig = {
   },
 };
 
+const MAX_CACHE_SIZE = 100;
+
 export function createPgDialect(pool: PgPool, config: DialectConfig = PostgresDialect): SqlDialect {
+  const cache = new Map<string, string>();
+  let count = 0;
+
+  const getQuery = (sql: string) => {
+    let name = cache.get(sql);
+    if (!name) {
+      if (cache.size >= MAX_CACHE_SIZE) {
+        const firstKey = cache.keys().next().value;
+        if (firstKey !== undefined) cache.delete(firstKey);
+      }
+      name = `q_${count++}`;
+      cache.set(sql, name);
+    }
+    return { name, text: sql };
+  };
+
   return {
     executor: {
       async all<T>(sql: string, params?: unknown[]) {
-        const res = await pool.query(sql, params);
+        const res = await pool.query({ ...getQuery(sql), values: params });
         return res.rows as T[];
       },
       async get<T>(sql: string, params?: unknown[]) {
-        const res = await pool.query(sql, params);
+        const res = await pool.query({ ...getQuery(sql), values: params });
         return res.rows[0] as T | undefined;
       },
       async run(sql: string, params?: unknown[]) {
-        const res = await pool.query(sql, params);
+        const res = await pool.query({ ...getQuery(sql), values: params });
         return { changes: Number(res.rowCount ?? 0) };
       },
     },

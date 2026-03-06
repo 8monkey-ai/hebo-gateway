@@ -35,15 +35,15 @@ export function createMysql2Dialect(
   return {
     executor: {
       async all<T>(sql: string, params?: unknown[]) {
-        const [rows] = await pool.query(sql, mapParams(params));
+        const [rows] = await pool.execute(sql, mapParams(params));
         return rows as T[];
       },
       async get<T>(sql: string, params?: unknown[]) {
-        const [rows] = await pool.query(sql, mapParams(params));
+        const [rows] = await pool.execute(sql, mapParams(params));
         return (rows as RowDataPacket[])[0] as T | undefined;
       },
       async run(sql: string, params?: unknown[]) {
-        const [res] = await pool.query(sql, mapParams(params));
+        const [res] = await pool.execute(sql, mapParams(params));
         const header = res as unknown as ResultSetHeader;
         return { changes: Number(header.affectedRows ?? 0) };
       },

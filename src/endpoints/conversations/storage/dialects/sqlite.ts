@@ -1,5 +1,5 @@
 import type { Client as LibsqlClient } from "@libsql/client";
-import type { Database as BetterSqlite3Database } from "better-sqlite3";
+import type { Database as BetterSqlite3Database, Statement } from "better-sqlite3";
 import type { SQL as BunSql } from "bun";
 
 import type { DialectConfig, SqlDialect } from "./types";
@@ -22,17 +22,34 @@ const mapParams = (params?: unknown[]) =>
     | null
   )[];
 
+const MAX_CACHE_SIZE = 100;
+
 export function createBetterSqlite3Dialect(db: BetterSqlite3Database): SqlDialect {
+  const cache = new Map<string, Statement>();
+
+  const getStmt = (sql: string) => {
+    let stmt = cache.get(sql);
+    if (!stmt) {
+      if (cache.size >= MAX_CACHE_SIZE) {
+        const firstKey = cache.keys().next().value;
+        if (firstKey !== undefined) cache.delete(firstKey);
+      }
+      stmt = db.prepare(sql);
+      cache.set(sql, stmt);
+    }
+    return stmt;
+  };
+
   return {
     executor: {
       all<T>(sql: string, params?: unknown[]) {
-        return Promise.resolve(db.prepare(sql).all(...(mapParams(params) ?? [])) as T[]);
+        return Promise.resolve(getStmt(sql).all(...(mapParams(params) ?? [])) as T[]);
       },
       get<T>(sql: string, params?: unknown[]) {
-        return Promise.resolve(db.prepare(sql).get(...(mapParams(params) ?? [])) as T | undefined);
+        return Promise.resolve(getStmt(sql).get(...(mapParams(params) ?? [])) as T | undefined);
       },
       run(sql: string, params?: unknown[]) {
-        const info = db.prepare(sql).run(...(mapParams(params) ?? []));
+        const info = getStmt(sql).run(...(mapParams(params) ?? []));
         return Promise.resolve({ changes: info.changes });
       },
     },
