@@ -402,8 +402,7 @@ Supports `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
-import { createBetterSqlite3Dialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/sqlite";
+import { createSqlStorage, createBetterSqlite3Dialect } from "@hebo-ai/gateway/storage/sql";
 import Database from "better-sqlite3";
 
 // 1. Setup connection
@@ -423,8 +422,7 @@ Supports `pg`, `postgres.js`, and `Bun.SQL`. Includes optimized `JSONB` storage 
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
-import { createPgDialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/postgres";
+import { createSqlStorage, createPgDialect } from "@hebo-ai/gateway/storage/sql";
 import { Pool } from "pg";
 
 // 1. Setup pool
@@ -446,8 +444,7 @@ Supports `mysql2` and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
-import { createMysql2Dialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/mysql";
+import { createSqlStorage, createMysql2Dialect } from "@hebo-ai/gateway/storage/sql";
 import mysql from "mysql2/promise";
 
 // 1. Setup pool
@@ -467,8 +464,7 @@ Specialized adapter for GrepTimeDB.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
-import { createSqlStorage } from "@hebo-ai/gateway/endpoints/conversations/storage/sql";
-import { createGrepTimeBunPostgresDialect } from "@hebo-ai/gateway/endpoints/conversations/storage/dialects/greptime";
+import { createSqlStorage, createGrepTimeBunPostgresDialect } from "@hebo-ai/gateway/storage/sql";
 import { sql } from "bun";
 
 const dialect = createGrepTimeBunPostgresDialect(sql);
