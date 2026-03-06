@@ -87,7 +87,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     reasoning,
     prompt_cache_key,
     prompt_cache_retention,
-    cached_content,
+    extra_body,
     cache_control,
     frequency_penalty,
     presence_penalty,
@@ -103,7 +103,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     parsePromptCachingOptions(
       prompt_cache_key,
       prompt_cache_retention,
-      cached_content,
+      extra_body?.google?.cached_content,
       cache_control,
     ),
   );

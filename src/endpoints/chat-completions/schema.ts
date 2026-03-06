@@ -254,7 +254,17 @@ const ChatCompletionsInputsSchema = z.object({
   prompt_cache_key: z.string().optional(),
   prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
   // Extension origin: Gemini explicit cache handle
-  cached_content: z.string().optional().meta({ extension: true }),
+  // FUTURE: generalize extra_body handling
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+  extra_body: z
+    .object({
+      google: z
+        .object({
+          cached_content: z.string().optional().meta({ extension: true }),
+        })
+        .optional(),
+    })
+    .optional(),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter

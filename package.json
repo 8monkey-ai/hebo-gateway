@@ -1,6 +1,6 @@
 {
   "name": "@hebo-ai/gateway",
-  "version": "0.6.1",
+  "version": "0.6.2-rc0",
   "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI-compatible /chat/completions, /embeddings & /models.",
   "keywords": [
     "ai",
@@ -170,7 +170,7 @@
     "@ai-sdk/google-vertex": "^4.0.80",
     "@ai-sdk/groq": "^3.0.29",
     "@ai-sdk/openai": "^3.0.41",
-    "@aws-sdk/credential-providers": "^3.1002.0",
+    "@aws-sdk/credential-providers": "^3.1003.0",
     "@langfuse/otel": "^4.6.1",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@opentelemetry/api": "^1.9.0",

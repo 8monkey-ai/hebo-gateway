@@ -569,7 +569,7 @@ Accepted request fields:
 
 - `prompt_cache_key` + `prompt_cache_retention` (OpenAI style)
 - `cache_control` (OpenRouter / Vercel / Claude style)
-- `cached_content` (Gemini style)
+- `extra_body { google: { cached_content } }` (Gemini style)
 
 ```json
 {
