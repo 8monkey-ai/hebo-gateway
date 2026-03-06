@@ -156,7 +156,9 @@
     "lint": "oxlint",
     "lint:staged": "oxlint --fix",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "check": "bun lint && bun format:check && bun typecheck",
+    "fix": "bun lint:staged && bun format:staged"
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.8",
