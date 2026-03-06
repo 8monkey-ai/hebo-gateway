@@ -248,23 +248,17 @@ export class SqlStorage implements ConversationStorage {
     const { placeholder } = this.config;
 
     const columns = ["id", "conversation_id", "object", "created_at", "type", "data"];
-    const placeholders: string[] = [];
-    const params: unknown[] = [];
+    const placeholders = columns.map((_, i) => placeholder(i)).join(", ");
+    const sql = `INSERT INTO conversation_items (${columns.join(", ")}) VALUES (${placeholders})`;
 
-    for (const item of items) {
-      const rowPlaceholders: string[] = [];
-      const { id, object, created_at, type, ...rest } = item;
-
-      const values = [id, convId, object, created_at, type, rest];
-      for (const val of values) {
-        rowPlaceholders.push(placeholder(params.length));
-        params.push(val);
+    await this.executor.transaction(async (tx) => {
+      for (const item of items) {
+        const { id, object, created_at, type, ...rest } = item;
+        const params = [id, convId, object, created_at, type, rest];
+        // eslint-disable-next-line no-await-in-loop
+        await tx.run(sql, params);
       }
-      placeholders.push(`(${rowPlaceholders.join(", ")})`);
-    }
-
-    const sql = `INSERT INTO conversation_items (${columns.join(", ")}) VALUES ${placeholders.join(", ")}`;
-    await this.executor.run(sql, params);
+    });
   }
 }
 

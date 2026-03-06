@@ -2,7 +2,7 @@ import type { SQL as BunSql } from "bun";
 import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql } from "postgres";
 
-import type { DialectConfig, SqlDialect } from "./types";
+import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 
 export type { PostgresJsSql, PgPool };
 
@@ -35,21 +35,51 @@ export function createPgDialect(pool: PgPool, config: DialectConfig = PostgresDi
     return { name, text: sql };
   };
 
-  return {
-    executor: {
-      async all<T>(sql: string, params?: unknown[]) {
-        const res = await pool.query({ ...getQuery(sql), values: params });
-        return res.rows as T[];
-      },
-      async get<T>(sql: string, params?: unknown[]) {
-        const res = await pool.query({ ...getQuery(sql), values: params });
-        return res.rows[0] as T | undefined;
-      },
-      async run(sql: string, params?: unknown[]) {
-        const res = await pool.query({ ...getQuery(sql), values: params });
-        return { changes: Number(res.rowCount ?? 0) };
-      },
+  const executor: QueryExecutor = {
+    async all<T>(sql: string, params?: unknown[]) {
+      const res = await pool.query({ ...getQuery(sql), values: params });
+      return res.rows as T[];
     },
+    async get<T>(sql: string, params?: unknown[]) {
+      const res = await pool.query({ ...getQuery(sql), values: params });
+      return res.rows[0] as T | undefined;
+    },
+    async run(sql: string, params?: unknown[]) {
+      const res = await pool.query({ ...getQuery(sql), values: params });
+      return { changes: Number(res.rowCount ?? 0) };
+    },
+    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      const client = await pool.connect();
+      await client.query("BEGIN");
+      try {
+        const result = await fn({
+          async all<R>(sql: string, params?: unknown[]) {
+            const res = await client.query({ ...getQuery(sql), values: params });
+            return res.rows as R[];
+          },
+          async get<R>(sql: string, params?: unknown[]) {
+            const res = await client.query({ ...getQuery(sql), values: params });
+            return res.rows[0] as R | undefined;
+          },
+          async run(sql: string, params?: unknown[]) {
+            const res = await client.query({ ...getQuery(sql), values: params });
+            return { changes: Number(res.rowCount ?? 0) };
+          },
+          transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(executor),
+        } as QueryExecutor);
+        await client.query("COMMIT");
+        return result;
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  };
+
+  return {
+    executor,
     config,
   };
 }
@@ -58,30 +88,31 @@ export function createPostgresJsDialect(
   sql: PostgresJsSql,
   config: DialectConfig = PostgresDialect,
 ): SqlDialect {
-  return {
-    executor: {
-      async all<T>(query: string, params?: unknown[]) {
-        return (await sql.unsafe(
-          query,
-          (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
-        )) as T[];
-      },
-      async get<T>(query: string, params?: unknown[]) {
-        const rows = await sql.unsafe(
-          query,
-          (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
-        );
-        return rows[0] as T | undefined;
-      },
-      async run(query: string, params?: unknown[]) {
-        const res = await sql.unsafe(
-          query,
-          (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
-        );
-        const result = res as unknown as { count: number };
-        return { changes: Number(result.count ?? 0) };
-      },
+  const executor: QueryExecutor = {
+    async all<T>(query: string, params?: unknown[]) {
+      return (await sql.unsafe(
+        query,
+        (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+      )) as T[];
     },
+    async get<T>(query: string, params?: unknown[]) {
+      const rows = await sql.unsafe(
+        query,
+        (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+      );
+      return rows[0] as T | undefined;
+    },
+    async run(query: string, params?: unknown[]) {
+      const res = await sql.unsafe(query, (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1]);
+      const result = res as unknown as { count: number };
+      return { changes: Number(result.count ?? 0) };
+    },
+    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
+      return (await sql.begin(() => fn(executor))) as T;
+    },
+  };
+  return {
+    executor,
     config,
   };
 }
@@ -90,21 +121,25 @@ export function createBunPostgresDialect(
   sql: BunSql,
   config: DialectConfig = PostgresDialect,
 ): SqlDialect {
-  return {
-    executor: {
-      async all<T>(query: string, params?: unknown[]) {
-        return (await sql.unsafe(query, params)) as T[];
-      },
-      async get<T>(query: string, params?: unknown[]) {
-        const rows = await sql.unsafe(query, params);
-        return rows[0] as T | undefined;
-      },
-      async run(query: string, params?: unknown[]) {
-        const res = await sql.unsafe(query, params);
-        const result = res as unknown as { affectedRows?: number; count?: number; length: number };
-        return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
-      },
+  const executor: QueryExecutor = {
+    async all<T>(query: string, params?: unknown[]) {
+      return (await sql.unsafe(query, params)) as T[];
     },
+    async get<T>(query: string, params?: unknown[]) {
+      const rows = await sql.unsafe(query, params);
+      return rows[0] as T | undefined;
+    },
+    async run(query: string, params?: unknown[]) {
+      const res = await sql.unsafe(query, params);
+      const result = res as unknown as { affectedRows?: number; count?: number; length: number };
+      return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
+    },
+    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      return await sql.transaction(() => fn(executor));
+    },
+  };
+  return {
+    executor,
     config,
   };
 }

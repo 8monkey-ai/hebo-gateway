@@ -2,7 +2,7 @@ import type { Client as LibsqlClient } from "@libsql/client";
 import type { Database as BetterSqlite3Database, Statement } from "better-sqlite3";
 import type { SQL as BunSql } from "bun";
 
-import type { DialectConfig, SqlDialect } from "./types";
+import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 
 export const SQLiteDialect: DialectConfig = {
   placeholder: () => "?",
@@ -40,59 +40,96 @@ export function createBetterSqlite3Dialect(db: BetterSqlite3Database): SqlDialec
     return stmt;
   };
 
-  return {
-    executor: {
-      all<T>(sql: string, params?: unknown[]) {
-        return Promise.resolve(getStmt(sql).all(...(mapParams(params) ?? [])) as T[]);
-      },
-      get<T>(sql: string, params?: unknown[]) {
-        return Promise.resolve(getStmt(sql).get(...(mapParams(params) ?? [])) as T | undefined);
-      },
-      run(sql: string, params?: unknown[]) {
-        const info = getStmt(sql).run(...(mapParams(params) ?? []));
-        return Promise.resolve({ changes: info.changes });
-      },
+  const executor: QueryExecutor = {
+    all<T>(sql: string, params?: unknown[]) {
+      return Promise.resolve(getStmt(sql).all(...(mapParams(params) ?? [])) as T[]);
     },
+    get<T>(sql: string, params?: unknown[]) {
+      return Promise.resolve(getStmt(sql).get(...(mapParams(params) ?? [])) as T | undefined);
+    },
+    run(sql: string, params?: unknown[]) {
+      const info = getStmt(sql).run(...(mapParams(params) ?? []));
+      return Promise.resolve({ changes: info.changes });
+    },
+    transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      const res = db.transaction(() => fn(executor))();
+      return Promise.resolve(res);
+    },
+  };
+
+  return {
+    executor,
     config: SQLiteDialect,
   };
 }
 
 export function createLibsqlDialect(client: LibsqlClient): SqlDialect {
-  return {
-    executor: {
-      async all<T>(sql: string, params?: unknown[]) {
-        const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
-        return rs.rows as unknown as T[];
-      },
-      async get<T>(sql: string, params?: unknown[]) {
-        const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
-        return rs.rows[0] as unknown as T | undefined;
-      },
-      async run(sql: string, params?: unknown[]) {
-        const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
-        return { changes: Number(rs.rowsAffected) };
-      },
+  const executor: QueryExecutor = {
+    async all<T>(sql: string, params?: unknown[]) {
+      const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
+      return rs.rows as unknown as T[];
     },
+    async get<T>(sql: string, params?: unknown[]) {
+      const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
+      return rs.rows[0] as unknown as T | undefined;
+    },
+    async run(sql: string, params?: unknown[]) {
+      const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
+      return { changes: Number(rs.rowsAffected) };
+    },
+    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      const tx = await client.transaction("deferred");
+      try {
+        const result = await fn({
+          async all<R>(sql: string, params?: unknown[]) {
+            const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
+            return rs.rows as unknown as R[];
+          },
+          async get<R>(sql: string, params?: unknown[]) {
+            const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
+            return rs.rows[0] as unknown as R | undefined;
+          },
+          async run(sql: string, params?: unknown[]) {
+            const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
+            return { changes: Number(rs.rowsAffected) };
+          },
+          transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(executor),
+        } as QueryExecutor);
+        await tx.commit();
+        return result;
+      } catch (err) {
+        await tx.rollback();
+        throw err;
+      }
+    },
+  };
+
+  return {
+    executor,
     config: SQLiteDialect,
   };
 }
 
 export function createBunSqliteDialect(sql: BunSql): SqlDialect {
-  return {
-    executor: {
-      async all<T>(query: string, params?: unknown[]) {
-        return (await sql.unsafe(query, params)) as T[];
-      },
-      async get<T>(query: string, params?: unknown[]) {
-        const rows = await sql.unsafe(query, params);
-        return rows[0] as T | undefined;
-      },
-      async run(query: string, params?: unknown[]) {
-        const res = await sql.unsafe(query, params);
-        const result = res as unknown as { affectedRows?: number; count?: number; length: number };
-        return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
-      },
+  const executor: QueryExecutor = {
+    async all<T>(query: string, params?: unknown[]) {
+      return (await sql.unsafe(query, params)) as T[];
     },
+    async get<T>(query: string, params?: unknown[]) {
+      const rows = await sql.unsafe(query, params);
+      return rows[0] as T | undefined;
+    },
+    async run(query: string, params?: unknown[]) {
+      const res = await sql.unsafe(query, params);
+      const result = res as unknown as { affectedRows?: number; count?: number; length: number };
+      return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
+    },
+    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      return await sql.transaction(() => fn(executor));
+    },
+  };
+  return {
+    executor,
     config: SQLiteDialect,
   };
 }

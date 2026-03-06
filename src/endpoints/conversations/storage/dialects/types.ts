@@ -2,6 +2,7 @@ export interface QueryExecutor {
   all<T>(sql: string, params?: unknown[]): Promise<T[]>;
   get<T>(sql: string, params?: unknown[]): Promise<T | undefined>;
   run(sql: string, params?: unknown[]): Promise<{ changes: number }>;
+  transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T>;
 }
 
 export interface DialectConfig {
