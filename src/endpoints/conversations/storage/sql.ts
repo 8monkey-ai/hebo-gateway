@@ -1,16 +1,18 @@
+import { v7 as uuidv7 } from "uuid";
+
 import type {
   Conversation,
   ConversationItem,
   ConversationItemListParams,
   Metadata,
+  ResponseInputItem,
 } from "../schema";
 import type { ConversationStorage } from "./types";
 import type { SqlDialect } from "./dialects/types";
 
 interface BaseRow {
   id: string;
-  object: string;
-  created_at: number;
+  created_at: number | Date;
   metadata?: string | Record<string, unknown> | null;
   conversation_id?: string;
   type?: string;
@@ -20,7 +22,7 @@ interface BaseRow {
 /**
  * Maps a raw database row to a clean conversation or item object.
  */
-function mapRow<T>(row: BaseRow): T {
+function mapRow<T>(row: BaseRow, objectType: string): T {
   const parsedData = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
   let parsedMetadata = row.metadata;
 
@@ -29,10 +31,16 @@ function mapRow<T>(row: BaseRow): T {
       parsedMetadata === "" || parsedMetadata === "{}" ? {} : JSON.parse(parsedMetadata);
   }
 
+  // Standardize timestamp to OpenAI-compliant SECONDS.
+  const createdAt =
+    row.created_at instanceof Date
+      ? Math.floor(row.created_at.getTime() / 1000)
+      : Number(row.created_at);
+
   const out: Record<string, unknown> = {
     id: row.id,
-    object: row.object,
-    created_at: row.created_at,
+    object: objectType, // Reconstructed in app layer
+    created_at: createdAt,
   };
 
   if (row.type) out["type"] = row.type;
@@ -60,72 +68,81 @@ export class SqlStorage implements ConversationStorage {
   }
 
   async migrate() {
-    const { types, partitioned } = this.config;
+    const { types } = this.config;
+    const isGreptime = types.index === "TIME";
+
     const varchar = (len: number) =>
       types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`;
-    const timeIndex = types.index === "TIME" ? ", TIME INDEX (created_at)" : "";
-
-    const getPartitionSql = (column: string) => {
-      if (!partitioned) return "";
-      const hex = "123456789abcdef".split("");
-      const ranges = hex.map((h) => `${column} < '${h}'`).join(", ");
-      return `PARTITION ON COLUMNS (${column}) (${ranges})`;
-    };
+    const timeIndex = isGreptime ? ", TIME INDEX (created_at)" : "";
+    const createdAtDefault = types.timestampNow ? `DEFAULT ${types.timestampNow}` : "";
 
     const createIndex = async (table: string, name: string, cols: string[], seq = false) => {
-      if (types.index === "TIME") return;
+      if (isGreptime) return;
       const using = seq && types.index !== "B-TREE" ? `USING ${types.index}` : "";
       await this.executor.run(
         `CREATE INDEX IF NOT EXISTS ${name} ON ${table} ${using} (${cols.join(", ")})`,
       );
     };
 
+    // Greptime specific column options
+    const skippingIdx = isGreptime ? "SKIPPING INDEX" : "";
+
     await this.executor.run(`
       CREATE TABLE IF NOT EXISTS conversations (
         id ${varchar(255)},
-        object ${varchar(64)},
-        created_at ${types.timestamp},
+        created_at ${types.timestamp} ${createdAtDefault},
         metadata ${types.json},
         PRIMARY KEY (id)
         ${timeIndex}
       )
-      ${getPartitionSql("id")}
     `);
 
     await this.executor.run(`
       CREATE TABLE IF NOT EXISTS conversation_items (
-        id ${varchar(255)},
+        id ${varchar(255)} ${skippingIdx},
         conversation_id ${varchar(255)},
-        object ${varchar(64)},
-        created_at ${types.timestamp},
+        created_at ${types.timestamp} ${createdAtDefault},
         type ${varchar(64)},
         data ${types.json},
-        PRIMARY KEY (conversation_id, id)
+        PRIMARY KEY (conversation_id${isGreptime ? "" : ", id"})
         ${timeIndex}
       )
-      ${getPartitionSql("conversation_id")}
     `);
 
-    await createIndex("conversations", "idx_conversations_created_at", ["created_at DESC"], true);
-    await createIndex("conversation_items", "idx_items_conv_id", [
-      "conversation_id",
-      "created_at DESC",
-      "id DESC",
-    ]);
+    if (!isGreptime) {
+      await createIndex("conversations", "idx_conversations_created_at", ["created_at DESC"], true);
+      await createIndex("conversation_items", "idx_items_conv_id", [
+        "conversation_id",
+        "created_at DESC",
+        "id DESC",
+      ]);
+    }
   }
 
-  async createConversation(
-    conversation: Conversation,
-    items?: ConversationItem[],
-  ): Promise<Conversation> {
+  async createConversation(params: {
+    metadata?: Metadata;
+    items?: ResponseInputItem[];
+  }): Promise<Conversation> {
     const { placeholder: p } = this.config;
-    await this.executor.run(
-      `INSERT INTO conversations (id, object, created_at, metadata) VALUES (${p(0)}, ${p(1)}, ${p(2)}, ${p(3)})`,
-      [conversation.id, conversation.object, conversation.created_at, conversation.metadata],
-    );
+    const id = uuidv7();
+    const metadata = params.metadata ?? null;
+    const now = Math.floor(Date.now() / 1000);
 
-    if (items?.length) {
-      await this.insertItems(conversation.id, items);
+    // Omit 'object' and 'created_at' to use database-level defaults
+    await this.executor.run(`INSERT INTO conversations (id, metadata) VALUES (${p(0)}, ${p(1)})`, [
+      id,
+      metadata,
+    ]);
+
+    const conversation: Conversation = {
+      id,
+      object: "conversation",
+      created_at: now,
+      metadata,
+    };
+
+    if (params.items?.length) {
+      await this.addItems(id, params.items);
     }
 
     return conversation;
@@ -136,7 +153,7 @@ export class SqlStorage implements ConversationStorage {
     const row = await this.executor.get<BaseRow>(`SELECT * FROM conversations WHERE id = ${p(0)}`, [
       id,
     ]);
-    return row ? mapRow<Conversation>(row) : undefined;
+    return row ? mapRow<Conversation>(row, "conversation") : undefined;
   }
 
   async updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined> {
@@ -158,13 +175,38 @@ export class SqlStorage implements ConversationStorage {
 
   async addItems(
     conversationId: string,
-    items: ConversationItem[],
+    items: ResponseInputItem[],
   ): Promise<ConversationItem[] | undefined> {
     const conversation = await this.getConversation(conversationId);
     if (!conversation) return undefined;
 
-    await this.insertItems(conversationId, items);
-    return items;
+    const { placeholder: p } = this.config;
+    const columns = ["id", "conversation_id", "type", "data"];
+    const placeholders = columns.map((_, i) => p(i)).join(", ");
+    const sql = `INSERT INTO conversation_items (${columns.join(", ")}) VALUES (${placeholders})`;
+
+    const now = Math.floor(Date.now() / 1000);
+    const results: ConversationItem[] = [];
+
+    await this.executor.transaction(async (tx) => {
+      for (const input of items) {
+        const { id: inputId, type, ...data } = input as { id?: string; type: string };
+        const id = inputId || uuidv7();
+
+        const params = [id, conversationId, type, data];
+        // eslint-disable-next-line no-await-in-loop
+        await tx.run(sql, params);
+
+        results.push({
+          ...input,
+          id,
+          object: "conversation.item",
+          created_at: now,
+        } as ConversationItem);
+      }
+    });
+
+    return results;
   }
 
   async getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined> {
@@ -173,7 +215,7 @@ export class SqlStorage implements ConversationStorage {
       `SELECT * FROM conversation_items WHERE id = ${p(0)} AND conversation_id = ${p(1)}`,
       [itemId, conversationId],
     );
-    return row ? mapRow<ConversationItem>(row) : undefined;
+    return row ? mapRow<ConversationItem>(row, "conversation.item") : undefined;
   }
 
   async deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined> {
@@ -196,46 +238,23 @@ export class SqlStorage implements ConversationStorage {
     const op = isAsc ? ">" : "<";
     const dir = isAsc ? "ASC" : "DESC";
 
-    const cursor = after ? await this.getItem(conversationId, after) : undefined;
-
-    // Build the query modularly to avoid repetition while keeping SQL static for caching
+    // Since we use UUIDv7, sorting by ID is equivalent to sorting by time.
+    // This allows for simple and efficient keyset pagination.
     const sqlParts = [`SELECT * FROM conversation_items WHERE conversation_id = ${p(0)}`];
-    if (cursor) {
-      sqlParts.push(
-        `AND (created_at ${op} ${p(1)} OR (created_at = ${p(2)} AND id ${op} ${p(3)}))`,
-      );
+    if (after) {
+      sqlParts.push(`AND id ${op} ${p(1)}`);
     }
-    sqlParts.push(`ORDER BY created_at ${dir}, id ${dir} LIMIT ${p(cursor ? 4 : 1)}`);
+    sqlParts.push(`ORDER BY id ${dir} LIMIT ${p(after ? 2 : 1)}`);
 
     const query = sqlParts.join(" ");
-    const args = cursor
-      ? [conversationId, cursor.created_at, cursor.created_at, cursor.id, limit]
-      : [conversationId, limit];
+    const args = after ? [conversationId, after, limit] : [conversationId, limit];
 
     const rows = await this.executor.all<BaseRow>(query, args);
-    const items: ConversationItem[] = [];
+    const results: ConversationItem[] = [];
     for (const row of rows) {
-      items.push(mapRow<ConversationItem>(row));
+      results.push(mapRow<ConversationItem>(row, "conversation.item"));
     }
-    return items;
-  }
-
-  private async insertItems(convId: string, items: ConversationItem[]) {
-    if (items.length === 0) return;
-    const { placeholder: p } = this.config;
-
-    const columns = ["id", "conversation_id", "object", "created_at", "type", "data"];
-    const placeholders = columns.map((_, i) => p(i)).join(", ");
-    const sql = `INSERT INTO conversation_items (${columns.join(", ")}) VALUES (${placeholders})`;
-
-    await this.executor.transaction(async (tx) => {
-      for (const item of items) {
-        const { id, object, created_at, type, ...data } = item;
-        const params = [id, convId, object, created_at, type, data];
-        // eslint-disable-next-line no-await-in-loop
-        await tx.run(sql, params);
-      }
-    });
+    return results;
   }
 }
 

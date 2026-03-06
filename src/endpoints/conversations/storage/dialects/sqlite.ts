@@ -9,7 +9,8 @@ export const SQLiteDialectConfig: DialectConfig = {
   types: {
     varchar: "TEXT",
     json: "TEXT",
-    timestamp: "INTEGER",
+    timestamp: "BIGINT",
+    timestampNow: "(unixepoch('now'))",
     index: "B-TREE",
   },
 };

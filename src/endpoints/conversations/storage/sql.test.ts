@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { SqliteDialect } from "./dialects/sqlite";
 import { SqlStorage } from "./sql";
-import { createConversation, createConversationItem } from "../utils";
 
 describe("SQLite Storage (In-Memory)", () => {
   test("should handle full lifecycle and complex queries", async () => {
@@ -12,52 +11,47 @@ describe("SQLite Storage (In-Memory)", () => {
     await storage.migrate();
 
     // 1. Create Conversation
-    const conv = createConversation({ metadata: { foo: "bar" } });
-    await storage.createConversation(conv);
+    const conv = await storage.createConversation({ metadata: { foo: "bar" } });
 
-    // 2. Add Items
-    const items = [
-      createConversationItem({ type: "message", role: "user", content: "Msg 1" }),
-      createConversationItem({ type: "message", role: "assistant", content: "Msg 2" }),
-      createConversationItem({ type: "message", role: "user", content: "Msg 3" }),
+    // 2. Add Items with sequential IDs to verify sorting/pagination
+    const itemInputs = [
+      { id: "item-1", type: "message" as const, role: "user" as const, content: "Msg 1" },
+      { id: "item-2", type: "message" as const, role: "assistant" as const, content: "Msg 2" },
+      { id: "item-3", type: "message" as const, role: "user" as const, content: "Msg 3" },
     ];
-    // Set explicit timestamps to ensure predictable ordering for pagination tests
-    items[0].created_at = 1000;
-    items[1].created_at = 2000;
-    items[2].created_at = 3000;
 
-    await storage.addItems(conv.id, items);
+    await storage.addItems(conv.id, itemInputs);
 
     // 3. Get Item
-    const item = await storage.getItem(conv.id, items[0].id);
+    const item = await storage.getItem(conv.id, "item-1");
     expect(item).toBeDefined();
-    expect(item?.id).toBe(items[0].id);
+    expect(item?.id).toBe("item-1");
     expect((item as any).content).toBe("Msg 1");
 
     // 4. List Items (Basic)
     const allItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
     expect(allItems?.length).toBe(3);
-    expect(allItems?.[0].id).toBe(items[0].id);
+    expect(allItems?.[0].id).toBe("item-1");
 
     // 5. List Items (Pagination: after)
     const page2 = await storage.listItems(conv.id, {
       limit: 2,
       order: "asc",
-      after: items[0].id,
+      after: "item-1",
     });
     expect(page2?.length).toBe(2);
-    expect(page2?.[0].id).toBe(items[1].id);
-    expect(page2?.[1].id).toBe(items[2].id);
+    expect(page2?.[0].id).toBe("item-2");
+    expect(page2?.[1].id).toBe("item-3");
 
     // 6. List Items (Pagination: order desc)
     const descItems = await storage.listItems(conv.id, { limit: 10, order: "desc" });
-    expect(descItems?.[0].id).toBe(items[2].id);
+    expect(descItems?.[0].id).toBe("item-3");
 
     // 7. Delete Item
-    await storage.deleteItem(conv.id, items[1].id);
+    await storage.deleteItem(conv.id, "item-2");
     const afterDeleteItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
     expect(afterDeleteItems?.length).toBe(2);
-    expect(afterDeleteItems?.find((i) => i.id === items[1].id)).toBeUndefined();
+    expect(afterDeleteItems?.find((i) => i.id === "item-2")).toBeUndefined();
 
     // 8. Delete Conversation
     const deleteRes = await storage.deleteConversation(conv.id);
@@ -74,16 +68,13 @@ describe("SQLite Storage (In-Memory)", () => {
     const storage = new SqlStorage({ dialect });
     await storage.migrate();
 
-    const conv = createConversation({});
-    await storage.createConversation(conv);
+    const conv = await storage.createConversation({});
 
-    const items = [
-      createConversationItem({ type: "message", role: "user", content: "Msg 1" }),
-      createConversationItem({ type: "message", role: "user", content: "Msg 2" }),
+    const itemInputs = [
+      { id: "item-1", type: "message" as const, role: "user" as const, content: "Msg 1" },
+      { id: "item-2", type: "message" as const, role: "user" as const, content: "Msg 2" },
     ];
-    items[0].created_at = 1000;
-    items[1].created_at = 2000;
-    await storage.addItems(conv.id, items);
+    await storage.addItems(conv.id, itemInputs);
 
     // Provide a non-existent 'after' ID
     const results = await storage.listItems(conv.id, {
@@ -92,9 +83,8 @@ describe("SQLite Storage (In-Memory)", () => {
       after: "non-existent-id",
     });
 
-    // Should return both items (ignoring 'after' filter)
-    expect(results?.length).toBe(2);
-    expect(results?.[0].id).toBe(items[0].id);
+    // Should return 0 items for an invalid cursor
+    expect(results?.length).toBe(0);
 
     db.close();
   });
@@ -106,14 +96,12 @@ describe("SQLite Storage (In-Memory)", () => {
     await storage.migrate();
 
     // Test null metadata
-    const convNull = createConversation({ metadata: null as any });
-    await storage.createConversation(convNull);
+    const convNull = await storage.createConversation({ metadata: null as any });
     const retrievedNull = await storage.getConversation(convNull.id);
     expect(retrievedNull?.metadata).toBeNull();
 
     // Test undefined metadata (should default to null)
-    const convUndef = createConversation({ metadata: undefined });
-    await storage.createConversation(convUndef);
+    const convUndef = await storage.createConversation({ metadata: undefined });
     const retrievedUndef = await storage.getConversation(convUndef.id);
     expect(retrievedUndef?.metadata).toBeNull();
 

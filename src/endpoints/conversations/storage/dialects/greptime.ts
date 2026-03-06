@@ -8,12 +8,12 @@ import {
 } from "./postgres";
 import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
 
-const GrepTimeBase: Pick<DialectConfig, "partitioned" | "types"> = {
-  partitioned: true,
+const GrepTimeBase: Pick<DialectConfig, "types"> = {
   types: {
     varchar: "VARCHAR",
     json: "JSON",
     timestamp: "TIMESTAMP",
+    timestampNow: "now()",
     index: "TIME",
   },
 };

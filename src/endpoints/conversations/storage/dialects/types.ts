@@ -7,11 +7,11 @@ export interface QueryExecutor {
 
 export interface DialectConfig {
   placeholder: (index: number) => string;
-  partitioned?: boolean;
   types: {
     varchar: string;
     json: string;
     timestamp: string;
+    timestampNow: string;
     index: "BRIN" | "B-TREE" | "TIME";
   };
 }

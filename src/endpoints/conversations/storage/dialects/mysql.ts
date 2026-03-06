@@ -11,6 +11,7 @@ export const MySQLDialectConfig: DialectConfig = {
     varchar: "VARCHAR",
     json: "JSON",
     timestamp: "BIGINT",
+    timestampNow: "(UNIX_TIMESTAMP())",
     index: "B-TREE",
   },
 };

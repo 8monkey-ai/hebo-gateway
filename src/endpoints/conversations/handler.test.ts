@@ -6,7 +6,6 @@ import { defineModelCatalog } from "../../models/catalog";
 import { conversations } from "./handler";
 import { type ResponseInputItem } from "./schema";
 import { InMemoryStorage } from "./storage/memory";
-import { createConversation, createConversationItem } from "./utils";
 
 describe("Conversations Handler", () => {
   let config: any;
@@ -102,17 +101,14 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage = endpoint._parsedConfig?.storage ?? config.storage;
 
-    const conv = createConversation({});
-    await storage.createConversation(conv);
-    const items = (
-      [
-        { type: "message", role: "user", content: "Message 1" },
-        { type: "message", role: "user", content: "Message 2" },
-      ] as ResponseInputItem[]
-    ).map((item) => createConversationItem(item));
-    await storage.addItems(conv.id, items);
-    const item1Id = items[0].id;
-    const item2Id = items[1].id;
+    const conv = await storage.createConversation({});
+    const itemInputs = [
+      { type: "message", role: "user", content: "Message 1" },
+      { type: "message", role: "user", content: "Message 2" },
+    ] as ResponseInputItem[];
+    const items = await storage.addItems(conv.id, itemInputs);
+    const item1Id = items![0].id;
+    const item2Id = items![1].id;
 
     // 1. Retrieve Single Item
     const getRes = await endpoint.handler(
@@ -154,18 +150,13 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
 
-    const conv = createConversation({});
-    await storage.createConversation(conv);
-    const items = Array.from(
-      { length: 5 },
-      (_, i) =>
-        ({
-          type: "message",
-          role: "user",
-          content: `Msg ${i + 1}`,
-        }) as ResponseInputItem,
-    ).map((item) => createConversationItem(item));
-    await storage.addItems(conv.id, items);
+    const itemInputs = Array.from({ length: 5 }, (_, i) => ({
+      type: "message",
+      role: "user",
+      content: `Msg ${i + 1}`,
+    })) as ResponseInputItem[];
+
+    const conv = await storage.createConversation({ items: itemInputs });
 
     const res = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=3&order=asc`),
@@ -194,18 +185,13 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
 
-    const conv = createConversation({});
-    await storage.createConversation(conv);
-    const items = Array.from(
-      { length: 5 },
-      (_, i) =>
-        ({
-          type: "message",
-          role: "user",
-          content: `Msg ${i + 1}`,
-        }) as ResponseInputItem,
-    ).map((item) => createConversationItem(item));
-    await storage.addItems(conv.id, items);
+    const itemInputs = Array.from({ length: 5 }, (_, i) => ({
+      type: "message",
+      role: "user",
+      content: `Msg ${i + 1}`,
+    })) as ResponseInputItem[];
+
+    const conv = await storage.createConversation({ items: itemInputs });
 
     // 1. Get first page (descending)
     const res1 = await endpoint.handler(
@@ -249,8 +235,7 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
 
-    const conv = createConversation({});
-    await storage.createConversation(conv);
+    const conv = await storage.createConversation({});
 
     // Limit too high
     const resHigh = await endpoint.handler(
@@ -297,9 +282,8 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
 
     // 1. Maintain item ID during addItems
-    const conv = createConversation({});
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
-    await storage.createConversation(conv);
+    const conv = await storage.createConversation({});
 
     const customItemId = "item_custom_123";
     const addItemsReq = postJson(`http://localhost/conversations/${conv.id}/items`, {
@@ -369,9 +353,8 @@ describe("Conversations Handler", () => {
     expect(resFile.status).toBe(400);
 
     // 3. Add item with empty input_image
-    const conv = createConversation({});
     const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
-    await storage.createConversation(conv);
+    const conv = await storage.createConversation({});
 
     const reqAdd = postJson(`http://localhost/conversations/${conv.id}/items`, {
       items: [

@@ -3,10 +3,14 @@ import type {
   ConversationItem,
   ConversationItemListParams,
   Metadata,
+  ResponseInputItem,
 } from "../schema";
 
 export interface ConversationStorage {
-  createConversation(conversation: Conversation, items?: ConversationItem[]): Promise<Conversation>;
+  createConversation(params: {
+    metadata?: Metadata;
+    items?: ResponseInputItem[];
+  }): Promise<Conversation>;
 
   getConversation(id: string): Promise<Conversation | undefined>;
 
@@ -16,7 +20,7 @@ export interface ConversationStorage {
 
   addItems(
     conversationId: string,
-    items: ConversationItem[],
+    items: ResponseInputItem[],
   ): Promise<ConversationItem[] | undefined>;
 
   getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined>;

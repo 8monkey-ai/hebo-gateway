@@ -12,6 +12,7 @@ export const PostgresDialectConfig: DialectConfig = {
     varchar: "VARCHAR",
     json: "JSONB",
     timestamp: "BIGINT",
+    timestampNow: "(extract(epoch from now()))",
     index: "BRIN",
   },
 };

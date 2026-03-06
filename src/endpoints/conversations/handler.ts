@@ -17,7 +17,6 @@ import {
   type ConversationDeleted,
   type ConversationItemList,
 } from "./schema";
-import { createConversation, createConversationItem } from "./utils";
 
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
@@ -38,10 +37,10 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const conversation = createConversation({ metadata: parsed.data.metadata });
-    const items = parsed.data.items?.map((item) => createConversationItem(item));
-
-    await storage.createConversation(conversation, items);
+    const conversation = await storage.createConversation({
+      metadata: parsed.data.metadata,
+      items: parsed.data.items,
+    });
 
     logger.debug(`[conversations] created conversation: ${conversation.id}`);
     logger.trace({ requestId: ctx.requestId, conversation }, "[storage] createConversation result");
@@ -181,8 +180,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const items = parsed.data.items.map((item) => createConversationItem(item));
-    const result = await storage.addItems(conversationId, items);
+    const result = await storage.addItems(conversationId, parsed.data.items);
 
     if (!result) {
       throw new GatewayError("Conversation not found", 404);
