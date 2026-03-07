@@ -8,6 +8,7 @@ export type { PostgresJsSql, PgPool };
 
 export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
+  quote: (i) => `"${i}"`,
   types: {
     varchar: "VARCHAR",
     json: "JSONB",

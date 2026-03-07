@@ -7,6 +7,9 @@ export interface QueryExecutor {
 
 export interface DialectConfig {
   placeholder: (index: number) => string;
+  quote: (name: string) => string;
+  supportUpdate?: boolean;
+  limitAsLiteral?: boolean;
   types: {
     varchar: string;
     json: string;

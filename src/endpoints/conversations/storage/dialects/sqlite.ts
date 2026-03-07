@@ -6,6 +6,7 @@ import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
+  quote: (i) => `"${i}"`,
   types: {
     varchar: "TEXT",
     json: "TEXT",

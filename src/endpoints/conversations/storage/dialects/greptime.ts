@@ -21,7 +21,14 @@ const GrepTimeBase: Pick<DialectConfig, "types"> = {
 export const GrepTimeDialectConfig: DialectConfig = {
   ...PostgresDialectConfig,
   ...GrepTimeBase,
+  supportUpdate: false,
+  limitAsLiteral: true,
 };
+
+const mapParams = (params?: unknown[]) =>
+  params?.map((p) =>
+    p !== null && typeof p === "object" && !(p instanceof Date) ? JSON.stringify(p) : p,
+  );
 
 export class GrepTimeDialect implements SqlDialect {
   readonly executor: QueryExecutor;
@@ -31,7 +38,21 @@ export class GrepTimeDialect implements SqlDialect {
     const { client } = options;
     const dialect = new PostgresDialect({ client, config: this.config });
 
-    this.executor = dialect.executor;
-    this.config = dialect.config;
+    const base = dialect.executor;
+    this.executor = {
+      ...base,
+      all: (sql, params) => base.all(sql, mapParams(params)),
+      get: (sql, params) => base.get(sql, mapParams(params)),
+      run: (sql, params) => base.run(sql, mapParams(params)),
+      transaction: (fn) =>
+        base.transaction((tx) =>
+          fn({
+            ...tx,
+            all: (sql, params) => tx.all(sql, mapParams(params)),
+            get: (sql, params) => tx.get(sql, mapParams(params)),
+            run: (sql, params) => tx.run(sql, mapParams(params)),
+          } as QueryExecutor),
+        ),
+    };
   }
 }

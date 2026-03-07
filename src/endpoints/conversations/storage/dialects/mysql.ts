@@ -7,6 +7,8 @@ export type { Mysql2Pool };
 
 export const MySQLDialectConfig: DialectConfig = {
   placeholder: () => "?",
+  quote: (i) => `\`${i}\``,
+  limitAsLiteral: true,
   types: {
     varchar: "VARCHAR",
     json: "JSON",
