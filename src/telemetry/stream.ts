@@ -7,24 +7,23 @@ export const wrapStream = (
   hooks: { onDone?: (status: number, reason: unknown) => void },
 ): ReadableStream => {
   let finished = false;
+  let reader: ReadableStreamDefaultReader | undefined;
 
-  const done = (
-    reader: ReadableStreamDefaultReader,
-    controller: ReadableStreamDefaultController,
-    status: number,
-    reason?: unknown,
-  ) => {
-    if (!finished) {
-      finished = true;
-      hooks.onDone?.(status, reason);
+  const done = (controller: ReadableStreamDefaultController, status: number, reason?: unknown) => {
+    if (finished) return;
+    finished = true;
+    hooks.onDone?.(status, reason);
+    if (status !== 200) {
+      reader?.cancel(reason).catch(() => {});
     }
-    reader.cancel(reason).catch(() => {});
-    controller.close();
+    try {
+      controller.close();
+    } catch {}
   };
 
   return new ReadableStream({
     async start(controller) {
-      const reader = src.getReader();
+      reader = src.getReader();
 
       try {
         for (;;) {
@@ -37,28 +36,29 @@ export const wrapStream = (
 
           if (out !== value) {
             const status = out.error?.type === "invalid_request_error" ? 422 : 502;
-            done(reader, controller, status, value);
+            done(controller, status, value);
             return;
           }
         }
 
-        done(reader, controller, 200);
+        done(controller, 200);
       } catch (err) {
-        controller.enqueue(toOpenAIError(err));
-        done(reader, controller, 502, err);
+        try {
+          controller.enqueue(toOpenAIError(err));
+        } catch {}
+        done(controller, 502, err);
       } finally {
         try {
-          reader.releaseLock();
+          reader?.releaseLock();
         } catch {}
       }
     },
 
     cancel(reason) {
-      if (!finished) {
-        finished = true;
-        hooks.onDone?.(499, reason);
-      }
-      src.cancel(reason).catch(() => {});
+      if (finished) return;
+      finished = true;
+      hooks.onDone?.(499, reason);
+      reader?.cancel(reason).catch(() => {});
     },
   });
 };
