@@ -133,9 +133,9 @@ test("openAIReasoningMiddleware > should disable reasoning when requested (stand
 
 test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", async () => {
   const cases = [
-    { reasoning: { enabled: false }, expected: "low" },
-    { reasoning: { enabled: true }, expected: "low" },
-    { reasoning: { enabled: true, effort: "none" }, expected: "low" },
+    { reasoning: { enabled: false }, expected: undefined },
+    { reasoning: { enabled: true }, expected: undefined },
+    { reasoning: { enabled: true, effort: "none" }, expected: undefined },
     { reasoning: { enabled: true, effort: "minimal" }, expected: "low" },
     { reasoning: { enabled: true, effort: "low" }, expected: "low" },
     { reasoning: { enabled: true, effort: "medium" }, expected: "medium" },
@@ -158,7 +158,7 @@ test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", asyn
         model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
       });
 
-      expect(result.providerOptions?.openai.reasoningEffort).toBe(expected);
+      expect(result.providerOptions!["openai"]!["reasoningEffort"]).toBe(expected);
     }),
   );
 });

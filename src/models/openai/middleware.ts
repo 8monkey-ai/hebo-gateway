@@ -27,16 +27,20 @@ export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
 
 function mapGptOssReasoningEffort(
   effort?: ChatCompletionsReasoningEffort,
-): "low" | "medium" | "high" {
+): "low" | "medium" | "high" | undefined {
   switch (effort) {
+    case undefined:
+    case "none":
+      return;
+    case "minimal":
+    case "low":
+      return "low";
     case "medium":
       return "medium";
     case "high":
     case "xhigh":
     case "max":
       return "high";
-    default:
-      return "low";
   }
 }
 

@@ -1,6 +1,7 @@
 import { toOpenAIError } from "../errors/openai";
 
-const isErrorChunk = (v: unknown) => v instanceof Error || !!(v as any)?.error;
+const isErrorChunk = (v: unknown): v is Error | { error: unknown } =>
+  v instanceof Error || (typeof v === "object" && v !== null && "error" in v);
 
 export const wrapStream = (
   src: ReadableStream,
@@ -27,16 +28,18 @@ export const wrapStream = (
 
       try {
         for (;;) {
-          // oxlint-disable-next-line no-await-in-loop
+          // oxlint-disable-next-line no-await-in-loop, no-unsafe-assignment
           const { value, done: eof } = await reader.read();
           if (eof) break;
 
-          const out = isErrorChunk(value) ? toOpenAIError(value) : value;
-          controller.enqueue(out);
+          controller.enqueue(value);
 
-          if (out !== value) {
-            const status = out.error?.type === "invalid_request_error" ? 422 : 502;
-            done(controller, status, value);
+          if (isErrorChunk(value)) {
+            done(
+              controller,
+              toOpenAIError(value).error.type === "invalid_request_error" ? 422 : 502,
+              value,
+            );
             return;
           }
         }

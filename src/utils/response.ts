@@ -26,7 +26,9 @@ export const mergeResponseInit = (
   const headers = new Headers(defaultHeaders);
   const override = responseInit?.headers;
   if (override) {
-    new Headers(override).forEach((value, key) => headers.set(key, value));
+    new Headers(override).forEach((value, key) => {
+      headers.set(key, value);
+    });
   }
   if (!responseInit) return { headers };
 

@@ -27,6 +27,8 @@ export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
 
 function mapNovaEffort(effort: ChatCompletionsReasoningEffort) {
   switch (effort) {
+    case "none":
+      return;
     case "minimal":
     case "low":
       return "low";

@@ -26,8 +26,6 @@ export function calculateReasoningBudgetFromEffort(
     case "max":
       percentage = 0.95;
       break;
-    default:
-      return 0;
   }
 
   return Math.max(minTokens, Math.floor(maxTokens * percentage));

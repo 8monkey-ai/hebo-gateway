@@ -84,7 +84,7 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
     let hasExplicitCacheControl = false;
     let lastCacheableBlock;
 
-    const processCacheControl = (providerOptions?: Record<string, any>) => {
+    const processCacheControl = (providerOptions?: Record<string, unknown>) => {
       if (!providerOptions) return;
 
       const entryBedrock = providerOptions["bedrock"] as Record<string, unknown> | undefined;

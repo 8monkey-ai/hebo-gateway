@@ -1,4 +1,4 @@
-import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai";
+import type { GenerateTextResult, ToolSet, Output, TextPart, FilePart } from "ai";
 
 import { describe, expect, test } from "bun:test";
 
@@ -32,7 +32,7 @@ describe("Chat Completions Converters", () => {
 
       const result = fromChatCompletionsToolResultMessage(assistantMessage, toolById);
       expect(result).toBeDefined();
-      expect(result?.content[0]).toMatchObject({
+      expect(result!.content[0]).toMatchObject({
         type: "tool-result",
         toolCallId: "call_1",
         output: { type: "text", value: "hello world" },
@@ -66,7 +66,7 @@ describe("Chat Completions Converters", () => {
 
       const result = fromChatCompletionsToolResultMessage(assistantMessage, toolById);
       expect(result).toBeDefined();
-      expect(result?.content[0]).toMatchObject({
+      expect(result!.content[0]).toMatchObject({
         type: "tool-result",
         toolCallId: "call_1",
         output: {
@@ -103,7 +103,7 @@ describe("Chat Completions Converters", () => {
 
       const result = fromChatCompletionsToolResultMessage(assistantMessage, toolById);
       expect(result).toBeDefined();
-      expect(result?.content[0]).toMatchObject({
+      expect(result!.content[0]).toMatchObject({
         type: "tool-result",
         toolCallId: "call_1",
         output: {
@@ -116,7 +116,7 @@ describe("Chat Completions Converters", () => {
 
   describe("toChatCompletionsAssistantMessage", () => {
     test("should pass through providerMetadata to extra_content", () => {
-      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
+      const mockResult = {
         content: [
           {
             type: "text",
@@ -126,10 +126,10 @@ describe("Chat Completions Converters", () => {
                 thought_signature: "signature-abc",
               },
             },
-          } as any,
+          },
         ],
         toolCalls: [],
-      };
+      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -141,7 +141,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should pass through providerMetadata to tool calls", () => {
-      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
+      const mockResult = {
         content: [],
         toolCalls: [
           {
@@ -153,17 +153,17 @@ describe("Chat Completions Converters", () => {
             },
           },
         ],
-      };
+      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
-      expect(message.tool_calls![0].extra_content).toEqual({
+      expect(message.tool_calls![0]!.extra_content).toEqual({
         vertex: { thought_signature: "tool-signature" },
       });
     });
 
     test("should extract reasoning_details from reasoning parts", () => {
-      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
+      const mockResult = {
         content: [
           {
             type: "reasoning",
@@ -173,15 +173,15 @@ describe("Chat Completions Converters", () => {
                 signature: "sig-123",
               },
             },
-          } as any,
+          },
           {
             type: "text",
             text: "Final answer.",
-          } as any,
+          },
         ],
         reasoningText: "I am thinking...",
         toolCalls: [],
-      };
+      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -193,12 +193,12 @@ describe("Chat Completions Converters", () => {
         format: "unknown",
         index: 0,
       });
-      expect(message.reasoning_details![0].id).toStartWith("reasoning-");
+      expect(message.reasoning_details![0]!.id).toStartWith("reasoning-");
       expect(message.content).toBe("Final answer.");
     });
 
     test("should handle redacted/encrypted reasoning", () => {
-      const mockResult: GenerateTextResult<ToolSet, Output.Output> = {
+      const mockResult = {
         content: [
           {
             type: "reasoning",
@@ -208,10 +208,10 @@ describe("Chat Completions Converters", () => {
                 redactedData: "encrypted-content",
               },
             },
-          } as any,
+          },
         ],
         toolCalls: [],
-      };
+      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -219,8 +219,8 @@ describe("Chat Completions Converters", () => {
         type: "reasoning.encrypted",
         data: "encrypted-content",
       });
-      expect((message.reasoning_details![0] as any).text).toBeUndefined();
-      expect(message.reasoning_details![0].signature).toBeUndefined();
+      expect(message.reasoning_details![0]!.text).toBeUndefined();
+      expect(message.reasoning_details![0]!.signature).toBeUndefined();
     });
   });
 
@@ -241,7 +241,7 @@ describe("Chat Completions Converters", () => {
       });
 
       expect(Array.isArray(message.content)).toBe(true);
-      const content = message.content as any[];
+      const content = message.content;
       expect(content).toHaveLength(2);
       expect(content[0]).toEqual({
         type: "reasoning",
@@ -273,7 +273,7 @@ describe("Chat Completions Converters", () => {
       });
 
       expect(Array.isArray(message.content)).toBe(true);
-      const content = message.content as any[];
+      const content = message.content;
       expect(content[0]).toEqual({
         type: "reasoning",
         text: "",
@@ -302,7 +302,7 @@ describe("Chat Completions Converters", () => {
       });
 
       expect(Array.isArray(message.content)).toBe(true);
-      const content = message.content as any[];
+      const content = message.content;
       expect(content).toHaveLength(2);
       expect(content[0]).toEqual({
         type: "text",
@@ -371,14 +371,16 @@ describe("Chat Completions Converters", () => {
         },
       });
 
-      expect(result.output?.name).toBe("object");
+      expect(result.output!.name).toBe("object");
 
       const parsed = await result.output!.parseCompleteOutput(
         {
           text: '{"city":"San Francisco"}',
         },
         {
+          // oxlint-disable-next-line no-unsafe-assignment
           response: {} as any,
+          // oxlint-disable-next-line no-unsafe-assignment
           usage: {} as any,
           finishReason: "stop",
         },
@@ -416,15 +418,15 @@ describe("Chat Completions Converters", () => {
         ],
       });
 
-      const userMessage = result.messages[0] as any;
+      const userMessage = result.messages[0]!;
       expect(userMessage.role).toBe("user");
       expect(Array.isArray(userMessage.content)).toBe(true);
 
-      const [part] = userMessage.content as any[];
+      const part = (userMessage.content as FilePart[])[0]!;
       expect(part.type).toBe("file");
       expect(part.mediaType).toBe("audio/wav");
       expect(part.data).toBeInstanceOf(Uint8Array);
-      expect(Array.from(part.data)).toEqual([104, 101, 108, 108, 111]);
+      expect(Array.from(part.data as Uint8Array)).toEqual([104, 101, 108, 108, 111]);
     });
 
     test("should map tool_choice 'validated' to 'auto'", () => {
@@ -554,11 +556,13 @@ describe("Chat Completions Converters", () => {
         ],
       });
 
-      expect((result.messages[0] as any).providerOptions.unknown.cache_control).toEqual({
+      expect(result.messages[0]!.providerOptions!["unknown"]!["cache_control"]).toEqual({
         type: "ephemeral",
         ttl: "1h",
       });
-      expect((result.messages[1] as any).content[0].providerOptions.unknown.cache_control).toEqual({
+      expect(
+        (result.messages[1]!.content[0] as TextPart).providerOptions!["unknown"]!["cache_control"],
+      ).toEqual({
         type: "ephemeral",
       });
     });
@@ -573,8 +577,13 @@ describe("Chat Completions Converters", () => {
         inputTokenDetails: {
           cacheReadTokens: 60,
           cacheWriteTokens: 10,
+          noCacheTokens: undefined,
         },
-      } as LanguageModelUsage);
+        outputTokenDetails: {
+          textTokens: 20,
+          reasoningTokens: undefined,
+        },
+      });
 
       expect(usage.prompt_tokens_details).toEqual({
         cached_tokens: 60,

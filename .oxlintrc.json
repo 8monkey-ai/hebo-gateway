@@ -1,5 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
   "plugins": ["eslint", "unicorn", "typescript", "oxc", "react", "promise", "jsx-a11y", "import"],
   "categories": {
     "correctness": "error",
@@ -14,7 +18,9 @@
     "max-lines": "off",
     "anchor-has-content": "off",
     "max-dependencies": "off",
-    "no-inline-comments": "off"
+    "no-inline-comments": "off",
+    "no-unsafe-type-assertion": "off",
+    "strict-boolean-expressions": "off"
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "e2e/**"]
 }

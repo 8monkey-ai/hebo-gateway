@@ -39,6 +39,6 @@ test("Voyage 4 Lite ID transformation in gateway config", () => {
 
   // 4. Check the providers registry directly
   const registry = config.providers;
-  const directModel = registry["voyage"]!.embeddingModel(modelId);
+  const directModel = registry["voyage"].embeddingModel(modelId);
   expect(directModel.modelId).toBe("voyage-4-lite");
 });

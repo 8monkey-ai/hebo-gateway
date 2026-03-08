@@ -117,7 +117,7 @@ const toMessageParts = (message: ChatCompletionsMessage) => {
     case "system":
       return toTextParts(message.content);
     default:
-      return [];
+      throw new Error(`Unhandled content part type: ${(message as { role: string }).role}`);
   }
 };
 

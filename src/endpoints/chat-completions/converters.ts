@@ -328,7 +328,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
           undefined,
           part.cache_control,
         );
-      default: {
+      case "text": {
         const out: TextPart = {
           type: "text" as const,
           text: part.text,
@@ -340,6 +340,8 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         }
         return out;
       }
+      default:
+        throw new Error(`Unhandled content part type: ${(part as { type: string }).type}`);
     }
   });
 }
@@ -468,6 +470,7 @@ function parseJsonOrText(
   content: string,
 ): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
   try {
+    // oxlint-disable-next-line no-unsafe-assignment
     return { type: "json", value: JSON.parse(content) };
   } catch {
     return { type: "text", value: content };
@@ -486,7 +489,10 @@ function parseReasoningOptions(
   }
   if (!reasoning && effort === undefined) return {};
 
-  const out: any = { reasoning: {} };
+  const out: {
+    reasoning: ChatCompletionsReasoningConfig;
+    reasoning_effort?: ChatCompletionsReasoningEffort;
+  } = { reasoning: {} };
 
   if (effort) {
     out.reasoning.enabled = true;
@@ -620,6 +626,7 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
 
     super({
       transform(part, controller) {
+        // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "text-delta": {
             controller.enqueue(
@@ -733,7 +740,7 @@ export const toChatCompletionsAssistantMessage = (
       if (message.content === null) {
         message.content = part.text;
       } else {
-        message.content += part.text;
+        (message.content as string) += part.text;
       }
       if (part.providerMetadata) {
         message.extra_content = part.providerMetadata;

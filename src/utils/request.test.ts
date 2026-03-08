@@ -10,7 +10,7 @@ describe("prepareForwardHeaders", () => {
 
     const headers = prepareForwardHeaders(request);
 
-    expect(headers["user-agent"].startsWith("client/1.0 @hebo-ai/gateway/")).toBe(true);
+    expect(headers["user-agent"]!.startsWith("client/1.0 @hebo-ai/gateway/")).toBe(true);
   });
 
   test("falls back to gateway user-agent when incoming user-agent is missing", () => {
@@ -18,7 +18,7 @@ describe("prepareForwardHeaders", () => {
 
     const headers = prepareForwardHeaders(request);
 
-    expect(headers["user-agent"].startsWith("@hebo-ai/gateway/")).toBe(true);
+    expect(headers["user-agent"]!.startsWith("@hebo-ai/gateway/")).toBe(true);
   });
 
   test("forwards allowlisted provider headers without provider context", () => {
@@ -68,8 +68,8 @@ describe("prepareForwardHeaders", () => {
 
     const headers = prepareForwardHeaders(request);
 
-    expect(headers.authorization).toBeUndefined();
-    expect(headers.cookie).toBeUndefined();
+    expect(headers["authorization"]).toBeUndefined();
+    expect(headers["cookie"]).toBeUndefined();
     expect(headers["x-custom-header"]).toBeUndefined();
   });
 });
