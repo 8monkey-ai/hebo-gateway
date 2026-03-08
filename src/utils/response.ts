@@ -2,18 +2,66 @@ import { REQUEST_ID_HEADER } from "./headers";
 
 const TEXT_ENCODER = new TextEncoder();
 
-class JsonToSseTransformStream extends TransformStream<unknown, string> {
-  constructor() {
-    super({
-      transform(part, controller) {
-        controller.enqueue(`data: ${JSON.stringify(part)}\n\n`);
-      },
-      flush(controller) {
-        controller.enqueue("data: [DONE]\n\n");
-      },
-    });
-  }
-}
+const SSE_KEEP_ALIVE = TEXT_ENCODER.encode(": keep-alive\n\n");
+const SSE_DONE = TEXT_ENCODER.encode("data: [DONE]\n\n");
+const SSE_DEFAULT_KEEP_ALIVE_MS = 20_000;
+
+export const toSseStream = (
+  src: ReadableStream<unknown>,
+  keepAliveMs: number = SSE_DEFAULT_KEEP_ALIVE_MS,
+): ReadableStream<Uint8Array> => {
+  let reader: ReadableStreamDefaultReader<unknown> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let finished = false;
+
+  const heartbeat = (controller: ReadableStreamDefaultController<Uint8Array>) => {
+    if (timer) clearTimeout(timer);
+    if (!keepAliveMs || keepAliveMs <= 0 || finished) return;
+
+    timer = setTimeout(() => {
+      if (finished) return;
+      controller.enqueue(SSE_KEEP_ALIVE);
+      heartbeat(controller);
+    }, keepAliveMs);
+  };
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      reader = src.getReader();
+      heartbeat(controller);
+
+      void (async () => {
+        try {
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            controller.enqueue(TEXT_ENCODER.encode(`data: ${JSON.stringify(value)}\n\n`));
+            heartbeat(controller);
+          }
+
+          finished = true;
+          if (timer) clearTimeout(timer);
+          controller.enqueue(SSE_DONE);
+          controller.close();
+        } catch (error) {
+          finished = true;
+          if (timer) clearTimeout(timer);
+          controller.error(error);
+        } finally {
+          try {
+            reader?.releaseLock();
+          } catch {}
+        }
+      })();
+    },
+
+    cancel(reason) {
+      finished = true;
+      if (timer) clearTimeout(timer);
+      return reader?.cancel(reason).catch(() => {});
+    },
+  });
+};
 
 export const prepareResponseInit = (requestId: string): ResponseInit => ({
   headers: { [REQUEST_ID_HEADER]: requestId },
@@ -47,7 +95,7 @@ export const toResponse = (
 
   const isStream = result instanceof ReadableStream;
   if (isStream) {
-    body = result.pipeThrough(new JsonToSseTransformStream()).pipeThrough(new TextEncoderStream());
+    body = toSseStream(result);
   } else if (result instanceof Uint8Array) {
     body = result;
   } else if (typeof result === "string") {
