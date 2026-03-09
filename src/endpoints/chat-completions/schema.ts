@@ -233,15 +233,6 @@ export const ChatCompletionsMetadataSchema = z.record(
 );
 export type ChatCompletionsMetadata = z.infer<typeof ChatCompletionsMetadataSchema>;
 
-export const ChatCompletionsServiceTierSchema = z.enum([
-  "auto",
-  "default",
-  "flex",
-  "scale",
-  "priority",
-]);
-export type ChatCompletionsServiceTier = z.infer<typeof ChatCompletionsServiceTierSchema>;
-
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
   tools: z.array(ChatCompletionsToolSchema).optional(),
