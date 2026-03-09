@@ -33,8 +33,7 @@
   "files": [
     "dist",
     "LICENSE",
-    "README.md",
-    "src"
+    "README.md"
   ],
   "type": "module",
   "sideEffects": [
@@ -48,114 +47,94 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "dev-source": "./src/index.ts"
+      "import": "./dist/index.js"
     },
     "./endpoints/chat-completions": {
       "types": "./dist/endpoints/chat-completions/index.d.ts",
-      "import": "./dist/endpoints/chat-completions/index.js",
-      "dev-source": "./src/endpoints/chat-completions/index.ts"
+      "import": "./dist/endpoints/chat-completions/index.js"
     },
     "./endpoints/embeddings": {
       "types": "./dist/endpoints/embeddings/index.d.ts",
-      "import": "./dist/endpoints/embeddings/index.js",
-      "dev-source": "./src/endpoints/embeddings/index.ts"
+      "import": "./dist/endpoints/embeddings/index.js"
     },
     "./endpoints/models": {
       "types": "./dist/endpoints/models/index.d.ts",
-      "import": "./dist/endpoints/models/index.js",
-      "dev-source": "./src/endpoints/models/index.ts"
+      "import": "./dist/endpoints/models/index.js"
     },
     "./errors/openai": {
       "types": "./dist/errors/openai.d.ts",
-      "import": "./dist/errors/openai.js",
-      "dev-source": "./src/errors/openai.ts"
+      "import": "./dist/errors/openai.js"
     },
     "./middleware/common": {
       "types": "./dist/middleware/common.d.ts",
-      "import": "./dist/middleware/common.js",
-      "dev-source": "./src/middleware/common.ts"
+      "import": "./dist/middleware/common.js"
     },
     "./models/anthropic": {
       "types": "./dist/models/anthropic/index.d.ts",
-      "import": "./dist/models/anthropic/index.js",
-      "dev-source": "./src/models/anthropic/index.ts"
+      "import": "./dist/models/anthropic/index.js"
     },
     "./models/cohere": {
       "types": "./dist/models/cohere/index.d.ts",
-      "import": "./dist/models/cohere/index.js",
-      "dev-source": "./src/models/cohere/index.ts"
+      "import": "./dist/models/cohere/index.js"
     },
     "./models/google": {
       "types": "./dist/models/google/index.d.ts",
-      "import": "./dist/models/google/index.js",
-      "dev-source": "./src/models/google/index.ts"
+      "import": "./dist/models/google/index.js"
     },
     "./models/openai": {
       "types": "./dist/models/openai/index.d.ts",
-      "import": "./dist/models/openai/index.js",
-      "dev-source": "./src/models/openai/index.ts"
+      "import": "./dist/models/openai/index.js"
     },
     "./models/meta": {
       "types": "./dist/models/meta/index.d.ts",
-      "import": "./dist/models/meta/index.js",
-      "dev-source": "./src/models/meta/index.ts"
+      "import": "./dist/models/meta/index.js"
     },
     "./models/voyage": {
       "types": "./dist/models/voyage/index.d.ts",
-      "import": "./dist/models/voyage/index.js",
-      "dev-source": "./src/models/voyage/index.ts"
+      "import": "./dist/models/voyage/index.js"
     },
     "./providers/anthropic": {
       "types": "./dist/providers/anthropic/index.d.ts",
-      "import": "./dist/providers/anthropic/index.js",
-      "dev-source": "./src/providers/anthropic/index.ts"
+      "import": "./dist/providers/anthropic/index.js"
     },
     "./providers/bedrock": {
       "types": "./dist/providers/bedrock/index.d.ts",
-      "import": "./dist/providers/bedrock/index.js",
-      "dev-source": "./src/providers/bedrock/index.ts"
+      "import": "./dist/providers/bedrock/index.js"
     },
     "./providers/cohere": {
       "types": "./dist/providers/cohere/index.d.ts",
-      "import": "./dist/providers/cohere/index.js",
-      "dev-source": "./src/providers/cohere/index.ts"
+      "import": "./dist/providers/cohere/index.js"
     },
     "./providers/groq": {
       "types": "./dist/providers/groq/index.d.ts",
-      "import": "./dist/providers/groq/index.js",
-      "dev-source": "./src/providers/groq/index.ts"
+      "import": "./dist/providers/groq/index.js"
     },
     "./providers/openai": {
       "types": "./dist/providers/openai/index.d.ts",
-      "import": "./dist/providers/openai/index.js",
-      "dev-source": "./src/providers/openai/index.ts"
+      "import": "./dist/providers/openai/index.js"
     },
     "./providers/vertex": {
       "types": "./dist/providers/vertex/index.d.ts",
-      "import": "./dist/providers/vertex/index.js",
-      "dev-source": "./src/providers/vertex/index.ts"
+      "import": "./dist/providers/vertex/index.js"
     },
     "./providers/voyage": {
       "types": "./dist/providers/voyage/index.d.ts",
-      "import": "./dist/providers/voyage/index.js",
-      "dev-source": "./src/providers/voyage/index.ts"
+      "import": "./dist/providers/voyage/index.js"
     },
     "./telemetry": {
       "types": "./dist/telemetry/index.d.ts",
-      "import": "./dist/telemetry/index.js",
-      "dev-source": "./src/telemetry/index.ts"
+      "import": "./dist/telemetry/index.js"
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "bun --hot src/index.ts",
     "clean": "git clean -fdx -e '.env*' .",
     "format": "oxfmt .",
     "format:staged": "oxfmt --no-error-on-unmatched-pattern",
     "lint": "oxlint",
     "lint:staged": "oxlint --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "oxlint --type-check",
     "test": "bun test",
     "check": "bun lint && bun typecheck",
     "fix": "bun lint:staged && bun fmt:staged"

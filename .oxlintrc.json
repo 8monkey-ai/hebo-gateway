@@ -1,15 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "options": {
-    "typeAware": true,
-    "typeCheck": true
+    "typeAware": true
   },
   "plugins": ["eslint", "unicorn", "typescript", "oxc", "react", "promise", "jsx-a11y", "import"],
   "categories": {
     "correctness": "error",
-    "suspicious": "warn",
-    "pedantic": "warn",
-    "perf": "warn"
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error"
   },
   "rules": {
     "react-in-jsx-scope": "off",
