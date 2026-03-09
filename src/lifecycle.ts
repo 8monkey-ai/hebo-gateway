@@ -13,7 +13,7 @@ import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
 import { recordRequestDuration } from "./telemetry/gen-ai";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
-import { recordV8jsMemory } from "./telemetry/memory";
+import { observeV8jsMemoryMetrics } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
 import { wrapStream } from "./telemetry/stream";
 import { resolveOrCreateRequestId } from "./utils/request";
@@ -29,6 +29,7 @@ export const winterCgHandler = (
     setSpanTracer(parsedConfig.telemetry?.tracer);
     setSpanEventsEnabled(parsedConfig.telemetry?.signals?.hebo);
     instrumentFetch(parsedConfig.telemetry?.signals?.hebo);
+    observeV8jsMemoryMetrics(parsedConfig.telemetry?.signals?.hebo);
   }
 
   return async (request: Request, state?: Record<string, unknown>): Promise<Response> => {
@@ -82,8 +83,6 @@ export const winterCgHandler = (
           parsedConfig.telemetry?.signals?.gen_ai,
         );
       }
-
-      recordV8jsMemory(parsedConfig.telemetry?.signals?.hebo);
 
       span.finish();
     };
