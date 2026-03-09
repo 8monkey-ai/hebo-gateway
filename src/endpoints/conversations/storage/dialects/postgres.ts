@@ -98,20 +98,24 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
 function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
-      return (await sql.unsafe(
-        query,
-        (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
-      )) as T[];
+      return (await sql.unsafe(query, (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1], {
+        prepare: true,
+      })) as T[];
     },
     async get<T>(query: string, params?: unknown[]) {
       const rows = await sql.unsafe(
         query,
         (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        { prepare: true },
       );
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = await sql.unsafe(query, (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1]);
+      const res = await sql.unsafe(
+        query,
+        (params ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        { prepare: true },
+      );
       const result = res as unknown as { count: number };
       return { changes: Number(result.count ?? 0) };
     },
@@ -123,16 +127,19 @@ function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
 }
 
 function createBunPostgresExecutor(sql: BunSql): QueryExecutor {
+  const mapParams = (params?: unknown[]) =>
+    params?.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p));
+
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
-      return (await sql.unsafe(query, params)) as T[];
+      return (await sql.unsafe(query, mapParams(params))) as T[];
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await sql.unsafe(query, params);
+      const rows = await sql.unsafe(query, mapParams(params));
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = await sql.unsafe(query, params);
+      const res = await sql.unsafe(query, mapParams(params));
       const result = res as unknown as { affectedRows?: number; count?: number; length: number };
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
