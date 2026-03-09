@@ -51,10 +51,9 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
   });
 
   expect(result.providerOptions).toEqual({
-    google: {
-      cachedContent: "cachedContents/reusable",
+    unknown: {
+      cached_content: "cachedContents/reusable",
     },
-    unknown: {},
   });
 });
 

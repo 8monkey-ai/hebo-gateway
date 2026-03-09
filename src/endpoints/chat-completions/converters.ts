@@ -100,13 +100,14 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
   Object.assign(
     rest,
-    parsePromptCachingOptions(
-      prompt_cache_key,
-      prompt_cache_retention,
-      extra_body?.google?.cached_content,
-      cache_control,
-    ),
+    parsePromptCachingOptions(prompt_cache_key, prompt_cache_retention, cache_control),
   );
+
+  if (extra_body) {
+    for (const v of Object.values(extra_body)) {
+      Object.assign(rest, v);
+    }
+  }
 
   const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
 
@@ -513,31 +514,26 @@ function parseReasoningOptions(
 function parsePromptCachingOptions(
   prompt_cache_key: string | undefined,
   prompt_cache_retention: "in_memory" | "24h" | undefined,
-  cached_content: string | undefined,
   cache_control: ChatCompletionsCacheControl | undefined,
 ) {
   const out: Record<string, unknown> = {};
 
-  const syncedCacheKey = prompt_cache_key ?? cached_content;
-  const syncedCachedContent = cached_content ?? prompt_cache_key;
-
-  let syncedCacheRetention = prompt_cache_retention;
-  if (!syncedCacheRetention && cache_control?.ttl) {
-    syncedCacheRetention = cache_control.ttl === "24h" ? "24h" : "in_memory";
+  let retention = prompt_cache_retention;
+  if (!retention && cache_control?.ttl) {
+    retention = cache_control.ttl === "24h" ? "24h" : "in_memory";
   }
 
-  let syncedCacheControl = cache_control;
-  if (!syncedCacheControl && syncedCacheRetention) {
-    syncedCacheControl = {
+  let control = cache_control;
+  if (!control && retention) {
+    control = {
       type: "ephemeral",
-      ttl: syncedCacheRetention === "24h" ? "24h" : "5m",
+      ttl: retention === "24h" ? "24h" : "5m",
     };
   }
 
-  if (syncedCacheKey) out["prompt_cache_key"] = syncedCacheKey;
-  if (syncedCacheRetention) out["prompt_cache_retention"] = syncedCacheRetention;
-  if (syncedCachedContent) out["cached_content"] = syncedCachedContent;
-  if (syncedCacheControl) out["cache_control"] = syncedCacheControl;
+  if (prompt_cache_key) out["prompt_cache_key"] = prompt_cache_key;
+  if (retention) out["prompt_cache_retention"] = retention;
+  if (control) out["cache_control"] = control;
 
   return out;
 }

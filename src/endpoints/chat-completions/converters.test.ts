@@ -512,7 +512,6 @@ describe("Chat Completions Converters", () => {
         unknown: {
           prompt_cache_key: "tenant:docs:v1",
           prompt_cache_retention: "24h",
-          cached_content: "tenant:docs:v1",
           cache_control: {
             type: "ephemeral",
             ttl: "24h",

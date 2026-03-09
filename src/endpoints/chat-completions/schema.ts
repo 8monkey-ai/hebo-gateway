@@ -250,22 +250,16 @@ const ChatCompletionsInputsSchema = z.object({
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   prompt_cache_key: z.string().optional(),
   prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
-  // Extension origin: Gemini explicit cache handle
-  // FUTURE: generalize extra_body handling
-  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
-  extra_body: z
-    .object({
-      google: z
-        .object({
-          cached_content: z.string().optional().meta({ extension: true }),
-        })
-        .optional(),
-    })
-    .optional(),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
+  // Extension origin: Gemini extra_body
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview#extra_body
+  extra_body: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
@@ -322,7 +316,10 @@ export const ChatCompletionsSchema = z.object({
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z.unknown().optional().meta({ extension: true }),
+  provider_metadata: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
@@ -356,6 +353,9 @@ export const ChatCompletionsChunkSchema = z.object({
   choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z.unknown().optional().meta({ extension: true }),
+  provider_metadata: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;

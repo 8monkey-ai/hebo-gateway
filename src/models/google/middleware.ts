@@ -10,6 +10,7 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
+import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -71,6 +72,9 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
+    // If thinking options exist, just pass through
+    if (unknown["thinking_config"]) return params;
+
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
@@ -114,10 +118,15 @@ export const geminiPromptCachingMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const cachedContent = unknown["cached_content"] as GoogleLanguageModelOptions["cachedContent"];
-    if (cachedContent) {
+    // If cached_content options exist, just pass through
+    if (unknown["cached_content"]) return params;
+
+    const promptCacheKey = unknown[
+      "prompt_cache_key"
+    ] as OpenAIChatLanguageModelOptions["promptCacheKey"];
+    if (promptCacheKey) {
       ((params.providerOptions!["google"] ??= {}) as GoogleLanguageModelOptions).cachedContent =
-        cachedContent;
+        promptCacheKey;
     }
 
     delete unknown["cached_content"];
