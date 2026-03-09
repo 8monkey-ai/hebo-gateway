@@ -26,10 +26,12 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
     const vertex = params.providerOptions?.["vertex"];
     if (!vertex || typeof vertex !== "object") return params;
 
-    const tier = vertex["serviceTier"] as ChatCompletionsServiceTier;
+    const tier = vertex["serviceTier"] as ChatCompletionsServiceTier | undefined;
     const headers = (params.headers ??= {});
 
     switch (tier) {
+      case undefined:
+        return params;
       case "flex":
         setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
         setHeaderIfMissing(headers, VERTEX_SHARED_REQUEST_TYPE_HEADER, "flex");
@@ -46,8 +48,6 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
         break;
       case "auto":
         break;
-      default:
-        return params;
     }
 
     delete vertex["serviceTier"];

@@ -19,24 +19,28 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
   transformParams: async ({ params }) => {
-    const bedrock = params.providerOptions?.["bedrock"];
+    const bedrock = params.providerOptions?.["bedrock"] as BedrockProviderOptions;
     if (!bedrock || typeof bedrock !== "object") return params;
 
-    const tier = bedrock["serviceTier"] as ChatCompletionsServiceTier;
+    // @ts-expect-error not yet supported by AI SDK, need to open PR
+    const tier = bedrock["serviceTier"] as ChatCompletionsServiceTier | undefined;
     switch (tier) {
+      case undefined:
+        return params;
       case "auto":
         // Bedrock uses its default tier when omitted.
-        delete bedrock["serviceTier"];
+        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        delete bedrock.serviceTier;
         return params;
       case "scale":
-        bedrock["serviceTier"] = { type: "reserved" };
+        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        bedrock.serviceTier = { type: "reserved" };
         return params;
       case "default":
       case "flex":
       case "priority":
-        bedrock["serviceTier"] = { type: tier };
-        return params;
-      default:
+        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        bedrock.serviceTier = { type: tier };
         return params;
     }
   },
