@@ -38,7 +38,7 @@ for (const { tier, expected } of groqServiceTierCases) {
       model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
     });
 
-    expect(result.providerOptions?.groq).toEqual({
+    expect(result.providerOptions!["groq"]).toEqual({
       serviceTier: expected,
     });
   });

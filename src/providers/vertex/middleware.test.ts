@@ -54,7 +54,7 @@ for (const { tier, expectedHeaders } of vertexServiceTierCases) {
     });
 
     expect(result.headers).toEqual(expectedHeaders);
-    expect(result.providerOptions?.vertex).toEqual({});
+    expect(result.providerOptions!["vertex"]).toEqual({});
   });
 }
 
@@ -82,5 +82,5 @@ test("vertexServiceTierMiddleware > should not override pre-set headers", async 
     "x-vertex-ai-llm-request-type": "shared",
     "x-vertex-ai-llm-shared-request-type": "priority",
   });
-  expect(result.providerOptions?.vertex).toEqual({});
+  expect(result.providerOptions!["vertex"]).toEqual({});
 });

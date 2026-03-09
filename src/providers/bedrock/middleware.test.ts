@@ -57,7 +57,7 @@ for (const { tier, expected } of bedrockServiceTierCases) {
       model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
     });
 
-    expect(result.providerOptions?.bedrock).toEqual(expected);
+    expect(result.providerOptions!["bedrock"]).toEqual(expected);
   });
 }
 

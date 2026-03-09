@@ -598,14 +598,14 @@ describe("Chat Completions Converters", () => {
             text: "hello",
             content: [{ type: "text", text: "hello" }],
             toolCalls: [],
-            usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+            usage: {},
             warnings: [],
             providerMetadata: {
               [provider]: {
                 service_tier: value,
               },
             },
-          } as any,
+          } as unknown as GenerateTextResult<ToolSet, Output.Output>,
           "openai/gpt-5",
         );
 
@@ -629,7 +629,7 @@ describe("Chat Completions Converters", () => {
             text: "hello",
             content: [{ type: "text", text: "hello" }],
             toolCalls: [],
-            usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+            usage: {},
             warnings: [],
             providerMetadata: {
               vertex: {
@@ -638,7 +638,7 @@ describe("Chat Completions Converters", () => {
                 },
               },
             },
-          } as any,
+          } as unknown as GenerateTextResult<ToolSet, Output.Output>,
           "google/gemini-2.5-pro",
         );
 
@@ -653,9 +653,9 @@ describe("Chat Completions Converters", () => {
           text: "hello",
           content: [{ type: "text", text: "hello" }],
           toolCalls: [],
-          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+          usage: {},
           warnings: [],
-        } as any,
+        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
         "openai/gpt-5",
       );
 
