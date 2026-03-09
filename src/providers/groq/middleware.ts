@@ -1,6 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions";
 
 // https://console.groq.com/docs/service-tiers
 export const groqServiceTierMiddleware: LanguageModelMiddleware = {
@@ -10,7 +11,7 @@ export const groqServiceTierMiddleware: LanguageModelMiddleware = {
     const groq = params.providerOptions?.["groq"];
     if (!groq || typeof groq !== "object") return params;
 
-    const tier = groq["serviceTier"];
+    const tier = groq["serviceTier"] as ChatCompletionsServiceTier;
     switch (tier) {
       case "auto":
       case "flex":

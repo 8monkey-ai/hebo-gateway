@@ -1,6 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions";
 
 const VERTEX_REQUEST_TYPE_HEADER = "x-vertex-ai-llm-request-type";
 const VERTEX_SHARED_REQUEST_TYPE_HEADER = "x-vertex-ai-llm-shared-request-type";
@@ -10,9 +11,7 @@ function setHeaderIfMissing(
   key: string,
   value: string,
 ) {
-  if (headers[key] === undefined) {
-    headers[key] = value;
-  }
+  headers[key] ??= value;
 }
 
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/standard-paygo
@@ -27,7 +26,7 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
     const vertex = params.providerOptions?.["vertex"];
     if (!vertex || typeof vertex !== "object") return params;
 
-    const tier = vertex["serviceTier"];
+    const tier = vertex["serviceTier"] as ChatCompletionsServiceTier;
     const headers = (params.headers ??= {});
 
     switch (tier) {

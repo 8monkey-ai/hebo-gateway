@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { toResponse, toSseStream } from "./response";
 
-const readResponseBody = async (response: Response) => {
+const readResponseBody = (response: Response) => {
   return response.text();
 };
 
@@ -32,7 +32,9 @@ describe("toResponse", () => {
               controller.close();
             }, 30);
 
-            return () =>{  clearTimeout(enqueueTimer); };
+            return () => {
+              clearTimeout(enqueueTimer);
+            };
           },
         }),
         10,

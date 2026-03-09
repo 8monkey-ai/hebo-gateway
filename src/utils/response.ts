@@ -33,6 +33,7 @@ export const toSseStream = (
       void (async () => {
         try {
           for (;;) {
+            // oxlint-disable-next-line no-await-in-loop
             const { value, done } = await reader.read();
             if (done) break;
             controller.enqueue(TEXT_ENCODER.encode(`data: ${JSON.stringify(value)}\n\n`));

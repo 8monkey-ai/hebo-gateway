@@ -5,7 +5,10 @@ import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
 
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsCacheControl } from "../../endpoints/chat-completions/schema";
+import type {
+  ChatCompletionsCacheControl,
+  ChatCompletionsServiceTier,
+} from "../../endpoints/chat-completions/schema";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
@@ -19,7 +22,7 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"];
     if (!bedrock || typeof bedrock !== "object") return params;
 
-    const tier = bedrock["serviceTier"];
+    const tier = bedrock["serviceTier"] as ChatCompletionsServiceTier;
     switch (tier) {
       case "auto":
         // Bedrock uses its default tier when omitted.
