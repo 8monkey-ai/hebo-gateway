@@ -22,24 +22,24 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"] as BedrockProviderOptions;
     if (!bedrock || typeof bedrock !== "object") return params;
 
-    // @ts-expect-error not yet supported by AI SDK, need to open PR
+    // @ts-expect-error AI SDK missing serviceTier, need to open PR
     const tier = bedrock["serviceTier"] as ChatCompletionsServiceTier | undefined;
     switch (tier) {
       case undefined:
         return params;
       case "auto":
         // Bedrock uses its default tier when omitted.
-        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        // @ts-expect-error AI SDK missing serviceTier, need to open PR
         delete bedrock.serviceTier;
         return params;
       case "scale":
-        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        // @ts-expect-error AI SDK missing serviceTier, need to open PR
         bedrock.serviceTier = { type: "reserved" };
         return params;
       case "default":
       case "flex":
       case "priority":
-        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        // @ts-expect-error AI SDK missing serviceTier, need to open PR
         bedrock.serviceTier = { type: tier };
         return params;
     }

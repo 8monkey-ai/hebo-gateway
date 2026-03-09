@@ -24,7 +24,7 @@ export const groqServiceTierMiddleware: LanguageModelMiddleware = {
         return params;
       case "scale":
       case "priority":
-        // @ts-expect-error not yet supported by AI SDK, need to open PR
+        // @ts-expect-error AI SDK missing "performance", need to open PR
         groq.serviceTier = "performance";
         return params;
     }
