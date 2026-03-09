@@ -16,6 +16,12 @@ export const getEmbeddingsRequestAttributes = (
     Object.assign(attrs, {
       "gen_ai.embeddings.dimension.count": inputs.dimensions,
     });
+
+    if (inputs.metadata) {
+      for (const key in inputs.metadata) {
+        attrs[`gen_ai.request.metadata.${key}`] = inputs.metadata[key];
+      }
+    }
   }
 
   return attrs;

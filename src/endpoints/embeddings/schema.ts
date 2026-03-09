@@ -3,9 +3,13 @@ import * as z from "zod";
 export const EmbeddingsDimensionsSchema = z.int().nonnegative().max(65536);
 export type EmbeddingsDimensions = z.infer<typeof EmbeddingsDimensionsSchema>;
 
+export const EmbeddingsMetadataSchema = z.record(z.string().min(1).max(64), z.string().max(512));
+export type EmbeddingsMetadata = z.infer<typeof EmbeddingsMetadataSchema>;
+
 export const EmbeddingsInputsSchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
   dimensions: EmbeddingsDimensionsSchema.optional(),
+  metadata: EmbeddingsMetadataSchema.optional(),
 });
 export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 
