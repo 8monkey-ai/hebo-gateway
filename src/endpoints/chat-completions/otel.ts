@@ -122,37 +122,37 @@ const toMessageParts = (message: ChatCompletionsMessage) => {
 };
 
 export const getChatRequestAttributes = (
-  inputs: ChatCompletionsBody,
+  body: ChatCompletionsBody,
   signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
   if (!signalLevel || signalLevel === "off") return {};
 
   const attrs: Attributes = {};
 
-  if (inputs.seed !== undefined) {
-    Object.assign(attrs, { "gen_ai.request.seed": inputs.seed });
+  if (body.seed !== undefined) {
+    Object.assign(attrs, { "gen_ai.request.seed": body.seed });
   }
 
   if (signalLevel !== "required") {
     Object.assign(attrs, {
       // FUTURE: add reasoning info
-      "gen_ai.request.stream": inputs.stream,
-      "gen_ai.request.service_tier": inputs.service_tier,
-      "gen_ai.request.frequency_penalty": inputs.frequency_penalty,
-      "gen_ai.request.max_tokens": inputs.max_completion_tokens,
-      "gen_ai.request.presence_penalty": inputs.presence_penalty,
-      "gen_ai.request.stop_sequences": inputs.stop
-        ? Array.isArray(inputs.stop)
-          ? inputs.stop
-          : [inputs.stop]
+      "gen_ai.request.stream": body.stream,
+      "gen_ai.request.service_tier": body.service_tier,
+      "gen_ai.request.frequency_penalty": body.frequency_penalty,
+      "gen_ai.request.max_tokens": body.max_completion_tokens,
+      "gen_ai.request.presence_penalty": body.presence_penalty,
+      "gen_ai.request.stop_sequences": body.stop
+        ? Array.isArray(body.stop)
+          ? body.stop
+          : [body.stop]
         : undefined,
-      "gen_ai.request.temperature": inputs.temperature,
-      "gen_ai.request.top_p": inputs.top_p,
+      "gen_ai.request.temperature": body.temperature,
+      "gen_ai.request.top_p": body.top_p,
     });
 
-    if (inputs.metadata) {
-      for (const key in inputs.metadata) {
-        attrs[`gen_ai.request.metadata.${key}`] = inputs.metadata[key];
+    if (body.metadata) {
+      for (const key in body.metadata) {
+        attrs[`gen_ai.request.metadata.${key}`] = body.metadata[key];
       }
     }
   }
@@ -164,10 +164,10 @@ export const getChatRequestAttributes = (
       // "gen_ai.system_instructions": inputs.messages
       //   .filter((m) => m.role === "system")
       //   .map((m) => JSON.stringify(toTextPart(m.content))),
-      "gen_ai.input.messages": inputs.messages
+      "gen_ai.input.messages": body.messages
         //.filter((m) => m.role !== "system")
         .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
-      "gen_ai.tool.definitions": inputs.tools?.map((toolDefinition) =>
+      "gen_ai.tool.definitions": body.tools?.map((toolDefinition) =>
         JSON.stringify(toolDefinition),
       ),
     });
