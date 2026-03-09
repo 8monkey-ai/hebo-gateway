@@ -158,7 +158,13 @@ test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", asyn
         model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
       });
 
-      expect(result.providerOptions!["openai"]!["reasoningEffort"]).toBe(expected);
+      expect(result).toEqual({
+        prompt: [],
+        providerOptions: {
+          openai: expected === undefined ? {} : { reasoningEffort: expected },
+          unknown: {},
+        },
+      });
     }),
   );
 });

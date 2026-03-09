@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
 import { MockLanguageModelV3 } from "ai/test";
 
-import { type JSONObject } from "@ai-sdk/provider";
-
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
@@ -275,12 +273,18 @@ test("geminiReasoningMiddleware > Gemini 2.5 Pro should have minimum budget even
     model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
   });
 
-  expect(
-    (result.providerOptions!["google"]!["thinkingConfig"] as JSONObject)["thinkingBudget"],
-  ).toBe(128);
-  expect(
-    (result.providerOptions!["google"]!["thinkingConfig"] as JSONObject)["includeThoughts"],
-  ).toBe(false);
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          thinkingBudget: 128,
+          includeThoughts: false,
+        },
+      },
+      unknown: {},
+    },
+  });
 });
 
 test("geminiReasoningMiddleware > Gemini 2.0 Flash should NOT have forced minimum budget", async () => {
@@ -299,10 +303,16 @@ test("geminiReasoningMiddleware > Gemini 2.0 Flash should NOT have forced minimu
     model: new MockLanguageModelV3({ modelId: "google/gemini-2.0-flash" }),
   });
 
-  expect(
-    (result.providerOptions!["google"]!["thinkingConfig"] as JSONObject)["thinkingBudget"],
-  ).toBe(0);
-  expect(
-    (result.providerOptions!["google"]!["thinkingConfig"] as JSONObject)["includeThoughts"],
-  ).toBe(false);
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          thinkingBudget: 0,
+          includeThoughts: false,
+        },
+      },
+      unknown: {},
+    },
+  });
 });

@@ -1,9 +1,11 @@
+import type { CohereEmbeddingModelOptions, CohereLanguageModelOptions } from "@ai-sdk/cohere";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Cohere)
 export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -22,10 +24,14 @@ export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
       return params;
     }
 
-    const dimensions = unknown["dimensions"] as number;
+    const dimensions = unknown["dimensions"] as EmbeddingsDimensions;
     if (!dimensions) return params;
 
-    (params.providerOptions!["cohere"] ??= {})["outputDimension"] = dimensions;
+    const target = (params.providerOptions!["cohere"] ??= {}) as CohereEmbeddingModelOptions;
+
+    // @ts-expect-error AI SDK does the value checking for us
+    target.outputDimension = dimensions;
+
     delete unknown["dimensions"];
 
     return params;
@@ -43,15 +49,15 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["cohere"] ??= {});
+    const target = (params.providerOptions!["cohere"] ??= {}) as CohereLanguageModelOptions;
 
     if (!reasoning.enabled) {
-      target["thinking"] = { type: "disabled" };
+      target.thinking = { type: "disabled" };
     } else if (reasoning.max_tokens) {
-      target["thinking"] = { type: "enabled", tokenBudget: reasoning.max_tokens };
+      target.thinking = { type: "enabled", tokenBudget: reasoning.max_tokens };
     } else if (reasoning.effort) {
       // FUTURE: warn that reasoning.max_tokens was computed
-      target["thinking"] = {
+      target.thinking = {
         type: "enabled",
         tokenBudget: calculateReasoningBudgetFromEffort(
           reasoning.effort,
@@ -60,7 +66,7 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
         ),
       };
     } else {
-      target["thinking"] = { type: "enabled" };
+      target.thinking = { type: "enabled" };
     }
 
     delete unknown["reasoning"];

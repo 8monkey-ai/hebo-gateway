@@ -1,8 +1,11 @@
 import * as z from "zod";
 
+export const EmbeddingsDimensionsSchema = z.int().nonnegative().max(65536);
+export type EmbeddingsDimensions = z.infer<typeof EmbeddingsDimensionsSchema>;
+
 export const EmbeddingsInputsSchema = z.object({
   input: z.union([z.string(), z.array(z.string())]),
-  dimensions: z.int().nonnegative().max(65536).optional(),
+  dimensions: EmbeddingsDimensionsSchema.optional(),
 });
 export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 

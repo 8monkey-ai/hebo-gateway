@@ -1,3 +1,8 @@
+import type { BedrockProviderOptions } from "@ai-sdk/amazon-bedrock";
+import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
+import type { AnthropicLanguageModelOptions } from "@ai-sdk/anthropic";
+import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
+
 import type { LanguageModelMiddleware } from "ai";
 
 import type { ChatCompletionsCacheControl } from "../../endpoints/chat-completions/schema";
@@ -12,16 +17,18 @@ export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
   transformParams: async ({ params, model }) => {
     if (!model.modelId.includes("gpt")) return params;
 
-    const bedrock = params.providerOptions?.["bedrock"];
-    if (!bedrock || typeof bedrock !== "object") return params;
+    const bedrock = params.providerOptions?.["bedrock"] as OpenAIChatLanguageModelOptions;
+    if (!bedrock) return params;
 
-    const effort = bedrock["reasoningEffort"];
+    const effort = bedrock.reasoningEffort;
     if (effort === undefined) return params;
 
-    const target = (bedrock["reasoningConfig"] ??= {}) as Record<string, unknown>;
-    target["maxReasoningEffort"] = effort;
+    const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
 
-    delete bedrock["reasoningEffort"];
+    // @ts-expect-error AI SDK does accept this
+    target.maxReasoningEffort = effort;
+
+    delete bedrock.reasoningEffort;
 
     return params;
   },
@@ -33,33 +40,30 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
   transformParams: async ({ params, model }) => {
     if (!model.modelId.includes("claude")) return params;
 
-    const bedrock = params.providerOptions?.["bedrock"];
-    if (!bedrock || typeof bedrock !== "object") return params;
+    const bedrock = params.providerOptions?.["bedrock"] as AnthropicLanguageModelOptions;
+    if (!bedrock) return params;
 
-    const thinking = bedrock["thinking"];
-    const effort = bedrock["effort"];
+    const thinking = bedrock.thinking;
+    const effort = bedrock.effort;
 
     if (!thinking && effort === undefined) return params;
 
-    const target = (bedrock["reasoningConfig"] ??= {}) as Record<string, unknown>;
+    const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
 
     if (thinking && typeof thinking === "object") {
-      const thinkingOptions = thinking as Record<string, unknown>;
-      if (thinkingOptions["type"] !== undefined) {
-        target["type"] = thinkingOptions["type"];
-      }
-      if (thinkingOptions["budgetTokens"] !== undefined) {
-        target["budgetTokens"] = thinkingOptions["budgetTokens"];
+      target.type = thinking.type;
+      if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
+        target.budgetTokens = thinking.budgetTokens;
       }
     }
 
     // FUTURE: bedrock currently does not support "effort" for other 4.x models
     if (effort !== undefined && isClaude46(model.modelId)) {
-      target["maxReasoningEffort"] = effort;
+      target.maxReasoningEffort = effort;
     }
 
-    delete bedrock["thinking"];
-    delete bedrock["effort"];
+    delete bedrock.thinking;
+    delete bedrock.effort;
 
     return params;
   },
@@ -84,10 +88,10 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
     let hasExplicitCacheControl = false;
     let lastCacheableBlock;
 
-    const processCacheControl = (providerOptions?: Record<string, unknown>) => {
+    const processCacheControl = (providerOptions?: SharedV3ProviderOptions) => {
       if (!providerOptions) return;
 
-      const entryBedrock = providerOptions["bedrock"] as Record<string, unknown> | undefined;
+      const entryBedrock = providerOptions["bedrock"];
       const entryCacheControl = entryBedrock?.["cacheControl"] as ChatCompletionsCacheControl;
       if (!entryBedrock || !entryCacheControl) return;
 
@@ -97,11 +101,11 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
     };
 
     for (const message of params.prompt) {
-      processCacheControl(message["providerOptions"]);
+      processCacheControl(message.providerOptions);
 
-      if (!Array.isArray(message["content"])) continue;
-      for (const part of message["content"]) {
-        processCacheControl(part["providerOptions"]);
+      if (!Array.isArray(message.content)) continue;
+      for (const part of message.content) {
+        processCacheControl(part.providerOptions);
       }
       lastCacheableBlock = message;
     }
@@ -109,7 +113,7 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"];
     const cacheControl = bedrock?.["cacheControl"] as ChatCompletionsCacheControl;
     if (cacheControl && !hasExplicitCacheControl && lastCacheableBlock) {
-      ((lastCacheableBlock["providerOptions"] ??= {})["bedrock"] ??= {})["cachePoint"] =
+      ((lastCacheableBlock.providerOptions ??= {})["bedrock"] ??= {})["cachePoint"] =
         toBedrockCachePoint(model.modelId, cacheControl);
     }
 

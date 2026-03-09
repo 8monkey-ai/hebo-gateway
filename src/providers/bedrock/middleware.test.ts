@@ -65,9 +65,14 @@ test("bedrockGptReasoningMiddleware > should map reasoningEffort into reasoningC
     model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
   });
 
-  expect(result.providerOptions!["bedrock"]).toEqual({
-    reasoningConfig: {
-      maxReasoningEffort: "high",
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          maxReasoningEffort: "high",
+        },
+      },
     },
   });
 });
@@ -88,8 +93,13 @@ test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
   });
 
-  expect(result.providerOptions!["bedrock"]).toEqual({
-    reasoningEffort: "medium",
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningEffort: "medium",
+      },
+    },
   });
 });
 
@@ -113,11 +123,16 @@ test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoni
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
-  expect(result.providerOptions!["bedrock"]).toEqual({
-    reasoningConfig: {
-      type: "adaptive",
-      budgetTokens: 4096,
-      maxReasoningEffort: "max",
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "adaptive",
+          budgetTokens: 4096,
+          maxReasoningEffort: "max",
+        },
+      },
     },
   });
 });
@@ -142,12 +157,17 @@ test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async (
     model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
   });
 
-  expect(result.providerOptions!["bedrock"]).toEqual({
-    thinking: {
-      type: "enabled",
-      budgetTokens: 4096,
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "enabled",
+          budgetTokens: 4096,
+        },
+        effort: "high",
+      },
     },
-    effort: "high",
   });
 });
 
@@ -171,10 +191,15 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-3.7" }),
   });
 
-  expect(result.providerOptions!["bedrock"]).toEqual({
-    reasoningConfig: {
-      type: "enabled",
-      budgetTokens: 4096,
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "enabled",
+          budgetTokens: 4096,
+        },
+      },
     },
   });
 });
@@ -199,10 +224,15 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.5" }),
   });
 
-  expect(result.providerOptions!["bedrock"]).toEqual({
-    reasoningConfig: {
-      type: "enabled",
-      budgetTokens: 4096,
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "enabled",
+          budgetTokens: 4096,
+        },
+      },
     },
   });
 });
@@ -241,22 +271,32 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
     model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
   });
 
-  expect(result.prompt[0]!.providerOptions!["bedrock"]!["cachePoint"]).toEqual({
-    type: "default",
-  });
-  expect(result.prompt[0]!.providerOptions!["bedrock"]!["cacheControl"]).toBeUndefined();
-  expect(
-    (result.prompt[0]!.content[0] as LanguageModelV3TextPart).providerOptions!["bedrock"]![
-      "cachePoint"
+  expect(result).toEqual({
+    prompt: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Policy",
+            providerOptions: {
+              bedrock: {
+                cachePoint: { type: "default" },
+              },
+            },
+          } satisfies LanguageModelV3TextPart,
+        ],
+        providerOptions: {
+          bedrock: {
+            cachePoint: { type: "default" },
+          },
+        },
+      },
     ],
-  ).toEqual({
-    type: "default",
+    providerOptions: {
+      bedrock: {},
+    },
   });
-  expect(
-    (result.prompt[0]!.content[0] as LanguageModelV3TextPart).providerOptions!["bedrock"]![
-      "cacheControl"
-    ],
-  ).toBeUndefined();
 });
 
 test("bedrockPromptCachingMiddleware > should fallback from top-level cacheControl", async () => {
@@ -289,8 +329,31 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
   });
 
-  expect(result.prompt[1]!.providerOptions).toBeDefined();
-  expect(result.providerOptions!["bedrock"]!["cacheControl"]).toBeUndefined();
+  expect(result).toEqual({
+    prompt: [
+      {
+        role: "system",
+        content: "Reusable context",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Question",
+          } satisfies LanguageModelV3TextPart,
+        ],
+        providerOptions: {
+          bedrock: {
+            cachePoint: { type: "default", ttl: "1h" },
+          },
+        },
+      },
+    ],
+    providerOptions: {
+      bedrock: {},
+    },
+  });
 });
 
 test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", async () => {
@@ -309,9 +372,12 @@ test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", 
     model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
   });
 
-  expect(result.providerOptions!["bedrock"]!["cacheControl"]).toEqual({
-    type: "ephemeral",
-    ttl: "1h",
+  expect(result).toEqual({
+    prompt: [{ role: "system", content: "Hello" }],
+    providerOptions: {
+      bedrock: {
+        cacheControl: { type: "ephemeral", ttl: "1h" },
+      },
+    },
   });
-  expect(result.prompt[0]!.providerOptions).toBeUndefined();
 });

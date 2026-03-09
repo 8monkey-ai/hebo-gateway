@@ -536,14 +536,14 @@ Normalization rules:
 
 - `enabled` -> fall-back to model default if none provided
 - `max_tokens`: fall-back to model default if model supports
-- `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`
+- `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
 - Generic `effort` -> budget = percentage of `max_tokens`
   - `none`: 0%
   - `minimal`: 10%
   - `low`: 20%
   - `medium`: 50% (default)
   - `high`: 80%
-  - `xhigh` / `max`: 95%
+  - `xhigh`: 95%
 
 Reasoning output is surfaced as extension to the `completion` object.
 
