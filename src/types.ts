@@ -4,7 +4,7 @@ import type { Tracer } from "@opentelemetry/api";
 import type {
   ChatCompletions,
   ChatCompletionsBody,
-  ChatCompletionsChunk,
+  ChatCompletionsStream,
 } from "./endpoints/chat-completions/schema";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
@@ -63,12 +63,7 @@ export type GatewayContext = {
   /**
    * Result returned by the handler (pre-response).
    */
-  result?:
-    | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | Error>
-    | Embeddings
-    | Model
-    | ModelList;
+  result?: ChatCompletions | ChatCompletionsStream | Embeddings | Model | ModelList;
   /**
    * Response object returned by the handler.
    */
@@ -145,9 +140,9 @@ export type GatewayHooks = {
   ) =>
     | void
     | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | Error>
+    | ChatCompletionsStream
     | Embeddings
-    | Promise<void | ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings>;
+    | Promise<void | ChatCompletions | ChatCompletionsStream | Embeddings>;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.
@@ -156,6 +151,22 @@ export type GatewayHooks = {
 };
 
 export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";
+
+export const DEFAULT_CHAT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+export type GatewayTimeout =
+  | number
+  | null
+  | {
+      /**
+       * Default timeout used.
+       */
+      normal?: number | null;
+      /**
+       * Timeout used when `service_tier=flex`.
+       * Defaults to 3x `normal` when omitted.
+       */
+      flex?: number | null;
+    };
 
 /**
  * Main configuration object for the gateway.
@@ -207,10 +218,19 @@ export type GatewayConfig = {
       hebo?: TelemetrySignalLevel;
     };
   };
+  /**
+   * Optional timeout for server responses.
+   * Supports a number in milliseconds, or tiered config.
+   */
+  timeouts?: GatewayTimeout;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = GatewayConfig & {
+export type GatewayConfigParsed = Omit<GatewayConfig, "timeouts"> & {
+  timeouts: {
+    normal?: number;
+    flex?: number;
+  };
   [kParsed]: true;
 };
 

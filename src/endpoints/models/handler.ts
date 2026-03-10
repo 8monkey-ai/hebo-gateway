@@ -1,12 +1,12 @@
-import type { GatewayConfig, Endpoint, GatewayContext } from "../../types";
+import type { GatewayConfig, Endpoint, GatewayContext, GatewayConfigParsed } from "../../types";
 
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { toModels, toModel } from "./converters";
 
 export const models = (config: GatewayConfig): Endpoint => {
-  // oxlint-disable-next-line require-await
-  const handler = async (ctx: GatewayContext) => {
+  // eslint-disable-next-line require-await
+  const handler = async (ctx: GatewayContext, _cfg: GatewayConfigParsed) => {
     ctx.operation = "models";
 
     if (!ctx.request || ctx.request.method !== "GET") {

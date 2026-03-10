@@ -9,7 +9,7 @@ trap 'kill 0' EXIT
 
 jq --unbuffered -Rcr '
   fromjson? | [
-    ((.time/1000 | strftime("%H:%M:%S")) + " " + (.level|tostring|ascii_upcase) + " " + (.msg // "")),
+    ((.time / 1000 | localtime | strftime("%H:%M:%S")) + " " + (.level|tostring|ascii_upcase) + " " + (.msg // "")),
     (tostring)
   ] | @tsv
 ' \
