@@ -57,31 +57,35 @@ export function toSseStream(
   };
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
+    start(controller) {
       reader = src.getReader();
       heartbeat(controller);
+    },
+
+    async pull(controller) {
+      if (finished) return;
 
       try {
-        for (;;) {
-          // oxlint-disable-next-line no-await-in-loop
-          const { value, done: eof } = await reader.read();
-          if (eof) break;
-
-          if (value.event === "error" || value.data instanceof Error) {
-            const error = toOpenAIError(value.data);
-            controller.enqueue(
-              TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
-            );
-            done(controller, error.error.type === "invalid_request_error" ? 422 : 502, value.data);
-            reader.cancel(value.data).catch(() => {});
-            return;
-          }
-
-          controller.enqueue(TEXT_ENCODER.encode(serializeSseFrame(value)));
-          heartbeat(controller);
+        // oxlint-disable-next-line no-await-in-loop
+        const result = await reader!.read();
+        if (result.done) {
+          done(controller, 200);
+          return;
         }
 
-        done(controller, 200);
+        const value = result.value;
+        if (value.event === "error" || value.data instanceof Error) {
+          const error = toOpenAIError(value.data);
+          controller.enqueue(
+            TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
+          );
+          done(controller, error.error.type === "invalid_request_error" ? 422 : 502, value.data);
+          reader!.cancel(value.data).catch(() => {});
+          return;
+        }
+
+        controller.enqueue(TEXT_ENCODER.encode(serializeSseFrame(value)));
+        heartbeat(controller);
       } catch (error) {
         try {
           controller.enqueue(
@@ -94,10 +98,6 @@ export function toSseStream(
           );
         } catch {}
         done(controller, 502, error);
-      } finally {
-        try {
-          reader?.releaseLock();
-        } catch {}
       }
     },
 

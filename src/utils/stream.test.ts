@@ -18,6 +18,24 @@ describe("stream utils", () => {
     expect(await response.text()).toBe('data: {"hello":"world"}\n\ndata: [DONE]\n\n');
   });
 
+  test("serializes multiple frames across pull cycles", async () => {
+    const response = new Response(
+      toSseStream(
+        new ReadableStream<SseFrame>({
+          start(controller) {
+            controller.enqueue({ data: { hello: "world" } });
+            controller.enqueue({ data: { goodbye: "moon" } });
+            controller.close();
+          },
+        }),
+      ),
+    );
+
+    expect(await response.text()).toBe(
+      'data: {"hello":"world"}\n\ndata: {"goodbye":"moon"}\n\ndata: [DONE]\n\n',
+    );
+  });
+
   test("emits keep-alive comments while waiting for the first frame", async () => {
     const response = new Response(
       toSseStream(
