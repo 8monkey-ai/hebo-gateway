@@ -34,7 +34,9 @@ export function toSseStream(
     if (finished) return;
     finished = true;
     if (timer) clearTimeout(timer);
-    options.onDone?.(status, reason);
+    try {
+      options.onDone?.(status, reason);
+    } catch {}
     try {
       controller.enqueue(SSE_DONE_CHUNK);
     } catch {}
