@@ -73,8 +73,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
 
     // Resolve model + provider (hooks may override defaults).
-    let inputs, service_tier, stream;
-    ({ model: ctx.modelId, stream, service_tier, ...inputs } = ctx.body);
+    let inputs, stream;
+    ({ model: ctx.modelId, stream, ...inputs } = ctx.body);
 
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
@@ -127,7 +127,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         headers: prepareForwardHeaders(ctx.request),
         abortSignal: ctx.request.signal,
         timeout: {
-          totalMs: service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
+          totalMs: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
         },
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
@@ -172,7 +172,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
-      timeout: service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
+      timeout: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
       experimental_include: {
         requestBody: false,
         responseBody: false,
