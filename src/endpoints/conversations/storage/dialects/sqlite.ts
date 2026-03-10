@@ -10,6 +10,10 @@ const mapParams = createParamsMapper(dateToNumber, jsonStringify);
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `"${i}"`,
+  upsertSuffix: (q, pk, cols) =>
+    `ON CONFLICT (${pk.map(q).join(", ")}) DO UPDATE SET ${cols
+      .map((c) => `${q(c)} = EXCLUDED.${q(c)}`)
+      .join(", ")}`,
   supportCreateIndexIfNotExists: true,
   types: {
     varchar: "TEXT",

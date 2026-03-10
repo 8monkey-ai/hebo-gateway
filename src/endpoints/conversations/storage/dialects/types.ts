@@ -8,7 +8,7 @@ export interface QueryExecutor {
 export interface DialectConfig {
   placeholder: (index: number) => string;
   quote: (name: string) => string;
-  supportUpdate?: boolean;
+  upsertSuffix?: (q: (n: string) => string, pk: string[], updateCols: string[]) => string;
   supportCreateIndexIfNotExists?: boolean;
   limitAsLiteral?: boolean;
   types: {

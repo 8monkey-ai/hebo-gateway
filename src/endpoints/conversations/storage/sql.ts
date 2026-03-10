@@ -157,35 +157,29 @@ export class SqlStorage implements ConversationStorage {
   async getConversation(id: string): Promise<Conversation | undefined> {
     const { placeholder: p, quote: q } = this.config;
     const row = await this.executor.get<BaseRow>(
-      `SELECT * FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)}`,
+      `SELECT * FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)} ORDER BY ${q(
+        "created_at",
+      )} DESC LIMIT 1`,
       [id],
     );
     return row ? mapRow<Conversation>(row, "conversation") : undefined;
   }
 
   async updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined> {
-    const { placeholder: p, quote: q, supportUpdate } = this.config;
+    const { placeholder: p, quote: q, upsertSuffix } = this.config;
+    const now = new Date();
 
-    if (supportUpdate === false) {
-      // For databases like GreptimeDB, we "update" by inserting a new version with the same primary key and time index.
-      const existing = await this.getConversation(id);
-      if (!existing) return undefined;
+    const pk = ["id"];
+    const updateCols = ["metadata"];
+    const suffix = upsertSuffix?.(q, pk, updateCols) ?? "";
 
-      // Restore millisecond timestamp from seconds
-      const createdAt = new Date(Number(existing.created_at) * 1000);
+    await this.executor.run(
+      `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
+        0,
+      )}, ${p(1)}, ${p(2)}) ${suffix}`,
+      [id, metadata ?? null, now],
+    );
 
-      await this.executor.run(
-        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
-          0,
-        )}, ${p(1)}, ${p(2)})`,
-        [id, metadata ?? null, createdAt],
-      );
-    } else {
-      await this.executor.run(
-        `UPDATE ${q("conversations")} SET ${q("metadata")} = ${p(0)} WHERE ${q("id")} = ${p(1)}`,
-        [metadata ?? null, id],
-      );
-    }
     return this.getConversation(id);
   }
 

@@ -11,6 +11,8 @@ const mapParams = createParamsMapper(dateToNumber, jsonStringify);
 export const MySQLDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `\`${i}\``,
+  upsertSuffix: (q, _pk, cols) =>
+    `ON DUPLICATE KEY UPDATE ${cols.map((c) => `${q(c)} = VALUES(${q(c)})`).join(", ")}`,
   limitAsLiteral: true,
   supportCreateIndexIfNotExists: false,
   types: {

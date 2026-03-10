@@ -21,7 +21,6 @@ const GrepTimeBase: Pick<DialectConfig, "types"> = {
 export const GrepTimeDialectConfig: DialectConfig = {
   ...PostgresDialectConfig,
   ...GrepTimeBase,
-  supportUpdate: false,
   supportCreateIndexIfNotExists: true,
   limitAsLiteral: true,
 };
