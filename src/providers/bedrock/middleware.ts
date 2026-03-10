@@ -22,6 +22,7 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"] as BedrockProviderOptions;
     if (!bedrock || typeof bedrock !== "object") return params;
 
+    // UPSTREAM: https://github.com/vercel/ai/issues/13241
     // @ts-expect-error AI SDK missing serviceTier, need to open PR
     const tier = bedrock["serviceTier"] as ChatCompletionsServiceTier | undefined;
     switch (tier) {

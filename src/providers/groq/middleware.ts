@@ -24,6 +24,7 @@ export const groqServiceTierMiddleware: LanguageModelMiddleware = {
         return params;
       case "scale":
       case "priority":
+        // UPSTREAM: https://github.com/vercel/ai/issues/13235
         // @ts-expect-error AI SDK missing "performance", need to open PR
         groq.serviceTier = "performance";
         return params;
