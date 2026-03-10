@@ -50,7 +50,7 @@ function mapRow<T>(row: BaseRow, objectType: string): T {
 }
 
 export class SqlStorage implements ConversationStorage {
-  private dialect: SqlDialect;
+  readonly dialect: SqlDialect;
 
   constructor(options: SqlDialect | { dialect: SqlDialect }) {
     if ("executor" in options) {
@@ -221,22 +221,37 @@ export class SqlStorage implements ConversationStorage {
     const conversation = await this.getConversation(conversationId);
     if (!conversation) return undefined;
 
-    const { placeholder: p, quote: q } = this.config;
+    const { placeholder: p, quote: q, types } = this.config;
+    const isGreptime = types.index === "TIME";
     const columns = ["id", "conversation_id", "type", "data"];
+    if (isGreptime) columns.push("created_at");
+
     const placeholders = columns.map((_, i) => p(i)).join(", ");
     const sql = `INSERT INTO ${q("conversation_items")} (${columns
       .map((c) => q(c))
       .join(", ")}) VALUES (${placeholders})`;
 
-    const now = Math.floor(Date.now() / 1000);
+    const now = Date.now();
     const results: ConversationItem[] = [];
 
     await this.executor.transaction(async (tx) => {
+      let i = 0;
       for (const input of items) {
         const { id: inputId, type, ...data } = input as { id?: string; type: string };
         const id = inputId || uuidv7();
+        // Add slight offset for Greptime to ensure unique (PK + TS) even in batch.
+        // We keep it in milliseconds internally for high precision.
+        const ts = now + i++;
 
         const params = [id, conversationId, type, data];
+        if (isGreptime) {
+          // GreptimeDB's Postgres protocol implementation fails to parse ISO strings
+          // (which drivers like PostgresJS automatically convert Date objects into).
+          // Passing a BigInt (millisecond epoch) prevents this conversion and is
+          // natively supported by GreptimeDB's TIMESTAMP columns.
+          params.push(BigInt(ts));
+        }
+
         // eslint-disable-next-line no-await-in-loop
         await tx.run(sql, params);
 
@@ -244,7 +259,7 @@ export class SqlStorage implements ConversationStorage {
           ...input,
           id,
           object: "conversation.item",
-          created_at: now,
+          created_at: Math.floor(ts / 1000),
         } as ConversationItem);
       }
     });

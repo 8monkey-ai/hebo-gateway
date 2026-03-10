@@ -3,6 +3,7 @@ import type { Database as BetterSqlite3Database, Statement } from "better-sqlite
 import type { SQL as BunSql } from "bun";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
+import { mapParams } from "./utils";
 
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
@@ -15,14 +16,6 @@ export const SQLiteDialectConfig: DialectConfig = {
     index: "B-TREE",
   },
 };
-
-const mapParams = (params?: unknown[]) =>
-  params?.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p)) as (
-    | string
-    | number
-    | boolean
-    | null
-  )[];
 
 const MAX_CACHE_SIZE = 100;
 
@@ -119,9 +112,6 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
 }
 
 function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
-  const mapParams = (params?: unknown[]) =>
-    params?.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p));
-
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(query, mapParams(params))) as T[];

@@ -7,6 +7,7 @@ import {
   type PostgresJsSql,
 } from "./postgres";
 import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
+import { mapParams } from "./utils";
 
 const GrepTimeBase: Pick<DialectConfig, "types"> = {
   types: {
@@ -24,11 +25,6 @@ export const GrepTimeDialectConfig: DialectConfig = {
   supportUpdate: false,
   limitAsLiteral: true,
 };
-
-const mapParams = (params?: unknown[]) =>
-  params?.map((p) =>
-    p !== null && typeof p === "object" && !(p instanceof Date) ? JSON.stringify(p) : p,
-  );
 
 export class GrepTimeDialect implements SqlDialect {
   readonly executor: QueryExecutor;

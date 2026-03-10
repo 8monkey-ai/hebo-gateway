@@ -2,6 +2,7 @@ import type { SQL as BunSql } from "bun";
 import type { Pool as Mysql2Pool, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
+import { mapParams } from "./utils";
 
 export type { Mysql2Pool };
 
@@ -17,19 +18,6 @@ export const MySQLDialectConfig: DialectConfig = {
     index: "B-TREE",
   },
 };
-
-/**
- * Helper to stringify object parameters.
- * Required because mysql2 does not automatically serialize objects for JSON columns,
- * even though MySQL supports a native JSON type.
- */
-const mapParams = (params?: unknown[]) =>
-  params?.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p)) as (
-    | string
-    | number
-    | boolean
-    | null
-  )[];
 
 function isMysql2(client: any): client is Mysql2Pool {
   return typeof client.execute === "function" && typeof client.getConnection === "function";
@@ -89,9 +77,6 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
 }
 
 function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
-  const mapParams = (params?: unknown[]) =>
-    params?.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p));
-
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(query, mapParams(params))) as T[];
