@@ -33,6 +33,7 @@ import type {
   ChatCompletionsToolCall,
   ChatCompletionsTool,
   ChatCompletionsToolChoice,
+  ChatCompletionsStreamResult,
   ChatCompletionsContentPart,
   ChatCompletionsMessage,
   ChatCompletionsUserMessage,
@@ -55,9 +56,9 @@ import type {
   ChatCompletionsCacheControl,
   ChatCompletionsServiceTier,
 } from "./schema";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
 import { GatewayError } from "../../errors/gateway";
-import { OpenAIError, toOpenAIError } from "../../errors/openai";
 import { toResponse } from "../../utils/response";
 import { parseDataUrl } from "../../utils/url";
 
@@ -566,6 +567,7 @@ export function toChatCompletions(
     service_tier: resolveResponseServiceTier(result.providerMetadata),
   };
 }
+
 export function toChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
@@ -574,12 +576,11 @@ export function toChatCompletionsResponse(
   return toResponse(toChatCompletions(result, model), responseInit);
 }
 
-export function toChatCompletionsStream<E extends boolean = false>(
+export function toChatCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-  wrapErrors?: E,
-): ReadableStream<ChatCompletionsChunk | (E extends true ? OpenAIError : Error)> {
-  return result.fullStream.pipeThrough(new ChatCompletionsStream(model, wrapErrors));
+): ChatCompletionsStreamResult {
+  return result.fullStream.pipeThrough(new ChatCompletionsStream(model));
 }
 
 export function toChatCompletionsStreamResponse(
@@ -587,14 +588,14 @@ export function toChatCompletionsStreamResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return toResponse(toChatCompletionsStream(result, model, true), responseInit);
+  return toResponse(toChatCompletionsStream(result, model), responseInit);
 }
 
-export class ChatCompletionsStream<E extends boolean = false> extends TransformStream<
+export class ChatCompletionsStream extends TransformStream<
   TextStreamPart<ToolSet>,
-  ChatCompletionsChunk | (E extends true ? OpenAIError : Error)
+  SseFrame<ChatCompletionsChunk> | SseErrorFrame
 > {
-  constructor(model: string, wrapErrors?: E) {
+  constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
@@ -606,25 +607,27 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
       provider_metadata?: SharedV3ProviderMetadata,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-    ): ChatCompletionsChunk => {
+    ): SseFrame<ChatCompletionsChunk> => {
       if (provider_metadata) {
         delta.extra_content = provider_metadata;
       }
 
       return {
-        id: streamId,
-        object: "chat.completion.chunk",
-        created: creationTime,
-        model,
-        choices: [
-          {
-            index: 0,
-            delta,
-            finish_reason: finish_reason ?? null,
-          } satisfies ChatCompletionsChoiceDelta,
-        ],
-        usage: usage ?? null,
-        service_tier: resolveResponseServiceTier(provider_metadata),
+        data: {
+          id: streamId,
+          object: "chat.completion.chunk",
+          created: creationTime,
+          model,
+          choices: [
+            {
+              index: 0,
+              delta,
+              finish_reason: finish_reason ?? null,
+            } satisfies ChatCompletionsChoiceDelta,
+          ],
+          usage: usage ?? null,
+          service_tier: resolveResponseServiceTier(provider_metadata),
+        } satisfies ChatCompletionsChunk,
       };
     };
 
@@ -702,15 +705,9 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
           }
 
           case "error": {
-            let err: Error | OpenAIError;
-            if (wrapErrors) {
-              err = toOpenAIError(part.error);
-            } else if (part.error instanceof Error) {
-              err = part.error;
-            } else {
-              err = new Error(String(part.error));
-            }
-            controller.enqueue(err as E extends true ? OpenAIError : Error);
+            controller.enqueue({
+              data: part.error instanceof Error ? part.error : new Error(String(part.error)),
+            });
           }
         }
       },

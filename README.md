@@ -342,9 +342,9 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings;
+      result: ChatCompletions | ChatCompletionsStreamResult | Embeddings;
     }): Promise<
-      ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings | void
+      ChatCompletions | ChatCompletionsStreamResult | Embeddings | void
     > => {
       // Example Use Cases:
       // - Transform result
@@ -888,7 +888,7 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `createChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.

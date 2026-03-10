@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+
 export const ChatCompletionsCacheControlSchema = z.object({
   type: z.literal("ephemeral"),
   ttl: z.string().optional(),
@@ -370,3 +372,6 @@ export const ChatCompletionsChunkSchema = z.object({
     .meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
+export type ChatCompletionsStreamResult = ReadableStream<
+  SseFrame<ChatCompletionsChunk> | SseErrorFrame
+>;

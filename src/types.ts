@@ -4,7 +4,7 @@ import type { Tracer } from "@opentelemetry/api";
 import type {
   ChatCompletions,
   ChatCompletionsBody,
-  ChatCompletionsChunk,
+  ChatCompletionsStreamResult,
 } from "./endpoints/chat-completions/schema";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
@@ -63,12 +63,7 @@ export type GatewayContext = {
   /**
    * Result returned by the handler (pre-response).
    */
-  result?:
-    | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | Error>
-    | Embeddings
-    | Model
-    | ModelList;
+  result?: ChatCompletions | ChatCompletionsStreamResult | Embeddings | Model | ModelList;
   /**
    * Response object returned by the handler.
    */
@@ -145,9 +140,9 @@ export type GatewayHooks = {
   ) =>
     | void
     | ChatCompletions
-    | ReadableStream<ChatCompletionsChunk | Error>
+    | ChatCompletionsStreamResult
     | Embeddings
-    | Promise<void | ChatCompletions | ReadableStream<ChatCompletionsChunk | Error> | Embeddings>;
+    | Promise<void | ChatCompletions | ChatCompletionsStreamResult | Embeddings>;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.
