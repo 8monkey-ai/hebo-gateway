@@ -9,6 +9,7 @@ export interface DialectConfig {
   placeholder: (index: number) => string;
   quote: (name: string) => string;
   supportUpdate?: boolean;
+  supportCreateIndexIfNotExists?: boolean;
   limitAsLiteral?: boolean;
   types: {
     varchar: string;

@@ -12,6 +12,7 @@ const mapParams = createParamsMapper(dateToNumber);
 export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
   quote: (i) => `"${i}"`,
+  supportCreateIndexIfNotExists: true,
   types: {
     varchar: "VARCHAR",
     json: "JSONB",

@@ -12,6 +12,7 @@ export const MySQLDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `\`${i}\``,
   limitAsLiteral: true,
+  supportCreateIndexIfNotExists: false,
   types: {
     varchar: "VARCHAR",
     json: "JSON",

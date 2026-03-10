@@ -10,6 +10,7 @@ const mapParams = createParamsMapper(dateToNumber, jsonStringify);
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `"${i}"`,
+  supportCreateIndexIfNotExists: true,
   types: {
     varchar: "TEXT",
     json: "TEXT",

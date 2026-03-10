@@ -22,6 +22,7 @@ export const GrepTimeDialectConfig: DialectConfig = {
   ...PostgresDialectConfig,
   ...GrepTimeBase,
   supportUpdate: false,
+  supportCreateIndexIfNotExists: true,
   limitAsLiteral: true,
 };
 

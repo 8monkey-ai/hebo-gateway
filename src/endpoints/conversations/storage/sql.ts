@@ -57,19 +57,17 @@ export class SqlStorage implements ConversationStorage {
   }
 
   async migrate() {
-    const { types, quote: q } = this.config;
-    const isGreptime = types.index === "TIME";
-    const isMysql = types.index === "B-TREE" && types.varchar !== "TEXT";
+    const { types, quote: q, supportCreateIndexIfNotExists } = this.config;
+    const isTimeIndex = types.index === "TIME";
 
     const varchar = (len: number) =>
       types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`;
-    const timeIndex = isGreptime ? `, TIME INDEX (${q("created_at")})` : "";
+    const timeIndex = isTimeIndex ? `, TIME INDEX (${q("created_at")})` : "";
 
     const createIndex = async (table: string, name: string, cols: string[], seq = false) => {
-      if (isGreptime) return;
       const isBrin = types.index === "BRIN";
       const using = seq && types.index !== "B-TREE" ? `USING ${types.index}` : "";
-      const ifNotExists = isMysql ? "" : "IF NOT EXISTS";
+      const ifNotExists = supportCreateIndexIfNotExists ? "IF NOT EXISTS" : "";
 
       const formattedCols = cols
         .map((c) => {
@@ -86,7 +84,7 @@ export class SqlStorage implements ConversationStorage {
           [],
         );
       } catch (err: any) {
-        if (isMysql && err.message?.includes("Duplicate key name")) return;
+        if (!supportCreateIndexIfNotExists && err.message?.includes("Duplicate key name")) return;
         throw err;
       }
     };
@@ -107,19 +105,19 @@ export class SqlStorage implements ConversationStorage {
     await this.executor.run(
       `
       CREATE TABLE IF NOT EXISTS ${q("conversation_items")} (
-        ${q("id")} ${varchar(255)}${isGreptime ? " SKIPPING INDEX" : ""},
+        ${q("id")} ${varchar(255)}${isTimeIndex ? " SKIPPING INDEX" : ""},
         ${q("conversation_id")} ${varchar(255)},
         ${q("created_at")} ${types.timestamp},
         ${q("type")} ${varchar(64)},
         ${q("data")} ${types.json},
-        PRIMARY KEY (${q("conversation_id")}${isGreptime ? "" : `, ${q("id")}`})
+        PRIMARY KEY (${q("conversation_id")}${isTimeIndex ? "" : `, ${q("id")}`})
         ${timeIndex}
       )
     `,
       [],
     );
 
-    if (!isGreptime) {
+    if (!isTimeIndex) {
       await createIndex("conversations", "idx_conversations_created_at", ["created_at DESC"], true);
       await createIndex("conversation_items", "idx_items_conv_id", [
         "conversation_id",
