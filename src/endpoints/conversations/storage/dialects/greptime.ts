@@ -7,7 +7,7 @@ import {
   type PostgresJsSql,
 } from "./postgres";
 import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
-import { createMapper, dateToBigInt, jsonStringify } from "./utils";
+import { createParamsMapper, dateToBigInt, jsonStringify } from "./utils";
 
 const GrepTimeBase: Pick<DialectConfig, "types"> = {
   types: {
@@ -25,7 +25,7 @@ export const GrepTimeDialectConfig: DialectConfig = {
   limitAsLiteral: true,
 };
 
-const mapParams = createMapper(dateToBigInt, jsonStringify);
+const mapParams = createParamsMapper(dateToBigInt, jsonStringify);
 
 function createGreptimeExecutor(base: QueryExecutor): QueryExecutor {
   return {

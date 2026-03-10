@@ -3,11 +3,11 @@ import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql } from "postgres";
 
 import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
-import { createMapper, dateToNumber } from "./utils";
+import { createParamsMapper, dateToNumber } from "./utils";
 
 export type { PostgresJsSql, PgPool };
 
-const mapParams = createMapper(dateToNumber);
+const mapParams = createParamsMapper(dateToNumber);
 
 export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,

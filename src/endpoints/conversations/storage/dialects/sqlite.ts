@@ -3,9 +3,9 @@ import type { Database as BetterSqlite3Database, Statement } from "better-sqlite
 import type { SQL as BunSql } from "bun";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { createMapper, dateToNumber, jsonStringify } from "./utils";
+import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
 
-const mapParams = createMapper(dateToNumber, jsonStringify);
+const mapParams = createParamsMapper(dateToNumber, jsonStringify);
 
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",

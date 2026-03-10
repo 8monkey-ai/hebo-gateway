@@ -2,11 +2,11 @@ import type { SQL as BunSql } from "bun";
 import type { Pool as Mysql2Pool, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { createMapper, dateToNumber, jsonStringify } from "./utils";
+import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
 
 export type { Mysql2Pool };
 
-const mapParams = createMapper(dateToNumber, jsonStringify);
+const mapParams = createParamsMapper(dateToNumber, jsonStringify);
 
 export const MySQLDialectConfig: DialectConfig = {
   placeholder: () => "?",

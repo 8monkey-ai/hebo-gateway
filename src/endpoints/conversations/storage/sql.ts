@@ -18,35 +18,24 @@ interface BaseRow {
   type?: string;
   data: string | Record<string, unknown>;
 }
+import { createRowMapper, mergeData, parseJson, toSeconds } from "./dialects/utils";
 
 /**
  * Maps a raw database row to a clean conversation or item object.
  */
 function mapRow<T>(row: BaseRow, objectType: string): T {
-  const parsedData = typeof row.data === "string" ? JSON.parse(row.data) : row.data;
-  let parsedMetadata = row.metadata;
+  const mapper = createRowMapper<T>(
+    parseJson("data"),
+    parseJson("metadata"),
+    toSeconds("created_at"),
+    mergeData("data"),
+    (r) => {
+      r["object"] = objectType;
+      return r;
+    },
+  );
 
-  if (typeof parsedMetadata === "string") {
-    parsedMetadata =
-      parsedMetadata === "" || parsedMetadata === "{}" ? {} : JSON.parse(parsedMetadata);
-  }
-
-  // Standardize timestamp to OpenAI-compliant SECONDS.
-  const createdAt =
-    row.created_at instanceof Date
-      ? Math.floor(row.created_at.getTime() / 1000)
-      : Math.floor(Number(row.created_at) / 1000);
-
-  const out: Record<string, unknown> = {
-    id: row.id,
-    object: objectType, // Reconstructed in app layer
-    created_at: createdAt,
-  };
-
-  if (row.type) out["type"] = row.type;
-  if (parsedMetadata !== undefined) out["metadata"] = parsedMetadata;
-
-  return Object.assign(out, parsedData) as T;
+  return mapper(row as unknown as Record<string, unknown>);
 }
 
 export class SqlStorage implements ConversationStorage {
