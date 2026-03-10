@@ -72,7 +72,7 @@ export function toSseStream(
             controller.enqueue(
               TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
             );
-            done(controller, error.error.type === "invalid_request_error" ? 422 : 500, value.data);
+            done(controller, error.error.type === "invalid_request_error" ? 422 : 502, value.data);
             reader.cancel(value.data).catch(() => {});
             return;
           }
