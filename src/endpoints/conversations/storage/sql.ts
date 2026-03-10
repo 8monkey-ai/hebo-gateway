@@ -167,7 +167,21 @@ export class SqlStorage implements ConversationStorage {
 
   async updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined> {
     const { placeholder: p, quote: q, upsertSuffix } = this.config;
-    const now = new Date();
+
+    // Unified approach: Fetch original created_at to verify existence and preserve it.
+    // 1. Existence check: Ensure the conversation exists before updating (returning undefined if missing).
+    //    This prevents clients from accidentally creating "zombie" conversations with custom IDs.
+    // 2. Consistency: Standard SQL (Postgres/MySQL/SQLite) preserves the original creation timestamp.
+    // 3. Deduplication: GreptimeDB requires the EXACT same Time Index (created_at) to deduplicate the row.
+    const row = await this.executor.get<{ created_at: Date | number }>(
+      `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(
+        0,
+      )} ORDER BY ${q("created_at")} DESC LIMIT 1`,
+      [id],
+    );
+
+    if (!row) return undefined;
+    const createdAt = row.created_at;
 
     const pk = ["id"];
     const updateCols = ["metadata"];
@@ -177,10 +191,17 @@ export class SqlStorage implements ConversationStorage {
       `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
         0,
       )}, ${p(1)}, ${p(2)}) ${suffix}`,
-      [id, metadata ?? null, now],
+      [id, metadata ?? null, createdAt],
     );
 
-    return this.getConversation(id);
+    return {
+      id,
+      object: "conversation",
+      created_at: Math.floor(
+        (createdAt instanceof Date ? createdAt.getTime() : Number(createdAt)) / 1000,
+      ),
+      metadata: metadata ?? null,
+    };
   }
 
   async deleteConversation(id: string): Promise<{ id: string; deleted: boolean }> {
