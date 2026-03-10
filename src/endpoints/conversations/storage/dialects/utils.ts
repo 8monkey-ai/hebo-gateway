@@ -1,15 +1,32 @@
+type Mapper = (v: any) => any;
+
 /**
- * Helper to stringify object parameters.
- *
- * This is required because most database drivers (such as mysql2, postgres.js, and bun:sqlite)
- * do not automatically serialize JavaScript objects when inserting into JSON columns.
- * Without this, passing an object as a query parameter would often result in the
- * driver trying to bind it as a string "[object Object]" or failing with a type error.
+ * Normalizes a list of parameters by applying a chain of atomic mappers to each value.
  */
-export const mapParams = (params?: unknown[]) =>
-  params?.map((p) => (p !== null && typeof p === "object" ? JSON.stringify(p) : p)) as (
-    | string
-    | number
-    | boolean
-    | null
-  )[];
+export function createMapper(...mappers: Mapper[]) {
+  return (params?: unknown[]) =>
+    params?.map((p) => {
+      let val = p;
+      for (const mapper of mappers) {
+        val = mapper(val);
+      }
+      return val;
+    }) as (string | number | bigint | boolean | null)[];
+}
+
+/**
+ * Converts Date objects to millisecond numbers.
+ */
+export const dateToNumber: Mapper = (v) => (v instanceof Date ? v.getTime() : v);
+
+/**
+ * Converts Date objects to BigInt milliseconds.
+ */
+export const dateToBigInt: Mapper = (v) => (v instanceof Date ? BigInt(v.getTime()) : v);
+
+/**
+ * Stringifies plain objects and arrays to JSON strings.
+ * Skips Date objects.
+ */
+export const jsonStringify: Mapper = (v) =>
+  v !== null && typeof v === "object" && !(v instanceof Date) ? JSON.stringify(v) : v;

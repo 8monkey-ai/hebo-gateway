@@ -3,7 +3,9 @@ import type { Database as BetterSqlite3Database, Statement } from "better-sqlite
 import type { SQL as BunSql } from "bun";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { mapParams } from "./utils";
+import { createMapper, dateToNumber, jsonStringify } from "./utils";
+
+const mapParams = createMapper(dateToNumber, jsonStringify);
 
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
@@ -12,7 +14,6 @@ export const SQLiteDialectConfig: DialectConfig = {
     varchar: "TEXT",
     json: "TEXT",
     timestamp: "BIGINT",
-    timestampNow: "(unixepoch('now'))",
     index: "B-TREE",
   },
 };

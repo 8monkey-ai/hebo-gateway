@@ -35,7 +35,7 @@ function mapRow<T>(row: BaseRow, objectType: string): T {
   const createdAt =
     row.created_at instanceof Date
       ? Math.floor(row.created_at.getTime() / 1000)
-      : Number(row.created_at);
+      : Math.floor(Number(row.created_at) / 1000);
 
   const out: Record<string, unknown> = {
     id: row.id,
@@ -75,7 +75,6 @@ export class SqlStorage implements ConversationStorage {
     const varchar = (len: number) =>
       types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`;
     const timeIndex = isGreptime ? `, TIME INDEX (${q("created_at")})` : "";
-    const createdAtDefault = types.timestampNow ? `DEFAULT ${types.timestampNow}` : "";
 
     const createIndex = async (table: string, name: string, cols: string[], seq = false) => {
       if (isGreptime) return;
@@ -107,7 +106,7 @@ export class SqlStorage implements ConversationStorage {
       `
       CREATE TABLE IF NOT EXISTS ${q("conversations")} (
         ${q("id")} ${varchar(255)},
-        ${q("created_at")} ${types.timestamp} ${createdAtDefault},
+        ${q("created_at")} ${types.timestamp},
         ${q("metadata")} ${types.json},
         PRIMARY KEY (${q("id")})
         ${timeIndex}
@@ -121,7 +120,7 @@ export class SqlStorage implements ConversationStorage {
       CREATE TABLE IF NOT EXISTS ${q("conversation_items")} (
         ${q("id")} ${varchar(255)}${isGreptime ? " SKIPPING INDEX" : ""},
         ${q("conversation_id")} ${varchar(255)},
-        ${q("created_at")} ${types.timestamp} ${createdAtDefault},
+        ${q("created_at")} ${types.timestamp},
         ${q("type")} ${varchar(64)},
         ${q("data")} ${types.json},
         PRIMARY KEY (${q("conversation_id")}${isGreptime ? "" : `, ${q("id")}`})
@@ -148,17 +147,19 @@ export class SqlStorage implements ConversationStorage {
     const { placeholder: p, quote: q } = this.config;
     const id = uuidv7();
     const metadata = params.metadata ?? null;
-    const now = Math.floor(Date.now() / 1000);
+    const now = new Date();
 
     await this.executor.run(
-      `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}) VALUES (${p(0)}, ${p(1)})`,
-      [id, metadata],
+      `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
+        0,
+      )}, ${p(1)}, ${p(2)})`,
+      [id, metadata, now],
     );
 
     const conversation: Conversation = {
       id,
       object: "conversation",
-      created_at: now,
+      created_at: Math.floor(now.getTime() / 1000),
       metadata,
     };
 
@@ -186,15 +187,14 @@ export class SqlStorage implements ConversationStorage {
       const existing = await this.getConversation(id);
       if (!existing) return undefined;
 
-      // Greptime TIMESTAMP expects milliseconds.
-      // We pass it as a literal in the SQL to avoid driver formatting issues.
-      const createdAt = Number(existing.created_at) * 1000;
+      // Restore millisecond timestamp from seconds
+      const createdAt = new Date(Number(existing.created_at) * 1000);
 
       await this.executor.run(
         `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
           0,
-        )}, ${p(1)}, ${createdAt})`,
-        [id, metadata ?? null],
+        )}, ${p(1)}, ${p(2)})`,
+        [id, metadata ?? null, createdAt],
       );
     } else {
       await this.executor.run(
@@ -221,10 +221,8 @@ export class SqlStorage implements ConversationStorage {
     const conversation = await this.getConversation(conversationId);
     if (!conversation) return undefined;
 
-    const { placeholder: p, quote: q, types } = this.config;
-    const isGreptime = types.index === "TIME";
-    const columns = ["id", "conversation_id", "type", "data"];
-    if (isGreptime) columns.push("created_at");
+    const { placeholder: p, quote: q } = this.config;
+    const columns = ["id", "conversation_id", "type", "data", "created_at"];
 
     const placeholders = columns.map((_, i) => p(i)).join(", ");
     const sql = `INSERT INTO ${q("conversation_items")} (${columns
@@ -239,18 +237,10 @@ export class SqlStorage implements ConversationStorage {
       for (const input of items) {
         const { id: inputId, type, ...data } = input as { id?: string; type: string };
         const id = inputId || uuidv7();
-        // Add slight offset for Greptime to ensure unique (PK + TS) even in batch.
-        // We keep it in milliseconds internally for high precision.
-        const ts = now + i++;
+        // Add slight offset to ensure unique (PK + TS) even in batch.
+        const createdAt = new Date(now + i++);
 
-        const params = [id, conversationId, type, data];
-        if (isGreptime) {
-          // GreptimeDB's Postgres protocol implementation fails to parse ISO strings
-          // (which drivers like PostgresJS automatically convert Date objects into).
-          // Passing a BigInt (millisecond epoch) prevents this conversion and is
-          // natively supported by GreptimeDB's TIMESTAMP columns.
-          params.push(BigInt(ts));
-        }
+        const params = [id, conversationId, type, data, createdAt];
 
         // eslint-disable-next-line no-await-in-loop
         await tx.run(sql, params);
@@ -259,7 +249,7 @@ export class SqlStorage implements ConversationStorage {
           ...input,
           id,
           object: "conversation.item",
-          created_at: Math.floor(ts / 1000),
+          created_at: Math.floor(createdAt.getTime() / 1000),
         } as ConversationItem);
       }
     });
