@@ -1,4 +1,4 @@
-import { v7 as uuidv7 } from "uuid";
+import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 
 import type {
   Conversation,
@@ -119,11 +119,7 @@ export class SqlStorage implements ConversationStorage {
 
     if (!isTimeIndex) {
       await createIndex("conversations", "idx_conversations_created_at", ["created_at DESC"], true);
-      await createIndex("conversation_items", "idx_items_conv_id", [
-        "conversation_id",
-        "created_at DESC",
-        "id DESC",
-      ]);
+      await createIndex("conversation_items", "idx_items_conv_id", ["conversation_id", "id DESC"]);
     }
   }
 
@@ -132,7 +128,8 @@ export class SqlStorage implements ConversationStorage {
     items?: ResponseInputItem[];
   }): Promise<Conversation> {
     const { placeholder: p, quote: q } = this.config;
-    const id = uuidv7();
+    const isGreptime = this.config.types.index === "TIME";
+    const id = isGreptime ? uuidv4() : uuidv7();
     const metadata = params.metadata ?? null;
     const now = new Date();
 

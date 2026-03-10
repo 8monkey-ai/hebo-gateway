@@ -15,7 +15,8 @@ function pipe<T>(...fns: ((v: T) => T)[]) {
  */
 export function createParamsMapper(...mappers: ((v: unknown) => unknown)[]) {
   const p = pipe(...mappers);
-  return (params?: unknown[]) => params?.map(p) as (string | number | bigint | boolean | null)[];
+  return (params?: unknown[]) =>
+    params?.map((v) => p(v)) as (string | number | bigint | boolean | null)[];
 }
 
 /**
