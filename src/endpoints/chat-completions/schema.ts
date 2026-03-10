@@ -372,6 +372,4 @@ export const ChatCompletionsChunkSchema = z.object({
     .meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
-export type ChatCompletionsStreamResult = ReadableStream<
-  SseFrame<ChatCompletionsChunk> | SseErrorFrame
->;
+export type ChatCompletionsStream = ReadableStream<SseFrame<ChatCompletionsChunk> | SseErrorFrame>;

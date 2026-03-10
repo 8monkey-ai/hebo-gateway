@@ -342,9 +342,9 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions | ChatCompletionsStreamResult | Embeddings;
+      result: ChatCompletions | ChatCompletionsStream | Embeddings;
     }): Promise<
-      ChatCompletions | ChatCompletionsStreamResult | Embeddings | void
+      ChatCompletions | ChatCompletionsStream | Embeddings | void
     > => {
       // Example Use Cases:
       // - Transform result

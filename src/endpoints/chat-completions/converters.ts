@@ -33,7 +33,7 @@ import type {
   ChatCompletionsToolCall,
   ChatCompletionsTool,
   ChatCompletionsToolChoice,
-  ChatCompletionsStreamResult,
+  ChatCompletionsStream,
   ChatCompletionsContentPart,
   ChatCompletionsMessage,
   ChatCompletionsUserMessage,
@@ -579,8 +579,8 @@ export function toChatCompletionsResponse(
 export function toChatCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-): ChatCompletionsStreamResult {
-  return result.fullStream.pipeThrough(new ChatCompletionsStream(model));
+): ChatCompletionsStream {
+  return result.fullStream.pipeThrough(new ChatCompletionsTransformStream(model));
 }
 
 export function toChatCompletionsStreamResponse(
@@ -591,7 +591,7 @@ export function toChatCompletionsStreamResponse(
   return toResponse(toChatCompletionsStream(result, model), responseInit);
 }
 
-export class ChatCompletionsStream extends TransformStream<
+export class ChatCompletionsTransformStream extends TransformStream<
   TextStreamPart<ToolSet>,
   SseFrame<ChatCompletionsChunk> | SseErrorFrame
 > {
