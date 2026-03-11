@@ -11,6 +11,7 @@ export interface DialectConfig {
   upsertSuffix?: (q: (n: string) => string, pk: string[], updateCols: string[]) => string;
   supportCreateIndexIfNotExists?: boolean;
   limitAsLiteral?: boolean;
+  partitionClause?: (columns: string[]) => string;
   types: {
     varchar: string;
     json: string;

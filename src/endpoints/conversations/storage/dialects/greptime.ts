@@ -26,6 +26,8 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
     upsertSuffix: undefined,
     supportCreateIndexIfNotExists: true,
     limitAsLiteral: true,
+    partitionClause: (cols) => `PARTITION ON COLUMNS (${cols.join(", ")})`,
+    types: GrepTimeBase.types,
   },
 );
 

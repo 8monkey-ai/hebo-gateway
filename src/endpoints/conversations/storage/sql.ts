@@ -59,6 +59,8 @@ export class SqlStorage implements ConversationStorage {
     const varchar = (len: number) =>
       types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`;
     const timeIndex = isTimeIndex ? `, TIME INDEX (${q("created_at")})` : "";
+    const partition = (cols: string[]) =>
+      this.config.partitionClause ? ` ${this.config.partitionClause(cols.map(q))}` : "";
 
     const createIndex = async (table: string, name: string, cols: string[], seq = false) => {
       const isBrin = types.index === "BRIN";
@@ -95,7 +97,7 @@ export class SqlStorage implements ConversationStorage {
         ${q("metadata")} ${types.json},
         PRIMARY KEY (${q("id")})
         ${timeIndex}
-      )
+      )${partition(["id"])}
     `,
       [],
     );
@@ -110,7 +112,7 @@ export class SqlStorage implements ConversationStorage {
         ${q("data")} ${types.json},
         PRIMARY KEY (${q("conversation_id")}${isTimeIndex ? "" : `, ${q("id")}`})
         ${timeIndex}
-      )
+      )${partition(["conversation_id"])}
     `,
       [],
     );
