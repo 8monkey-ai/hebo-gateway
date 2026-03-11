@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+
 export const ChatCompletionsCacheControlSchema = z.object({
   type: z.literal("ephemeral"),
   ttl: z.string().optional(),
@@ -191,14 +193,11 @@ export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoice
 
 export const ChatCompletionsReasoningEffortSchema = z.enum([
   "none",
-  // Extension origin: Gemini
   "minimal",
   "low",
   "medium",
   "high",
   "xhigh",
-  // Extension origin: Anthropic
-  "max",
 ]);
 export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
 
@@ -235,6 +234,14 @@ export const ChatCompletionsMetadataSchema = z.record(
   z.string().max(512),
 );
 export type ChatCompletionsMetadata = z.infer<typeof ChatCompletionsMetadataSchema>;
+export const ChatCompletionsServiceTierSchema = z.enum([
+  "auto",
+  "default",
+  "flex",
+  "scale",
+  "priority",
+]);
+export type ChatCompletionsServiceTier = z.infer<typeof ChatCompletionsServiceTierSchema>;
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
@@ -251,14 +258,19 @@ const ChatCompletionsInputsSchema = z.object({
   metadata: ChatCompletionsMetadataSchema.optional(),
   response_format: ChatCompletionsResponseFormatSchema.optional(),
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   prompt_cache_key: z.string().optional(),
   prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
-  // Extension origin: Gemini explicit cache handle
-  cached_content: z.string().optional().meta({ extension: true }),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
+  // Extension origin: Gemini extra_body
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview#extra_body
+  extra_body: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
@@ -314,8 +326,12 @@ export const ChatCompletionsSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z.unknown().optional().meta({ extension: true }),
+  provider_metadata: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
@@ -348,7 +364,12 @@ export const ChatCompletionsChunkSchema = z.object({
   model: z.string(),
   choices: z.array(ChatCompletionsChoiceDeltaSchema),
   usage: ChatCompletionsUsageSchema.nullable(),
+  service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z.unknown().optional().meta({ extension: true }),
+  provider_metadata: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
+export type ChatCompletionsStream = ReadableStream<SseFrame<ChatCompletionsChunk> | SseErrorFrame>;

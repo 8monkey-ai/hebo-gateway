@@ -1,4 +1,4 @@
-import type { LogFn, LogLevel, Logger } from "./index";
+import type { LogArgs, LogFn, LogLevel, Logger } from "./index";
 
 import { isProduction, isTest } from "../utils/env";
 
@@ -34,7 +34,7 @@ function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, u
 
     let val: unknown;
     try {
-      val = (err as any)[k];
+      val = (err as unknown as Record<string, unknown>)[k];
     } catch {
       val = "[Unreadable]";
     }
@@ -48,9 +48,7 @@ function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, u
   return out;
 }
 
-const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknown> => {
-  if (args.length === 0) return {};
-
+const buildLogObject = (level: LogLevel, args: LogArgs): Record<string, unknown> => {
   const [first, second] = args;
 
   let obj: Record<string, unknown> | undefined;
@@ -88,8 +86,9 @@ const buildLogObject = (level: LogLevel, args: unknown[]): Record<string, unknow
 
 const makeLogFn =
   (level: LogLevel, write: (line: string) => void): LogFn =>
-  (...args: unknown[]) =>
+  (...args: LogArgs) => {
     write(JSON.stringify(buildLogObject(level, args)));
+  };
 
 export const createDefaultLogger = (config: { level?: LogLevel }): Logger => {
   if (config.level === "silent" || getDefaultLogLevel() === "silent") {

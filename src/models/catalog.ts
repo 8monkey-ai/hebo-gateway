@@ -9,5 +9,9 @@ type ModelCatalogInput =
 export function defineModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalog {
   const catalogs = inputs.flat().map((input) => (typeof input === "function" ? input() : input));
 
-  return Object.assign({}, ...catalogs);
+  const out: ModelCatalog = {};
+  for (const catalog of catalogs) {
+    Object.assign(out, catalog);
+  }
+  return out;
 }

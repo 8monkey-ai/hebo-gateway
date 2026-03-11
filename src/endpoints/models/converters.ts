@@ -17,14 +17,14 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
     id,
     object: "model" as const,
     created: createdTimestamp,
-    owned_by: id.split("/")[0] || "system",
+    owned_by: id.split("/")[0] ?? "system",
     architecture: {
-      input_modalities: modalities?.input || [],
+      input_modalities: modalities?.input ?? [],
       modality:
         modalities?.input &&
         modalities?.output &&
         `${modalities.input?.[0]}->${modalities.output?.[0]}`,
-      output_modalities: modalities?.output || [],
+      output_modalities: modalities?.output ?? [],
     },
     endpoints:
       providers?.map((provider) => ({

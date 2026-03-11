@@ -116,7 +116,9 @@ export const withCanonicalIds = (
     stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
 
   // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
+  // oxlint-disable-next-line unbound-method
   const languageModel = provider.languageModel;
+  // oxlint-disable-next-line unbound-method, no-deprecated
   const embeddingModel = provider.textEmbeddingModel!;
 
   const fallbackProvider = needsFallbackWrap
@@ -131,6 +133,7 @@ export const withCanonicalIds = (
         embeddingModel: (id: string) => {
           const mapped = applyFallbackAffixes(normalizeId(id));
           logger.debug(`[canonical] mapped ${id} to ${mapped}`);
+          // oxlint-disable-next-line no-deprecated
           return embeddingModel(mapped);
         },
       } satisfies ProviderV3)

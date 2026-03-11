@@ -1,3 +1,4 @@
+import type { OpenAIChatLanguageModelOptions, OpenAIEmbeddingModelOptions } from "@ai-sdk/openai";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type {
@@ -15,28 +16,30 @@ export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const dimensions = unknown["dimensions"] as number;
+    const dimensions = unknown["dimensions"] as OpenAIEmbeddingModelOptions["dimensions"];
     if (!dimensions) return params;
 
-    (params.providerOptions!["openai"] ??= {})["dimensions"] = dimensions;
+    const target = (params.providerOptions!["openai"] ??= {}) as OpenAIEmbeddingModelOptions;
+    target.dimensions = dimensions;
     delete unknown["dimensions"];
 
     return params;
   },
 };
 
-function mapGptOssReasoningEffort(
-  effort?: ChatCompletionsReasoningEffort,
-): "low" | "medium" | "high" {
+function mapGptOssReasoningEffort(effort?: ChatCompletionsReasoningEffort) {
   switch (effort) {
+    case undefined:
+    case "none":
+      return;
+    case "minimal":
+    case "low":
+      return "low";
     case "medium":
       return "medium";
     case "high":
     case "xhigh":
-    case "max":
       return "high";
-    default:
-      return "low";
   }
 }
 
@@ -50,16 +53,16 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["openai"] ??= {});
+    const target = (params.providerOptions!["openai"] ??= {}) as OpenAIChatLanguageModelOptions;
     const isGptOss = model.modelId.includes("gpt-oss");
 
     if (isGptOss) {
       // FUTURE: warn that unable to disable reasoning for gpt-oss models
-      target["reasoningEffort"] = mapGptOssReasoningEffort(reasoning.effort);
+      target.reasoningEffort = mapGptOssReasoningEffort(reasoning.effort);
     } else if (reasoning.enabled === false) {
-      target["reasoningEffort"] = "none";
+      target.reasoningEffort = "none";
     } else if (reasoning.effort) {
-      target["reasoningEffort"] = reasoning.effort;
+      target.reasoningEffort = reasoning.effort;
     }
 
     // FUTURE: warn that reasoning.max_tokens (not supported) was ignored
@@ -78,13 +81,15 @@ export const openAIPromptCachingMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const key = unknown["prompt_cache_key"] as string | undefined;
-    const retention = unknown["prompt_cache_retention"] as "in_memory" | "24h" | undefined;
+    const key = unknown["prompt_cache_key"] as OpenAIChatLanguageModelOptions["promptCacheKey"];
+    const retention = unknown[
+      "prompt_cache_retention"
+    ] as OpenAIChatLanguageModelOptions["promptCacheRetention"];
 
     if (key || retention) {
-      const target = (params.providerOptions!["openai"] ??= {});
-      if (key) target["promptCacheKey"] = key;
-      if (retention) target["promptCacheRetention"] = retention;
+      const target = (params.providerOptions!["openai"] ??= {}) as OpenAIChatLanguageModelOptions;
+      if (key) target.promptCacheKey = key;
+      if (retention) target.promptCacheRetention = retention;
     }
 
     delete unknown["prompt_cache_key"];

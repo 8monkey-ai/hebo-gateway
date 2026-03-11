@@ -145,7 +145,7 @@ class ModelMiddlewareMatcher {
 export const modelMiddlewareMatcher = new ModelMiddlewareMatcher();
 export type { ModelMiddlewareMatcher };
 
-const toArray = <T>(v: T | readonly T[]) => (Array.isArray(v) ? v : [v]);
+const toArray = <T>(v: T | readonly T[]): T[] => (Array.isArray(v) ? v : [v as T]);
 
 function compilePattern(pattern: string): (key: string) => boolean {
   if (!pattern.includes("*")) return (key) => key === pattern;

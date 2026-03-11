@@ -1,4 +1,8 @@
-import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
+import type {
+  SharedV3ProviderOptions,
+  SharedV3ProviderMetadata,
+  JSONObject,
+} from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -29,6 +33,7 @@ import type {
   ChatCompletionsToolCall,
   ChatCompletionsTool,
   ChatCompletionsToolChoice,
+  ChatCompletionsStream,
   ChatCompletionsContentPart,
   ChatCompletionsMessage,
   ChatCompletionsUserMessage,
@@ -49,10 +54,11 @@ import type {
   ChatCompletionsResponseFormat,
   ChatCompletionsContentPartText,
   ChatCompletionsCacheControl,
+  ChatCompletionsServiceTier,
 } from "./schema";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
 import { GatewayError } from "../../errors/gateway";
-import { OpenAIError, toOpenAIError } from "../../errors/openai";
 import { toResponse } from "../../utils/response";
 import { parseDataUrl } from "../../utils/url";
 
@@ -87,7 +93,7 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     reasoning,
     prompt_cache_key,
     prompt_cache_retention,
-    cached_content,
+    extra_body,
     cache_control,
     frequency_penalty,
     presence_penalty,
@@ -100,13 +106,14 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
   Object.assign(
     rest,
-    parsePromptCachingOptions(
-      prompt_cache_key,
-      prompt_cache_retention,
-      cached_content,
-      cache_control,
-    ),
+    parsePromptCachingOptions(prompt_cache_key, prompt_cache_retention, cache_control),
   );
+
+  if (extra_body) {
+    for (const v of Object.values(extra_body)) {
+      Object.assign(rest, v);
+    }
+  }
 
   const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
 
@@ -328,7 +335,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
           undefined,
           part.cache_control,
         );
-      default: {
+      case "text": {
         const out: TextPart = {
           type: "text" as const,
           text: part.text,
@@ -340,6 +347,8 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         }
         return out;
       }
+      default:
+        throw new Error(`Unhandled content part type: ${(part as { type: string }).type}`);
     }
   });
 }
@@ -468,6 +477,7 @@ function parseJsonOrText(
   content: string,
 ): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
   try {
+    // oxlint-disable-next-line no-unsafe-assignment
     return { type: "json", value: JSON.parse(content) };
   } catch {
     return { type: "text", value: content };
@@ -486,7 +496,10 @@ function parseReasoningOptions(
   }
   if (!reasoning && effort === undefined) return {};
 
-  const out: any = { reasoning: {} };
+  const out: {
+    reasoning: ChatCompletionsReasoningConfig;
+    reasoning_effort?: ChatCompletionsReasoningEffort;
+  } = { reasoning: {} };
 
   if (effort) {
     out.reasoning.enabled = true;
@@ -507,31 +520,26 @@ function parseReasoningOptions(
 function parsePromptCachingOptions(
   prompt_cache_key: string | undefined,
   prompt_cache_retention: "in_memory" | "24h" | undefined,
-  cached_content: string | undefined,
   cache_control: ChatCompletionsCacheControl | undefined,
 ) {
   const out: Record<string, unknown> = {};
 
-  const syncedCacheKey = prompt_cache_key ?? cached_content;
-  const syncedCachedContent = cached_content ?? prompt_cache_key;
-
-  let syncedCacheRetention = prompt_cache_retention;
-  if (!syncedCacheRetention && cache_control?.ttl) {
-    syncedCacheRetention = cache_control.ttl === "24h" ? "24h" : "in_memory";
+  let retention = prompt_cache_retention;
+  if (!retention && cache_control?.ttl) {
+    retention = cache_control.ttl === "24h" ? "24h" : "in_memory";
   }
 
-  let syncedCacheControl = cache_control;
-  if (!syncedCacheControl && syncedCacheRetention) {
-    syncedCacheControl = {
+  let control = cache_control;
+  if (!control && retention) {
+    control = {
       type: "ephemeral",
-      ttl: syncedCacheRetention === "24h" ? "24h" : "5m",
+      ttl: retention === "24h" ? "24h" : "5m",
     };
   }
 
-  if (syncedCacheKey) out["prompt_cache_key"] = syncedCacheKey;
-  if (syncedCacheRetention) out["prompt_cache_retention"] = syncedCacheRetention;
-  if (syncedCachedContent) out["cached_content"] = syncedCachedContent;
-  if (syncedCacheControl) out["cache_control"] = syncedCacheControl;
+  if (prompt_cache_key) out["prompt_cache_key"] = prompt_cache_key;
+  if (retention) out["prompt_cache_retention"] = retention;
+  if (control) out["cache_control"] = control;
 
   return out;
 }
@@ -556,8 +564,10 @@ export function toChatCompletions(
     ],
     usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
     provider_metadata: result.providerMetadata,
+    service_tier: resolveResponseServiceTier(result.providerMetadata),
   };
 }
+
 export function toChatCompletionsResponse(
   result: GenerateTextResult<ToolSet, Output.Output>,
   model: string,
@@ -566,12 +576,11 @@ export function toChatCompletionsResponse(
   return toResponse(toChatCompletions(result, model), responseInit);
 }
 
-export function toChatCompletionsStream<E extends boolean = false>(
+export function toChatCompletionsStream(
   result: StreamTextResult<ToolSet, Output.Output>,
   model: string,
-  wrapErrors?: E,
-): ReadableStream<ChatCompletionsChunk | (E extends true ? OpenAIError : Error)> {
-  return result.fullStream.pipeThrough(new ChatCompletionsStream(model, wrapErrors));
+): ChatCompletionsStream {
+  return result.fullStream.pipeThrough(new ChatCompletionsTransformStream(model));
 }
 
 export function toChatCompletionsStreamResponse(
@@ -579,14 +588,14 @@ export function toChatCompletionsStreamResponse(
   model: string,
   responseInit?: ResponseInit,
 ): Response {
-  return toResponse(toChatCompletionsStream(result, model, true), responseInit);
+  return toResponse(toChatCompletionsStream(result, model), responseInit);
 }
 
-export class ChatCompletionsStream<E extends boolean = false> extends TransformStream<
+export class ChatCompletionsTransformStream extends TransformStream<
   TextStreamPart<ToolSet>,
-  ChatCompletionsChunk | (E extends true ? OpenAIError : Error)
+  SseFrame<ChatCompletionsChunk> | SseErrorFrame
 > {
-  constructor(model: string, wrapErrors?: E) {
+  constructor(model: string) {
     const streamId = `chatcmpl-${crypto.randomUUID()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
@@ -598,28 +607,33 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
       provider_metadata?: SharedV3ProviderMetadata,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
-    ): ChatCompletionsChunk => {
+    ): SseFrame<ChatCompletionsChunk> => {
       if (provider_metadata) {
         delta.extra_content = provider_metadata;
       }
+
       return {
-        id: streamId,
-        object: "chat.completion.chunk",
-        created: creationTime,
-        model,
-        choices: [
-          {
-            index: 0,
-            delta,
-            finish_reason: finish_reason ?? null,
-          } satisfies ChatCompletionsChoiceDelta,
-        ],
-        usage: usage ?? null,
+        data: {
+          id: streamId,
+          object: "chat.completion.chunk",
+          created: creationTime,
+          model,
+          choices: [
+            {
+              index: 0,
+              delta,
+              finish_reason: finish_reason ?? null,
+            } satisfies ChatCompletionsChoiceDelta,
+          ],
+          usage: usage ?? null,
+          service_tier: resolveResponseServiceTier(provider_metadata),
+        } satisfies ChatCompletionsChunk,
       };
     };
 
     super({
       transform(part, controller) {
+        // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "text-delta": {
             controller.enqueue(
@@ -691,19 +705,64 @@ export class ChatCompletionsStream<E extends boolean = false> extends TransformS
           }
 
           case "error": {
-            let err: Error | OpenAIError;
-            if (wrapErrors) {
-              err = toOpenAIError(part.error);
-            } else if (part.error instanceof Error) {
-              err = part.error;
-            } else {
-              err = new Error(String(part.error));
-            }
-            controller.enqueue(err as E extends true ? OpenAIError : Error);
+            controller.enqueue({
+              data: part.error instanceof Error ? part.error : new Error(String(part.error)),
+            });
           }
         }
       },
     });
+  }
+}
+
+function resolveResponseServiceTier(
+  providerMetadata: SharedV3ProviderMetadata | undefined,
+): ChatCompletionsServiceTier | undefined {
+  if (!providerMetadata) return;
+
+  for (const metadata of Object.values(providerMetadata)) {
+    const tier = parseReturnedServiceTier(
+      metadata["service_tier"] ??
+        (metadata["usage_metadata"] as JSONObject | undefined)?.["traffic_type"],
+    );
+    if (tier) return tier;
+  }
+}
+
+function parseReturnedServiceTier(value: unknown): ChatCompletionsServiceTier | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const n = value.toLowerCase();
+  switch (n) {
+    case "traffic_type_unspecified":
+    case "auto":
+      return "auto";
+
+    case "default":
+    case "on_demand":
+    case "on-demand":
+    case "shared":
+      return "default";
+
+    case "on_demand_flex":
+    case "flex":
+      return "flex";
+
+    case "on_demand_priority":
+    case "priority":
+    case "performance":
+      return "priority";
+
+    case "provisioned_throughput":
+    case "scale":
+    case "reserved":
+    case "dedicated":
+    case "provisioned":
+    case "throughput":
+      return "scale";
+
+    default:
+      return undefined;
   }
 }
 
@@ -733,7 +792,7 @@ export const toChatCompletionsAssistantMessage = (
       if (message.content === null) {
         message.content = part.text;
       } else {
-        message.content += part.text;
+        (message.content as string) += part.text;
       }
       if (part.providerMetadata) {
         message.extra_content = part.providerMetadata;

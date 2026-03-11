@@ -1,5 +1,5 @@
-import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
+import { MockLanguageModelV3 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
@@ -51,15 +51,16 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
   });
 
   expect(result.providerOptions).toEqual({
-    google: {
-      cachedContent: "cachedContents/reusable",
+    unknown: {
+      cached_content: "cachedContents/reusable",
     },
-    unknown: {},
   });
 });
 
 test("geminiDimensionsMiddleware > matching patterns", () => {
-  const matching = ["google/gemini-embedding-001"];
+  const matching = [
+    "google/gemini-embedding-2-preview",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
   const nonMatching = [
     "google/gemini-3-flash-preview",
     "google/embedding-001",
@@ -273,8 +274,18 @@ test("geminiReasoningMiddleware > Gemini 2.5 Pro should have minimum budget even
     model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
   });
 
-  expect(result.providerOptions?.google?.thinkingConfig?.thinkingBudget).toBe(128);
-  expect(result.providerOptions?.google?.thinkingConfig?.includeThoughts).toBe(false);
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          thinkingBudget: 128,
+          includeThoughts: false,
+        },
+      },
+      unknown: {},
+    },
+  });
 });
 
 test("geminiReasoningMiddleware > Gemini 2.0 Flash should NOT have forced minimum budget", async () => {
@@ -293,6 +304,16 @@ test("geminiReasoningMiddleware > Gemini 2.0 Flash should NOT have forced minimu
     model: new MockLanguageModelV3({ modelId: "google/gemini-2.0-flash" }),
   });
 
-  expect(result.providerOptions?.google?.thinkingConfig?.thinkingBudget).toBe(0);
-  expect(result.providerOptions?.google?.thinkingConfig?.includeThoughts).toBe(false);
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          thinkingBudget: 0,
+          includeThoughts: false,
+        },
+      },
+      unknown: {},
+    },
+  });
 });

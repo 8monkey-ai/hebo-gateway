@@ -4,6 +4,7 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type { ProviderId } from "../providers/types";
 
 function snakeToCamel(key: string): string {
+  // oxlint-disable-next-line prefer-includes
   if (key.indexOf("_") === -1) return key;
 
   let out = "";

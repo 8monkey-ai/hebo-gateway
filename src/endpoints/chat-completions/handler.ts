@@ -16,6 +16,7 @@ import type {
   GatewayContext,
   ResolveProviderHookContext,
   ResolveModelHookContext,
+  GatewayConfigParsed,
 } from "../../types";
 
 import { GatewayError } from "../../errors/gateway";
@@ -37,7 +38,7 @@ import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
-  const handler = async (ctx: GatewayContext) => {
+  const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
     ctx.operation = "chat";
     addSpanEvent("hebo.handler.started");
@@ -49,6 +50,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Parse + validate input.
     try {
+      // oxlint-disable-next-line no-unsafe-assignment
       ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
@@ -94,11 +96,12 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const genAiSignalLevel = config.telemetry?.signals?.gen_ai;
+    const genAiSignalLevel = cfg.telemetry?.signals?.gen_ai;
     const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
+    // oxlint-disable-next-line no-unsafe-argument
     const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
       {
@@ -124,7 +127,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         headers: prepareForwardHeaders(ctx.request),
         abortSignal: ctx.request.signal,
         timeout: {
-          totalMs: 5 * 60 * 1000,
+          totalMs: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
         },
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
@@ -169,7 +172,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
-      timeout: 5 * 60 * 1000,
+      timeout: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
       experimental_include: {
         requestBody: false,
         responseBody: false,

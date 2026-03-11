@@ -1,10 +1,11 @@
 import { isTest } from "../utils/env";
 
-export type LogFn = {
-  (msg: string): void;
-  (obj: Record<string, unknown>, msg?: string): void;
-  (err: Error, msg?: string): void;
-};
+export type LogArgs =
+  | [msg: string]
+  | [obj: Record<string, unknown>, msg?: string]
+  | [err: Error, msg?: string];
+
+export type LogFn = (...args: LogArgs) => void;
 
 export type Logger = Record<"trace" | "debug" | "info" | "warn" | "error", LogFn>;
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "silent";

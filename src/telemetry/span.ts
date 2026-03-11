@@ -60,7 +60,7 @@ export const withSpan = async <T>(
   options?: SpanOptions,
 ): Promise<T> => {
   if (!spanTracer) {
-    return await run();
+    return run();
   }
 
   const started = startSpan(name, options);

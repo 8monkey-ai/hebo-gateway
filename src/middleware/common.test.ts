@@ -47,8 +47,23 @@ describe("forwardParamsMiddleware", () => {
       // oxlint-disable-next-line require-await
       doGenerate: async () => ({
         content: [{ type: "text", text: "hi" }],
-        finishReason: "stop",
-        usage: { promptTokens: 1, completionTokens: 1 },
+        finishReason: {
+          unified: "stop",
+          raw: "stop",
+        },
+        usage: {
+          inputTokens: {
+            total: 1,
+            noCache: 1,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: 1,
+            text: 1,
+            reasoning: undefined,
+          },
+        },
         providerMetadata: {
           vertex: {
             thoughtSignature: "encrypted-signature",
@@ -85,8 +100,23 @@ describe("forwardParamsMiddleware", () => {
             providerMetadata: { vertex: { thoughtSignature: "part-sig" } },
           },
         ],
-        finishReason: "stop",
-        usage: { promptTokens: 1, completionTokens: 1 },
+        finishReason: {
+          unified: "stop",
+          raw: "stop",
+        },
+        usage: {
+          inputTokens: {
+            total: 1,
+            noCache: 1,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: 1,
+            text: 1,
+            reasoning: undefined,
+          },
+        },
         warnings: [],
       }),
     });
@@ -98,7 +128,7 @@ describe("forwardParamsMiddleware", () => {
       doStream: () => model.doStream({ prompt: [] }),
     });
 
-    expect(result.content[0].providerMetadata).toEqual({
+    expect(result.content[0]!.providerMetadata).toEqual({
       vertex: {
         thought_signature: "part-sig",
       },
@@ -121,8 +151,23 @@ describe("forwardParamsMiddleware", () => {
             });
             controller.enqueue({
               type: "finish",
-              finishReason: "stop",
-              usage: { promptTokens: 1, completionTokens: 1 },
+              finishReason: {
+                unified: "stop",
+                raw: "stop",
+              },
+              usage: {
+                inputTokens: {
+                  total: 1,
+                  noCache: 1,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: 1,
+                  text: 1,
+                  reasoning: undefined,
+                },
+              },
             });
             controller.close();
           },
@@ -139,7 +184,8 @@ describe("forwardParamsMiddleware", () => {
 
     const reader = result.stream.getReader();
     const part = await reader.read();
-    expect(part.value.providerMetadata).toEqual({
+
+    expect((part.value as { providerMetadata: unknown }).providerMetadata).toEqual({
       vertex: { thought_signature: "part-signature" },
     });
   });
@@ -182,7 +228,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions).toEqual({
       openai: { reasoningEffort: "low" },
     });
-    expect(result.providerOptions!.unknown).toBeUndefined();
+    expect(result.providerOptions!["unknown"]).toBeUndefined();
   });
 
   test("should merge all providerOptions into target providerName and reserve others", async () => {
@@ -210,6 +256,6 @@ describe("forwardParamsMiddleware", () => {
       },
       openai: { other_option: "value2" },
     });
-    expect(result.providerOptions!.unknown).toBeUndefined();
+    expect(result.providerOptions!["unknown"]).toBeUndefined();
   });
 });

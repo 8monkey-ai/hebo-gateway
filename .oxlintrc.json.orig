@@ -18,10 +18,13 @@
     "anchor-has-content": "off",
     "max-dependencies": "off",
     "no-inline-comments": "off",
+<<<<<<< HEAD
     "unicorn/no-array-reverse": "off",
-    "unicorn/prefer-array-to-reversed": "off",
+    "unicorn/prefer-array-to-reversed": "off"
+=======
     "no-unsafe-type-assertion": "off",
     "strict-boolean-expressions": "off"
+>>>>>>> origin/main
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "e2e/**"]
 }

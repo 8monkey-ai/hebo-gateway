@@ -5,6 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
 import { chatCompletions } from "./handler";
+import { type ChatCompletions } from "./schema";
 
 const baseUrl = "http://localhost/chat/completions";
 
@@ -110,7 +111,7 @@ describe("Chat Completions Handler", () => {
   test("should return 405 for non-POST requests", async () => {
     const request = new Request(baseUrl, { method: "GET" });
     const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
+    const data = await parseResponse<ChatCompletions>(res);
     expect(data).toMatchObject({
       error: {
         code: "method_not_allowed",
@@ -126,7 +127,7 @@ describe("Chat Completions Handler", () => {
       body: "invalid-json",
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
+    const data = await parseResponse<ChatCompletions>(res);
     expect(data).toMatchObject({
       error: {
         code: "bad_request",
@@ -139,7 +140,7 @@ describe("Chat Completions Handler", () => {
   test("should return 400 for validation errors (missing messages)", async () => {
     const request = postJson(baseUrl, { model: "openai/gpt-oss-20b" });
     const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
+    const data = await parseResponse<ChatCompletions>(res);
     expect(data).toMatchObject({
       error: {
         code: "bad_request",
@@ -156,7 +157,7 @@ describe("Chat Completions Handler", () => {
       messages: [{ role: "user", content: "hi" }],
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
+    const data = await parseResponse<ChatCompletions>(res);
     expect(data).toMatchObject({
       error: {
         code: "model_not_found",
@@ -172,10 +173,12 @@ describe("Chat Completions Handler", () => {
       messages: [{ role: "user", content: "hi" }],
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
+    const data = await parseResponse<ChatCompletions>(res);
     expect(data).toEqual({
+      // oxlint-disable-next-line no-unsafe-assignment
       id: expect.stringMatching(/^chatcmpl-/),
       object: "chat.completion",
+      // oxlint-disable-next-line no-unsafe-assignment
       created: expect.any(Number),
       model: "openai/gpt-oss-20b",
       choices: [
@@ -225,7 +228,7 @@ describe("Chat Completions Handler", () => {
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = await parseResponse(res);
+    const data = (await parseResponse<ChatCompletions>(res))!;
     expect(data.model).toBe("openai/gpt-oss-20b");
   });
 
@@ -250,10 +253,12 @@ describe("Chat Completions Handler", () => {
       ],
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse(res);
+    const data = await parseResponse<ChatCompletions>(res);
     expect(data).toEqual({
+      // oxlint-disable-next-line no-unsafe-assignment
       id: expect.stringMatching(/^chatcmpl-/),
       object: "chat.completion",
+      // oxlint-disable-next-line no-unsafe-assignment
       created: expect.any(Number),
       model: "openai/gpt-oss-20b",
       choices: [
@@ -329,7 +334,7 @@ describe("Chat Completions Handler", () => {
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = await parseResponse(res);
+    const data = (await parseResponse<ChatCompletions>(res))!;
     expect(data.model).toBe("openai/gpt-oss-20b");
   });
 
@@ -342,7 +347,7 @@ describe("Chat Completions Handler", () => {
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = await parseResponse(res);
+    const data = (await parseResponse<ChatCompletions>(res))!;
     expect(data.model).toBe("openai/gpt-oss-20b");
   });
 
@@ -370,8 +375,8 @@ describe("Chat Completions Handler", () => {
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = await parseResponse(res);
-    expect(data.choices[0].message.content).toBe('{"city":"San Francisco","temp_c":18}');
+    const data = (await parseResponse<ChatCompletions>(res))!;
+    expect(data.choices[0]!.message.content).toBe('{"city":"San Francisco","temp_c":18}');
   });
 
   test('should accept response_format type "text"', async () => {
@@ -385,7 +390,7 @@ describe("Chat Completions Handler", () => {
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = await parseResponse(res);
-    expect(data.choices[0].message.content).toBe("Hello from AI");
+    const data = (await parseResponse<ChatCompletions>(res))!;
+    expect(data.choices[0]!.message.content).toBe("Hello from AI");
   });
 });

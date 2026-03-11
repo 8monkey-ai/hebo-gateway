@@ -1,3 +1,5 @@
+import type { GoogleVertexEmbeddingModelOptions } from "@ai-sdk/google-vertex";
+import type { GoogleLanguageModelOptions } from "@ai-sdk/google";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type {
@@ -7,6 +9,8 @@ import type {
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
+import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -16,10 +20,11 @@ export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const dimensions = unknown["dimensions"] as number;
+    const dimensions = unknown["dimensions"] as EmbeddingsDimensions;
     if (!dimensions) return params;
 
-    (params.providerOptions!["google"] ??= {})["outputDimensionality"] = dimensions;
+    const target = (params.providerOptions!["google"] ??= {}) as GoogleVertexEmbeddingModelOptions;
+    target.outputDimensionality = dimensions;
     delete unknown["dimensions"];
 
     return params;
@@ -27,11 +32,8 @@ export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
 };
 
 // https://ai.google.dev/gemini-api/docs/thinking#thinking-levels
-export function mapGeminiReasoningEffort(
-  effort: ChatCompletionsReasoningEffort,
-  modelId: string,
-): ChatCompletionsReasoningEffort | undefined {
-  if (modelId.includes("gemini-3.1-pro")) {
+export function mapGeminiReasoningEffort(effort: ChatCompletionsReasoningEffort, modelId: string) {
+  if (modelId.includes("pro")) {
     switch (effort) {
       case "none":
       case "minimal":
@@ -41,28 +43,23 @@ export function mapGeminiReasoningEffort(
         return "medium";
       case "high":
       case "xhigh":
-      case "max":
         return "high";
     }
   }
 
-  if (modelId.includes("gemini-3-flash") || modelId.includes("gemini-3.1-flash")) {
-    switch (effort) {
-      case "none":
-      case "minimal":
-        return "minimal";
-      case "low":
-        return "low";
-      case "medium":
-        return "medium";
-      case "high":
-      case "xhigh":
-      case "max":
-        return "high";
-    }
+  // Flash
+  switch (effort) {
+    case "none":
+    case "minimal":
+      return "minimal";
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+    case "xhigh":
+      return "high";
   }
-
-  return effort;
 }
 
 export const GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 65536;
@@ -75,16 +72,19 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
+    // If thinking options exist, just pass through
+    if (unknown["thinking_config"]) return params;
+
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["google"] ??= {});
+    const target = (params.providerOptions!["google"] ??= {}) as GoogleLanguageModelOptions;
     const modelId = model.modelId;
 
     if (modelId.includes("gemini-2")) {
       const is25Pro = modelId.includes("gemini-2.5-pro");
 
-      target["thinkingConfig"] = {
+      target.thinkingConfig = {
         thinkingBudget:
           reasoning.max_tokens ??
           calculateReasoningBudgetFromEffort(
@@ -94,14 +94,14 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
           ),
       };
     } else if (modelId.includes("gemini-3") && reasoning.effort) {
-      target["thinkingConfig"] = {
+      target.thinkingConfig = {
         thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, modelId),
       };
       // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
     }
 
-    ((target["thinkingConfig"] ??= {}) as Record<string, unknown>)["includeThoughts"] =
-      reasoning.enabled ? !reasoning.exclude : false;
+    const thinkingConfig = (target.thinkingConfig ??= {});
+    thinkingConfig.includeThoughts = reasoning.enabled ? !reasoning.exclude : false;
 
     delete unknown["reasoning"];
 
@@ -118,9 +118,15 @@ export const geminiPromptCachingMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const cachedContent = unknown["cached_content"] as string | undefined;
-    if (cachedContent) {
-      (params.providerOptions!["google"] ??= {})["cachedContent"] = cachedContent;
+    // If cached_content options exist, just pass through
+    if (unknown["cached_content"]) return params;
+
+    const promptCacheKey = unknown[
+      "prompt_cache_key"
+    ] as OpenAIChatLanguageModelOptions["promptCacheKey"];
+    if (promptCacheKey) {
+      ((params.providerOptions!["google"] ??= {}) as GoogleLanguageModelOptions).cachedContent =
+        promptCacheKey;
     }
 
     delete unknown["cached_content"];

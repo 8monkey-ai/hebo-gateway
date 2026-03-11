@@ -15,7 +15,7 @@ export const OpenAIErrorSchema = z.object({
 });
 
 export class OpenAIError {
-  readonly error;
+  readonly error: z.infer<typeof OpenAIErrorSchema>["error"];
 
   constructor(message: string, type: string = "server_error", code?: string, param: string = "") {
     this.error = { message, type, code: code?.toLowerCase(), param };

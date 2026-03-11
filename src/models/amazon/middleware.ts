@@ -1,4 +1,10 @@
+import type {
+  AmazonBedrockEmbeddingModelOptions,
+  AmazonBedrockLanguageModelOptions,
+} from "@ai-sdk/amazon-bedrock";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
+
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings/schema";
 
 import type {
   ChatCompletionsReasoningConfig,
@@ -15,10 +21,14 @@ export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const dimensions = unknown["dimensions"] as number;
+    const dimensions = unknown["dimensions"] as EmbeddingsDimensions;
     if (!dimensions) return params;
 
-    (params.providerOptions!["nova"] ??= {})["embeddingDimension"] = dimensions;
+    const target = (params.providerOptions!["nova"] ??= {}) as AmazonBedrockEmbeddingModelOptions;
+
+    // @ts-expect-error AI SDK does the value checking for us
+    target.embeddingDimension = dimensions;
+
     delete unknown["dimensions"];
 
     return params;
@@ -27,6 +37,8 @@ export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
 
 function mapNovaEffort(effort: ChatCompletionsReasoningEffort) {
   switch (effort) {
+    case "none":
+      return;
     case "minimal":
     case "low":
       return "low";
@@ -34,7 +46,6 @@ function mapNovaEffort(effort: ChatCompletionsReasoningEffort) {
       return "medium";
     case "high":
     case "xhigh":
-    case "max":
       return "high";
   }
 }
@@ -49,19 +60,19 @@ export const novaReasoningMiddleware: LanguageModelMiddleware = {
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["amazon"] ??= {});
+    const target = (params.providerOptions!["amazon"] ??= {}) as AmazonBedrockLanguageModelOptions;
 
     if (!reasoning.enabled) {
-      target["reasoningConfig"] = { type: "disabled" };
+      target.reasoningConfig = { type: "disabled" };
     } else if (reasoning.effort) {
       // FUTURE: warn if mapNovaEffort modified the effort
-      target["reasoningConfig"] = {
+      target.reasoningConfig = {
         type: "enabled",
         maxReasoningEffort: mapNovaEffort(reasoning.effort),
       };
     } else {
       // FUTURE: warn if reasoning.max_tokens (unsupported) was ignored
-      target["reasoningConfig"] = { type: "enabled" };
+      target.reasoningConfig = { type: "enabled" };
     }
 
     delete unknown["reasoning"];

@@ -28,9 +28,13 @@ const getRequestAttributes = (input: RequestInfo | URL, init?: RequestInit): Att
   return attrs;
 };
 
-const shouldTraceFetch = (init?: RequestInit): boolean =>
-  typeof (init?.headers as any)?.["user-agent"] === "string" &&
-  (init!.headers as any)["user-agent"].indexOf("ai-sdk/provider-utils") !== -1;
+const shouldTraceFetch = (init?: RequestInit): boolean => {
+  const h = init?.headers;
+  if (!h || typeof h !== "object" || Array.isArray(h) || h instanceof Headers) return false;
+
+  const ua = h["user-agent"];
+  return typeof ua === "string" && ua.includes("ai-sdk/provider-utils");
+};
 
 const otelFetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const original = g[ORIGINAL_FETCH_KEY]!;
