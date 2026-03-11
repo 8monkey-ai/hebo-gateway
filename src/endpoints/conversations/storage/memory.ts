@@ -44,7 +44,7 @@ export class InMemoryStorage implements ConversationStorage {
       if (t !== "object") continue;
 
       if (ArrayBuffer.isView(obj)) {
-        total += (obj as ArrayBufferView).byteLength;
+        total += obj.byteLength;
         continue;
       }
 

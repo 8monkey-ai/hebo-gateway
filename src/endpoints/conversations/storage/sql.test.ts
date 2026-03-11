@@ -6,6 +6,7 @@ import { SqlStorage } from "./sql";
 describe("SQLite Storage (In-Memory)", () => {
   test("should handle full lifecycle and complex queries", async () => {
     const db = new Database(":memory:");
+    // @ts-expect-error - Bun.sqlite.Database is not perfectly matched with BetterSqlite3Database in types but works
     const dialect = new SqliteDialect({ client: db });
     const storage = new SqlStorage({ dialect });
     await storage.migrate();
@@ -26,12 +27,12 @@ describe("SQLite Storage (In-Memory)", () => {
     const item = await storage.getItem(conv.id, "item-1");
     expect(item).toBeDefined();
     expect(item!.id).toBe("item-1");
-    expect((item as Record<string, unknown>).content).toBe("Msg 1");
+    expect((item as Record<string, unknown>)["content"]).toBe("Msg 1");
 
     // 4. List Items (Basic)
     const allItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
     expect(allItems!.length).toBe(3);
-    expect(allItems![0].id).toBe("item-1");
+    expect(allItems![0]!.id).toBe("item-1");
 
     // 5. List Items (Pagination: after)
     const page2 = await storage.listItems(conv.id, {
@@ -40,12 +41,12 @@ describe("SQLite Storage (In-Memory)", () => {
       after: "item-1",
     });
     expect(page2!.length).toBe(2);
-    expect(page2![0].id).toBe("item-2");
-    expect(page2![1].id).toBe("item-3");
+    expect(page2![0]!.id).toBe("item-2");
+    expect(page2![1]!.id).toBe("item-3");
 
     // 6. List Items (Pagination: order desc)
     const descItems = await storage.listItems(conv.id, { limit: 10, order: "desc" });
-    expect(descItems![0].id).toBe("item-3");
+    expect(descItems![0]!.id).toBe("item-3");
 
     // 7. Delete Item
     await storage.deleteItem(conv.id, "item-2");
@@ -64,6 +65,7 @@ describe("SQLite Storage (In-Memory)", () => {
 
   test("should handle non-existent after ID by returning first page", async () => {
     const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
     const dialect = new SqliteDialect({ client: db });
     const storage = new SqlStorage({ dialect });
     await storage.migrate();
@@ -91,6 +93,7 @@ describe("SQLite Storage (In-Memory)", () => {
 
   test("should handle null and undefined metadata", async () => {
     const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
     const dialect = new SqliteDialect({ client: db });
     const storage = new SqlStorage({ dialect });
     await storage.migrate();

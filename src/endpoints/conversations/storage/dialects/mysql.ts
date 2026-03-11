@@ -6,7 +6,7 @@ import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
 
 export type { Mysql2Pool };
 
-const mapParams = createParamsMapper(dateToNumber, jsonStringify);
+const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
 export const MySQLDialectConfig: DialectConfig = {
   placeholder: () => "?",
@@ -86,25 +86,24 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
 
 function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
-    async all<T>(query: string, params?: unknown[]) {
-      return (await sql.unsafe(query, mapParams(params))) as T[];
+    all<T>(query: string, params?: unknown[]) {
+      return sql.unsafe(query, mapParams(params)) as Promise<T[]>;
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await sql.unsafe(query, mapParams(params));
+      const rows = await (sql.unsafe(query, mapParams(params)) as Promise<unknown[]>);
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = await sql.unsafe(query, mapParams(params));
-      const result = res as unknown as { affectedRows?: number; count?: number; length: number };
+      const res = (await sql.unsafe(query, mapParams(params))) as unknown;
+      const result = res as { affectedRows?: number; count?: number; length: number };
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
-    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      return await sql.transaction(async (tx) => {
-        return await fn(createBunMysqlExecutor(tx as unknown as BunSql));
+    transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      return sql.transaction((tx) => {
+        return fn(createBunMysqlExecutor(tx as unknown as BunSql));
       });
     },
   };
-
   return executor;
 }
 
@@ -112,7 +111,7 @@ export class MysqlDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig;
 
-  constructor(options: { client: Mysql2Pool | BunSql | unknown; config?: DialectConfig }) {
+  constructor(options: { client: Mysql2Pool | BunSql; config?: DialectConfig }) {
     const { client, config = MySQLDialectConfig } = options;
     this.config = config;
 

@@ -25,7 +25,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   const storage = parsedConfig.storage;
 
   async function create(ctx: GatewayContext): Promise<Conversation> {
-    let body = {};
+    let body: unknown;
     try {
       body = await ctx.request.json();
     } catch {
@@ -61,7 +61,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
-    let body;
+    let body: unknown;
     try {
       body = await ctx.request.json();
     } catch {
@@ -169,7 +169,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     ctx: GatewayContext,
     conversationId: string,
   ): Promise<ConversationItemList> {
-    let body;
+    let body: unknown;
     try {
       body = await ctx.request.json();
     } catch {

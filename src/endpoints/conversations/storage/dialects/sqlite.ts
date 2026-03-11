@@ -6,7 +6,7 @@ import { LRUCache } from "lru-cache";
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
 
-const mapParams = createParamsMapper(dateToNumber, jsonStringify);
+const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
@@ -145,21 +145,21 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
 
 function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
-    async all<T>(query: string, params?: unknown[]) {
-      return (await sql.unsafe(query, mapParams(params))) as T[];
+    all<T>(query: string, params?: unknown[]) {
+      return sql.unsafe(query, mapParams(params)) as Promise<T[]>;
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await sql.unsafe(query, mapParams(params));
+      const rows = await (sql.unsafe(query, mapParams(params)) as Promise<unknown[]>);
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = await sql.unsafe(query, mapParams(params));
-      const result = res as unknown as { affectedRows?: number; count?: number; length: number };
+      const res = (await sql.unsafe(query, mapParams(params))) as unknown;
+      const result = res as { affectedRows?: number; count?: number; length: number };
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
-    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      return await sql.transaction(async (tx) => {
-        return await fn(createBunSqliteExecutor(tx as unknown as BunSql));
+    transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      return sql.transaction((tx) => {
+        return fn(createBunSqliteExecutor(tx as unknown as BunSql));
       });
     },
   };
@@ -170,7 +170,7 @@ export class SqliteDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig = SQLiteDialectConfig;
 
-  constructor(options: { client: BetterSqlite3Database | LibsqlClient | BunSql | unknown }) {
+  constructor(options: { client: BetterSqlite3Database | LibsqlClient | BunSql }) {
     const { client } = options;
 
     if (isBetterSqlite3(client)) {

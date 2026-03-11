@@ -344,9 +344,7 @@ const gw = gateway({
      */
     after: async (ctx: {
       result: ChatCompletions | ChatCompletionsStream | Embeddings;
-    }): Promise<
-      ChatCompletions | ChatCompletionsStream | Embeddings | void
-    > => {
+    }): Promise<ChatCompletions | ChatCompletionsStream | Embeddings | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
@@ -417,7 +415,6 @@ const gw = gateway({ storage });
 
 > [!TIP]
 > The `PostgresDialect` includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
-
 
 ## 🧩 Framework Support
 

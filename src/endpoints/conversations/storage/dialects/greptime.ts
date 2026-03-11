@@ -26,7 +26,7 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
     upsertSuffix: undefined,
     supportCreateIndexIfNotExists: true,
     limitAsLiteral: true,
-    partitionClause: (cols) => {
+    partitionClause: (cols: string[]) => {
       const col = cols[0];
       return (
         `PARTITION ON COLUMNS (${col}) (` +
@@ -40,7 +40,7 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
   },
 );
 
-const mapParams = createParamsMapper(dateToBigInt, jsonStringify);
+const mapParams = createParamsMapper([dateToBigInt, jsonStringify]);
 
 function createGreptimeExecutor(base: QueryExecutor): QueryExecutor {
   return {
@@ -55,7 +55,7 @@ export class GrepTimeDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig = GrepTimeDialectConfig;
 
-  constructor(options: { client: PgPool | PostgresJsSql | BunSql | unknown }) {
+  constructor(options: { client: PgPool | PostgresJsSql | BunSql }) {
     const { client } = options;
     const dialect = new PostgresDialect({ client, config: this.config });
     this.executor = createGreptimeExecutor(dialect.executor);

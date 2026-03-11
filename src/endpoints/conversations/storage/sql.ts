@@ -16,12 +16,12 @@ import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialect
  * Maps a raw database row to a clean conversation or item entity.
  */
 function mapRow<T>(row: Record<string, unknown>): T {
-  const mapper = createRowMapper<T>(
+  const mapper = createRowMapper<T>([
     parseJson("data"),
     parseJson("metadata"),
     toMilliseconds("created_at"),
     mergeData("data"),
-  );
+  ]);
 
   return mapper(row);
 }
@@ -52,7 +52,9 @@ export class SqlStorage implements ConversationStorage {
       types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`;
     const timeIndex = isTimeIndex ? `, TIME INDEX (${q("created_at")})` : "";
     const partition = (cols: string[]) =>
-      this.config.partitionClause ? ` ${this.config.partitionClause(cols.map(q))}` : "";
+      this.config.partitionClause
+        ? ` ${this.config.partitionClause(cols.map((col) => q(col)))}`
+        : "";
 
     const createIndex = async (table: string, name: string, cols: string[], seq = false) => {
       const isBrin = types.index === "BRIN";
@@ -75,8 +77,14 @@ export class SqlStorage implements ConversationStorage {
           `CREATE INDEX ${ifNotExists} ${q(name)} ON ${q(table)} ${using} (${formattedCols})`,
           [],
         );
-      } catch (err: any) {
-        if (!supportCreateIndexIfNotExists && err.message?.includes("Duplicate key name")) return;
+      } catch (err: unknown) {
+        if (
+          !supportCreateIndexIfNotExists &&
+          err instanceof Error &&
+          err.message?.includes("Duplicate key name")
+        ) {
+          return;
+        }
         throw err;
       }
     };
@@ -226,7 +234,7 @@ export class SqlStorage implements ConversationStorage {
       let i = 0;
       for (const input of items) {
         const { id: inputId, type } = input;
-        const id = inputId || uuidv7();
+        const id = inputId ?? uuidv7();
         // Add slight offset to ensure unique (PK + TS) even in batch.
         const createdAt = new Date(now + i++);
 

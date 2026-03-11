@@ -1,6 +1,6 @@
 import type { SQL as BunSql } from "bun";
 import type { Pool as PgPool } from "pg";
-import type { Sql as PostgresJsSql } from "postgres";
+import type { Sql as PostgresJsSql, TransactionSql } from "postgres";
 
 import { LRUCache } from "lru-cache";
 
@@ -9,7 +9,7 @@ import { createParamsMapper, dateToNumber } from "./utils";
 
 export type { PostgresJsSql, PgPool };
 
-const mapParams = createParamsMapper(dateToNumber);
+const mapParams = createParamsMapper([dateToNumber]);
 
 export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
@@ -104,7 +104,7 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
 
   return executor;
 }
-function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
+function createPostgresJsExecutor(sql: PostgresJsSql | TransactionSql): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
       return (await sql.unsafe(
@@ -131,7 +131,7 @@ function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
       return { changes: Number(result.count ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
-      return (await sql.begin((tx) => fn(createPostgresJsExecutor(tx)))) as T;
+      return (await (sql as PostgresJsSql).begin((tx) => fn(createPostgresJsExecutor(tx)))) as T;
     },
   };
   return executor;
@@ -139,21 +139,21 @@ function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
 
 function createBunPostgresExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
-    async all<T>(query: string, params?: unknown[]) {
-      return (await sql.unsafe(query, mapParams(params))) as T[];
+    all<T>(query: string, params?: unknown[]) {
+      return sql.unsafe(query, mapParams(params)) as Promise<T[]>;
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await sql.unsafe(query, mapParams(params));
+      const rows = await (sql.unsafe(query, mapParams(params)) as Promise<unknown[]>);
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = await sql.unsafe(query, mapParams(params));
-      const result = res as unknown as { affectedRows?: number; count?: number; length: number };
+      const res = (await sql.unsafe(query, mapParams(params))) as unknown;
+      const result = res as { affectedRows?: number; count?: number; length: number };
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
-    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      return await sql.transaction(async (tx) => {
-        return await fn(createBunPostgresExecutor(tx as unknown as BunSql));
+    transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      return sql.transaction((tx) => {
+        return fn(createBunPostgresExecutor(tx as unknown as BunSql));
       });
     },
   };
@@ -164,10 +164,7 @@ export class PostgresDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig;
 
-  constructor(options: {
-    client: PgPool | PostgresJsSql | BunSql | unknown;
-    config?: DialectConfig;
-  }) {
+  constructor(options: { client: PgPool | PostgresJsSql | BunSql; config?: DialectConfig }) {
     const { client, config = PostgresDialectConfig } = options;
     this.config = config;
 

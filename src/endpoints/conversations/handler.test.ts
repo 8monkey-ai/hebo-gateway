@@ -2,13 +2,21 @@ import { MockProviderV3 } from "ai/test";
 import { beforeEach, describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
+import { type GatewayConfig } from "../../types";
 import { defineModelCatalog } from "../../models/catalog";
 import { conversations } from "./handler";
-import { type ResponseInputItem } from "./schema";
+import {
+  type Conversation,
+  type ConversationDeleted,
+  type ConversationItem,
+  type ConversationItemList,
+  type ResponseInputItem,
+} from "./schema";
 import { InMemoryStorage } from "./storage/memory";
+import { type ConversationStorage } from "./storage/types";
 
 describe("Conversations Handler", () => {
-  let config: any;
+  let config: GatewayConfig;
 
   beforeEach(() => {
     config = {
@@ -35,7 +43,7 @@ describe("Conversations Handler", () => {
     });
     const createRes = await endpoint.handler(createReq);
     expect(createRes.status).toBe(200);
-    const conv = await parseResponse(createRes);
+    const conv = (await parseResponse<Conversation>(createRes))!;
     const convId = conv.id;
 
     // 2. Retrieve
@@ -43,8 +51,8 @@ describe("Conversations Handler", () => {
       new Request(`http://localhost/conversations/${convId}`),
     );
     expect(retrieveRes.status).toBe(200);
-    const retrieved = await parseResponse(retrieveRes);
-    expect(retrieved.metadata.initial).toBe("true");
+    const retrieved = (await parseResponse<Conversation>(retrieveRes))!;
+    expect(retrieved.metadata!["initial"]).toBe("true");
 
     // 3. Update
     const updateReq = postJson(`http://localhost/conversations/${convId}`, {
@@ -52,8 +60,8 @@ describe("Conversations Handler", () => {
     });
     const updateRes = await endpoint.handler(updateReq);
     expect(updateRes.status).toBe(200);
-    const updated = await parseResponse(updateRes);
-    expect(updated.metadata.updated).toBe("true");
+    const updated = (await parseResponse<Conversation>(updateRes))!;
+    expect(updated.metadata!["updated"]).toBe("true");
 
     // 4. Update with null metadata
     const updateNullReq = postJson(`http://localhost/conversations/${convId}`, {
@@ -61,14 +69,14 @@ describe("Conversations Handler", () => {
     });
     const updateNullRes = await endpoint.handler(updateNullReq);
     expect(updateNullRes.status).toBe(200);
-    const updatedNull = await parseResponse(updateNullRes);
+    const updatedNull = (await parseResponse<Conversation>(updateNullRes))!;
     expect(updatedNull.metadata).toBeNull();
 
     // 5. Update with missing metadata (should default to null)
     const updateMissingReq = postJson(`http://localhost/conversations/${convId}`, {});
     const updateMissingRes = await endpoint.handler(updateMissingReq);
     expect(updateMissingRes.status).toBe(200);
-    const updatedMissing = await parseResponse(updateMissingRes);
+    const updatedMissing = (await parseResponse<Conversation>(updateMissingRes))!;
     expect(updatedMissing.metadata).toBeNull();
 
     // 6. Delete
@@ -76,7 +84,7 @@ describe("Conversations Handler", () => {
       new Request(`http://localhost/conversations/${convId}`, { method: "DELETE" }),
     );
     expect(deleteRes.status).toBe(200);
-    const deleted = await parseResponse(deleteRes);
+    const deleted = (await parseResponse<ConversationDeleted>(deleteRes))!;
     expect(deleted.object).toBe("conversation.deleted");
 
     // 5. Verify retrieval fails
@@ -91,7 +99,7 @@ describe("Conversations Handler", () => {
 
     // 1. Invalid value type (number)
     const req1 = postJson("http://localhost/conversations", {
-      metadata: { count: 123 },
+      metadata: { count: 123 } as unknown as Record<string, string>,
     });
     const res1 = await endpoint.handler(req1);
     expect(res1.status).toBe(400);
@@ -99,32 +107,36 @@ describe("Conversations Handler", () => {
 
   test("should manage individual items", async () => {
     const endpoint = conversations(config);
-    const storage = endpoint._parsedConfig?.storage ?? config.storage;
+    const storage =
+      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
+        ?.storage ?? config.storage!;
 
     const conv = await storage.createConversation({});
     const itemInputs = [
       { type: "message", role: "user", content: "Message 1" },
       { type: "message", role: "user", content: "Message 2" },
     ] as ResponseInputItem[];
-    const items = await storage.addItems(conv.id, itemInputs);
-    const item1Id = items![0].id;
-    const item2Id = items![1].id;
+    const items = (await storage.addItems(conv.id, itemInputs))!;
+    const item1Id = items[0]!.id;
+    const item2Id = items[1]!.id;
 
     // 1. Retrieve Single Item
     const getRes = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items/${item1Id}`),
     );
     expect(getRes.status).toBe(200);
-    const itemData = await parseResponse(getRes);
-    expect(itemData.content).toBe("Message 1");
+    const itemData = (await parseResponse<ConversationItem>(getRes))!;
+    expect(
+      itemData.type === "message" && typeof itemData.content === "string" ? itemData.content : "",
+    ).toBe("Message 1");
 
     // 2. List with Limit & Order
     const listRes = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=1&order=desc`),
     );
-    const listData = await parseResponse(listRes);
+    const listData = (await parseResponse<ConversationItemList>(listRes))!;
     expect(listData.data).toHaveLength(1);
-    expect(listData.data[0].id).toBe(item2Id);
+    expect(listData.data[0]!.id).toBe(item2Id);
 
     // 3. Delete Single Item (Returns parent conversation)
     const delRes = await endpoint.handler(
@@ -133,7 +145,7 @@ describe("Conversations Handler", () => {
       }),
     );
     expect(delRes.status).toBe(200);
-    const delData = await parseResponse(delRes);
+    const delData = (await parseResponse<Conversation>(delRes))!;
     expect(delData.id).toBe(conv.id);
     expect(delData.object).toBe("conversation");
 
@@ -141,16 +153,16 @@ describe("Conversations Handler", () => {
     const finalItemsRes = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items`),
     );
-    const finalItemsData = await parseResponse(finalItemsRes);
+    const finalItemsData = (await parseResponse<ConversationItemList>(finalItemsRes))!;
     expect(finalItemsData.data).toHaveLength(1);
-    expect(finalItemsData.data[0].id).toBe(item2Id);
+    expect(finalItemsData.data[0]!.id).toBe(item2Id);
   });
 
   test("should handle pagination (has_more)", async () => {
     const endpoint = conversations(config);
     const storage =
       (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage;
+        ?.storage ?? config.storage!;
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
@@ -163,22 +175,27 @@ describe("Conversations Handler", () => {
     const res = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=3&order=asc`),
     );
-    const data = await parseResponse(res);
+    const data = (await parseResponse<ConversationItemList>(res))!;
     expect(data.data).toHaveLength(3);
     expect(data.has_more).toBe(true);
-    expect(data.data[0].content).toBe("Msg 1");
+    const firstItem = data.data[0];
+    if (firstItem && firstItem.type === "message") {
+      expect(typeof firstItem.content === "string" ? firstItem.content : "").toBe("Msg 1");
+    } else {
+      throw new Error("Expected message item");
+    }
 
     const res2 = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=5&order=asc`),
     );
-    const data2 = await parseResponse(res2);
+    const data2 = (await parseResponse<ConversationItemList>(res2))!;
     expect(data2.data).toHaveLength(5);
     expect(data2.has_more).toBe(false);
 
     const res3 = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=10&order=asc`),
     );
-    const data3 = await parseResponse(res3);
+    const data3 = (await parseResponse<ConversationItemList>(res3))!;
     expect(data3.data).toHaveLength(5);
     expect(data3.has_more).toBe(false);
   });
@@ -187,7 +204,7 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage =
       (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage;
+        ?.storage ?? config.storage!;
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
@@ -201,13 +218,19 @@ describe("Conversations Handler", () => {
     const res1 = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=2&order=desc`),
     );
-    const data1 = await parseResponse(res1);
+    const data1 = (await parseResponse<ConversationItemList>(res1))!;
     expect(data1.data).toHaveLength(2);
-    expect(data1.data[0].content).toBe("Msg 5");
-    expect(data1.data[1].content).toBe("Msg 4");
+    const item0 = data1.data[0];
+    const item1 = data1.data[1];
+    if (item0 && item0.type === "message") {
+      expect(typeof item0.content === "string" ? item0.content : "").toBe("Msg 5");
+    }
+    if (item1 && item1.type === "message") {
+      expect(typeof item1.content === "string" ? item1.content : "").toBe("Msg 4");
+    }
     expect(data1.has_more).toBe(true);
 
-    const after = data1.data[1].id; // Last item of first page
+    const after = data1.data[1]!.id; // Last item of first page
 
     // 2. Get second page using 'after'
     const res2 = await endpoint.handler(
@@ -215,13 +238,19 @@ describe("Conversations Handler", () => {
         `http://localhost/conversations/${conv.id}/items?limit=2&order=desc&after=${after}`,
       ),
     );
-    const data2 = await parseResponse(res2);
+    const data2 = (await parseResponse<ConversationItemList>(res2))!;
     expect(data2.data).toHaveLength(2);
-    expect(data2.data[0].content).toBe("Msg 3");
-    expect(data2.data[1].content).toBe("Msg 2");
+    const item20 = data2.data[0];
+    const item21 = data2.data[1];
+    if (item20 && item20.type === "message") {
+      expect(typeof item20.content === "string" ? item20.content : "").toBe("Msg 3");
+    }
+    if (item21 && item21.type === "message") {
+      expect(typeof item21.content === "string" ? item21.content : "").toBe("Msg 2");
+    }
     expect(data2.has_more).toBe(true);
 
-    const after2 = data2.data[1].id;
+    const after2 = data2.data[1]!.id;
 
     // 3. Get last page
     const res3 = await endpoint.handler(
@@ -229,9 +258,12 @@ describe("Conversations Handler", () => {
         `http://localhost/conversations/${conv.id}/items?limit=2&order=desc&after=${after2}`,
       ),
     );
-    const data3 = await parseResponse(res3);
+    const data3 = (await parseResponse<ConversationItemList>(res3))!;
     expect(data3.data).toHaveLength(1);
-    expect(data3.data[0].content).toBe("Msg 1");
+    const item30 = data3.data[0];
+    if (item30 && item30.type === "message") {
+      expect(typeof item30.content === "string" ? item30.content : "").toBe("Msg 1");
+    }
     expect(data3.has_more).toBe(false);
   });
 
@@ -239,7 +271,7 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
     const storage =
       (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage;
+        ?.storage ?? config.storage!;
 
     const conv = await storage.createConversation({});
 
@@ -260,7 +292,7 @@ describe("Conversations Handler", () => {
       new Request(`http://localhost/conversations/${conv.id}/items?limit=0`),
     );
     expect(resZero.status).toBe(200);
-    const dataZero = await parseResponse(resZero);
+    const dataZero = (await parseResponse<ConversationItemList>(resZero))!;
     expect(dataZero.has_more).toBe(false);
   });
 
@@ -273,14 +305,14 @@ describe("Conversations Handler", () => {
     });
     const createRes = await endpoint.handler(createReq);
     expect(createRes.status).toBe(200);
-    const conv = await parseResponse(createRes);
-    expect(conv.metadata.subpath).toBe("true");
+    const conv = (await parseResponse<Conversation>(createRes))!;
+    expect(conv.metadata!["subpath"]).toBe("true");
 
     const retrieveRes = await endpoint.handler(
       new Request(`http://localhost/api/v1/conversations/${conv.id}`),
     );
     expect(retrieveRes.status).toBe(200);
-    const retrieved = await parseResponse(retrieveRes);
+    const retrieved = (await parseResponse<Conversation>(retrieveRes))!;
     expect(retrieved.id).toBe(conv.id);
   });
 
@@ -290,7 +322,7 @@ describe("Conversations Handler", () => {
     // 1. Maintain item ID during addItems
     const storage =
       (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage;
+        ?.storage ?? config.storage!;
     const conv = await storage.createConversation({});
 
     const customItemId = "item_custom_123";
@@ -299,8 +331,8 @@ describe("Conversations Handler", () => {
     });
     const addItemsRes = await endpoint.handler(addItemsReq);
     expect(addItemsRes.status).toBe(200);
-    const addItemsData = await parseResponse(addItemsRes);
-    expect(addItemsData.data[0].id).toBe(customItemId);
+    const addItemsData = (await parseResponse<ConversationItemList>(addItemsRes))!;
+    expect(addItemsData.data[0]!.id).toBe(customItemId);
     expect(addItemsData.first_id).toBe(customItemId);
     expect(addItemsData.last_id).toBe(customItemId);
 
@@ -312,7 +344,7 @@ describe("Conversations Handler", () => {
       ],
     });
     const multiAddItemsRes = await endpoint.handler(multiAddItemsReq);
-    const multiAddItemsData = await parseResponse(multiAddItemsRes);
+    const multiAddItemsData = (await parseResponse<ConversationItemList>(multiAddItemsRes))!;
     expect(multiAddItemsData.first_id).toBe("item1");
     expect(multiAddItemsData.last_id).toBe("item2");
 
@@ -322,13 +354,13 @@ describe("Conversations Handler", () => {
     });
     const createRes = await endpoint.handler(createReq);
     expect(createRes.status).toBe(200);
-    const newConv = await parseResponse(createRes);
+    const newConv = (await parseResponse<Conversation>(createRes))!;
 
     const listRes = await endpoint.handler(
       new Request(`http://localhost/conversations/${newConv.id}/items`),
     );
-    const listData = await parseResponse(listRes);
-    expect(listData.data[0].id).toBe("msg_1");
+    const listData = (await parseResponse<ConversationItemList>(listRes))!;
+    expect(listData.data[0]!.id).toBe("msg_1");
   });
 
   test("should reject empty input_image and input_file payloads", async () => {
@@ -340,7 +372,7 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_image" }],
+          content: [{ type: "input_image" }] as unknown as ResponseInputItem[],
         },
       ],
     });
@@ -353,7 +385,7 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_file" }],
+          content: [{ type: "input_file" }] as unknown as ResponseInputItem[],
         },
       ],
     });
@@ -363,7 +395,7 @@ describe("Conversations Handler", () => {
     // 3. Add item with empty input_image
     const storage =
       (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage;
+        ?.storage ?? config.storage!;
     const conv = await storage.createConversation({});
 
     const reqAdd = postJson(`http://localhost/conversations/${conv.id}/items`, {
@@ -371,7 +403,9 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_image", image_url: null, file_id: null }],
+          content: [
+            { type: "input_image", image_url: null, file_id: null } as unknown as ResponseInputItem,
+          ],
         },
       ],
     });
@@ -388,7 +422,7 @@ describe("Conversations Handler", () => {
       new Request(`http://localhost/conversations/${nonExistentId}/items`),
     );
     expect(listRes.status).toBe(404);
-    const listData = await parseResponse(listRes);
+    const listData = (await parseResponse<{ error: { message: string } }>(listRes))!;
     expect(listData.error.message).toBe("Conversation not found");
 
     // 2. Add items
@@ -397,7 +431,7 @@ describe("Conversations Handler", () => {
     });
     const addRes = await endpoint.handler(addReq);
     expect(addRes.status).toBe(404);
-    const addData = await parseResponse(addRes);
+    const addData = (await parseResponse<{ error: { message: string } }>(addRes))!;
     expect(addData.error.message).toBe("Conversation not found");
   });
 });
