@@ -25,13 +25,13 @@ describe("SQLite Storage (In-Memory)", () => {
     // 3. Get Item
     const item = await storage.getItem(conv.id, "item-1");
     expect(item).toBeDefined();
-    expect(item?.id).toBe("item-1");
+    expect(item!.id).toBe("item-1");
     expect((item as Record<string, unknown>).content).toBe("Msg 1");
 
     // 4. List Items (Basic)
     const allItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
-    expect(allItems?.length).toBe(3);
-    expect(allItems?.[0].id).toBe("item-1");
+    expect(allItems!.length).toBe(3);
+    expect(allItems![0].id).toBe("item-1");
 
     // 5. List Items (Pagination: after)
     const page2 = await storage.listItems(conv.id, {
@@ -39,19 +39,19 @@ describe("SQLite Storage (In-Memory)", () => {
       order: "asc",
       after: "item-1",
     });
-    expect(page2?.length).toBe(2);
-    expect(page2?.[0].id).toBe("item-2");
-    expect(page2?.[1].id).toBe("item-3");
+    expect(page2!.length).toBe(2);
+    expect(page2![0].id).toBe("item-2");
+    expect(page2![1].id).toBe("item-3");
 
     // 6. List Items (Pagination: order desc)
     const descItems = await storage.listItems(conv.id, { limit: 10, order: "desc" });
-    expect(descItems?.[0].id).toBe("item-3");
+    expect(descItems![0].id).toBe("item-3");
 
     // 7. Delete Item
     await storage.deleteItem(conv.id, "item-2");
     const afterDeleteItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
-    expect(afterDeleteItems?.length).toBe(2);
-    expect(afterDeleteItems?.find((i) => i.id === "item-2")).toBeUndefined();
+    expect(afterDeleteItems!.length).toBe(2);
+    expect(afterDeleteItems!.find((i) => i.id === "item-2")).toBeUndefined();
 
     // 8. Delete Conversation
     const deleteRes = await storage.deleteConversation(conv.id);
@@ -84,7 +84,7 @@ describe("SQLite Storage (In-Memory)", () => {
     });
 
     // Should return 0 items for an invalid cursor
-    expect(results?.length).toBe(0);
+    expect(results!.length).toBe(0);
 
     db.close();
   });
@@ -98,22 +98,22 @@ describe("SQLite Storage (In-Memory)", () => {
     // Test null metadata
     const convNull = await storage.createConversation({ metadata: null });
     const retrievedNull = await storage.getConversation(convNull.id);
-    expect(retrievedNull?.metadata).toBeNull();
+    expect(retrievedNull!.metadata).toBeNull();
 
     // Test undefined metadata (should default to null)
     const convUndef = await storage.createConversation({ metadata: undefined });
     const retrievedUndef = await storage.getConversation(convUndef.id);
-    expect(retrievedUndef?.metadata).toBeNull();
+    expect(retrievedUndef!.metadata).toBeNull();
 
     // Test updating to null
     await storage.updateConversation(convUndef.id, null);
     const updatedNull = await storage.getConversation(convUndef.id);
-    expect(updatedNull?.metadata).toBeNull();
+    expect(updatedNull!.metadata).toBeNull();
 
     // Test updating to empty object
     await storage.updateConversation(convNull.id, {});
     const updatedObj = await storage.getConversation(convNull.id);
-    expect(updatedObj?.metadata).toEqual({});
+    expect(updatedObj!.metadata).toEqual({});
 
     db.close();
   });
