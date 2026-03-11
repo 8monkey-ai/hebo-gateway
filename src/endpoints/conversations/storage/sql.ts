@@ -231,22 +231,20 @@ export class SqlStorage implements ConversationStorage {
     await this.executor.transaction(async (tx) => {
       let i = 0;
       for (const input of items) {
-        const { id: inputId, type, ...data } = input;
+        const { id: inputId, type } = input;
         const id = inputId || uuidv7();
         // Add slight offset to ensure unique (PK + TS) even in batch.
         const createdAt = new Date(now + i++);
 
-        const params = [id, conversationId, type, data, createdAt];
-
         // eslint-disable-next-line no-await-in-loop
-        await tx.run(sql, params);
+        await tx.run(sql, [id, conversationId, type, input, createdAt]);
 
-        results.push({
-          ...input,
-          id,
-          conversation_id: conversationId,
-          created_at: createdAt.getTime(),
-        } as ConversationItemEntity);
+        const item = input as ConversationItemEntity;
+        item.id = id;
+        item.conversation_id = conversationId;
+        item.created_at = createdAt.getTime();
+
+        results.push(item);
       }
     });
 

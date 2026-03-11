@@ -69,7 +69,7 @@ export class InMemoryStorage implements ConversationStorage {
     return total;
   }
   private mapItem(conversationId: string, input: ConversationItemInput): ConversationItemEntity {
-    const item = { ...input } as ConversationItemEntity;
+    const item = input as ConversationItemEntity;
     item.id ??= uuidv7();
     item.conversation_id = conversationId;
     item.created_at = Date.now();

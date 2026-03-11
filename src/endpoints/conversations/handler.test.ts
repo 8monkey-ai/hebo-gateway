@@ -148,7 +148,9 @@ describe("Conversations Handler", () => {
 
   test("should handle pagination (has_more)", async () => {
     const endpoint = conversations(config);
-    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+    const storage =
+      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
+        ?.storage ?? config.storage;
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
@@ -183,7 +185,9 @@ describe("Conversations Handler", () => {
 
   test("should handle pagination with after and order=desc", async () => {
     const endpoint = conversations(config);
-    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+    const storage =
+      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
+        ?.storage ?? config.storage;
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
@@ -233,7 +237,9 @@ describe("Conversations Handler", () => {
 
   test("should enforce limit constraints", async () => {
     const endpoint = conversations(config);
-    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+    const storage =
+      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
+        ?.storage ?? config.storage;
 
     const conv = await storage.createConversation({});
 
@@ -282,7 +288,9 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
 
     // 1. Maintain item ID during addItems
-    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+    const storage =
+      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
+        ?.storage ?? config.storage;
     const conv = await storage.createConversation({});
 
     const customItemId = "item_custom_123";
@@ -353,7 +361,9 @@ describe("Conversations Handler", () => {
     expect(resFile.status).toBe(400);
 
     // 3. Add item with empty input_image
-    const storage = (endpoint as any)._parsedConfig?.storage ?? config.storage;
+    const storage =
+      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
+        ?.storage ?? config.storage;
     const conv = await storage.createConversation({});
 
     const reqAdd = postJson(`http://localhost/conversations/${conv.id}/items`, {

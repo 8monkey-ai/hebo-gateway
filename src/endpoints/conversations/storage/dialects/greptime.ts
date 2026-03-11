@@ -18,13 +18,16 @@ const GrepTimeBase: Pick<DialectConfig, "types"> = {
   },
 };
 
-export const GrepTimeDialectConfig: DialectConfig = {
-  ...PostgresDialectConfig,
-  ...GrepTimeBase,
-  upsertSuffix: undefined,
-  supportCreateIndexIfNotExists: true,
-  limitAsLiteral: true,
-};
+export const GrepTimeDialectConfig: DialectConfig = Object.assign(
+  {},
+  PostgresDialectConfig,
+  GrepTimeBase,
+  {
+    upsertSuffix: undefined,
+    supportCreateIndexIfNotExists: true,
+    limitAsLiteral: true,
+  },
+);
 
 const mapParams = createParamsMapper(dateToBigInt, jsonStringify);
 
@@ -41,7 +44,7 @@ export class GrepTimeDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig = GrepTimeDialectConfig;
 
-  constructor(options: { client: PgPool | PostgresJsSql | BunSql | any }) {
+  constructor(options: { client: PgPool | PostgresJsSql | BunSql | unknown }) {
     const { client } = options;
     const dialect = new PostgresDialect({ client, config: this.config });
     this.executor = createGreptimeExecutor(dialect.executor);

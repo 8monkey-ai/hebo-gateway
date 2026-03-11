@@ -23,12 +23,14 @@ export const MySQLDialectConfig: DialectConfig = {
   },
 };
 
-function isMysql2(client: any): client is Mysql2Pool {
-  return typeof client.execute === "function" && typeof client.getConnection === "function";
+function isMysql2(client: unknown): client is Mysql2Pool {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["execute"] === "function" && typeof c["getConnection"] === "function";
 }
 
-function isBunSql(client: any): client is BunSql {
-  return typeof client.unsafe === "function" && typeof client.transaction === "function";
+function isBunSql(client: unknown): client is BunSql {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["unsafe"] === "function" && typeof c["transaction"] === "function";
 }
 
 function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
@@ -106,7 +108,7 @@ export class MysqlDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig;
 
-  constructor(options: { client: Mysql2Pool | BunSql | any; config?: DialectConfig }) {
+  constructor(options: { client: Mysql2Pool | BunSql | unknown; config?: DialectConfig }) {
     const { client, config = MySQLDialectConfig } = options;
     this.config = config;
 

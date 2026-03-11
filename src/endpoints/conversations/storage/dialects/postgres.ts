@@ -27,16 +27,19 @@ export const PostgresDialectConfig: DialectConfig = {
 
 const MAX_CACHE_SIZE = 100;
 
-function isPgPool(client: any): client is PgPool {
-  return typeof client.query === "function" && typeof client.connect === "function";
+function isPgPool(client: unknown): client is PgPool {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["query"] === "function" && typeof c["connect"] === "function";
 }
 
-function isPostgresJs(client: any): client is PostgresJsSql {
-  return typeof client.unsafe === "function" && typeof client.begin === "function";
+function isPostgresJs(client: unknown): client is PostgresJsSql {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["unsafe"] === "function" && typeof c["begin"] === "function";
 }
 
-function isBunSql(client: any): client is BunSql {
-  return typeof client.unsafe === "function" && typeof client.transaction === "function";
+function isBunSql(client: unknown): client is BunSql {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["unsafe"] === "function" && typeof c["transaction"] === "function";
 }
 
 function createPgExecutor(pool: PgPool): QueryExecutor {
@@ -159,7 +162,10 @@ export class PostgresDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig;
 
-  constructor(options: { client: PgPool | PostgresJsSql | BunSql | any; config?: DialectConfig }) {
+  constructor(options: {
+    client: PgPool | PostgresJsSql | BunSql | unknown;
+    config?: DialectConfig;
+  }) {
     const { client, config = PostgresDialectConfig } = options;
     this.config = config;
 

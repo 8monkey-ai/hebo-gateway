@@ -129,7 +129,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     conversationId: string,
     searchParams: URLSearchParams,
   ): Promise<ConversationItemList> {
-    const params: Record<string, any> = Object.fromEntries(searchParams.entries());
+    const params: Record<string, string> = Object.fromEntries(searchParams.entries());
 
     const parsed = ConversationItemListParamsSchema.safeParse(params);
     if (!parsed.success) {

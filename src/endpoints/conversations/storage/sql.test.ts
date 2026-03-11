@@ -26,7 +26,7 @@ describe("SQLite Storage (In-Memory)", () => {
     const item = await storage.getItem(conv.id, "item-1");
     expect(item).toBeDefined();
     expect(item?.id).toBe("item-1");
-    expect((item as any).content).toBe("Msg 1");
+    expect((item as Record<string, unknown>).content).toBe("Msg 1");
 
     // 4. List Items (Basic)
     const allItems = await storage.listItems(conv.id, { limit: 10, order: "asc" });
@@ -96,7 +96,7 @@ describe("SQLite Storage (In-Memory)", () => {
     await storage.migrate();
 
     // Test null metadata
-    const convNull = await storage.createConversation({ metadata: null as any });
+    const convNull = await storage.createConversation({ metadata: null });
     const retrievedNull = await storage.getConversation(convNull.id);
     expect(retrievedNull?.metadata).toBeNull();
 
@@ -106,7 +106,7 @@ describe("SQLite Storage (In-Memory)", () => {
     expect(retrievedUndef?.metadata).toBeNull();
 
     // Test updating to null
-    await storage.updateConversation(convUndef.id, null as any);
+    await storage.updateConversation(convUndef.id, null);
     const updatedNull = await storage.getConversation(convUndef.id);
     expect(updatedNull?.metadata).toBeNull();
 

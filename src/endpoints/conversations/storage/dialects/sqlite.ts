@@ -25,16 +25,19 @@ export const SQLiteDialectConfig: DialectConfig = {
 
 const MAX_CACHE_SIZE = 100;
 
-function isBetterSqlite3(client: any): client is BetterSqlite3Database {
-  return typeof client.prepare === "function" && typeof client.transaction === "function";
+function isBetterSqlite3(client: unknown): client is BetterSqlite3Database {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["prepare"] === "function" && typeof c["transaction"] === "function";
 }
 
-function isLibsql(client: any): client is LibsqlClient {
-  return typeof client.execute === "function" && typeof client.batch === "function";
+function isLibsql(client: unknown): client is LibsqlClient {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["execute"] === "function" && typeof c["batch"] === "function";
 }
 
-function isBunSql(client: any): client is BunSql {
-  return typeof client.unsafe === "function" && typeof client.transaction === "function";
+function isBunSql(client: unknown): client is BunSql {
+  const c = client as Record<string, unknown>;
+  return !!client && typeof c["unsafe"] === "function" && typeof c["transaction"] === "function";
 }
 
 function createBetterSqlite3Executor(db: BetterSqlite3Database): QueryExecutor {
@@ -142,7 +145,7 @@ export class SqliteDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig = SQLiteDialectConfig;
 
-  constructor(options: { client: BetterSqlite3Database | LibsqlClient | BunSql | any }) {
+  constructor(options: { client: BetterSqlite3Database | LibsqlClient | BunSql | unknown }) {
     const { client } = options;
 
     if (isBetterSqlite3(client)) {

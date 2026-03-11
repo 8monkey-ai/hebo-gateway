@@ -11,13 +11,11 @@ export function toConversation(entity: ConversationEntity): Conversation {
 }
 
 export function toConversationItem(entity: ConversationItemEntity): ConversationItem {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { conversation_id, created_at, ...rest } = entity;
-  return {
-    ...rest,
-    object: "conversation.item",
-    created_at: Math.floor(created_at / 1000),
-  } as ConversationItem;
+  const item = entity as unknown as ConversationItem;
+  item.object = "conversation.item";
+  item.created_at = Math.floor(entity.created_at / 1000);
+
+  return item;
 }
 
 export function toConversationDeleted(result: {
