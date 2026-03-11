@@ -1,6 +1,7 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import type { Database as BetterSqlite3Database, Statement } from "better-sqlite3";
 import type { SQL as BunSql } from "bun";
+import { LRUCache } from "lru-cache";
 
 import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
 import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
@@ -41,15 +42,11 @@ function isBunSql(client: unknown): client is BunSql {
 }
 
 function createBetterSqlite3Executor(db: BetterSqlite3Database): QueryExecutor {
-  const cache = new Map<string, Statement>();
+  const cache = new LRUCache<string, Statement>({ max: MAX_CACHE_SIZE });
 
   const getStmt = (sql: string) => {
     let stmt = cache.get(sql);
     if (!stmt) {
-      if (cache.size >= MAX_CACHE_SIZE) {
-        const firstKey = cache.keys().next().value;
-        if (firstKey !== undefined) cache.delete(firstKey);
-      }
       stmt = db.prepare(sql);
       cache.set(sql, stmt);
     }

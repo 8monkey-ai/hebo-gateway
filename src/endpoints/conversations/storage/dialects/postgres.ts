@@ -2,6 +2,8 @@ import type { SQL as BunSql } from "bun";
 import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql } from "postgres";
 
+import { LRUCache } from "lru-cache";
+
 import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
 import { createParamsMapper, dateToNumber } from "./utils";
 
@@ -43,16 +45,12 @@ function isBunSql(client: unknown): client is BunSql {
 }
 
 function createPgExecutor(pool: PgPool): QueryExecutor {
-  const cache = new Map<string, string>();
+  const cache = new LRUCache<string, string>({ max: MAX_CACHE_SIZE });
   let count = 0;
 
   const getQuery = (sql: string) => {
     let name = cache.get(sql);
     if (!name) {
-      if (cache.size >= MAX_CACHE_SIZE) {
-        const firstKey = cache.keys().next().value;
-        if (firstKey !== undefined) cache.delete(firstKey);
-      }
       name = `q_${count++}`;
       cache.set(sql, name);
     }
