@@ -1,9 +1,11 @@
 import type {
   GatewayConfig,
+  GatewayConfigParsed,
   GatewayContext,
   OnRequestHookContext,
   OnResponseHookContext,
 } from "./types";
+import type { SseFrame } from "./utils/stream";
 
 import { parseConfig } from "./config";
 import { GatewayError } from "./errors/gateway";
@@ -15,12 +17,14 @@ import { recordRequestDuration } from "./telemetry/gen-ai";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { observeV8jsMemoryMetrics } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
-import { wrapStream } from "./telemetry/stream";
 import { resolveOrCreateRequestId } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
 
 export const winterCgHandler = (
-  run: (ctx: GatewayContext) => Promise<object | ReadableStream<object>>,
+  run: (
+    ctx: GatewayContext,
+    cfg: GatewayConfigParsed,
+  ) => Promise<object | ReadableStream<SseFrame>>,
   config: GatewayConfig,
 ) => {
   const parsedConfig = parseConfig(config);
@@ -98,13 +102,11 @@ export const winterCgHandler = (
       }
 
       if (!ctx.response) {
-        ctx.result = (await span.runWithContext(() => run(ctx))) as typeof ctx.result;
+        ctx.result = (await span.runWithContext(() => run(ctx, parsedConfig))) as typeof ctx.result;
 
-        if (ctx.result instanceof ReadableStream) {
-          ctx.result = wrapStream(ctx.result, { onDone: finalize });
-        }
-
-        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId));
+        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
+          onDone: finalize,
+        });
       }
 
       if (parsedConfig.hooks?.onResponse) {

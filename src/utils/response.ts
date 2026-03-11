@@ -1,19 +1,9 @@
+import type { SseFrame } from "./stream";
+
 import { REQUEST_ID_HEADER } from "./headers";
+import { toSseStream } from "./stream";
 
 const TEXT_ENCODER = new TextEncoder();
-
-class JsonToSseTransformStream extends TransformStream<unknown, string> {
-  constructor() {
-    super({
-      transform(part, controller) {
-        controller.enqueue(`data: ${JSON.stringify(part)}\n\n`);
-      },
-      flush(controller) {
-        controller.enqueue("data: [DONE]\n\n");
-      },
-    });
-  }
-}
 
 export const prepareResponseInit = (requestId: string): ResponseInit => ({
   headers: { [REQUEST_ID_HEADER]: requestId },
@@ -40,29 +30,26 @@ export const mergeResponseInit = (
 };
 
 export const toResponse = (
-  result: ReadableStream | Uint8Array<ArrayBuffer> | object | string,
+  result: ReadableStream<SseFrame> | Uint8Array<ArrayBuffer> | object | string,
   responseInit?: ResponseInit,
+  streamOptions?: { onDone?: (status: number, reason?: unknown) => void },
 ): Response => {
   let body: BodyInit;
-
   const isStream = result instanceof ReadableStream;
+
   if (isStream) {
-    body = result.pipeThrough(new JsonToSseTransformStream()).pipeThrough(new TextEncoderStream());
+    body = toSseStream(result, streamOptions);
   } else if (result instanceof Uint8Array) {
     body = result;
   } else if (typeof result === "string") {
     body = TEXT_ENCODER.encode(result);
-  } else if (result instanceof Error) {
-    body = TEXT_ENCODER.encode(JSON.stringify({ message: result.message }));
   } else {
     body = TEXT_ENCODER.encode(JSON.stringify(result));
   }
 
   if (!responseInit?.statusText) {
-    const isError = result instanceof Error;
-
-    const status = responseInit?.status ?? (isError ? 500 : 200);
-    const statusText = isError ? "REQUEST_FAILED" : "OK";
+    const status = responseInit?.status ?? 200;
+    const statusText = "OK";
     const headers = responseInit?.headers;
 
     responseInit = headers ? { status, statusText, headers } : { status, statusText };

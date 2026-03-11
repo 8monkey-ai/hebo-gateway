@@ -1,11 +1,11 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import type { Embeddings, EmbeddingsInputs } from "./schema";
+import type { Embeddings, EmbeddingsBody } from "./schema";
 
 import { type TelemetrySignalLevel } from "../../types";
 
 export const getEmbeddingsRequestAttributes = (
-  inputs: EmbeddingsInputs,
+  body: EmbeddingsBody,
   signalLevel?: TelemetrySignalLevel,
 ): Attributes => {
   if (!signalLevel || signalLevel === "off") return {};
@@ -14,12 +14,12 @@ export const getEmbeddingsRequestAttributes = (
 
   if (signalLevel !== "required") {
     Object.assign(attrs, {
-      "gen_ai.embeddings.dimension.count": inputs.dimensions,
+      "gen_ai.embeddings.dimension.count": body.dimensions,
     });
 
-    if (inputs.metadata) {
-      for (const key in inputs.metadata) {
-        attrs[`gen_ai.request.metadata.${key}`] = inputs.metadata[key];
+    if (body.metadata) {
+      for (const key in body.metadata) {
+        attrs[`gen_ai.request.metadata.${key}`] = body.metadata[key];
       }
     }
   }
