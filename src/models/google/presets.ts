@@ -37,6 +37,16 @@ export const geminiEmbedding001 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const geminiEmbedding2Preview = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-embedding-2-preview" as const,
+  {
+    ...GEMINI_EMBEDDINGS_BASE,
+    name: "Gemini Embedding 2 (Preview)",
+    created: "2026-03-10",
+    context: 8192,
+  } satisfies CatalogModel,
+);
+
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3-flash-preview" as const,
   {
@@ -100,7 +110,7 @@ export const gemini25Pro = presetFor<CanonicalModelId, CatalogModel>()(
 const geminiAtomic = {
   "v2.5": [gemini25FlashLite, gemini25Flash, gemini25Pro],
   "v3-preview": [gemini3FlashPreview, gemini31FlashLitePreview, gemini31ProPreview],
-  embeddings: [geminiEmbedding001],
+  embeddings: [geminiEmbedding001, geminiEmbedding2Preview],
 } as const;
 
 const geminiGroups = {
