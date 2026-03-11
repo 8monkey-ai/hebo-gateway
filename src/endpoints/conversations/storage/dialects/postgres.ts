@@ -13,7 +13,7 @@ export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
   quote: (i) => `"${i}"`,
   upsertSuffix: (q, pk, cols) =>
-    `ON CONFLICT (${pk.map(q).join(", ")}) DO UPDATE SET ${cols
+    `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols
       .map((c) => `${q(c)} = EXCLUDED.${q(c)}`)
       .join(", ")}`,
   supportCreateIndexIfNotExists: true,

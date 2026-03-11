@@ -1,34 +1,55 @@
-import type {
-  Conversation,
-  ConversationItem,
-  ConversationItemListParams,
-  Metadata,
-  ResponseInputItem,
-} from "../schema";
+export type ConversationMetadata = Record<string, string> | null;
+
+export interface ConversationEntity {
+  id: string;
+  created_at: number;
+  metadata: ConversationMetadata;
+}
+
+export interface ConversationItemInput {
+  id?: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface ConversationItemEntity extends ConversationItemInput {
+  id: string;
+  conversation_id: string;
+  created_at: number;
+}
+
+export interface ConversationQueryOptions {
+  limit: number;
+  after?: string;
+  order?: "asc" | "desc";
+}
 
 export interface ConversationStorage {
   createConversation(params: {
-    metadata?: Metadata;
-    items?: ResponseInputItem[];
-  }): Promise<Conversation>;
+    metadata?: ConversationMetadata;
+    items?: ConversationItemInput[];
+  }): Promise<ConversationEntity>;
 
-  getConversation(id: string): Promise<Conversation | undefined>;
+  getConversation(id: string): Promise<ConversationEntity | undefined>;
 
-  updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined>;
+  updateConversation(
+    id: string,
+    metadata: ConversationMetadata,
+  ): Promise<ConversationEntity | undefined>;
 
   deleteConversation(id: string): Promise<{ id: string; deleted: boolean }>;
 
   addItems(
     conversationId: string,
-    items: ResponseInputItem[],
-  ): Promise<ConversationItem[] | undefined>;
+    items: ConversationItemInput[],
+  ): Promise<ConversationItemEntity[] | undefined>;
 
-  getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined>;
+  getItem(conversationId: string, itemId: string): Promise<ConversationItemEntity | undefined>;
 
-  deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined>;
+  deleteItem(conversationId: string, itemId: string): Promise<ConversationEntity | undefined>;
 
   listItems(
     conversationId: string,
-    params: ConversationItemListParams,
-  ): Promise<ConversationItem[] | undefined>;
+    params: ConversationQueryOptions,
+  ): Promise<ConversationItemEntity[] | undefined>;
 }

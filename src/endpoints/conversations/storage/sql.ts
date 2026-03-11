@@ -1,13 +1,13 @@
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 
 import type {
-  Conversation,
-  ConversationItem,
-  ConversationItemListParams,
-  Metadata,
-  ResponseInputItem,
-} from "../schema";
-import type { ConversationStorage } from "./types";
+  ConversationStorage,
+  ConversationEntity,
+  ConversationItemEntity,
+  ConversationMetadata,
+  ConversationItemInput,
+  ConversationQueryOptions,
+} from "./types";
 import type { SqlDialect } from "./dialects/types";
 
 interface BaseRow {
@@ -18,21 +18,17 @@ interface BaseRow {
   type?: string;
   data: string | Record<string, unknown>;
 }
-import { createRowMapper, mergeData, parseJson, toSeconds } from "./dialects/utils";
+import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 
 /**
- * Maps a raw database row to a clean conversation or item object.
+ * Maps a raw database row to a clean conversation or item entity.
  */
-function mapRow<T>(row: BaseRow, objectType: string): T {
+function mapRow<T>(row: BaseRow): T {
   const mapper = createRowMapper<T>(
     parseJson("data"),
     parseJson("metadata"),
-    toSeconds("created_at"),
+    toMilliseconds("created_at"),
     mergeData("data"),
-    (r) => {
-      r["object"] = objectType;
-      return r;
-    },
   );
 
   return mapper(row as unknown as Record<string, unknown>);
@@ -71,7 +67,9 @@ export class SqlStorage implements ConversationStorage {
 
       const formattedCols = cols
         .map((c) => {
-          const [col, dir] = c.split(" ");
+          const parts = c.split(" ");
+          const col = parts[0]!;
+          const dir = parts[1];
           // BRIN doesn't support ASC/DESC
           const effectiveDir = isBrin ? "" : dir;
           return effectiveDir ? `${q(col)} ${effectiveDir}` : q(col);
@@ -124,9 +122,9 @@ export class SqlStorage implements ConversationStorage {
   }
 
   async createConversation(params: {
-    metadata?: Metadata;
-    items?: ResponseInputItem[];
-  }): Promise<Conversation> {
+    metadata?: ConversationMetadata;
+    items?: ConversationItemInput[];
+  }): Promise<ConversationEntity> {
     const { placeholder: p, quote: q } = this.config;
     const isGreptime = this.config.types.index === "TIME";
     const id = isGreptime ? uuidv4() : uuidv7();
@@ -140,10 +138,9 @@ export class SqlStorage implements ConversationStorage {
       [id, metadata, now],
     );
 
-    const conversation: Conversation = {
+    const conversation: ConversationEntity = {
       id,
-      object: "conversation",
-      created_at: Math.floor(now.getTime() / 1000),
+      created_at: now.getTime(),
       metadata,
     };
 
@@ -154,7 +151,7 @@ export class SqlStorage implements ConversationStorage {
     return conversation;
   }
 
-  async getConversation(id: string): Promise<Conversation | undefined> {
+  async getConversation(id: string): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q } = this.config;
     const row = await this.executor.get<BaseRow>(
       `SELECT * FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)} ORDER BY ${q(
@@ -162,10 +159,13 @@ export class SqlStorage implements ConversationStorage {
       )} DESC LIMIT 1`,
       [id],
     );
-    return row ? mapRow<Conversation>(row, "conversation") : undefined;
+    return row ? mapRow<ConversationEntity>(row) : undefined;
   }
 
-  async updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined> {
+  async updateConversation(
+    id: string,
+    metadata: ConversationMetadata,
+  ): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q, upsertSuffix } = this.config;
 
     // Unified approach: Fetch original created_at to verify existence and preserve it.
@@ -196,10 +196,7 @@ export class SqlStorage implements ConversationStorage {
 
     return {
       id,
-      object: "conversation",
-      created_at: Math.floor(
-        (createdAt instanceof Date ? createdAt.getTime() : Number(createdAt)) / 1000,
-      ),
+      created_at: createdAt instanceof Date ? createdAt.getTime() : Number(createdAt),
       metadata: metadata ?? null,
     };
   }
@@ -215,8 +212,8 @@ export class SqlStorage implements ConversationStorage {
 
   async addItems(
     conversationId: string,
-    items: ResponseInputItem[],
-  ): Promise<ConversationItem[] | undefined> {
+    items: ConversationItemInput[],
+  ): Promise<ConversationItemEntity[] | undefined> {
     const conversation = await this.getConversation(conversationId);
     if (!conversation) return undefined;
 
@@ -229,12 +226,12 @@ export class SqlStorage implements ConversationStorage {
       .join(", ")}) VALUES (${placeholders})`;
 
     const now = Date.now();
-    const results: ConversationItem[] = [];
+    const results: ConversationItemEntity[] = [];
 
     await this.executor.transaction(async (tx) => {
       let i = 0;
       for (const input of items) {
-        const { id: inputId, type, ...data } = input as { id?: string; type: string };
+        const { id: inputId, type, ...data } = input;
         const id = inputId || uuidv7();
         // Add slight offset to ensure unique (PK + TS) even in batch.
         const createdAt = new Date(now + i++);
@@ -247,16 +244,19 @@ export class SqlStorage implements ConversationStorage {
         results.push({
           ...input,
           id,
-          object: "conversation.item",
-          created_at: Math.floor(createdAt.getTime() / 1000),
-        } as ConversationItem);
+          conversation_id: conversationId,
+          created_at: createdAt.getTime(),
+        } as ConversationItemEntity);
       }
     });
 
     return results;
   }
 
-  async getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined> {
+  async getItem(
+    conversationId: string,
+    itemId: string,
+  ): Promise<ConversationItemEntity | undefined> {
     const { placeholder: p, quote: q } = this.config;
     const row = await this.executor.get<BaseRow>(
       `SELECT * FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
@@ -264,10 +264,13 @@ export class SqlStorage implements ConversationStorage {
       )} = ${p(1)}`,
       [itemId, conversationId],
     );
-    return row ? mapRow<ConversationItem>(row, "conversation.item") : undefined;
+    return row ? mapRow<ConversationItemEntity>(row) : undefined;
   }
 
-  async deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined> {
+  async deleteItem(
+    conversationId: string,
+    itemId: string,
+  ): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q } = this.config;
     await this.executor.run(
       `DELETE FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
@@ -280,8 +283,8 @@ export class SqlStorage implements ConversationStorage {
 
   async listItems(
     conversationId: string,
-    params: ConversationItemListParams,
-  ): Promise<ConversationItem[] | undefined> {
+    params: ConversationQueryOptions,
+  ): Promise<ConversationItemEntity[] | undefined> {
     const { after, order, limit } = params;
     const { placeholder: p, quote: q, limitAsLiteral } = this.config;
 
@@ -310,9 +313,9 @@ export class SqlStorage implements ConversationStorage {
     if (!limitAsLiteral && limit !== undefined) args.push(limitVal);
 
     const rows = await this.executor.all<BaseRow>(query, args);
-    const results: ConversationItem[] = [];
+    const results: ConversationItemEntity[] = [];
     for (const row of rows) {
-      results.push(mapRow<ConversationItem>(row, "conversation.item"));
+      results.push(mapRow<ConversationItemEntity>(row));
     }
     return results;
   }

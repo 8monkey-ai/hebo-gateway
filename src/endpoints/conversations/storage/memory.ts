@@ -2,23 +2,23 @@ import { LRUCache } from "lru-cache";
 import { v7 as uuidv7 } from "uuid";
 
 import type {
-  Conversation,
-  ConversationItem,
-  ConversationItemListParams,
-  Metadata,
-  ResponseInputItem,
-} from "../schema";
-import type { ConversationStorage } from "./types";
+  ConversationStorage,
+  ConversationEntity,
+  ConversationItemEntity,
+  ConversationMetadata,
+  ConversationItemInput,
+  ConversationQueryOptions,
+} from "./types";
 
 export class InMemoryStorage implements ConversationStorage {
-  private conversations = new Map<string, Conversation>();
-  private items: LRUCache<string, Map<string, ConversationItem>>;
+  private conversations = new Map<string, ConversationEntity>();
+  private items: LRUCache<string, Map<string, ConversationItemEntity>>;
 
   constructor(options?: { maxSize?: number }) {
     // Default to 256MB
     const maxSize = options?.maxSize ?? 256 * 1024 * 1024;
 
-    this.items = new LRUCache<string, Map<string, ConversationItem>>({
+    this.items = new LRUCache<string, Map<string, ConversationItemEntity>>({
       maxSize,
       sizeCalculation: (items) => Math.max(1, this.estimateSize(items)),
       noDisposeOnSet: true,
@@ -68,30 +68,29 @@ export class InMemoryStorage implements ConversationStorage {
 
     return total;
   }
-  private mapItem(input: ResponseInputItem): ConversationItem {
-    const item = { ...input } as ConversationItem;
+  private mapItem(conversationId: string, input: ConversationItemInput): ConversationItemEntity {
+    const item = { ...input } as ConversationItemEntity;
     item.id ??= uuidv7();
-    item.object = "conversation.item";
-    item.created_at = Math.floor(Date.now() / 1000);
+    item.conversation_id = conversationId;
+    item.created_at = Date.now();
     return item;
   }
 
   createConversation(params: {
-    metadata?: Metadata;
-    items?: ResponseInputItem[];
-  }): Promise<Conversation> {
+    metadata?: ConversationMetadata;
+    items?: ConversationItemInput[];
+  }): Promise<ConversationEntity> {
     const id = uuidv7();
-    const conversation: Conversation = {
+    const conversation: ConversationEntity = {
       id,
-      object: "conversation",
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: Date.now(),
       metadata: params.metadata ?? null,
     };
 
-    const itemMap = new Map<string, ConversationItem>();
+    const itemMap = new Map<string, ConversationItemEntity>();
     if (params.items) {
       for (const input of params.items) {
-        const item = this.mapItem(input);
+        const item = this.mapItem(id, input);
         itemMap.set(item.id, item);
       }
     }
@@ -101,18 +100,21 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(conversation);
   }
 
-  getConversation(id: string): Promise<Conversation | undefined> {
+  getConversation(id: string): Promise<ConversationEntity | undefined> {
     // Updates the LRU position
     if (this.items.get(id) === undefined) {
-      return Promise.resolve(undefined as Conversation | undefined);
+      return Promise.resolve(undefined as ConversationEntity | undefined);
     }
     return Promise.resolve(this.conversations.get(id));
   }
 
-  updateConversation(id: string, metadata: Metadata): Promise<Conversation | undefined> {
+  updateConversation(
+    id: string,
+    metadata: ConversationMetadata,
+  ): Promise<ConversationEntity | undefined> {
     // Updates the LRU position
     if (this.items.get(id) === undefined) {
-      return Promise.resolve(undefined as Conversation | undefined);
+      return Promise.resolve(undefined as ConversationEntity | undefined);
     }
 
     const conversation = this.conversations.get(id);
@@ -130,16 +132,16 @@ export class InMemoryStorage implements ConversationStorage {
 
   addItems(
     conversationId: string,
-    items: ResponseInputItem[],
-  ): Promise<ConversationItem[] | undefined> {
+    items: ConversationItemInput[],
+  ): Promise<ConversationItemEntity[] | undefined> {
     const existing = this.items.get(conversationId);
     if (!existing) {
-      return Promise.resolve(undefined as ConversationItem[] | undefined);
+      return Promise.resolve(undefined as ConversationItemEntity[] | undefined);
     }
 
-    const mappedItems: ConversationItem[] = [];
+    const mappedItems: ConversationItemEntity[] = [];
     for (const input of items) {
-      const item = this.mapItem(input);
+      const item = this.mapItem(conversationId, input);
       existing.set(item.id, item);
       mappedItems.push(item);
     }
@@ -149,13 +151,13 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(mappedItems);
   }
 
-  getItem(conversationId: string, itemId: string): Promise<ConversationItem | undefined> {
+  getItem(conversationId: string, itemId: string): Promise<ConversationItemEntity | undefined> {
     return Promise.resolve(this.items.get(conversationId)?.get(itemId));
   }
 
-  deleteItem(conversationId: string, itemId: string): Promise<Conversation | undefined> {
+  deleteItem(conversationId: string, itemId: string): Promise<ConversationEntity | undefined> {
     const existing = this.items.get(conversationId);
-    if (!existing) return Promise.resolve(undefined as Conversation | undefined);
+    if (!existing) return Promise.resolve(undefined as ConversationEntity | undefined);
 
     if (existing.delete(itemId)) {
       // Recalculate the cache size
@@ -167,17 +169,17 @@ export class InMemoryStorage implements ConversationStorage {
 
   listItems(
     conversationId: string,
-    params: ConversationItemListParams,
-  ): Promise<ConversationItem[] | undefined> {
+    params: ConversationQueryOptions,
+  ): Promise<ConversationItemEntity[] | undefined> {
     const { after, order, limit } = params;
     const existing = this.items.get(conversationId);
-    if (!existing) return Promise.resolve(undefined as ConversationItem[] | undefined);
+    if (!existing) return Promise.resolve(undefined as ConversationItemEntity[] | undefined);
     if (limit <= 0) return Promise.resolve([]);
 
     // If after is provided but doesn't exist, return empty list
     if (after && !existing.has(after)) return Promise.resolve([]);
 
-    const out: ConversationItem[] = [];
+    const out: ConversationItemEntity[] = [];
 
     if (order === "asc") {
       let seen = after === null || after === undefined;
