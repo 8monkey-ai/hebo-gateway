@@ -22,6 +22,7 @@ export interface ConversationQueryOptions {
   limit: number;
   after?: string;
   order?: "asc" | "desc";
+  metadata?: ConversationMetadata;
 }
 
 export interface ConversationStorage {
@@ -31,6 +32,8 @@ export interface ConversationStorage {
   }): Promise<ConversationEntity>;
 
   getConversation(id: string): Promise<ConversationEntity | undefined>;
+
+  listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]>;
 
   updateConversation(
     id: string,

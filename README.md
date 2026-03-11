@@ -625,6 +625,38 @@ Provider-specific mapping:
 
 When available, the resolved value is echoed back on response as `service_tier`.
 
+### Conversations
+
+Hebo Gateway provides a dedicated `/conversations` endpoint for managing persistent conversation state. It is designed as an extension of the [OpenAI Conversations API](https://developers.openai.com/api/reference/typescript/resources/conversations) and supports standard CRUD operations alongside advanced listing with metadata filtering.
+
+#### List & Filter Conversations
+
+You can list conversations with standard cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
+
+```bash
+# List conversations for a specific user
+curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
+```
+
+The response follows the standard OpenAI list object:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "conv_abc123",
+      "object": "conversation",
+      "created_at": 1678531200,
+      "metadata": { "user_id": "123" }
+    }
+  ],
+  "first_id": "conv_abc123",
+  "last_id": "conv_abc123",
+  "has_more": false
+}
+```
+
 ### Prompt Caching
 
 The chat completions endpoint supports both implicit (provider-managed) and explicit prompt caching across OpenAI-compatible providers.

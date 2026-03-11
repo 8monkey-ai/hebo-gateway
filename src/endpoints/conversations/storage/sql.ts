@@ -163,6 +163,61 @@ export class SqlStorage implements ConversationStorage {
     );
     return row ? mapRow<ConversationEntity>(row) : undefined;
   }
+  async listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]> {
+    const { after, order, limit, metadata } = params;
+    const { placeholder: p, quote: q, limitAsLiteral } = this.config;
+
+    const isAsc = order === "asc";
+    const dir = isAsc ? "ASC" : "DESC";
+
+    const sqlParts = [`SELECT * FROM ${q("conversations")} WHERE 1=1`];
+    const args: unknown[] = [];
+    let nextIdx = 0;
+
+    // Filter by metadata
+    if (metadata && Object.keys(metadata).length > 0) {
+      for (const [key, value] of Object.entries(metadata)) {
+        const extractExpr = this.config.jsonExtract(q("metadata"), key);
+        sqlParts.push(`AND ${extractExpr} = ${p(nextIdx++)}`);
+        args.push(value);
+      }
+    }
+    if (after) {
+      // Find the created_at of the 'after' conversation for cursor-based pagination
+      const cursorRow = await this.executor.get<{ created_at: Date | number | bigint }>(
+        `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)}`,
+        [after],
+      );
+
+      if (cursorRow) {
+        const op = isAsc ? ">" : "<";
+        const createdAt = cursorRow.created_at;
+
+        sqlParts.push(
+          `AND (${q("created_at")} ${op} ${p(nextIdx++)} OR (${q("created_at")} = ${p(
+            nextIdx++,
+          )} AND ${q("id")} ${op} ${p(nextIdx++)}))`,
+        );
+        args.push(createdAt, createdAt, after);
+      } else {
+        return []; // Cursor not found
+      }
+    }
+
+    sqlParts.push(`ORDER BY ${q("created_at")} ${dir}, ${q("id")} ${dir}`);
+
+    const limitVal = Number(limit);
+    if (limitAsLiteral) {
+      sqlParts.push(`LIMIT ${limitVal}`);
+    } else {
+      sqlParts.push(`LIMIT ${p(nextIdx++)}`);
+      args.push(limitVal);
+    }
+
+    const query = sqlParts.join(" ");
+    const rows = await this.executor.all<Record<string, unknown>>(query, args);
+    return rows.map((row) => mapRow<ConversationEntity>(row));
+  }
 
   async updateConversation(
     id: string,

@@ -11,6 +11,7 @@ const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `"${i}"`,
+  jsonExtract: (c, k) => `json_extract(${c}, '$.${k}')`,
   upsertSuffix: (q, pk, cols) =>
     `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols
       .map((c) => `${q(c)} = EXCLUDED.${q(c)}`)

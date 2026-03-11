@@ -108,6 +108,41 @@ export class InMemoryStorage implements ConversationStorage {
     return Promise.resolve(this.conversations.get(id));
   }
 
+  listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]> {
+    const { after, order, limit, metadata } = params;
+    if (limit <= 0) return Promise.resolve([]);
+
+    let results = Array.from(this.conversations.values());
+
+    // Filter by metadata
+    if (metadata) {
+      results = results.filter((conv) => {
+        if (!conv.metadata) return false;
+        for (const [key, value] of Object.entries(metadata)) {
+          if (conv.metadata[key] !== value) return false;
+        }
+        return true;
+      });
+    }
+
+    // Sort by created_at (and ID as tiebreaker for cursor consistency)
+    results.sort((a, b) => {
+      if (a.created_at !== b.created_at) {
+        return order === "asc" ? a.created_at - b.created_at : b.created_at - a.created_at;
+      }
+      return order === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+    });
+
+    // Pagination: after
+    if (after) {
+      const index = results.findIndex((conv) => conv.id === after);
+      if (index === -1) return Promise.resolve([]);
+      results = results.slice(index + 1);
+    }
+
+    return Promise.resolve(results.slice(0, limit));
+  }
+
   updateConversation(
     id: string,
     metadata: ConversationMetadata,

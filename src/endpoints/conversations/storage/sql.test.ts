@@ -120,4 +120,60 @@ describe("SQLite Storage (In-Memory)", () => {
 
     db.close();
   });
+
+  test("should list conversations with metadata filtering and pagination", async () => {
+    const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
+    await storage.migrate();
+
+    // 1. Create conversations with varying metadata
+    const c1 = await storage.createConversation({ metadata: { user: "1", tag: "a" } });
+    // Ensure unique timestamps for predictable sorting in SQLite
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2);
+    });
+    const c2 = await storage.createConversation({ metadata: { user: "1", tag: "b" } });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2);
+    });
+    const c3 = await storage.createConversation({ metadata: { user: "2", tag: "a" } });
+
+    // 2. List all (Default order: desc)
+    const all = await storage.listConversations({ limit: 10 });
+    expect(all).toHaveLength(3);
+    expect(all[0]!.id).toBe(c3.id);
+
+    // 3. Filter by single metadata key
+    const user1 = await storage.listConversations({ limit: 10, metadata: { user: "1" } });
+    expect(user1).toHaveLength(2);
+    expect(user1.map((c) => c.id)).toContain(c1.id);
+    expect(user1.map((c) => c.id)).toContain(c2.id);
+
+    // 4. Filter by multiple metadata keys (AND)
+    const both = await storage.listConversations({ limit: 10, metadata: { user: "1", tag: "a" } });
+    expect(both).toHaveLength(1);
+    expect(both[0]!.id).toBe(c1.id);
+
+    // 5. Pagination: limit and after
+    const page1 = await storage.listConversations({ limit: 1, order: "asc" });
+    expect(page1).toHaveLength(1);
+    expect(page1[0]!.id).toBe(c1.id);
+
+    const page2 = await storage.listConversations({ limit: 1, order: "asc", after: c1.id });
+    expect(page2).toHaveLength(1);
+    expect(page2[0]!.id).toBe(c2.id);
+
+    // 6. Filter and Paginate
+    const filteredPaginated = await storage.listConversations({
+      limit: 1,
+      order: "desc",
+      metadata: { user: "1" },
+    });
+    expect(filteredPaginated).toHaveLength(1);
+    expect(filteredPaginated[0]!.id).toBe(c2.id);
+
+    db.close();
+  });
 });

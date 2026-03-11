@@ -94,6 +94,64 @@ describe("Conversations Handler", () => {
     expect(finalRetrieveRes.status).toBe(404);
   });
 
+  test("should list conversations and filter by metadata", async () => {
+    const endpoint = conversations(config);
+
+    // 1. Create conversations with different metadata
+    await endpoint.handler(
+      postJson("http://localhost/conversations", {
+        metadata: { user_id: "user_1", project: "a" },
+      }),
+    );
+    await endpoint.handler(
+      postJson("http://localhost/conversations", {
+        metadata: { user_id: "user_1", project: "b" },
+      }),
+    );
+    await endpoint.handler(
+      postJson("http://localhost/conversations", {
+        metadata: { user_id: "user_2", project: "a" },
+      }),
+    );
+
+    // 2. List all
+    const resAll = await endpoint.handler(new Request("http://localhost/conversations"));
+    const dataAll = (await parseResponse<{ data: Conversation[] }>(resAll))!;
+    expect(dataAll.data).toHaveLength(3);
+
+    // 3. Filter by user_id
+    const resUser1 = await endpoint.handler(
+      new Request("http://localhost/conversations?metadata.user_id=user_1"),
+    );
+    const dataUser1 = (await parseResponse<{ data: Conversation[] }>(resUser1))!;
+    expect(dataUser1.data).toHaveLength(2);
+    expect(dataUser1.data.every((c) => c.metadata?.["user_id"] === "user_1")).toBe(true);
+
+    // 4. Filter by project
+    const resProjectB = await endpoint.handler(
+      new Request("http://localhost/conversations?metadata.project=b"),
+    );
+    const dataProjectB = (await parseResponse<{ data: Conversation[] }>(resProjectB))!;
+    expect(dataProjectB.data).toHaveLength(1);
+    expect(dataProjectB.data[0]?.metadata?.["project"]).toBe("b");
+
+    // 5. Multi-key filter (AND)
+    const resBoth = await endpoint.handler(
+      new Request("http://localhost/conversations?metadata.user_id=user_1&metadata.project=a"),
+    );
+    const dataBoth = (await parseResponse<{ data: Conversation[] }>(resBoth))!;
+    expect(dataBoth.data).toHaveLength(1);
+    expect(dataBoth.data[0]?.metadata?.["user_id"]).toBe("user_1");
+    expect(dataBoth.data[0]?.metadata?.["project"]).toBe("a");
+
+    // 6. Non-existent filter
+    const resNone = await endpoint.handler(
+      new Request("http://localhost/conversations?metadata.user_id=user_99"),
+    );
+    const dataNone = (await parseResponse<{ data: Conversation[] }>(resNone))!;
+    expect(dataNone.data).toHaveLength(0);
+  });
+
   test("should reject invalid metadata", async () => {
     const endpoint = conversations(config);
 

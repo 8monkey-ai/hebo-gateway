@@ -23,8 +23,10 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
   PostgresDialectConfig,
   GrepTimeBase,
   {
+    jsonExtract: (c: string, k: string) => `json_get_string(${c}, '${k}')`,
     upsertSuffix: undefined,
     supportCreateIndexIfNotExists: true,
+
     limitAsLiteral: true,
     partitionClause: (cols: string[]) => {
       const col = cols[0];

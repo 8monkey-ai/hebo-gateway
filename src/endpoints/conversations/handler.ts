@@ -12,10 +12,12 @@ import {
   ConversationItemsAddBodySchema,
   ConversationUpdateBodySchema,
   ConversationItemListParamsSchema,
+  ConversationListParamsSchema,
   type Conversation,
   type ConversationItem,
   type ConversationDeleted,
   type ConversationItemList,
+  type ConversationList,
 } from "./schema";
 import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
 import type { ConversationMetadata } from "./storage/types";
@@ -23,6 +25,46 @@ import type { ConversationMetadata } from "./storage/types";
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
   const storage = parsedConfig.storage;
+
+  async function list(
+    ctx: GatewayContext,
+    searchParams: URLSearchParams,
+  ): Promise<ConversationList> {
+    const params = Object.fromEntries(searchParams.entries());
+
+    const parsed = ConversationListParamsSchema.safeParse(params);
+    if (!parsed.success) {
+      throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
+    }
+
+    const { limit, after, order, metadata } = parsed.data;
+
+    // Treat limit 0 as unlimited (up to 100,000 items)
+    const entities = await storage.listConversations({
+      limit: limit ? limit + 1 : 100000,
+      after,
+      order,
+      metadata: metadata as ConversationMetadata,
+    });
+
+    logger.trace(
+      { requestId: ctx.requestId, count: entities.length },
+      "[storage] listConversations result",
+    );
+
+    const has_more = limit !== 0 && entities.length > limit;
+    const data = entities
+      .slice(0, limit > 0 ? limit : entities.length)
+      .map((item) => toConversation(item));
+
+    return {
+      object: "list",
+      data,
+      has_more,
+      first_id: data[0]?.id,
+      last_id: data.at(-1)?.id,
+    };
+  }
 
   async function create(ctx: GatewayContext): Promise<Conversation> {
     let body: unknown;
@@ -225,9 +267,11 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     let result;
 
-    // POST /conversations (Create)
+    // GET/POST /conversations (List/Create)
     if (len === 1) {
-      if (ctx.request.method === "POST") {
+      if (ctx.request.method === "GET") {
+        result = await list(ctx, url.searchParams);
+      } else if (ctx.request.method === "POST") {
         result = await create(ctx);
       } else {
         throw new GatewayError("Method Not Allowed", 405);
