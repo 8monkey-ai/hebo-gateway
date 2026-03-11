@@ -51,23 +51,25 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const conn = await pool.getConnection();
       await conn.beginTransaction();
+      const txExecutor: QueryExecutor = {
+        async all<R>(sql: string, params?: unknown[]) {
+          const [rows] = await conn.execute(sql, mapParams(params));
+          return rows as R[];
+        },
+        async get<R>(sql: string, params?: unknown[]) {
+          const [rows] = await conn.execute(sql, mapParams(params));
+          return (rows as RowDataPacket[])?.[0] as R | undefined;
+        },
+        async run(sql: string, params?: unknown[]) {
+          const [res] = await conn.execute(sql, mapParams(params));
+          const header = res as unknown as ResultSetHeader;
+          return { changes: Number(header.affectedRows ?? 0) };
+        },
+        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
+      } as QueryExecutor;
+
       try {
-        const result = await fn({
-          async all<R>(sql: string, params?: unknown[]) {
-            const [rows] = await conn.execute(sql, mapParams(params));
-            return rows as R[];
-          },
-          async get<R>(sql: string, params?: unknown[]) {
-            const [rows] = await conn.execute(sql, mapParams(params));
-            return (rows as RowDataPacket[])?.[0] as R | undefined;
-          },
-          async run(sql: string, params?: unknown[]) {
-            const [res] = await conn.execute(sql, mapParams(params));
-            const header = res as unknown as ResultSetHeader;
-            return { changes: Number(header.affectedRows ?? 0) };
-          },
-          transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(executor),
-        } as QueryExecutor);
+        const result = await fn(txExecutor);
         await conn.commit();
         return result;
       } catch (err) {
@@ -97,7 +99,9 @@ function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      return await sql.transaction(() => fn(executor));
+      return await sql.transaction(async (tx) => {
+        return await fn(createBunMysqlExecutor(tx as unknown as BunSql));
+      });
     },
   };
 

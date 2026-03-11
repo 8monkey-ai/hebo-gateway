@@ -10,20 +10,12 @@ import type {
 } from "./types";
 import type { SqlDialect } from "./dialects/types";
 
-interface BaseRow {
-  id: string;
-  created_at: number | Date;
-  metadata?: string | Record<string, unknown> | null;
-  conversation_id?: string;
-  type?: string;
-  data: string | Record<string, unknown>;
-}
 import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 
 /**
  * Maps a raw database row to a clean conversation or item entity.
  */
-function mapRow<T>(row: BaseRow): T {
+function mapRow<T>(row: Record<string, unknown>): T {
   const mapper = createRowMapper<T>(
     parseJson("data"),
     parseJson("metadata"),
@@ -31,7 +23,7 @@ function mapRow<T>(row: BaseRow): T {
     mergeData("data"),
   );
 
-  return mapper(row as unknown as Record<string, unknown>);
+  return mapper(row);
 }
 
 export class SqlStorage implements ConversationStorage {
@@ -155,7 +147,7 @@ export class SqlStorage implements ConversationStorage {
 
   async getConversation(id: string): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q } = this.config;
-    const row = await this.executor.get<BaseRow>(
+    const row = await this.executor.get<Record<string, unknown>>(
       `SELECT * FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)} ORDER BY ${q(
         "created_at",
       )} DESC LIMIT 1`,
@@ -258,7 +250,7 @@ export class SqlStorage implements ConversationStorage {
     itemId: string,
   ): Promise<ConversationItemEntity | undefined> {
     const { placeholder: p, quote: q } = this.config;
-    const row = await this.executor.get<BaseRow>(
+    const row = await this.executor.get<Record<string, unknown>>(
       `SELECT * FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
         "conversation_id",
       )} = ${p(1)}`,
@@ -312,7 +304,7 @@ export class SqlStorage implements ConversationStorage {
     if (after) args.push(after);
     if (!limitAsLiteral && limit !== undefined) args.push(limitVal);
 
-    const rows = await this.executor.all<BaseRow>(query, args);
+    const rows = await this.executor.all<Record<string, unknown>>(query, args);
     const results: ConversationItemEntity[] = [];
     for (const row of rows) {
       results.push(mapRow<ConversationItemEntity>(row));

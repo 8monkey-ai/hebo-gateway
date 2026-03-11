@@ -394,89 +394,30 @@ const gw = gateway({
 
 #### SQL Storage
 
-Hebo Gateway provides high-performance SQL adapters.
-
-##### SQLite
-
-Supports `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
-
-```ts
-import { gateway } from "@hebo-ai/gateway";
-import { SqlStorage, SqliteDialect } from "@hebo-ai/gateway/storage/sql";
-import Database from "better-sqlite3";
-
-// 1. Setup connection
-const db = new Database("conv.db");
-
-// 2. Setup storage
-const storage = new SqlStorage({
-  dialect: new SqliteDialect({ client: db }),
-});
-await storage.migrate(); // Creates tables & indexes
-
-const gw = gateway({ storage });
-```
-
-##### PostgreSQL
-
-Supports `pg`, `postgres.js`, and `Bun.SQL`. Includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
+Hebo Gateway provides high-performance SQL adapters for **PostgreSQL**, **SQLite**, **MySQL**, and **GrepTimeDB**. It supports common drivers like `pg`, `postgres.js`, `mysql2`, `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
 import { SqlStorage, PostgresDialect } from "@hebo-ai/gateway/storage/sql";
 import { Pool } from "pg";
 
-// 1. Setup pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+// 1. Setup dialect-specific client (e.g. pg, mysql2, sqlite, bun)
+const client = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// 2. Setup storage with matching dialect (PostgresDialect, SqliteDialect, MysqlDialect, ...)
+const storage = new SqlStorage({
+  dialect: new PostgresDialect({ client }),
 });
 
-// 2. Setup storage
-const storage = new SqlStorage({
-  dialect: new PostgresDialect({ client: pool }),
-});
+// 3. Run migrations
 await storage.migrate();
 
 const gw = gateway({ storage });
 ```
 
-##### MySQL
+> [!TIP]
+> The `PostgresDialect` includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
 
-Supports `mysql2` and `Bun.SQL`.
-
-```ts
-import { gateway } from "@hebo-ai/gateway";
-import { SqlStorage, MysqlDialect } from "@hebo-ai/gateway/storage/sql";
-import mysql from "mysql2/promise";
-
-// 1. Setup pool
-const pool = mysql.createPool(process.env.DATABASE_URL);
-
-// 2. Setup storage
-const storage = new SqlStorage({
-  dialect: new MysqlDialect({ client: pool }),
-});
-await storage.migrate();
-
-const gw = gateway({ storage });
-```
-
-##### GrepTimeDB
-
-Specialized adapter for GrepTimeDB (Postgres protocol).
-
-```ts
-import { gateway } from "@hebo-ai/gateway";
-import { SqlStorage, GrepTimeDialect } from "@hebo-ai/gateway/storage/sql";
-import { sql } from "bun";
-
-const storage = new SqlStorage({
-  dialect: new GrepTimeDialect({ client: sql }),
-});
-await storage.migrate();
-
-const gw = gateway({ storage });
-```
 
 ## 🧩 Framework Support
 

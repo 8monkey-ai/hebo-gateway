@@ -26,7 +26,16 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
     upsertSuffix: undefined,
     supportCreateIndexIfNotExists: true,
     limitAsLiteral: true,
-    partitionClause: (cols) => `PARTITION ON COLUMNS (${cols.join(", ")})`,
+    partitionClause: (cols) => {
+      const col = cols[0];
+      return (
+        `PARTITION ON COLUMNS (${col}) (` +
+        `${col} < '4', ` +
+        `${col} >= '4' AND ${col} < '8', ` +
+        `${col} >= '8' AND ${col} < 'c', ` +
+        `${col} >= 'c')`
+      );
+    },
     types: GrepTimeBase.types,
   },
 );

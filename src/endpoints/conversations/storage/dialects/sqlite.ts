@@ -67,9 +67,30 @@ function createBetterSqlite3Executor(db: BetterSqlite3Database): QueryExecutor {
       const info = stmt.run.apply(stmt, mapParams(params) ?? []);
       return Promise.resolve({ changes: info.changes });
     },
-    transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      const res = db.transaction(() => fn(executor))();
-      return Promise.resolve(res as T);
+    async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
+      const inTransaction = db.inTransaction;
+      if (inTransaction) {
+        const savepoint = `sp_${Math.random().toString(36).slice(2)}`;
+        db.exec(`SAVEPOINT ${savepoint}`);
+        try {
+          const result = await fn(executor);
+          db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+          return result;
+        } catch (err) {
+          db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+          throw err;
+        }
+      } else {
+        db.exec("BEGIN");
+        try {
+          const result = await fn(executor);
+          db.exec("COMMIT");
+          return result;
+        } catch (err) {
+          db.exec("ROLLBACK");
+          throw err;
+        }
+      }
     },
   };
 
@@ -92,22 +113,24 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const tx = await client.transaction("deferred");
+      const txExecutor: QueryExecutor = {
+        async all<R>(sql: string, params?: unknown[]) {
+          const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
+          return rs.rows as unknown as R[];
+        },
+        async get<R>(sql: string, params?: unknown[]) {
+          const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
+          return rs.rows?.[0] as unknown as R | undefined;
+        },
+        async run(sql: string, params?: unknown[]) {
+          const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
+          return { changes: Number(rs.rowsAffected) };
+        },
+        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
+      } as QueryExecutor;
+
       try {
-        const result = await fn({
-          async all<R>(sql: string, params?: unknown[]) {
-            const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
-            return rs.rows as unknown as R[];
-          },
-          async get<R>(sql: string, params?: unknown[]) {
-            const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
-            return rs.rows?.[0] as unknown as R | undefined;
-          },
-          async run(sql: string, params?: unknown[]) {
-            const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
-            return { changes: Number(rs.rowsAffected) };
-          },
-          transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(executor),
-        } as QueryExecutor);
+        const result = await fn(txExecutor);
         await tx.commit();
         return result;
       } catch (err) {
@@ -135,7 +158,9 @@ function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      return await sql.transaction(() => fn(executor));
+      return await sql.transaction(async (tx) => {
+        return await fn(createBunSqliteExecutor(tx as unknown as BunSql));
+      });
     },
   };
   return executor;

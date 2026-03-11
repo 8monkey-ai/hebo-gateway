@@ -73,22 +73,24 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const client = await pool.connect();
       await client.query("BEGIN");
+      const txExecutor: QueryExecutor = {
+        async all<R>(sql: string, params?: unknown[]) {
+          const res = await client.query(getQuery(sql, mapParams(params)));
+          return res.rows as R[];
+        },
+        async get<R>(sql: string, params?: unknown[]) {
+          const res = await client.query(getQuery(sql, mapParams(params)));
+          return res.rows?.[0] as R | undefined;
+        },
+        async run(sql: string, params?: unknown[]) {
+          const res = await client.query(getQuery(sql, mapParams(params)));
+          return { changes: Number(res.rowCount ?? 0) };
+        },
+        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
+      } as QueryExecutor;
+
       try {
-        const result = await fn({
-          async all<R>(sql: string, params?: unknown[]) {
-            const res = await client.query(getQuery(sql, mapParams(params)));
-            return res.rows as R[];
-          },
-          async get<R>(sql: string, params?: unknown[]) {
-            const res = await client.query(getQuery(sql, mapParams(params)));
-            return res.rows?.[0] as R | undefined;
-          },
-          async run(sql: string, params?: unknown[]) {
-            const res = await client.query(getQuery(sql, mapParams(params)));
-            return { changes: Number(res.rowCount ?? 0) };
-          },
-          transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(executor),
-        } as QueryExecutor);
+        const result = await fn(txExecutor);
         await client.query("COMMIT");
         return result;
       } catch (err) {
@@ -129,7 +131,7 @@ function createPostgresJsExecutor(sql: PostgresJsSql): QueryExecutor {
       return { changes: Number(result.count ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
-      return (await sql.begin(() => fn(executor))) as T;
+      return (await sql.begin((tx) => fn(createPostgresJsExecutor(tx)))) as T;
     },
   };
   return executor;
@@ -150,7 +152,9 @@ function createBunPostgresExecutor(sql: BunSql): QueryExecutor {
       return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
-      return await sql.transaction(() => fn(executor));
+      return await sql.transaction(async (tx) => {
+        return await fn(createBunPostgresExecutor(tx as unknown as BunSql));
+      });
     },
   };
   return executor;
