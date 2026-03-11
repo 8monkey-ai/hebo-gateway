@@ -48,26 +48,26 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
   const cache = new LRUCache<string, string>({ max: MAX_CACHE_SIZE });
   let count = 0;
 
-  const getQuery = (sql: string) => {
+  const getQuery = (sql: string, values?: unknown[]) => {
     let name = cache.get(sql);
     if (!name) {
       name = `q_${count++}`;
       cache.set(sql, name);
     }
-    return { name, text: sql };
+    return { name, text: sql, values };
   };
 
   const executor: QueryExecutor = {
     async all<T>(sql: string, params?: unknown[]) {
-      const res = await pool.query({ ...getQuery(sql), values: mapParams(params) });
+      const res = await pool.query(getQuery(sql, mapParams(params)));
       return res.rows as T[];
     },
     async get<T>(sql: string, params?: unknown[]) {
-      const res = await pool.query({ ...getQuery(sql), values: mapParams(params) });
+      const res = await pool.query(getQuery(sql, mapParams(params)));
       return res.rows?.[0] as T | undefined;
     },
     async run(sql: string, params?: unknown[]) {
-      const res = await pool.query({ ...getQuery(sql), values: mapParams(params) });
+      const res = await pool.query(getQuery(sql, mapParams(params)));
       return { changes: Number(res.rowCount ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
@@ -76,15 +76,15 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
       try {
         const result = await fn({
           async all<R>(sql: string, params?: unknown[]) {
-            const res = await client.query({ ...getQuery(sql), values: mapParams(params) });
+            const res = await client.query(getQuery(sql, mapParams(params)));
             return res.rows as R[];
           },
           async get<R>(sql: string, params?: unknown[]) {
-            const res = await client.query({ ...getQuery(sql), values: mapParams(params) });
+            const res = await client.query(getQuery(sql, mapParams(params)));
             return res.rows?.[0] as R | undefined;
           },
           async run(sql: string, params?: unknown[]) {
-            const res = await client.query({ ...getQuery(sql), values: mapParams(params) });
+            const res = await client.query(getQuery(sql, mapParams(params)));
             return { changes: Number(res.rowCount ?? 0) };
           },
           transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(executor),

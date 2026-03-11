@@ -55,13 +55,16 @@ function createBetterSqlite3Executor(db: BetterSqlite3Database): QueryExecutor {
 
   const executor: QueryExecutor = {
     all<T>(sql: string, params?: unknown[]) {
-      return Promise.resolve(getStmt(sql).all(...(mapParams(params) ?? [])) as T[]);
+      const stmt = getStmt(sql);
+      return Promise.resolve(stmt.all.apply(stmt, mapParams(params) ?? []) as T[]);
     },
     get<T>(sql: string, params?: unknown[]) {
-      return Promise.resolve(getStmt(sql).get(...(mapParams(params) ?? [])) as T | undefined);
+      const stmt = getStmt(sql);
+      return Promise.resolve(stmt.get.apply(stmt, mapParams(params) ?? []) as T | undefined);
     },
     run(sql: string, params?: unknown[]) {
-      const info = getStmt(sql).run(...(mapParams(params) ?? []));
+      const stmt = getStmt(sql);
+      const info = stmt.run.apply(stmt, mapParams(params) ?? []);
       return Promise.resolve({ changes: info.changes });
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {

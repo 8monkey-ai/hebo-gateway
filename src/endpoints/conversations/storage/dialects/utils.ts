@@ -1,10 +1,11 @@
 /**
  * Generic utility to chain multiple functions together.
  */
-function pipe<T>(...fns: ((v: T) => T)[]) {
+function pipe<T>() {
+  const fns = arguments;
   return (v: T): T => {
-    for (const f of fns) {
-      v = f(v);
+    for (let i = 0; i < fns.length; i++) {
+      v = (fns[i] as (v: T) => T)(v);
     }
     return v;
   };
@@ -13,8 +14,8 @@ function pipe<T>(...fns: ((v: T) => T)[]) {
 /**
  * Normalizes a list of parameters by applying a chain of atomic mappers to each value.
  */
-export function createParamsMapper(...mappers: ((v: unknown) => unknown)[]) {
-  const p = pipe(...mappers);
+export function createParamsMapper() {
+  const p = pipe.apply(null, arguments as any) as (v: unknown) => unknown;
   return (params?: unknown[]) =>
     params?.map((v) => p(v)) as (string | number | bigint | boolean | null)[];
 }
@@ -23,10 +24,8 @@ export function createParamsMapper(...mappers: ((v: unknown) => unknown)[]) {
  * Normalizes an object (row) by applying a chain of atomic mappers.
  * Mappers are expected to mutate the object for performance and to avoid spreads.
  */
-export function createRowMapper<T>(
-  ...mappers: ((row: Record<string, unknown>) => Record<string, unknown>)[]
-) {
-  return pipe(...mappers) as unknown as (row: Record<string, unknown>) => T;
+export function createRowMapper<T>() {
+  return pipe.apply(null, arguments as any) as unknown as (row: Record<string, unknown>) => T;
 }
 
 /**
