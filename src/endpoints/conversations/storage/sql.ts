@@ -186,11 +186,14 @@ export class SqlStorage implements ConversationStorage {
     // Filter by metadata
     if (metadata && Object.keys(metadata).length > 0) {
       for (const [key, value] of Object.entries(metadata)) {
-        const extractExpr = this.config.jsonExtract(q("metadata"), key);
+        // Basic sanitization for the key to prevent syntax issues if it contains quotes
+        const safeKey = key.replace(/'/g, "''");
+        const extractExpr = this.config.jsonExtract(q("metadata"), safeKey);
         sqlParts.push(`AND ${extractExpr} = ${p(nextIdx++)}`);
         args.push(value);
       }
     }
+
     if (after) {
       // NOTE: Two-roundtrip pagination is used here for stability across all dialects (Postgres/MySQL/SQLite/Greptime).
       // 1. First, fetch the EXACT timestamp (created_at) of the 'after' cursor ID.
