@@ -61,4 +61,4 @@ jobs:
           claude_args: |
             --model us.anthropic.claude-opus-4-6-v1
             --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,WebFetch,WebSearch
-            --max-turns 20
+            --max-turns 30
