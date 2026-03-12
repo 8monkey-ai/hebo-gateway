@@ -39,8 +39,12 @@ export function createRowMapper<T>(
  */
 export const dateToNumber = (v: unknown) => (v instanceof Date ? v.getTime() : v);
 export const dateToBigInt = (v: unknown) => (v instanceof Date ? BigInt(v.getTime()) : v);
-export const jsonStringify = (v: unknown) =>
-  v !== null && typeof v === "object" && !(v instanceof Date) ? JSON.stringify(v) : v;
+export const jsonStringify = (v: unknown, asBuffer = false) =>
+  v !== null && typeof v === "object" && !(v instanceof Date)
+    ? asBuffer
+      ? Buffer.from(JSON.stringify(v))
+      : JSON.stringify(v)
+    : v;
 
 /**
  * Atomic mappers for database rows.

@@ -5,6 +5,8 @@ import {
   PostgresDialectConfig,
   type PgPool,
   type PostgresJsSql,
+  isBunSql,
+  isPgPool,
 } from "./postgres";
 import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
 import { createParamsMapper, dateToBigInt, jsonStringify } from "./utils";
@@ -42,16 +44,30 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
   },
 );
 
-const mapParams = createParamsMapper([dateToBigInt, jsonStringify]);
+const pad = (n: number, l = 2) => n.toString().padStart(l, "0");
 
-function createGreptimeExecutor(base: QueryExecutor): QueryExecutor {
-  return {
-    all: (sql, params) => base.all(sql, mapParams(params)),
-    get: (sql, params) => base.get(sql, mapParams(params)),
-    run: (sql, params) => base.run(sql, mapParams(params)),
-    transaction: (fn) => base.transaction((tx) => fn(createGreptimeExecutor(tx))),
-  };
+function dateToGreptimeString(v: unknown) {
+  if (v instanceof Date) {
+    return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())} ${pad(v.getUTCHours())}:${pad(v.getUTCMinutes())}:${pad(v.getUTCSeconds())}.${pad(v.getUTCMilliseconds(), 3)}`;
+  }
+  return v;
 }
+
+// GreptimeDB is strictly typed over the Postgres wire protocol, and each driver
+// coerces JavaScript types differently. There is no unified parameter format:
+//
+// 1. Timestamps:
+//    - `pg` requires a strictly formatted string (YYYY-MM-DD HH:mm:ss.SSS). It fails on BigInt.
+//    - `postgresjs` requires a BigInt (milliseconds). It parses strings into ISO formats which GreptimeDB rejects.
+//    - `Bun.SQL` is flexible, but we use BigInt for consistency with postgresjs.
+//
+// 2. JSON:
+//    - GreptimeDB rejects plain strings for JSON, expecting a bytea-compatible format.
+//    - `pg` and `Bun.SQL` require the JSON string to be wrapped in a Buffer.
+//    - `postgresjs` works with plain JSON strings.
+const mapParams = createParamsMapper([dateToBigInt, (v) => jsonStringify(v)]);
+const mapParamsBun = createParamsMapper([dateToBigInt, (v) => jsonStringify(v, true)]);
+const mapParamsPg = createParamsMapper([dateToGreptimeString, (v) => jsonStringify(v, true)]);
 
 export class GrepTimeDialect implements SqlDialect {
   readonly executor: QueryExecutor;
@@ -59,7 +75,11 @@ export class GrepTimeDialect implements SqlDialect {
 
   constructor(options: { client: PgPool | PostgresJsSql | BunSql }) {
     const { client } = options;
-    const dialect = new PostgresDialect({ client, config: this.config });
-    this.executor = createGreptimeExecutor(dialect.executor);
+    const dialect = new PostgresDialect({
+      client,
+      config: this.config,
+      mapParams: isPgPool(client) ? mapParamsPg : isBunSql(client) ? mapParamsBun : mapParams,
+    });
+    this.executor = dialect.executor;
   }
 }

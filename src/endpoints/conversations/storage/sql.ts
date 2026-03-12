@@ -274,10 +274,12 @@ export class SqlStorage implements ConversationStorage {
 
   async deleteConversation(id: string): Promise<{ id: string; deleted: boolean }> {
     const { placeholder: p, quote: q } = this.config;
+
     const { changes } = await this.executor.run(
       `DELETE FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)}`,
       [id],
     );
+
     return { id, deleted: changes > 0 };
   }
 

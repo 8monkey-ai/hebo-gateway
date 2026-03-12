@@ -9,7 +9,7 @@ import { createParamsMapper, dateToNumber } from "./utils";
 
 export type { PostgresJsSql, PgPool };
 
-const mapParams = createParamsMapper([dateToNumber]);
+const defaultMapParams = createParamsMapper([dateToNumber]);
 
 export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
@@ -30,22 +30,30 @@ export const PostgresDialectConfig: DialectConfig = {
 
 const MAX_CACHE_SIZE = 100;
 
-function isPgPool(client: unknown): client is PgPool {
+export function isPgPool(client: unknown): client is PgPool {
   const c = client as Record<string, unknown>;
   return !!client && typeof c["query"] === "function" && typeof c["connect"] === "function";
 }
 
 function isPostgresJs(client: unknown): client is PostgresJsSql {
   const c = client as Record<string, unknown>;
-  return !!client && typeof c["unsafe"] === "function" && typeof c["begin"] === "function";
+  return (
+    !!client &&
+    typeof c["unsafe"] === "function" &&
+    typeof c["begin"] === "function" &&
+    !("transaction" in c)
+  );
 }
 
-function isBunSql(client: unknown): client is BunSql {
+export function isBunSql(client: unknown): client is BunSql {
   const c = client as Record<string, unknown>;
   return !!client && typeof c["unsafe"] === "function" && typeof c["transaction"] === "function";
 }
 
-function createPgExecutor(pool: PgPool): QueryExecutor {
+function createPgExecutor(
+  pool: PgPool,
+  mapParams: (params?: unknown[]) => (string | number | bigint | boolean | null)[],
+): QueryExecutor {
   const cache = new LRUCache<string, string>({ max: MAX_CACHE_SIZE });
   let count = 0;
 
@@ -60,15 +68,18 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
 
   const executor: QueryExecutor = {
     async all<T>(sql: string, params?: unknown[]) {
-      const res = await pool.query(getQuery(sql, mapParams(params)));
+      const p = mapParams(params);
+      const res = await pool.query(getQuery(sql, p?.length > 0 ? p : undefined));
       return res.rows as T[];
     },
     async get<T>(sql: string, params?: unknown[]) {
-      const res = await pool.query(getQuery(sql, mapParams(params)));
+      const p = mapParams(params);
+      const res = await pool.query(getQuery(sql, p?.length > 0 ? p : undefined));
       return res.rows?.[0] as T | undefined;
     },
     async run(sql: string, params?: unknown[]) {
-      const res = await pool.query(getQuery(sql, mapParams(params)));
+      const p = mapParams(params);
+      const res = await pool.query(getQuery(sql, p?.length > 0 ? p : undefined));
       return { changes: Number(res.rowCount ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
@@ -76,15 +87,18 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
       await client.query("BEGIN");
       const txExecutor: QueryExecutor = {
         async all<R>(sql: string, params?: unknown[]) {
-          const res = await client.query(getQuery(sql, mapParams(params)));
+          const p = mapParams(params);
+          const res = await client.query(getQuery(sql, p?.length > 0 ? p : undefined));
           return res.rows as R[];
         },
         async get<R>(sql: string, params?: unknown[]) {
-          const res = await client.query(getQuery(sql, mapParams(params)));
+          const p = mapParams(params);
+          const res = await client.query(getQuery(sql, p?.length > 0 ? p : undefined));
           return res.rows?.[0] as R | undefined;
         },
         async run(sql: string, params?: unknown[]) {
-          const res = await client.query(getQuery(sql, mapParams(params)));
+          const p = mapParams(params);
+          const res = await client.query(getQuery(sql, p?.length > 0 ? p : undefined));
           return { changes: Number(res.rowCount ?? 0) };
         },
         transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
@@ -105,56 +119,86 @@ function createPgExecutor(pool: PgPool): QueryExecutor {
 
   return executor;
 }
-function createPostgresJsExecutor(sql: PostgresJsSql | TransactionSql): QueryExecutor {
+
+function createPostgresJsExecutor(
+  sql: PostgresJsSql | TransactionSql,
+  mapParams: (params?: unknown[]) => (string | number | bigint | boolean | null)[],
+): QueryExecutor {
   const executor: QueryExecutor = {
     async all<T>(query: string, params?: unknown[]) {
+      const p = mapParams(params);
       return (await sql.unsafe(
         query,
-        (mapParams(params) ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        (p?.length > 0 ? p : undefined) as Parameters<PostgresJsSql["unsafe"]>[1],
         { prepare: true },
       )) as T[];
     },
     async get<T>(query: string, params?: unknown[]) {
+      const p = mapParams(params);
       const rows = await sql.unsafe(
         query,
-        (mapParams(params) ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        (p?.length > 0 ? p : undefined) as Parameters<PostgresJsSql["unsafe"]>[1],
         { prepare: true },
       );
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
+      const p = mapParams(params);
       const res = await sql.unsafe(
         query,
-        (mapParams(params) ?? []) as Parameters<PostgresJsSql["unsafe"]>[1],
+        (p?.length > 0 ? p : undefined) as Parameters<PostgresJsSql["unsafe"]>[1],
         { prepare: true },
       );
       const result = res as unknown as { count: number };
       return { changes: Number(result.count ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
-      return (await (sql as PostgresJsSql).begin((tx) => fn(createPostgresJsExecutor(tx)))) as T;
+      return (await (sql as PostgresJsSql).begin((tx) =>
+        fn(createPostgresJsExecutor(tx, mapParams)),
+      )) as T;
     },
   };
   return executor;
 }
 
-function createBunPostgresExecutor(sql: BunSql): QueryExecutor {
+function createBunPostgresExecutor(
+  sql: BunSql,
+  mapParams: (params?: unknown[]) => (string | number | bigint | boolean | null)[],
+): QueryExecutor {
   const executor: QueryExecutor = {
     all<T>(query: string, params?: unknown[]) {
-      return sql.unsafe(query, mapParams(params)) as Promise<T[]>;
+      const p = mapParams(params);
+      return sql.unsafe(query, p?.length > 0 ? p : undefined) as Promise<T[]>;
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await (sql.unsafe(query, mapParams(params)) as Promise<unknown[]>);
+      const p = mapParams(params);
+      const rows = await (sql.unsafe(query, p?.length > 0 ? p : undefined) as Promise<unknown[]>);
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = (await sql.unsafe(query, mapParams(params))) as unknown;
-      const result = res as { affectedRows?: number; count?: number; length: number };
-      return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
+      const p = mapParams(params);
+      const res = (await sql.unsafe(query, p?.length > 0 ? p : undefined)) as unknown;
+      const result = res as {
+        affectedRows?: number;
+        count?: number;
+        length: number;
+        command?: string;
+      };
+
+      let changes = result.affectedRows ?? result.count ?? result.length ?? 0;
+
+      // When Bun.SQL is used with GreptimeDB, mutation responses over the Postgres wire protocol
+      // don't populate `count` or `affectedRows`, but they do provide a command string like "OK 1"
+      if (changes === 0 && result.command?.startsWith("OK ")) {
+        const parsed = parseInt(result.command.slice(3), 10);
+        if (!isNaN(parsed)) changes = parsed;
+      }
+
+      return { changes: Number(changes) };
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
-        return fn(createBunPostgresExecutor(tx as unknown as BunSql));
+        return fn(createBunPostgresExecutor(tx as unknown as BunSql, mapParams));
       });
     },
   };
@@ -165,16 +209,20 @@ export class PostgresDialect implements SqlDialect {
   readonly executor: QueryExecutor;
   readonly config: DialectConfig;
 
-  constructor(options: { client: PgPool | PostgresJsSql | BunSql; config?: DialectConfig }) {
-    const { client, config = PostgresDialectConfig } = options;
+  constructor(options: {
+    client: PgPool | PostgresJsSql | BunSql;
+    config?: DialectConfig;
+    mapParams?: (params?: unknown[]) => (string | number | bigint | boolean | null)[];
+  }) {
+    const { client, config = PostgresDialectConfig, mapParams = defaultMapParams } = options;
     this.config = config;
 
     if (isPgPool(client)) {
-      this.executor = createPgExecutor(client);
-    } else if (isPostgresJs(client)) {
-      this.executor = createPostgresJsExecutor(client);
+      this.executor = createPgExecutor(client, mapParams);
     } else if (isBunSql(client)) {
-      this.executor = createBunPostgresExecutor(client);
+      this.executor = createBunPostgresExecutor(client, mapParams);
+    } else if (isPostgresJs(client)) {
+      this.executor = createPostgresJsExecutor(client, mapParams);
     } else {
       throw new Error("Unsupported Postgres client");
     }
