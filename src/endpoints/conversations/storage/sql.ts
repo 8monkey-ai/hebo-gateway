@@ -118,8 +118,17 @@ export class SqlStorage implements ConversationStorage {
     );
 
     if (!isTimeIndex) {
-      await createIndex("conversations", "idx_conversations_created_at", ["created_at DESC"], true);
-      await createIndex("conversation_items", "idx_items_conv_id", ["conversation_id", "id DESC"]);
+      await createIndex(
+        "conversations",
+        "idx_conversations_created_at",
+        ["created_at DESC", "id DESC"],
+        true,
+      );
+      await createIndex("conversation_items", "idx_items_conv_id", [
+        "conversation_id",
+        "created_at DESC",
+        "id DESC",
+      ]);
     }
   }
 
@@ -183,7 +192,10 @@ export class SqlStorage implements ConversationStorage {
       }
     }
     if (after) {
-      // Find the created_at of the 'after' conversation for cursor-based pagination
+      // NOTE: Two-roundtrip pagination is used here for stability across all dialects (Postgres/MySQL/SQLite/Greptime).
+      // 1. First, fetch the EXACT timestamp (created_at) of the 'after' cursor ID.
+      // 2. Then, use that timestamp in a composite cursor (created_at, id) for the main query.
+      // This is more robust than a subquery as it allows for clean error handling if the cursor ID is invalid/deleted.
       const cursorRow = await this.executor.get<{ created_at: Date | number | bigint }>(
         `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)}`,
         [after],
@@ -207,11 +219,13 @@ export class SqlStorage implements ConversationStorage {
     sqlParts.push(`ORDER BY ${q("created_at")} ${dir}, ${q("id")} ${dir}`);
 
     const limitVal = Number(limit);
-    if (limitAsLiteral) {
-      sqlParts.push(`LIMIT ${limitVal}`);
-    } else {
-      sqlParts.push(`LIMIT ${p(nextIdx++)}`);
-      args.push(limitVal);
+    if (!isNaN(limitVal)) {
+      if (limitAsLiteral) {
+        sqlParts.push(`LIMIT ${limitVal}`);
+      } else {
+        sqlParts.push(`LIMIT ${p(nextIdx++)}`);
+        args.push(limitVal);
+      }
     }
 
     const query = sqlParts.join(" ");
@@ -350,29 +364,51 @@ export class SqlStorage implements ConversationStorage {
     const sqlParts = [
       `SELECT * FROM ${q("conversation_items")} WHERE ${q("conversation_id")} = ${p(0)}`,
     ];
+    const args: unknown[] = [conversationId];
     let nextIdx = 1;
+
     if (after) {
-      sqlParts.push(`AND ${q("id")} ${op} ${p(nextIdx++)}`);
+      // NOTE: Two-roundtrip pagination is used here for stability across all dialects (Postgres/MySQL/SQLite/Greptime).
+      // 1. First, fetch the EXACT timestamp (created_at) of the 'after' cursor ID.
+      // 2. Then, use that timestamp in a composite cursor (created_at, id) for the main query.
+      // This is more robust than a subquery as it allows for clean error handling if the cursor ID is invalid/deleted.
+      const cursorRow = await this.executor.get<{ created_at: Date | number | bigint }>(
+        `SELECT ${q("created_at")} FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(
+          0,
+        )} AND ${q("conversation_id")} = ${p(1)}`,
+        [after, conversationId],
+      );
+
+      if (cursorRow) {
+        const createdAt = cursorRow.created_at;
+
+        // Composite cursor using (created_at, id) for robust pagination even with identical timestamps
+        sqlParts.push(
+          `AND (${q("created_at")} ${op} ${p(nextIdx++)} OR (${q("created_at")} = ${p(
+            nextIdx++,
+          )} AND ${q("id")} ${op} ${p(nextIdx++)}))`,
+        );
+        args.push(createdAt, createdAt, after);
+      } else {
+        return []; // Cursor not found
+      }
     }
 
+    sqlParts.push(`ORDER BY ${q("created_at")} ${dir}, ${q("id")} ${dir}`);
+
     const limitVal = Number(limit);
-    if (limitAsLiteral) {
-      sqlParts.push(`ORDER BY ${q("id")} ${dir} LIMIT ${limitVal}`);
-    } else {
-      sqlParts.push(`ORDER BY ${q("id")} ${dir} LIMIT ${p(nextIdx++)}`);
+    if (!isNaN(limitVal)) {
+      if (limitAsLiteral) {
+        sqlParts.push(`LIMIT ${limitVal}`);
+      } else {
+        sqlParts.push(`LIMIT ${p(nextIdx++)}`);
+        args.push(limitVal);
+      }
     }
 
     const query = sqlParts.join(" ");
-    const args: unknown[] = [conversationId];
-    if (after) args.push(after);
-    if (!limitAsLiteral && limit !== undefined) args.push(limitVal);
-
     const rows = await this.executor.all<Record<string, unknown>>(query, args);
-    const results: ConversationItemEntity[] = [];
-    for (const row of rows) {
-      results.push(mapRow<ConversationItemEntity>(row));
-    }
-    return results;
+    return rows.map((row) => mapRow<ConversationItemEntity>(row));
   }
 }
 
