@@ -99,11 +99,13 @@ export type ResponseOutputText = z.infer<typeof ResponseOutputTextSchema>;
 
 // Message Items
 
-const MessageItemBaseSchema = z.object({
-  type: z.literal("message"),
-  id: z.string().optional(),
-  status: ItemStatusSchema.optional(),
-});
+const MessageItemBaseSchema = z
+  .object({
+    type: z.literal("message"),
+    id: z.string().optional(),
+    status: ItemStatusSchema.optional(),
+  })
+  .loose();
 
 const UserMessageSchema = MessageItemBaseSchema.extend({
   role: z.literal("user"),
@@ -137,23 +139,27 @@ export type MessageItemUnion = z.infer<typeof MessageItemUnionSchema>;
  * --- Function ---
  */
 
-export const ResponseFunctionToolCallSchema = z.object({
-  type: z.literal("function_call"),
-  id: z.string().optional(),
-  call_id: z.string(),
-  name: z.string(),
-  arguments: z.string(),
-  status: ItemStatusSchema.optional(),
-});
+export const ResponseFunctionToolCallSchema = z
+  .object({
+    type: z.literal("function_call"),
+    id: z.string().optional(),
+    call_id: z.string(),
+    name: z.string(),
+    arguments: z.string(),
+    status: ItemStatusSchema.optional(),
+  })
+  .loose();
 export type ResponseFunctionToolCall = z.infer<typeof ResponseFunctionToolCallSchema>;
 
-export const FunctionCallOutputSchema = z.object({
-  type: z.literal("function_call_output"),
-  id: z.string().optional(),
-  call_id: z.string(),
-  output: z.union([z.string(), z.array(ResponseInputContentSchema)]),
-  status: ItemStatusSchema.optional(),
-});
+export const FunctionCallOutputSchema = z
+  .object({
+    type: z.literal("function_call_output"),
+    id: z.string().optional(),
+    call_id: z.string(),
+    output: z.union([z.string(), z.array(ResponseInputContentSchema)]),
+    status: ItemStatusSchema.optional(),
+  })
+  .loose();
 export type FunctionCallOutput = z.infer<typeof FunctionCallOutputSchema>;
 
 /**
@@ -172,14 +178,16 @@ export const ResponseReasoningTextSchema = z.object({
 });
 export type ResponseReasoningText = z.infer<typeof ResponseReasoningTextSchema>;
 
-export const ResponseReasoningItemSchema = z.object({
-  type: z.literal("reasoning"),
-  id: z.string().optional(),
-  summary: z.array(ResponseSummaryTextSchema),
-  content: z.array(ResponseReasoningTextSchema).optional(),
-  encrypted_content: z.string().optional(),
-  status: ItemStatusSchema.optional(),
-});
+export const ResponseReasoningItemSchema = z
+  .object({
+    type: z.literal("reasoning"),
+    id: z.string().optional(),
+    summary: z.array(ResponseSummaryTextSchema),
+    content: z.array(ResponseReasoningTextSchema).optional(),
+    encrypted_content: z.string().optional(),
+    status: ItemStatusSchema.optional(),
+  })
+  .loose();
 export type ResponseReasoningItem = z.infer<typeof ResponseReasoningItemSchema>;
 
 /**
@@ -200,6 +208,7 @@ export const ConversationItemSchema = z
     object: z.literal("conversation.item"),
     created_at: z.number().int(),
   })
+  .loose()
   .and(ResponseInputItemSchema);
 export type ConversationItem = z.infer<typeof ConversationItemSchema>;
 

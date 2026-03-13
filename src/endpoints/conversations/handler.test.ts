@@ -152,6 +152,110 @@ describe("Conversations Handler", () => {
     expect(dataNone.data).toHaveLength(0);
   });
 
+  test("should preserve extra payload (cache_control, extra_content) across all item types", async () => {
+    const endpoint = conversations(config);
+
+    const itemsToTest = [
+      {
+        type: "message",
+        role: "system",
+        content: "You are a helpful assistant.",
+        cache_control: { type: "ephemeral" },
+      },
+      {
+        type: "message",
+        role: "user",
+        content: "What is the weather in London?",
+        cache_control: { type: "ephemeral" },
+      },
+      {
+        type: "message",
+        role: "assistant",
+        content: "Let me check that for you.",
+        extra_content: { vertex: { thought_signature: "sig_assistant_123" } },
+      },
+      {
+        type: "function_call",
+        call_id: "call_123",
+        name: "get_weather",
+        arguments: '{"location": "London"}',
+        extra_content: { vertex: { thought_signature: "sig_call_456" } },
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_123",
+        output: "Rainy, 15°C",
+      },
+    ];
+
+    // 1. Create conversation with these items
+    const createRes = await endpoint.handler(
+      postJson("http://localhost/conversations", {
+        items: itemsToTest,
+      }),
+    );
+    expect(createRes.status).toBe(200);
+    const conv = (await parseResponse<Conversation>(createRes))!;
+
+    // 2. Retrieve items and verify all flexible fields are preserved at root
+    const itemsRes = await endpoint.handler(
+      new Request(`http://localhost/conversations/${conv.id}/items?order=asc`),
+    );
+    const items = (await parseResponse<ConversationItemList>(itemsRes))!;
+    expect(items.data).toHaveLength(5);
+
+    type TestItem = {
+      cache_control: { type: string };
+      extra_content: { vertex: { thought_signature: string } };
+      role: string;
+    };
+    const [sys, user, assistant, call] = items.data as unknown as [TestItem, TestItem, TestItem, TestItem, TestItem];
+
+    // Verify messages
+    expect(sys.cache_control).toEqual({ type: "ephemeral" });
+    expect(user.cache_control).toEqual({ type: "ephemeral" });
+    expect(assistant.extra_content.vertex.thought_signature).toBe("sig_assistant_123");
+
+    // Verify function items
+    expect(call.extra_content.vertex.thought_signature).toBe("sig_call_456");
+  });
+
+  test("should preserve extra payload when adding items to existing conversation", async () => {
+    const endpoint = conversations(config);
+
+    // 1. Create empty conversation
+    const createRes = await endpoint.handler(postJson("http://localhost/conversations", {}));
+    const conv = (await parseResponse<Conversation>(createRes))!;
+
+    // 2. Add an item with cache_control
+    const addItemRes = await endpoint.handler(
+      postJson(`http://localhost/conversations/${conv.id}/items`, {
+        items: [
+          {
+            type: "message",
+            role: "user",
+            content: "Hello",
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+      }),
+    );
+    expect(addItemRes.status).toBe(200);
+
+    // 3. Verify item was saved with cache_control
+    const itemsRes = await endpoint.handler(
+      new Request(`http://localhost/conversations/${conv.id}/items`),
+    );
+    const items = (await parseResponse<ConversationItemList>(itemsRes))!;
+    const item = items.data[0] as unknown as {
+      role?: string;
+      cache_control?: { type: string };
+    };
+
+    expect(item.role).toBe("user");
+    expect(item.cache_control).toEqual({ type: "ephemeral" });
+  });
+
   test("should reject invalid metadata", async () => {
     const endpoint = conversations(config);
 
