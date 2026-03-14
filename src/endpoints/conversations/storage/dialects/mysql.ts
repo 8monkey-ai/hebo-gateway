@@ -9,8 +9,9 @@ export type { Mysql2Pool };
 const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
 export const MySQLDialectConfig: DialectConfig = {
-  placeholder: () => "?",
+  placeholder: (i) => "?",
   quote: (i) => `\`${i}\``,
+  selectJson: (c) => c,
   jsonExtract: (c, k) => `JSON_EXTRACT(${c}, '$.${k}')`,
   upsertSuffix: (q, _pk, cols) =>
     `ON DUPLICATE KEY UPDATE ${cols.map((c) => `${q(c)} = VALUES(${q(c)})`).join(", ")}`,

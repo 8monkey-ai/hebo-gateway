@@ -163,23 +163,27 @@ export class SqlStorage implements ConversationStorage {
   }
 
   async getConversation(id: string): Promise<ConversationEntity | undefined> {
-    const { placeholder: p, quote: q } = this.config;
+    const { placeholder: p, quote: q, selectJson: sj } = this.config;
     const row = await this.executor.get<Record<string, unknown>>(
-      `SELECT * FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)} ORDER BY ${q(
-        "created_at",
-      )} DESC LIMIT 1`,
+      `SELECT ${q("id")}, ${q("created_at")}, ${sj(q("metadata"))} as ${q("metadata")} FROM ${q(
+        "conversations",
+      )} WHERE ${q("id")} = ${p(0)} ORDER BY ${q("created_at")} DESC LIMIT 1`,
       [id],
     );
     return row ? mapRow<ConversationEntity>(row) : undefined;
   }
   async listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]> {
     const { after, order, limit, metadata } = params;
-    const { placeholder: p, quote: q, limitAsLiteral } = this.config;
+    const { placeholder: p, quote: q, selectJson: sj, limitAsLiteral } = this.config;
 
     const isAsc = order === "asc";
     const dir = isAsc ? "ASC" : "DESC";
 
-    const sqlParts = [`SELECT c.* FROM ${q("conversations")} c WHERE 1=1`];
+    const sqlParts = [
+      `SELECT c.${q("id")}, c.${q("created_at")}, ${sj(`c.${q("metadata")}`)} as ${q(
+        "metadata",
+      )} FROM ${q("conversations")} c WHERE 1=1`,
+    ];
     const args: unknown[] = [];
     let nextIdx = 0;
 
@@ -321,9 +325,11 @@ export class SqlStorage implements ConversationStorage {
     conversationId: string,
     itemId: string,
   ): Promise<ConversationItemEntity | undefined> {
-    const { placeholder: p, quote: q } = this.config;
+    const { placeholder: p, quote: q, selectJson: sj } = this.config;
     const row = await this.executor.get<Record<string, unknown>>(
-      `SELECT * FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
+      `SELECT ${q("id")}, ${q("conversation_id")}, ${q("created_at")}, ${q("type")}, ${sj(
+        q("data"),
+      )} as ${q("data")} FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
         "conversation_id",
       )} = ${p(1)}`,
       [itemId, conversationId],
@@ -353,14 +359,18 @@ export class SqlStorage implements ConversationStorage {
     if (!conversation) return undefined;
 
     const { after, order, limit } = params;
-    const { placeholder: p, quote: q, limitAsLiteral } = this.config;
+    const { placeholder: p, quote: q, selectJson: sj, limitAsLiteral } = this.config;
 
     const isAsc = order === "asc";
     const op = isAsc ? ">" : "<";
     const dir = isAsc ? "ASC" : "DESC";
 
     const sqlParts = [
-      `SELECT c.* FROM ${q("conversation_items")} c WHERE c.${q("conversation_id")} = ${p(0)}`,
+      `SELECT c.${q("id")}, c.${q("conversation_id")}, c.${q("created_at")}, c.${q(
+        "type",
+      )}, ${sj(`c.${q("data")}`)} as ${q("data")} FROM ${q("conversation_items")} c WHERE c.${q(
+        "conversation_id",
+      )} = ${p(0)}`,
     ];
     const args: unknown[] = [conversationId];
     let nextIdx = 1;

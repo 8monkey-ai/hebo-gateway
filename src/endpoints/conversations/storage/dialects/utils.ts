@@ -47,6 +47,17 @@ export const jsonStringify = (v: unknown, asBuffer = false) =>
     : v;
 
 /**
+ * WORKAROUND: GreptimeDB can return Rust-style Unicode escapes (\u{xxxx}) 
+ * inside JSON strings, which is invalid JSON and causes crashes in JSON.parse.
+ * This normalization converts those escapes back into literal characters before parsing.
+ */
+function normalizeJsonUnicodeEscapes(value: string): string {
+  return value.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, hex) =>
+    String.fromCodePoint(+`0x${hex}`),
+  );
+}
+
+/**
  * Atomic mappers for database rows.
  */
 export const parseJson =
@@ -54,7 +65,7 @@ export const parseJson =
   (row: Record<string, unknown>): Record<string, unknown> => {
     const val = row[key];
     if (typeof val === "string") {
-      row[key] = val === "" || val === "{}" ? {} : JSON.parse(val);
+      row[key] = val === "" || val === "{}" ? {} : JSON.parse(normalizeJsonUnicodeEscapes(val));
     }
     return row;
   };

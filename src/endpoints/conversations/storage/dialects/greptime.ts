@@ -25,6 +25,17 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
   PostgresDialectConfig,
   GrepTimeBase,
   {
+    /**
+     * GreptimeDB has a bug where it can return invalid JSON strings
+     * containing Rust-style Unicode escapes like \u{xxxx} instead of standard JSON escapes \uxxxx.
+     *
+     * To prevent the Postgres drivers (postgresjs, pg, bun:sql) from crashing when they attempt
+     * to auto-parse this invalid JSON, we cast the JSON column to a raw STRING on the wire.
+     *
+     * Our storage layer then manually normalizes these Rust escapes before calling JSON.parse().
+     * See: src/endpoints/conversations/storage/dialects/utils.ts -> normalizeJsonUnicodeEscapes
+     */
+    selectJson: (c: string) => `${c}::STRING`,
     jsonExtract: (c: string, k: string) => `json_get_string(${c}, '${k}')`,
     upsertSuffix: undefined,
     supportCreateIndexIfNotExists: true,

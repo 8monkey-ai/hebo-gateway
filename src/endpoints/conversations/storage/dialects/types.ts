@@ -8,6 +8,7 @@ export interface QueryExecutor {
 export interface DialectConfig {
   placeholder: (index: number) => string;
   quote: (name: string) => string;
+  selectJson: (column: string) => string;
   jsonExtract: (column: string, key: string) => string;
   upsertSuffix?: (q: (n: string) => string, pk: string[], updateCols: string[]) => string;
 
