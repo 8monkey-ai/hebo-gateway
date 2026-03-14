@@ -91,6 +91,22 @@ describe("SQLite Storage (In-Memory)", () => {
     db.close();
   });
 
+  test("should return undefined from listItems for a non-existent conversation", async () => {
+    const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
+    await storage.migrate();
+
+    const results = await storage.listItems("non-existent-conv-id", {
+      limit: 10,
+    });
+
+    expect(results).toBeUndefined();
+
+    db.close();
+  });
+
   test("should handle null and undefined metadata", async () => {
     const db = new Database(":memory:");
     // @ts-expect-error - types mismatch

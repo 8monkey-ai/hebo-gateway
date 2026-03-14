@@ -156,7 +156,7 @@ export class SqlStorage implements ConversationStorage {
     };
 
     if (params.items?.length) {
-      await this.addItems(id, params.items);
+      await this.addItems(id, params.items, true);
     }
 
     return conversation;
@@ -179,7 +179,7 @@ export class SqlStorage implements ConversationStorage {
     const isAsc = order === "asc";
     const dir = isAsc ? "ASC" : "DESC";
 
-    const sqlParts = [`SELECT * FROM ${q("conversations")} WHERE 1=1`];
+    const sqlParts = [`SELECT c.* FROM ${q("conversations")} c WHERE 1=1`];
     const args: unknown[] = [];
     let nextIdx = 0;
 
@@ -188,38 +188,25 @@ export class SqlStorage implements ConversationStorage {
       for (const [key, value] of Object.entries(metadata)) {
         // Basic sanitization for the key to prevent syntax issues if it contains quotes
         const safeKey = key.replaceAll("'", "''");
-        const extractExpr = this.config.jsonExtract(q("metadata"), safeKey);
+        const extractExpr = this.config.jsonExtract(`c.${q("metadata")}`, safeKey);
         sqlParts.push(`AND ${extractExpr} = ${p(nextIdx++)}`);
         args.push(value);
       }
     }
 
     if (after) {
-      // NOTE: Two-roundtrip pagination is used here for stability across all dialects (Postgres/MySQL/SQLite/Greptime).
-      // 1. First, fetch the EXACT timestamp (created_at) of the 'after' cursor ID.
-      // 2. Then, use that timestamp in a composite cursor (created_at, id) for the main query.
-      // This is more robust than a subquery as it allows for clean error handling if the cursor ID is invalid/deleted.
-      const cursorRow = await this.executor.get<{ created_at: Date | number | bigint }>(
-        `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(0)}`,
-        [after],
+      const op = isAsc ? ">" : "<";
+      sqlParts.push(
+        `AND EXISTS (SELECT 1 FROM ${q("conversations")} _cursor WHERE _cursor.${q("id")} = ${p(
+          nextIdx++,
+        )} AND (c.${q("created_at")} ${op} _cursor.${q("created_at")} OR (c.${q(
+          "created_at",
+        )} = _cursor.${q("created_at")} AND c.${q("id")} ${op} _cursor.${q("id")})))`,
       );
-
-      if (cursorRow) {
-        const op = isAsc ? ">" : "<";
-        const createdAt = cursorRow.created_at;
-
-        sqlParts.push(
-          `AND (${q("created_at")} ${op} ${p(nextIdx++)} OR (${q("created_at")} = ${p(
-            nextIdx++,
-          )} AND ${q("id")} ${op} ${p(nextIdx++)}))`,
-        );
-        args.push(createdAt, createdAt, after);
-      } else {
-        return []; // Cursor not found
-      }
+      args.push(after);
     }
 
-    sqlParts.push(`ORDER BY ${q("created_at")} ${dir}, ${q("id")} ${dir}`);
+    sqlParts.push(`ORDER BY c.${q("created_at")} ${dir}, c.${q("id")} ${dir}`);
 
     const limitVal = Number(limit);
     if (!isNaN(limitVal)) {
@@ -289,9 +276,12 @@ export class SqlStorage implements ConversationStorage {
   async addItems(
     conversationId: string,
     items: ConversationItemInput[],
+    skipCheck = false,
   ): Promise<ConversationItemEntity[] | undefined> {
-    const conversation = await this.getConversation(conversationId);
-    if (!conversation) return undefined;
+    if (!skipCheck) {
+      const conversation = await this.getConversation(conversationId);
+      if (!conversation) return undefined;
+    }
 
     const { placeholder: p, quote: q } = this.config;
     const columns = ["id", "conversation_id", "type", "data", "created_at"];
@@ -359,6 +349,9 @@ export class SqlStorage implements ConversationStorage {
     conversationId: string,
     params: ConversationQueryOptions,
   ): Promise<ConversationItemEntity[] | undefined> {
+    const conversation = await this.getConversation(conversationId);
+    if (!conversation) return undefined;
+
     const { after, order, limit } = params;
     const { placeholder: p, quote: q, limitAsLiteral } = this.config;
 
@@ -367,39 +360,25 @@ export class SqlStorage implements ConversationStorage {
     const dir = isAsc ? "ASC" : "DESC";
 
     const sqlParts = [
-      `SELECT * FROM ${q("conversation_items")} WHERE ${q("conversation_id")} = ${p(0)}`,
+      `SELECT c.* FROM ${q("conversation_items")} c WHERE c.${q("conversation_id")} = ${p(0)}`,
     ];
     const args: unknown[] = [conversationId];
     let nextIdx = 1;
 
     if (after) {
-      // NOTE: Two-roundtrip pagination is used here for stability across all dialects (Postgres/MySQL/SQLite/Greptime).
-      // 1. First, fetch the EXACT timestamp (created_at) of the 'after' cursor ID.
-      // 2. Then, use that timestamp in a composite cursor (created_at, id) for the main query.
-      // This is more robust than a subquery as it allows for clean error handling if the cursor ID is invalid/deleted.
-      const cursorRow = await this.executor.get<{ created_at: Date | number | bigint }>(
-        `SELECT ${q("created_at")} FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(
-          0,
-        )} AND ${q("conversation_id")} = ${p(1)}`,
-        [after, conversationId],
+      sqlParts.push(
+        `AND EXISTS (SELECT 1 FROM ${q("conversation_items")} _cursor WHERE _cursor.${q(
+          "id",
+        )} = ${p(nextIdx++)} AND _cursor.${q("conversation_id")} = ${p(
+          nextIdx++,
+        )} AND (c.${q("created_at")} ${op} _cursor.${q("created_at")} OR (c.${q(
+          "created_at",
+        )} = _cursor.${q("created_at")} AND c.${q("id")} ${op} _cursor.${q("id")})))`,
       );
-
-      if (cursorRow) {
-        const createdAt = cursorRow.created_at;
-
-        // Composite cursor using (created_at, id) for robust pagination even with identical timestamps
-        sqlParts.push(
-          `AND (${q("created_at")} ${op} ${p(nextIdx++)} OR (${q("created_at")} = ${p(
-            nextIdx++,
-          )} AND ${q("id")} ${op} ${p(nextIdx++)}))`,
-        );
-        args.push(createdAt, createdAt, after);
-      } else {
-        return []; // Cursor not found
-      }
+      args.push(after, conversationId);
     }
 
-    sqlParts.push(`ORDER BY ${q("created_at")} ${dir}, ${q("id")} ${dir}`);
+    sqlParts.push(`ORDER BY c.${q("created_at")} ${dir}, c.${q("id")} ${dir}`);
 
     const limitVal = Number(limit);
     if (!isNaN(limitVal)) {

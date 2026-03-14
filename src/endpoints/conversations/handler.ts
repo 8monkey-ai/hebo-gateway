@@ -53,9 +53,14 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     );
 
     const has_more = limit !== 0 && entities.length > limit;
-    const data = entities
-      .slice(0, limit > 0 ? limit : entities.length)
-      .map((item) => toConversation(item));
+    const targetLength = limit > 0 && entities.length > limit ? limit : entities.length;
+    const data: Conversation[] = [];
+    for (let i = 0; i < targetLength; i++) {
+      const entity = entities[i];
+      if (entity) {
+        data.push(toConversation(entity));
+      }
+    }
 
     return {
       object: "list",
@@ -194,9 +199,14 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entities) throw new GatewayError("Conversation not found", 404);
 
     const has_more = limit !== 0 && entities.length > limit;
-    const data = entities
-      .slice(0, limit > 0 ? limit : entities.length)
-      .map((item) => toConversationItem(item));
+    const targetLength = limit > 0 && entities.length > limit ? limit : entities.length;
+    const data: ConversationItem[] = [];
+    for (let i = 0; i < targetLength; i++) {
+      const entity = entities[i];
+      if (entity) {
+        data.push(toConversationItem(entity));
+      }
+    }
 
     return {
       object: "list",
@@ -239,7 +249,14 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       "[storage] addItems result",
     );
 
-    const data = entities.map((item) => toConversationItem(item));
+    const dataLength = entities.length;
+    const data: ConversationItem[] = [];
+    for (let i = 0; i < dataLength; i++) {
+      const entity = entities[i];
+      if (entity) {
+        data.push(toConversationItem(entity));
+      }
+    }
 
     return {
       object: "list",
@@ -255,15 +272,28 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.handler.started");
 
     const url = new URL(ctx.request.url);
-    const allSegments = url.pathname.split("/").filter(Boolean);
-    const rootIndex = allSegments.indexOf("conversations");
+    const rawSegments = url.pathname.split("/");
+    const segments: string[] = [];
+    for (let i = 0; i < rawSegments.length; i++) {
+      const segment = rawSegments[i];
+      if (segment) {
+        segments.push(segment);
+      }
+    }
+
+    let rootIndex = -1;
+    for (let i = 0; i < segments.length; i++) {
+      if (segments[i] === "conversations") {
+        rootIndex = i;
+        break;
+      }
+    }
 
     if (rootIndex === -1) {
       throw new GatewayError("Not Found", 404);
     }
 
-    const segments = allSegments.slice(rootIndex);
-    const len = segments.length;
+    const len = segments.length - rootIndex;
 
     let result;
 
@@ -280,7 +310,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     // GET/POST/DELETE /conversations/{id} (Conversation Instance)
     else if (len === 2) {
-      const conversationId = segments[1] as string;
+      const conversationId = segments[rootIndex + 1] as string;
       logger.debug(`[conversations] resolved conversation ID: ${conversationId}`);
 
       if (ctx.request.method === "GET") {
@@ -295,8 +325,8 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
 
     // GET/POST /conversations/{id}/items
-    else if (len === 3 && segments[2] === "items") {
-      const conversationId = segments[1] as string;
+    else if (len === 3 && segments[rootIndex + 2] === "items") {
+      const conversationId = segments[rootIndex + 1] as string;
       logger.debug(`[conversations] list/add items for conversation ID: ${conversationId}`);
 
       if (ctx.request.method === "GET") {
@@ -309,9 +339,9 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
 
     // GET/DELETE /conversations/{id}/items/{item_id}
-    else if (len === 4 && segments[2] === "items") {
-      const conversationId = segments[1] as string;
-      const itemId = segments[3] as string;
+    else if (len === 4 && segments[rootIndex + 2] === "items") {
+      const conversationId = segments[rootIndex + 1] as string;
+      const itemId = segments[rootIndex + 3] as string;
       logger.debug(
         `[conversations] item access: conversation ID=${conversationId}, item ID=${itemId}`,
       );

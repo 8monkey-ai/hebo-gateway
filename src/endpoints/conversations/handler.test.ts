@@ -209,7 +209,13 @@ describe("Conversations Handler", () => {
       extra_content: { vertex: { thought_signature: string } };
       role: string;
     };
-    const [sys, user, assistant, call] = items.data as unknown as [TestItem, TestItem, TestItem, TestItem, TestItem];
+    const [sys, user, assistant, call] = items.data as unknown as [
+      TestItem,
+      TestItem,
+      TestItem,
+      TestItem,
+      TestItem,
+    ];
 
     // Verify messages
     expect(sys.cache_control).toEqual({ type: "ephemeral" });
