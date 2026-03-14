@@ -1,10 +1,9 @@
 import type { Client as LibsqlClient } from "@libsql/client";
 import type { Database as BetterSqlite3Database, Statement } from "better-sqlite3";
-import type { SQL as BunSql } from "bun";
 import { LRUCache } from "lru-cache";
 
-import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
+import type { BunSql, DialectConfig, QueryExecutor, SqlDialect } from "./types";
+import { createParamsMapper, dateToNumber, escapeSqlString, jsonStringify } from "./utils";
 
 const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
@@ -12,7 +11,7 @@ export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `"${i}"`,
   selectJson: (c) => c,
-  jsonExtract: (c, k) => `json_extract(${c}, '$.${k}')`,
+  jsonExtract: (c, k) => `json_extract(${c}, '$.${escapeSqlString(k)}')`,
   upsertSuffix: (q, pk, cols) =>
     `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols
       .map((c) => `${q(c)} = EXCLUDED.${q(c)}`)
@@ -148,16 +147,16 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
 function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
     all<T>(query: string, params?: unknown[]) {
-      return sql.unsafe(query, mapParams(params)) as Promise<T[]>;
+      return sql.unsafe<T[]>(query, mapParams(params));
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await (sql.unsafe(query, mapParams(params)) as Promise<unknown[]>);
+      const rows = await sql.unsafe<unknown[]>(query, mapParams(params));
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
       const res = (await sql.unsafe(query, mapParams(params))) as unknown;
-      const result = res as { affectedRows?: number; count?: number; length: number };
-      return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
+      const result = res as { affectedRows?: number; count?: number };
+      return { changes: Number(result.affectedRows ?? result.count ?? 0) };
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {

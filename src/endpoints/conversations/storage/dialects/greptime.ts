@@ -1,5 +1,3 @@
-import type { SQL as BunSql } from "bun";
-
 import {
   PostgresDialect,
   PostgresDialectConfig,
@@ -8,8 +6,8 @@ import {
   isBunSql,
   isPgPool,
 } from "./postgres";
-import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
-import { createParamsMapper, dateToBigInt, jsonStringify } from "./utils";
+import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
+import { createParamsMapper, dateToBigInt, escapeSqlString, jsonStringify } from "./utils";
 
 const GrepTimeBase: Pick<DialectConfig, "types"> = {
   types: {
@@ -36,7 +34,7 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
      * See: src/endpoints/conversations/storage/dialects/utils.ts -> normalizeJsonUnicodeEscapes
      */
     selectJson: (c: string) => `${c}::STRING`,
-    jsonExtract: (c: string, k: string) => `json_get_string(${c}, '${k}')`,
+    jsonExtract: (c: string, k: string) => `json_get_string(${c}, '${escapeSqlString(k)}')`,
     upsertSuffix: undefined,
     supportCreateIndexIfNotExists: true,
 

@@ -11,11 +11,20 @@ export function toConversation(entity: ConversationEntity): Conversation {
 }
 
 export function toConversationItem(entity: ConversationItemEntity): ConversationItem {
-  const item = entity as unknown as ConversationItem;
-  item.object = "conversation.item";
-  item.created_at = Math.floor(entity.created_at / 1000);
+  const item: Record<string, unknown> = {
+    object: "conversation.item",
+  };
 
-  return item;
+  for (const key in entity) {
+    if (key === "conversation_id") continue;
+    if (key === "created_at") {
+      item["created_at"] = Math.floor(entity["created_at"] / 1000);
+      continue;
+    }
+    item[key] = entity[key];
+  }
+
+  return item as unknown as ConversationItem;
 }
 
 export function toConversationDeleted(result: {

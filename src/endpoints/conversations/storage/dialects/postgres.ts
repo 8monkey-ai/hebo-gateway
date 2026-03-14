@@ -1,11 +1,10 @@
-import type { SQL as BunSql } from "bun";
 import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql, TransactionSql } from "postgres";
 
 import { LRUCache } from "lru-cache";
 
-import { type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
-import { createParamsMapper, dateToNumber } from "./utils";
+import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
+import { createParamsMapper, dateToNumber, escapeSqlString } from "./utils";
 
 export type { PostgresJsSql, PgPool };
 
@@ -15,7 +14,7 @@ export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
   quote: (i) => `"${i}"`,
   selectJson: (c) => c,
-  jsonExtract: (c, k) => `${c}->>'${k}'`,
+  jsonExtract: (c, k) => `${c}->>'${escapeSqlString(k)}'`,
   upsertSuffix: (q, pk, cols) =>
     `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols
       .map((c) => `${q(c)} = EXCLUDED.${q(c)}`)
@@ -169,11 +168,11 @@ function createBunPostgresExecutor(
   const executor: QueryExecutor = {
     all<T>(query: string, params?: unknown[]) {
       const p = mapParams(params);
-      return sql.unsafe(query, p?.length > 0 ? p : undefined) as Promise<T[]>;
+      return sql.unsafe<T[]>(query, p?.length > 0 ? p : undefined);
     },
     async get<T>(query: string, params?: unknown[]) {
       const p = mapParams(params);
-      const rows = await (sql.unsafe(query, p?.length > 0 ? p : undefined) as Promise<unknown[]>);
+      const rows = await sql.unsafe<unknown[]>(query, p?.length > 0 ? p : undefined);
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
@@ -182,11 +181,10 @@ function createBunPostgresExecutor(
       const result = res as {
         affectedRows?: number;
         count?: number;
-        length: number;
         command?: string;
       };
 
-      let changes = result.affectedRows ?? result.count ?? result.length ?? 0;
+      let changes = result.affectedRows ?? result.count ?? 0;
 
       // When Bun.SQL is used with GreptimeDB, mutation responses over the Postgres wire protocol
       // don't populate `count` or `affectedRows`, but they do provide a command string like "OK 1"

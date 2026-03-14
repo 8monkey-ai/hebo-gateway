@@ -1,3 +1,18 @@
+/**
+ * Lightweight interface for Bun's SQL client.
+ *
+ * We define this locally instead of importing from "bun" to avoid leaking Bun-only
+ * types in our public API. This prevents TypeScript compilation errors for users
+ * who are not using Bun and don't have @types/bun installed.
+ *
+ * Because TypeScript uses structural typing, a real Bun SQL instance will still
+ * match this interface perfectly.
+ */
+export interface BunSql {
+  unsafe<T = any>(query: string, params?: unknown[]): Promise<T>;
+  transaction<T>(fn: (tx: BunSql) => Promise<T>): Promise<T>;
+}
+
 export interface QueryExecutor {
   all<T>(sql: string, params?: unknown[]): Promise<T[]>;
   get<T>(sql: string, params?: unknown[]): Promise<T | undefined>;

@@ -1,18 +1,17 @@
-import type { SQL as BunSql } from "bun";
 import type { Pool as Mysql2Pool, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import type { DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { createParamsMapper, dateToNumber, jsonStringify } from "./utils";
+import type { BunSql, DialectConfig, QueryExecutor, SqlDialect } from "./types";
+import { createParamsMapper, dateToNumber, escapeSqlString, jsonStringify } from "./utils";
 
 export type { Mysql2Pool };
 
 const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
 export const MySQLDialectConfig: DialectConfig = {
-  placeholder: (i) => "?",
+  placeholder: (_i) => "?",
   quote: (i) => `\`${i}\``,
   selectJson: (c) => c,
-  jsonExtract: (c, k) => `JSON_EXTRACT(${c}, '$.${k}')`,
+  jsonExtract: (c, k) => `JSON_EXTRACT(${c}, '$.${escapeSqlString(k)}')`,
   upsertSuffix: (q, _pk, cols) =>
     `ON DUPLICATE KEY UPDATE ${cols.map((c) => `${q(c)} = VALUES(${q(c)})`).join(", ")}`,
   limitAsLiteral: true,
@@ -89,16 +88,16 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
 function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
   const executor: QueryExecutor = {
     all<T>(query: string, params?: unknown[]) {
-      return sql.unsafe(query, mapParams(params)) as Promise<T[]>;
+      return sql.unsafe<T[]>(query, mapParams(params));
     },
     async get<T>(query: string, params?: unknown[]) {
-      const rows = await (sql.unsafe(query, mapParams(params)) as Promise<unknown[]>);
+      const rows = await sql.unsafe<unknown[]>(query, mapParams(params));
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
       const res = (await sql.unsafe(query, mapParams(params))) as unknown;
-      const result = res as { affectedRows?: number; count?: number; length: number };
-      return { changes: Number(result.affectedRows ?? result.count ?? result.length ?? 0) };
+      const result = res as { affectedRows?: number; count?: number };
+      return { changes: Number(result.affectedRows ?? result.count ?? 0) };
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {

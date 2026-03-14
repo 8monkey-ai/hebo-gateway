@@ -190,9 +190,7 @@ export class SqlStorage implements ConversationStorage {
     // Filter by metadata
     if (metadata && Object.keys(metadata).length > 0) {
       for (const [key, value] of Object.entries(metadata)) {
-        // Basic sanitization for the key to prevent syntax issues if it contains quotes
-        const safeKey = key.replaceAll("'", "''");
-        const extractExpr = this.config.jsonExtract(`c.${q("metadata")}`, safeKey);
+        const extractExpr = this.config.jsonExtract(`c.${q("metadata")}`, key);
         sqlParts.push(`AND ${extractExpr} = ${p(nextIdx++)}`);
         args.push(value);
       }

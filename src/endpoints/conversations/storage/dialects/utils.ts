@@ -47,14 +47,17 @@ export const jsonStringify = (v: unknown, asBuffer = false) =>
     : v;
 
 /**
- * WORKAROUND: GreptimeDB can return Rust-style Unicode escapes (\u{xxxx}) 
+ * Escapes single quotes in a string for use in SQL literals.
+ */
+export const escapeSqlString = (str: string) => str.replaceAll("'", "''");
+
+/**
+ * WORKAROUND: GreptimeDB can return Rust-style Unicode escapes (\u{xxxx})
  * inside JSON strings, which is invalid JSON and causes crashes in JSON.parse.
  * This normalization converts those escapes back into literal characters before parsing.
  */
 function normalizeJsonUnicodeEscapes(value: string): string {
-  return value.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, hex) =>
-    String.fromCodePoint(+`0x${hex}`),
-  );
+  return value.replaceAll(/\\u\{([0-9a-fA-F]+)\}/g, (_, hex) => String.fromCodePoint(+`0x${hex}`));
 }
 
 /**

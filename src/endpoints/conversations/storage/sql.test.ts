@@ -192,4 +192,27 @@ describe("SQLite Storage (In-Memory)", () => {
 
     db.close();
   });
+
+  test("should handle metadata keys with single quotes", async () => {
+    const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
+    await storage.migrate();
+
+    const keyWithQuote = "foo'bar";
+    const c1 = await storage.createConversation({ metadata: { [keyWithQuote]: "baz" } });
+    await storage.createConversation({ metadata: { simple: "qux" } });
+
+    const results = await storage.listConversations({
+      limit: 10,
+      metadata: { [keyWithQuote]: "baz" },
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]!.id).toBe(c1.id);
+    expect(results[0]!.metadata).toEqual({ [keyWithQuote]: "baz" });
+
+    db.close();
+  });
 });
