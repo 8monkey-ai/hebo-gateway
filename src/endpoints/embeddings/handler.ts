@@ -65,9 +65,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     // Resolve model + provider (hooks may override defaults).
-    let inputs;
-    ({ model: ctx.modelId, ...inputs } = ctx.body);
-
+    ctx.modelId = ctx.body.model;
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[embeddings] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
@@ -93,6 +91,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
+    const { model: _model, ...inputs } = ctx.body;
     // oxlint-disable-next-line no-unsafe-argument
     const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace(

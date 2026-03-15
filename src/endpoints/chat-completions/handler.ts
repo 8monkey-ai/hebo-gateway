@@ -73,9 +73,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     }
 
     // Resolve model + provider (hooks may override defaults).
-    let inputs, stream;
-    ({ model: ctx.modelId, stream, ...inputs } = ctx.body);
-
+    ctx.modelId = ctx.body.model;
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
     logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
@@ -101,6 +99,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
+    const { model: _model, stream, ...inputs } = ctx.body;
     // oxlint-disable-next-line no-unsafe-argument
     const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
