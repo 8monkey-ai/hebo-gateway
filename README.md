@@ -12,7 +12,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 
 ## 🍌 Features
 
-- 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
+- 🌐 OpenAI-compatible /chat/completions, /responses, /embeddings & /models endpoints.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
@@ -293,9 +293,9 @@ const gw = gateway({
      * @returns Replacement parsed body, or undefined to keep original body unchanged.
      */
     before: async (ctx: {
-      body: ChatCompletionsBody | EmbeddingsBody;
-      operation: "chat" | "embeddings";
-    }): Promise<ChatCompletionsBody | EmbeddingsBody | void> => {
+      body: ChatCompletionsBody | EmbeddingsBody | ResponsesBody;
+      operation: "chat" | "embeddings" | "responses";
+    }): Promise<ChatCompletionsBody | EmbeddingsBody | ResponsesBody | void> => {
       // Example Use Cases:
       // - Transform request body
       // - Observability integration
@@ -308,7 +308,7 @@ const gw = gateway({
      * @returns Canonical model ID or undefined to keep original.
      */
     resolveModelId: async (ctx: {
-      body: ChatCompletionsBody | EmbeddingsBody;
+      body: ChatCompletionsBody | EmbeddingsBody | ResponsesBody;
       modelId: ModelId;
     }): Promise<ModelId | void> => {
       // Example Use Cases:
@@ -321,15 +321,15 @@ const gw = gateway({
      * @param ctx.models ModelCatalog from config.
      * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.resolvedModelId Resolved model ID.
-     * @param ctx.operation Operation type ("chat" | "embeddings").
+     * @param ctx.operation Operation type ("chat" | "embeddings" | "responses").
      * @returns ProviderV3 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
       providers: ProviderRegistry;
       models: ModelCatalog;
-      body: ChatCompletionsBody | EmbeddingsBody;
+      body: ChatCompletionsBody | EmbeddingsBody | ResponsesBody;
       resolvedModelId: ModelId;
-      operation: "chat" | "embeddings";
+      operation: "chat" | "embeddings" | "responses";
     }): Promise<ProviderV3 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
@@ -342,10 +342,8 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions | ChatCompletionsStream | Embeddings;
-    }): Promise<
-      ChatCompletions | ChatCompletionsStream | Embeddings | void
-    > => {
+      result: ChatCompletions | ChatCompletionsStream | Embeddings | ResponsesResponse | ResponsesStream;
+    }): Promise<ChatCompletions | ChatCompletionsStream | Embeddings | ResponsesResponse | ResponsesStream | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
@@ -888,7 +886,7 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings`, `models`, and `responses` endpoints.
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
