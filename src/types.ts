@@ -6,6 +6,7 @@ import type {
   ChatCompletionsBody,
   ChatCompletionsStream,
 } from "./endpoints/chat-completions/schema";
+import type { ConversationStorage } from "./endpoints/conversations/storage/types";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
 import type { Model, ModelList } from "./endpoints/models";
 import type { Logger, LoggerConfig } from "./logger";
@@ -51,7 +52,7 @@ export type GatewayContext = {
   /**
    * Operation type.
    */
-  operation?: "chat" | "embeddings" | "models";
+  operation?: "chat" | "embeddings" | "models" | "conversations";
   /**
    * Resolved provider instance.
    */
@@ -193,6 +194,11 @@ export type GatewayConfig = {
    */
   logger?: Logger | LoggerConfig | null;
   /**
+   * Optional conversation storage backend.
+   * Defaults to an in-memory storage if not provided.
+   */
+  storage?: ConversationStorage;
+  /**
    * Optional AI SDK telemetry configuration.
    */
   telemetry?: {
@@ -226,7 +232,8 @@ export type GatewayConfig = {
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = Omit<GatewayConfig, "timeouts"> & {
+export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts"> & {
+  storage: ConversationStorage;
   timeouts: {
     normal?: number;
     flex?: number;

@@ -53,6 +53,11 @@
       "types": "./dist/endpoints/chat-completions/index.d.ts",
       "import": "./dist/endpoints/chat-completions/index.js"
     },
+    "./endpoints/conversations": {
+      "types": "./dist/endpoints/conversations/index.d.ts",
+      "import": "./dist/endpoints/conversations/index.js",
+      "dev-source": "./src/endpoints/conversations/index.ts"
+    },
     "./endpoints/embeddings": {
       "types": "./dist/endpoints/embeddings/index.d.ts",
       "import": "./dist/endpoints/embeddings/index.js"
@@ -60,6 +65,16 @@
     "./endpoints/models": {
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js"
+    },
+    "./storage/memory": {
+      "types": "./dist/endpoints/conversations/storage/memory.d.ts",
+      "import": "./dist/endpoints/conversations/storage/memory.js",
+      "dev-source": "./src/endpoints/conversations/storage/memory.ts"
+    },
+    "./storage/sql": {
+      "types": "./dist/endpoints/conversations/storage/sql.d.ts",
+      "import": "./dist/endpoints/conversations/storage/sql.js",
+      "dev-source": "./src/endpoints/conversations/storage/sql.ts"
     },
     "./errors/openai": {
       "types": "./dist/errors/openai.d.ts",
@@ -142,6 +157,8 @@
   "dependencies": {
     "@ai-sdk/provider": "^3.0.8",
     "ai": "^6.0.116",
+    "lru-cache": "^11.2.6",
+    "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -153,23 +170,31 @@
     "@ai-sdk/openai": "^3.0.41",
     "@aws-sdk/credential-providers": "^3.1004.0",
     "@langfuse/otel": "^4.6.1",
+    "@libsql/client": "^0.17.0",
     "@mjackson/node-fetch-server": "^0.7.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-async-hooks": "^2.6.0",
     "@opentelemetry/sdk-trace-base": "^2.6.0",
     "@tanstack/react-router": "^1.166.3",
     "@tanstack/react-start": "^1.166.3",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "latest",
+    "@types/pg": "^8.18.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^11.0.0",
+    "better-sqlite3": "^12.6.2",
     "elysia": "^1.4.27",
     "hono": "^4.12.5",
     "lefthook": "^2.1.3",
+    "mysql2": "^3.18.2",
     "next": "^16.1.6",
     "oxfmt": "^0.24.0",
     "oxlint": "^1.51.0",
     "oxlint-tsgolint": "^0.16.0",
+    "pg": "^8.19.0",
     "pino": "^10.3.1",
+    "postgres": "^3.4.8",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^6.1.1",
@@ -183,7 +208,12 @@
     "@ai-sdk/google-vertex": "^4.0.80",
     "@ai-sdk/groq": "^3.0.29",
     "@ai-sdk/openai": "^3.0.41",
+    "@libsql/client": "^0.14.0",
     "@opentelemetry/api": "^1.9.0",
+    "better-sqlite3": "^11.0.0",
+    "mysql2": "^3.11.0",
+    "pg": "^8.13.0",
+    "postgres": "^3.4.0",
     "typescript": "^5.9.3",
     "voyage-ai-provider": "^3.0.0"
   },
@@ -210,6 +240,21 @@
       "optional": true
     },
     "voyage-ai-provider": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "postgres": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "@libsql/client": {
       "optional": true
     }
   }
