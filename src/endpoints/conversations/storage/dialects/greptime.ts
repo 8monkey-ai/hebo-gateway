@@ -72,7 +72,7 @@ function dateToGreptimeString(v: unknown) {
 //
 // 2. JSON:
 //    - GreptimeDB rejects plain strings for JSON, expecting a bytea-compatible format.
-//    - `pg` and `Bun.SQL` require the JSON string to be wrapped in a Buffer.
+//    - `pg` and `Bun.SQL` require the JSON string to be wrapped in a Uint8Array (binary).
 //    - `postgresjs` works with plain JSON strings.
 const mapParams = createParamsMapper([dateToBigInt, (v) => jsonStringify(v)]);
 const mapParamsBun = createParamsMapper([dateToBigInt, (v) => jsonStringify(v, true)]);

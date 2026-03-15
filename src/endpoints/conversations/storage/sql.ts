@@ -12,19 +12,12 @@ import type { SqlDialect } from "./dialects/types";
 
 import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 
-/**
- * Maps a raw database row to a clean conversation or item entity.
- */
-function mapRow<T>(row: Record<string, unknown>): T {
-  const mapper = createRowMapper<T>([
-    parseJson("data"),
-    parseJson("metadata"),
-    toMilliseconds("created_at"),
-    mergeData("data"),
-  ]);
-
-  return mapper(row);
-}
+const rowMapper = createRowMapper<any>([
+  parseJson("data"),
+  parseJson("metadata"),
+  toMilliseconds("created_at"),
+  mergeData("data"),
+]);
 
 export class SqlStorage implements ConversationStorage {
   readonly dialect: SqlDialect;
@@ -156,7 +149,7 @@ export class SqlStorage implements ConversationStorage {
     };
 
     if (params.items?.length) {
-      await this.addItems(id, params.items, true);
+      await this.addItemsInternal(id, params.items, true);
     }
 
     return conversation;
@@ -170,7 +163,7 @@ export class SqlStorage implements ConversationStorage {
       )} WHERE ${q("id")} = ${p(0)} ORDER BY ${q("created_at")} DESC LIMIT 1`,
       [id],
     );
-    return row ? mapRow<ConversationEntity>(row) : undefined;
+    return row ? (rowMapper(row) as ConversationEntity) : undefined;
   }
   async listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]> {
     const { after, order, limit, metadata } = params;
@@ -222,46 +215,51 @@ export class SqlStorage implements ConversationStorage {
 
     const query = sqlParts.join(" ");
     const rows = await this.executor.all<Record<string, unknown>>(query, args);
-    return rows.map((row) => mapRow<ConversationEntity>(row));
+    for (let i = 0; i < rows.length; i++) {
+      rowMapper(rows[i]!);
+    }
+    return rows as unknown as ConversationEntity[];
   }
 
-  async updateConversation(
+  updateConversation(
     id: string,
     metadata: ConversationMetadata,
   ): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q, upsertSuffix } = this.config;
 
-    // Unified approach: Fetch original created_at to verify existence and preserve it.
-    // 1. Existence check: Ensure the conversation exists before updating (returning undefined if missing).
-    //    This prevents clients from accidentally creating "zombie" conversations with custom IDs.
-    // 2. Consistency: Standard SQL (Postgres/MySQL/SQLite) preserves the original creation timestamp.
-    // 3. Deduplication: GreptimeDB requires the EXACT same Time Index (created_at) to deduplicate the row.
-    const row = await this.executor.get<{ created_at: Date | number }>(
-      `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(
-        0,
-      )} ORDER BY ${q("created_at")} DESC LIMIT 1`,
-      [id],
-    );
+    return this.executor.transaction(async (tx) => {
+      // Unified approach: Fetch original created_at to verify existence and preserve it.
+      // 1. Existence check: Ensure the conversation exists before updating (returning undefined if missing).
+      //    This prevents clients from accidentally creating "zombie" conversations with custom IDs.
+      // 2. Consistency: Standard SQL (Postgres/MySQL/SQLite) preserves the original creation timestamp.
+      // 3. Deduplication: GreptimeDB requires the EXACT same Time Index (created_at) to deduplicate the row.
+      const row = await tx.get<{ created_at: Date | number }>(
+        `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(
+          0,
+        )} ORDER BY ${q("created_at")} DESC LIMIT 1`,
+        [id],
+      );
 
-    if (!row) return undefined;
-    const createdAt = row.created_at;
+      if (!row) return;
+      const createdAt = row.created_at;
 
-    const pk = ["id"];
-    const updateCols = ["metadata"];
-    const suffix = upsertSuffix?.(q, pk, updateCols) ?? "";
+      const pk = ["id"];
+      const updateCols = ["metadata"];
+      const suffix = upsertSuffix?.(q, pk, updateCols) ?? "";
 
-    await this.executor.run(
-      `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
-        0,
-      )}, ${p(1)}, ${p(2)}) ${suffix}`,
-      [id, metadata ?? null, createdAt],
-    );
+      await tx.run(
+        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
+          0,
+        )}, ${p(1)}, ${p(2)}) ${suffix}`,
+        [id, metadata ?? null, createdAt],
+      );
 
-    return {
-      id,
-      created_at: createdAt instanceof Date ? createdAt.getTime() : Number(createdAt),
-      metadata: metadata ?? null,
-    };
+      return {
+        id,
+        created_at: createdAt instanceof Date ? createdAt.getTime() : Number(createdAt),
+        metadata: metadata ?? null,
+      };
+    });
   }
 
   async deleteConversation(id: string): Promise<{ id: string; deleted: boolean }> {
@@ -275,7 +273,14 @@ export class SqlStorage implements ConversationStorage {
     return { id, deleted: changes > 0 };
   }
 
-  async addItems(
+  addItems(
+    conversationId: string,
+    items: ConversationItemInput[],
+  ): Promise<ConversationItemEntity[] | undefined> {
+    return this.addItemsInternal(conversationId, items, false);
+  }
+
+  private async addItemsInternal(
     conversationId: string,
     items: ConversationItemInput[],
     skipCheck = false,
@@ -332,7 +337,7 @@ export class SqlStorage implements ConversationStorage {
       )} = ${p(1)}`,
       [itemId, conversationId],
     );
-    return row ? mapRow<ConversationItemEntity>(row) : undefined;
+    return row ? (rowMapper(row) as ConversationItemEntity) : undefined;
   }
 
   async deleteItem(
@@ -400,7 +405,10 @@ export class SqlStorage implements ConversationStorage {
 
     const query = sqlParts.join(" ");
     const rows = await this.executor.all<Record<string, unknown>>(query, args);
-    return rows.map((row) => mapRow<ConversationItemEntity>(row));
+    for (let i = 0; i < rows.length; i++) {
+      rowMapper(rows[i]!);
+    }
+    return rows as unknown as ConversationItemEntity[];
   }
 }
 

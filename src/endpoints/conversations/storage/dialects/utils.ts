@@ -39,10 +39,10 @@ export function createRowMapper<T>(
  */
 export const dateToNumber = (v: unknown) => (v instanceof Date ? v.getTime() : v);
 export const dateToBigInt = (v: unknown) => (v instanceof Date ? BigInt(v.getTime()) : v);
-export const jsonStringify = (v: unknown, asBuffer = false) =>
+export const jsonStringify = (v: unknown, asBinary = false) =>
   v !== null && typeof v === "object" && !(v instanceof Date)
-    ? asBuffer
-      ? Buffer.from(JSON.stringify(v))
+    ? asBinary
+      ? new TextEncoder().encode(JSON.stringify(v))
       : JSON.stringify(v)
     : v;
 
