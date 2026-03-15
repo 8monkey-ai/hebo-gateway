@@ -26,6 +26,7 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
     /**
      * GreptimeDB has a bug where it can return invalid JSON strings
      * containing Rust-style Unicode escapes like \u{xxxx} instead of standard JSON escapes \uxxxx.
+     * https://github.com/GreptimeTeam/greptimedb/issues/7808
      *
      * To prevent the Postgres drivers (postgresjs, pg, bun:sql) from crashing when they attempt
      * to auto-parse this invalid JSON, we cast the JSON column to a raw STRING on the wire.
