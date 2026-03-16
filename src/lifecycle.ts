@@ -79,7 +79,7 @@ export const winterCgHandler = (
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 
-      if (ctx.operation === "chat" || ctx.operation === "embeddings") {
+      if (ctx.operation === "chat" || ctx.operation === "embeddings" || ctx.operation === "responses") {
         recordRequestDuration(
           performance.now() - start,
           realStatus,

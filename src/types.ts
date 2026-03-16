@@ -8,6 +8,7 @@ import type {
 } from "./endpoints/chat-completions/schema";
 import type { ConversationStorage } from "./endpoints/conversations/storage/types";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema";
 import type { Model, ModelList } from "./endpoints/models";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
@@ -40,7 +41,7 @@ export type GatewayContext = {
   /**
    * Parsed body from the request.
    */
-  body?: ChatCompletionsBody | EmbeddingsBody;
+  body?: ChatCompletionsBody | EmbeddingsBody | ResponsesBody;
   /**
    * Incoming model ID.
    */
@@ -52,7 +53,7 @@ export type GatewayContext = {
   /**
    * Operation type.
    */
-  operation?: "chat" | "embeddings" | "models" | "conversations";
+  operation?: "chat" | "embeddings" | "models" | "conversations" | "responses";
   /**
    * Resolved provider instance.
    */
@@ -64,7 +65,7 @@ export type GatewayContext = {
   /**
    * Result returned by the handler (pre-response).
    */
-  result?: ChatCompletions | ChatCompletionsStream | Embeddings | Model | ModelList;
+  result?: ChatCompletions | ChatCompletionsStream | Embeddings | Model | ModelList | Responses | ResponsesStream;
   /**
    * Response object returned by the handler.
    */
@@ -119,7 +120,8 @@ export type GatewayHooks = {
     | void
     | ChatCompletionsBody
     | EmbeddingsBody
-    | Promise<void | ChatCompletionsBody | EmbeddingsBody>;
+    | ResponsesBody
+    | Promise<void | ChatCompletionsBody | EmbeddingsBody | ResponsesBody>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @returns Canonical model ID or undefined to keep original.
@@ -143,7 +145,9 @@ export type GatewayHooks = {
     | ChatCompletions
     | ChatCompletionsStream
     | Embeddings
-    | Promise<void | ChatCompletions | ChatCompletionsStream | Embeddings>;
+    | Responses
+    | ResponsesStream
+    | Promise<void | ChatCompletions | ChatCompletionsStream | Embeddings | Responses | ResponsesStream>;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.
