@@ -9,6 +9,7 @@ export * from "./middleware/common";
 export * from "./middleware/matcher";
 
 export * from "./endpoints/chat-completions";
+export * from "./endpoints/conversations";
 export * from "./endpoints/embeddings";
 export * from "./endpoints/models";
 

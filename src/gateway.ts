@@ -2,6 +2,7 @@ import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
 
 import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
+import { conversations } from "./endpoints/conversations/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
 import { models } from "./endpoints/models/handler";
 import { GatewayError } from "./errors/gateway";
@@ -22,6 +23,7 @@ export function gateway(config: GatewayConfig) {
     ["/chat/completions"]: chatCompletions(parsedConfig),
     ["/embeddings"]: embeddings(parsedConfig),
     ["/models"]: models(parsedConfig),
+    ["/conversations"]: conversations(parsedConfig),
   } as const satisfies Record<string, Endpoint>;
 
   const routeEntries = Object.entries(routes);
