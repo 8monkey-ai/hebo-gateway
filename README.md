@@ -13,6 +13,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 ## 🍌 Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
+- 💬 /conversations endpoint built on top of the Responses API.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
@@ -32,7 +33,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Storage](#storage) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -343,9 +344,7 @@ const gw = gateway({
      */
     after: async (ctx: {
       result: ChatCompletions | ChatCompletionsStream | Embeddings;
-    }): Promise<
-      ChatCompletions | ChatCompletionsStream | Embeddings | void
-    > => {
+    }): Promise<ChatCompletions | ChatCompletionsStream | Embeddings | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
@@ -370,6 +369,52 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
+
+### Storage
+
+The `/conversations` endpoint stores conversation history and associated items. By default, the gateway uses an in-memory storage, which is suitable for development but not for production as data is lost when the server restarts.
+
+#### In-Memory Storage
+
+You can configure the size of the in-memory storage (default is 256MB).
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { InMemoryStorage } from "@hebo-ai/gateway/storage/memory";
+
+const gw = gateway({
+  // ...
+  storage: new InMemoryStorage({
+    maxSize: 512 * 1024 * 1024, // 512MB
+  }),
+});
+```
+
+#### SQL Storage
+
+Hebo Gateway provides high-performance SQL adapters for **PostgreSQL**, **SQLite**, **MySQL**, and **GrepTimeDB**. It supports common drivers like `pg`, `postgres.js`, `mysql2`, `better-sqlite3`, `@libsql/client`, and `Bun.SQL`.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+import { SqlStorage, PostgresDialect } from "@hebo-ai/gateway/storage/sql";
+import { Pool } from "pg";
+
+// 1. Setup dialect-specific client (e.g. pg, mysql2, sqlite, bun)
+const client = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// 2. Setup storage with matching dialect (PostgresDialect, SqliteDialect, MysqlDialect, ...)
+const storage = new SqlStorage({
+  dialect: new PostgresDialect({ client }),
+});
+
+// 3. Run migrations
+await storage.migrate();
+
+const gw = gateway({ storage });
+```
+
+> [!TIP]
+> The `PostgresDialect` includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
 
 ## 🧩 Framework Support
 
@@ -579,6 +624,38 @@ Provider-specific mapping:
 - **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
 
 When available, the resolved value is echoed back on response as `service_tier`.
+
+### Conversations
+
+Hebo Gateway provides a dedicated `/conversations` endpoint for managing persistent conversation state. It is designed as an extension of the [OpenAI Conversations API](https://developers.openai.com/api/reference/typescript/resources/conversations) and supports standard CRUD operations alongside advanced listing with metadata filtering.
+
+#### List & Filter Conversations
+
+You can list conversations with standard cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
+
+```bash
+# List conversations for a specific user
+curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
+```
+
+The response follows the standard OpenAI list object:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "conv_abc123",
+      "object": "conversation",
+      "created_at": 1678531200,
+      "metadata": { "user_id": "123" }
+    }
+  ],
+  "first_id": "conv_abc123",
+  "last_id": "conv_abc123",
+  "has_more": false
+}
+```
 
 ### Prompt Caching
 
@@ -888,7 +965,7 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `embeddings` and `models` endpoints.
+Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `conversations`, `embeddings` and `models` endpoints.
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
