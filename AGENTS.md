@@ -58,7 +58,7 @@ If priorities conflict, apply this order:
 
 - Install deps: `bun install`
 - Build: `bun run build`
-- Type check: `bun run type-check`
+- Type check: `bun run typecheck`
 - Test: `bun run test`
 - Lint: `bun run lint`
 - Format: `bun run format`
@@ -69,7 +69,7 @@ If priorities conflict, apply this order:
 1. Read the touched feature area first (`models`, `providers`, `endpoints`, etc.).
 2. Keep edits minimal and localized; avoid broad refactors unless asked.
 3. Update related tests when behavior changes.
-4. Run `bun run type-check` and `bun run test`.
+4. Run `bun run check` and `bun run test`.
 5. If formatting/linting is impacted, run `bun run format` and `bun run lint`.
 
 ## Model Preset Changes
@@ -110,7 +110,7 @@ When adjusting canonicalization:
 ## PR/Commit Checklist
 
 - [ ] Change is scoped to requested behavior.
-- [ ] Types compile (`bun run type-check`).
+- [ ] Types compile (`bun run typecheck`).
 - [ ] Tests pass (`bun run test`) or failures are documented.
 - [ ] Model metadata (`created`, `knowledge`) follows `Model Preset Changes` when touched.
 - [ ] New canonical IDs are reflected in both model presets and provider mappings.
