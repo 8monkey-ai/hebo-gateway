@@ -43,10 +43,7 @@ describe("SQL Dialect Utilities", () => {
 
   describe("createParamsMapper", () => {
     test("should pipe multiple mappers to params", () => {
-      const mapper = createParamsMapper([
-        dateToNumber,
-        (v) => (typeof v === "number" ? v * 2 : v),
-      ]);
+      const mapper = createParamsMapper([dateToNumber, (v) => (typeof v === "number" ? v * 2 : v)]);
       const now = new Date(1000);
       const results = mapper([now, 50]);
       expect(results).toEqual([2000, 100]);
@@ -56,7 +53,7 @@ describe("SQL Dialect Utilities", () => {
   describe("Row Mappers", () => {
     test("parseJson with GreptimeDB Unicode workaround", () => {
       const mapper = parseJson("data");
-      
+
       // Standard JSON
       const row1 = { data: '{"foo":"bar"}' };
       expect(mapper(row1)["data"]).toEqual({ foo: "bar" });
@@ -79,7 +76,7 @@ describe("SQL Dialect Utilities", () => {
       const mapper = mergeData("data");
       const row = { id: 1, data: { name: "test", val: 100 } };
       const result = mapper(row);
-      
+
       expect(result["id"]).toBe(1);
       expect(result["name"]).toBe("test");
       expect(result["val"]).toBe(100);
@@ -90,12 +87,12 @@ describe("SQL Dialect Utilities", () => {
       const mapper = createRowMapper<Record<string, any>>([
         parseJson("data"),
         mergeData("data"),
-        toMilliseconds("created_at")
+        toMilliseconds("created_at"),
       ]);
 
       const row = {
         created_at: "1000",
-        data: '{"foo":"bar"}'
+        data: '{"foo":"bar"}',
       };
 
       const result = mapper(row);

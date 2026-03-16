@@ -8,7 +8,7 @@ import type {
   ConversationItemInput,
   ConversationQueryOptions,
 } from "./types";
-import type { SqlDialect } from "./dialects/types";
+import type { SqlDialect, QueryExecutor } from "./dialects/types";
 
 import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 
@@ -126,7 +126,7 @@ export class SqlStorage implements ConversationStorage {
     }
   }
 
-  async createConversation(params: {
+  createConversation(params: {
     metadata?: ConversationMetadata;
     items?: ConversationItemInput[];
   }): Promise<ConversationEntity> {
@@ -136,29 +136,38 @@ export class SqlStorage implements ConversationStorage {
     const metadata = params.metadata ?? null;
     const now = new Date();
 
-    await this.executor.run(
-      `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
-        0,
-      )}, ${p(1)}, ${p(2)})`,
-      [id, metadata, now],
-    );
+    return this.executor.transaction(async (tx) => {
+      await tx.run(
+        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
+          0,
+        )}, ${p(1)}, ${p(2)})`,
+        [id, metadata, now],
+      );
 
-    const conversation: ConversationEntity = {
-      id,
-      created_at: now.getTime(),
-      metadata,
-    };
+      const conversation: ConversationEntity = {
+        id,
+        created_at: now.getTime(),
+        metadata,
+      };
 
-    if (params.items?.length) {
-      await this.addItemsInternal(id, params.items, true);
-    }
+      if (params.items?.length) {
+        await this.addItemsInternal(id, params.items, true, tx);
+      }
 
-    return conversation;
+      return conversation;
+    });
   }
 
-  async getConversation(id: string): Promise<ConversationEntity | undefined> {
+  getConversation(id: string): Promise<ConversationEntity | undefined> {
+    return this.getConversationInternal(id, this.executor);
+  }
+
+  private async getConversationInternal(
+    id: string,
+    executor: QueryExecutor,
+  ): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q, selectJson: sj } = this.config;
-    const row = await this.executor.get<Record<string, unknown>>(
+    const row = await executor.get<Record<string, unknown>>(
       `SELECT ${q("id")}, ${q("created_at")}, ${sj(q("metadata"))} as ${q("metadata")} FROM ${q(
         "conversations",
       )} WHERE ${q("id")} = ${p(0)} ORDER BY ${q("created_at")} DESC LIMIT 1`,
@@ -166,6 +175,7 @@ export class SqlStorage implements ConversationStorage {
     );
     return row ? (rowMapper(row) as ConversationEntity) : undefined;
   }
+
   async listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]> {
     const { after, order, limit, metadata } = params;
     const { placeholder: p, quote: q, selectJson: sj, limitAsLiteral } = this.config;
@@ -234,15 +244,10 @@ export class SqlStorage implements ConversationStorage {
       //    This prevents clients from accidentally creating "zombie" conversations with custom IDs.
       // 2. Consistency: Standard SQL (Postgres/MySQL/SQLite) preserves the original creation timestamp.
       // 3. Deduplication: GreptimeDB requires the EXACT same Time Index (created_at) to deduplicate the row.
-      const row = await tx.get<{ created_at: Date | number }>(
-        `SELECT ${q("created_at")} FROM ${q("conversations")} WHERE ${q("id")} = ${p(
-          0,
-        )} ORDER BY ${q("created_at")} DESC LIMIT 1`,
-        [id],
-      );
+      const conversation = await this.getConversationInternal(id, tx);
 
-      if (!row) return;
-      const createdAt = row.created_at;
+      if (!conversation) return;
+      const createdAt = conversation.created_at;
 
       const pk = ["id"];
       const updateCols = ["metadata"];
@@ -252,12 +257,12 @@ export class SqlStorage implements ConversationStorage {
         `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
           0,
         )}, ${p(1)}, ${p(2)}) ${suffix}`,
-        [id, metadata ?? null, createdAt],
+        [id, metadata ?? null, new Date(createdAt)],
       );
 
       return {
         id,
-        created_at: createdAt instanceof Date ? createdAt.getTime() : Number(createdAt),
+        created_at: createdAt,
         metadata: metadata ?? null,
       };
     });
@@ -281,28 +286,29 @@ export class SqlStorage implements ConversationStorage {
     return this.addItemsInternal(conversationId, items, false);
   }
 
-  private async addItemsInternal(
+  private addItemsInternal(
     conversationId: string,
     items: ConversationItemInput[],
     skipCheck = false,
+    executor: QueryExecutor = this.executor,
   ): Promise<ConversationItemEntity[] | undefined> {
-    if (!skipCheck) {
-      const conversation = await this.getConversation(conversationId);
-      if (!conversation) return undefined;
-    }
+    return executor.transaction(async (tx) => {
+      if (!skipCheck) {
+        const conversation = await this.getConversationInternal(conversationId, tx);
+        if (!conversation) return;
+      }
 
-    const { placeholder: p, quote: q } = this.config;
-    const columns = ["id", "conversation_id", "type", "data", "created_at"];
+      const { placeholder: p, quote: q } = this.config;
+      const columns = ["id", "conversation_id", "type", "data", "created_at"];
 
-    const placeholders = columns.map((_, i) => p(i)).join(", ");
-    const sql = `INSERT INTO ${q("conversation_items")} (${columns
-      .map((c) => q(c))
-      .join(", ")}) VALUES (${placeholders})`;
+      const placeholders = columns.map((_, i) => p(i)).join(", ");
+      const sql = `INSERT INTO ${q("conversation_items")} (${columns
+        .map((c) => q(c))
+        .join(", ")}) VALUES (${placeholders})`;
 
-    const now = Date.now();
-    const results: ConversationItemEntity[] = [];
+      const now = Date.now();
+      const results: ConversationItemEntity[] = [];
 
-    await this.executor.transaction(async (tx) => {
       let i = 0;
       for (const input of items) {
         const { id: inputId, type } = input;
@@ -320,9 +326,9 @@ export class SqlStorage implements ConversationStorage {
 
         results.push(item);
       }
-    });
 
-    return results;
+      return results;
+    });
   }
 
   async getItem(
@@ -341,25 +347,25 @@ export class SqlStorage implements ConversationStorage {
     return row ? (rowMapper(row) as ConversationItemEntity) : undefined;
   }
 
-  async deleteItem(
-    conversationId: string,
-    itemId: string,
-  ): Promise<ConversationEntity | undefined> {
+  deleteItem(conversationId: string, itemId: string): Promise<ConversationEntity | undefined> {
     const { placeholder: p, quote: q } = this.config;
-    await this.executor.run(
-      `DELETE FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
-        "conversation_id",
-      )} = ${p(1)}`,
-      [itemId, conversationId],
-    );
-    return this.getConversation(conversationId);
+
+    return this.executor.transaction(async (tx) => {
+      await tx.run(
+        `DELETE FROM ${q("conversation_items")} WHERE ${q("id")} = ${p(0)} AND ${q(
+          "conversation_id",
+        )} = ${p(1)}`,
+        [itemId, conversationId],
+      );
+      return this.getConversationInternal(conversationId, tx);
+    });
   }
 
   async listItems(
     conversationId: string,
     params: ConversationQueryOptions,
   ): Promise<ConversationItemEntity[] | undefined> {
-    const conversation = await this.getConversation(conversationId);
+    const conversation = await this.getConversationInternal(conversationId, this.executor);
     if (!conversation) return undefined;
 
     const { after, order, limit } = params;

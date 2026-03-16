@@ -5,7 +5,7 @@ import { SqlStorage } from "../sql";
 describe("MySQL Dialect (Mocked)", () => {
   const createMockPool = () => {
     const queries: { sql: string; params: unknown[] }[] = [];
-    
+
     const execute = mock((sql: string, params?: unknown[]) => {
       queries.push({ sql, params: params ?? [] });
       // Return a mock result: [rows, fields]
@@ -21,13 +21,15 @@ describe("MySQL Dialect (Mocked)", () => {
 
     const pool = {
       execute,
-      getConnection: mock(() => Promise.resolve({
-        execute,
-        beginTransaction: mock(() => Promise.resolve()),
-        commit: mock(() => Promise.resolve()),
-        rollback: mock(() => Promise.resolve()),
-        release: mock(() => {}),
-      })),
+      getConnection: mock(() =>
+        Promise.resolve({
+          execute,
+          beginTransaction: mock(() => Promise.resolve()),
+          commit: mock(() => Promise.resolve()),
+          rollback: mock(() => Promise.resolve()),
+          release: mock(() => {}),
+        }),
+      ),
     };
 
     return { pool, queries };
@@ -42,10 +44,12 @@ describe("MySQL Dialect (Mocked)", () => {
     const metadata = { foo: "bar" };
     await storage.createConversation({ metadata });
 
-    const insertConv = queries.find(q => q.sql.includes("INSERT INTO `conversations`"));
+    const insertConv = queries.find((q) => q.sql.includes("INSERT INTO `conversations`"));
     expect(insertConv).toBeDefined();
     // Verify MySQL specific: backticks and ? placeholders
-    expect(insertConv!.sql).toContain("INSERT INTO `conversations` (`id`, `metadata`, `created_at`) VALUES (?, ?, ?)");
+    expect(insertConv!.sql).toContain(
+      "INSERT INTO `conversations` (`id`, `metadata`, `created_at`) VALUES (?, ?, ?)",
+    );
     // Verify JSON mapping
     expect(insertConv!.params[1]).toBe(JSON.stringify(metadata));
     // Verify Date mapping (should be number/timestamp for BIGINT)
@@ -55,12 +59,14 @@ describe("MySQL Dialect (Mocked)", () => {
 
     // 2. Add Items (Testing Batch/Transaction)
     await storage.addItems("conv-1", [
-      { id: "item-1", type: "message", role: "user", content: "hello" }
+      { id: "item-1", type: "message", role: "user", content: "hello" },
     ]);
 
-    const insertItem = queries.find(q => q.sql.includes("INSERT INTO `conversation_items`"));
+    const insertItem = queries.find((q) => q.sql.includes("INSERT INTO `conversation_items`"));
     expect(insertItem).toBeDefined();
-    expect(insertItem!.sql).toContain("INSERT INTO `conversation_items` (`id`, `conversation_id`, `type`, `data`, `created_at`) VALUES (?, ?, ?, ?, ?)");
+    expect(insertItem!.sql).toContain(
+      "INSERT INTO `conversation_items` (`id`, `conversation_id`, `type`, `data`, `created_at`) VALUES (?, ?, ?, ?, ?)",
+    );
     expect(pool.getConnection).toHaveBeenCalled();
   });
 
@@ -74,14 +80,14 @@ describe("MySQL Dialect (Mocked)", () => {
 
     await storage.updateConversation("conv-1", { updated: "true" });
 
-    const upsertQuery = queries.find(q => q.sql.includes("ON DUPLICATE KEY UPDATE"));
+    const upsertQuery = queries.find((q) => q.sql.includes("ON DUPLICATE KEY UPDATE"));
     expect(upsertQuery).toBeDefined();
     // MySQL specific UPSERT syntax
     expect(upsertQuery!.sql).toContain("ON DUPLICATE KEY UPDATE `metadata` = VALUES(`metadata`)");
   });
 
   test("should generate correct JSON extraction for MySQL", () => {
-    const expression = MySQLDialectConfig.jsonExtract("`metadata`" , "user_id");
+    const expression = MySQLDialectConfig.jsonExtract("`metadata`", "user_id");
     // MySQL specific JSON extraction
     expect(expression).toBe("JSON_EXTRACT(`metadata`, '$.user_id')");
   });

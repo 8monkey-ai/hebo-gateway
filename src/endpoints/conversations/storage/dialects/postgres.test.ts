@@ -5,13 +5,13 @@ import { SqlStorage } from "../sql";
 describe("Postgres Dialect (Mocked)", () => {
   const createMockPool = () => {
     const queries: { sql: string; params: unknown[] }[] = [];
-    
+
     const query = mock((queryInput: string | { text: string; values?: unknown[] }) => {
       const text = typeof queryInput === "string" ? queryInput : queryInput.text;
       const values = typeof queryInput === "string" ? [] : (queryInput.values ?? []);
-      
+
       queries.push({ sql: text, params: values });
-      
+
       // Return a mock result
       if (text.trim().toUpperCase().startsWith("SELECT")) {
         if (text.includes('FROM "conversations"')) {
@@ -24,10 +24,12 @@ describe("Postgres Dialect (Mocked)", () => {
 
     const pool = {
       query,
-      connect: mock(() => Promise.resolve({
-        query,
-        release: mock(() => {}),
-      })),
+      connect: mock(() =>
+        Promise.resolve({
+          query,
+          release: mock(() => {}),
+        }),
+      ),
     };
 
     return { pool, queries };
@@ -42,10 +44,12 @@ describe("Postgres Dialect (Mocked)", () => {
     const metadata = { foo: "bar" };
     await storage.createConversation({ metadata });
 
-    const insertConv = queries.find(q => q.sql.includes('INSERT INTO "conversations"'));
+    const insertConv = queries.find((q) => q.sql.includes('INSERT INTO "conversations"'));
     expect(insertConv).toBeDefined();
     // Verify Postgres specific: double quotes and $ placeholders
-    expect(insertConv!.sql).toContain('INSERT INTO "conversations" ("id", "metadata", "created_at") VALUES ($1, $2, $3)');
+    expect(insertConv!.sql).toContain(
+      'INSERT INTO "conversations" ("id", "metadata", "created_at") VALUES ($1, $2, $3)',
+    );
     // Verify JSON mapping (pg natively supports JSON objects, so it doesn't stringify)
     expect(insertConv!.params[1]).toEqual(metadata);
     // Verify Date mapping (should be number for BIGINT)
@@ -55,12 +59,14 @@ describe("Postgres Dialect (Mocked)", () => {
 
     // 2. Add Items
     await storage.addItems("conv-1", [
-      { id: "item-1", type: "message", role: "user", content: "hello" }
+      { id: "item-1", type: "message", role: "user", content: "hello" },
     ]);
 
-    const insertItem = queries.find(q => q.sql.includes('INSERT INTO "conversation_items"'));
+    const insertItem = queries.find((q) => q.sql.includes('INSERT INTO "conversation_items"'));
     expect(insertItem).toBeDefined();
-    expect(insertItem!.sql).toContain('INSERT INTO "conversation_items" ("id", "conversation_id", "type", "data", "created_at") VALUES ($1, $2, $3, $4, $5)');
+    expect(insertItem!.sql).toContain(
+      'INSERT INTO "conversation_items" ("id", "conversation_id", "type", "data", "created_at") VALUES ($1, $2, $3, $4, $5)',
+    );
     expect(pool.connect).toHaveBeenCalled();
   });
 
@@ -71,14 +77,16 @@ describe("Postgres Dialect (Mocked)", () => {
 
     await storage.updateConversation("conv-1", { updated: "true" });
 
-    const upsertQuery = queries.find(q => q.sql.includes("ON CONFLICT"));
+    const upsertQuery = queries.find((q) => q.sql.includes("ON CONFLICT"));
     expect(upsertQuery).toBeDefined();
     // Postgres specific UPSERT syntax
-    expect(upsertQuery!.sql).toContain('ON CONFLICT ("id") DO UPDATE SET "metadata" = EXCLUDED."metadata"');
+    expect(upsertQuery!.sql).toContain(
+      'ON CONFLICT ("id") DO UPDATE SET "metadata" = EXCLUDED."metadata"',
+    );
   });
 
   test("should generate correct JSON extraction for Postgres", () => {
-    const expression = PostgresDialectConfig.jsonExtract('c."metadata"' , "user_id");
+    const expression = PostgresDialectConfig.jsonExtract('c."metadata"', "user_id");
     // Postgres specific JSON extraction
     expect(expression).toBe(`c."metadata"->>'user_id'`);
   });
