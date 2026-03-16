@@ -43,18 +43,17 @@ export {
 } from "../shared/schema";
 
 import {
-  ChatCompletionsCacheControlSchema,
-  ChatCompletionsReasoningEffortSchema,
-  ChatCompletionsReasoningConfigSchema,
-  ChatCompletionsServiceTierSchema,
-} from "../chat-completions/schema";
+  CacheControlSchema,
+  ReasoningEffortSchema,
+  ReasoningConfigSchema,
+  ServiceTierSchema,
+  type CacheControl,
+  type ReasoningEffort,
+  type ReasoningConfig,
+  type ServiceTier,
+} from "../shared/schema";
 
-export type {
-  ChatCompletionsCacheControl,
-  ChatCompletionsReasoningEffort,
-  ChatCompletionsReasoningConfig,
-  ChatCompletionsServiceTier,
-} from "../chat-completions/schema";
+export type { CacheControl, ReasoningEffort, ReasoningConfig, ServiceTier };
 
 /**
  * --- Tools ---
@@ -122,14 +121,14 @@ const ResponsesInputsSchema = z.object({
   frequency_penalty: z.number().min(-2.0).max(2.0).optional(),
   presence_penalty: z.number().min(-2.0).max(2.0).optional(),
   max_output_tokens: z.number().int().nonnegative().optional(),
-  reasoning: ChatCompletionsReasoningConfigSchema.optional(),
+  reasoning: ReasoningConfigSchema.optional(),
   prompt_cache_key: z.string().optional(),
   metadata: MetadataSchema,
-  service_tier: ChatCompletionsServiceTierSchema.optional(),
+  service_tier: ServiceTierSchema.optional(),
   // Extension origin: OpenRouter/Vercel/Anthropic
-  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
+  cache_control: CacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter
-  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional().meta({ extension: true }),
+  reasoning_effort: ReasoningEffortSchema.optional().meta({ extension: true }),
   // Extension origin: Gemini extra_body
   extra_body: z
     .record(z.string(), z.record(z.string(), z.unknown()))
@@ -149,13 +148,15 @@ export type ResponsesBody = z.infer<typeof ResponsesBodySchema>;
  * --- Output Items ---
  */
 
-export const ResponseOutputMessageSchema = z.object({
-  type: z.literal("message"),
-  id: z.string(),
-  role: z.literal("assistant"),
-  status: z.enum(["in_progress", "completed", "incomplete"]),
-  content: z.array(ResponseOutputTextSchema),
-});
+export const ResponseOutputMessageSchema = z
+  .object({
+    type: z.literal("message"),
+    id: z.string(),
+    role: z.literal("assistant"),
+    status: z.enum(["in_progress", "completed", "incomplete"]),
+    content: z.array(ResponseOutputTextSchema),
+  })
+  .loose();
 export type ResponseOutputMessage = z.infer<typeof ResponseOutputMessageSchema>;
 
 export const ResponseOutputItemSchema = z.discriminatedUnion("type", [
@@ -208,7 +209,7 @@ export const ResponsesSchema = z.object({
     .optional(),
   created_at: z.number().int(),
   completed_at: z.number().int().nullable(),
-  service_tier: ChatCompletionsServiceTierSchema.optional(),
+  service_tier: ServiceTierSchema.optional(),
   metadata: MetadataSchema,
   // Extension origin: Vercel AI Gateway
   provider_metadata: z

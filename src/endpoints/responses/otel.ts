@@ -149,8 +149,7 @@ export const getResponsesResponseAttributes = (
       "gen_ai.response.service_tier": responses.service_tier,
       "gen_ai.usage.total_tokens": responses.usage?.total_tokens,
       "gen_ai.usage.input_tokens": responses.usage?.input_tokens,
-      "gen_ai.usage.cache_read.input_tokens":
-        responses.usage?.input_tokens_details?.cached_tokens,
+      "gen_ai.usage.cache_read.input_tokens": responses.usage?.input_tokens_details?.cached_tokens,
       "gen_ai.usage.output_tokens": responses.usage?.output_tokens,
       "gen_ai.usage.reasoning.output_tokens":
         responses.usage?.output_tokens_details?.reasoning_tokens,

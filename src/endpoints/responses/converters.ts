@@ -1,8 +1,4 @@
-import type {
-  SharedV3ProviderOptions,
-  SharedV3ProviderMetadata,
-  JSONObject,
-} from "@ai-sdk/provider";
+import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -17,7 +13,6 @@ import type {
   LanguageModelUsage,
   TextStreamPart,
   ReasoningOutput,
-  JSONValue,
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
@@ -48,18 +43,19 @@ import type {
   ResponsesTextConfig,
 } from "./schema";
 
-import type {
-  ChatCompletionsCacheControl,
-  ChatCompletionsReasoningEffort,
-  ChatCompletionsReasoningConfig,
-  ChatCompletionsServiceTier,
-} from "../chat-completions/schema";
-
 import type { SseErrorFrame } from "../../utils/stream";
 
 import { GatewayError } from "../../errors/gateway";
 import { toResponse } from "../../utils/response";
 import { parseDataUrl } from "../../utils/url";
+import {
+  parseJsonOrText,
+  parseReasoningOptions,
+  parsePromptCachingOptions,
+  resolveResponseServiceTier,
+  normalizeToolName,
+  stripEmptyKeys,
+} from "../shared/converters";
 
 export type TextCallOptions = {
   messages: ModelMessage[];
@@ -97,7 +93,7 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
   } = params;
 
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
-  Object.assign(rest, parsePromptCachingOptions(prompt_cache_key, cache_control));
+  Object.assign(rest, parsePromptCachingOptions(prompt_cache_key, undefined, cache_control));
 
   if (extra_body) {
     for (const v of Object.values(extra_body)) {
@@ -175,13 +171,39 @@ export function convertToModelMessages(
     }
 
     if (item.type === "reasoning") {
-      // Reasoning items don't map directly to model messages in request flow;
-      // they are context items the model already produced.
+      modelMessages.push(fromReasoningItem(item));
       continue;
     }
   }
 
   return modelMessages;
+}
+
+function fromReasoningItem(item: ResponseReasoningItem): AssistantModelMessage {
+  const parts: AssistantContent = [];
+
+  if (item.summary && item.summary.length > 0) {
+    for (const s of item.summary) {
+      const extra = (item as Record<string, unknown>)["extra_content"] as
+        | Record<string, unknown>
+        | undefined;
+      parts.push({
+        type: "reasoning",
+        text: s.text,
+        providerOptions:
+          extra || item.encrypted_content
+            ? {
+                unknown: {
+                  ...extra,
+                  redactedData: item.encrypted_content,
+                },
+              }
+            : undefined,
+      });
+    }
+  }
+
+  return { role: "assistant", content: parts };
 }
 
 function indexToolOutputs(items: ResponseInputItem[]) {
@@ -200,7 +222,10 @@ function fromMessageItem(item: MessageItemUnion): ModelMessage {
     case "developer":
       return {
         role: "system",
-        content: typeof item.content === "string" ? item.content : item.content.map(fromInputContentPart).join(""),
+        content:
+          typeof item.content === "string"
+            ? item.content
+            : item.content.map(fromInputContentPart).join(""),
       };
     case "user":
       return fromUserMessageItem(item);
@@ -209,9 +234,7 @@ function fromMessageItem(item: MessageItemUnion): ModelMessage {
   }
 }
 
-function fromUserMessageItem(
-  item: MessageItemUnion & { role: "user" },
-): UserModelMessage {
+function fromUserMessageItem(item: MessageItemUnion & { role: "user" }): UserModelMessage {
   if (typeof item.content === "string") {
     return { role: "user", content: item.content };
   }
@@ -242,9 +265,7 @@ function fromUserMessageItem(
   return { role: "user", content };
 }
 
-function fromImageInput(
-  url: string,
-): ImagePart | FilePart {
+function fromImageInput(url: string): ImagePart | FilePart {
   if (url.startsWith("data:")) {
     const { mimeType, dataStart } = parseDataUrl(url);
     if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
@@ -264,10 +285,7 @@ function fromImageInput(
   };
 }
 
-function fromFileInput(
-  data: string,
-  filename?: string,
-): FilePart {
+function fromFileInput(data: string, filename?: string): FilePart {
   return {
     type: "file",
     data: z.util.base64ToUint8Array(data),
@@ -276,9 +294,7 @@ function fromFileInput(
   };
 }
 
-function fromInputContentPart(
-  part: { type: string; text?: string },
-): string {
+function fromInputContentPart(part: { type: string; text?: string }): string {
   if ("text" in part && typeof part.text === "string") {
     return part.text;
   }
@@ -289,7 +305,11 @@ function fromAssistantMessageItem(
   item: MessageItemUnion & { role: "assistant" },
 ): AssistantModelMessage {
   if (typeof item.content === "string") {
-    return { role: "assistant", content: item.content };
+    const out: AssistantModelMessage = { role: "assistant", content: item.content };
+    if ("extra_content" in item && item["extra_content"]) {
+      out.providerOptions = item["extra_content"] as SharedV3ProviderOptions;
+    }
+    return out;
   }
 
   const parts: AssistantContent = [];
@@ -299,18 +319,25 @@ function fromAssistantMessageItem(
     }
   }
 
-  return { role: "assistant", content: parts.length > 0 ? parts : "" };
+  const out: AssistantModelMessage = { role: "assistant", content: parts.length > 0 ? parts : "" };
+  if ("extra_content" in item && item["extra_content"]) {
+    out.providerOptions = item["extra_content"] as SharedV3ProviderOptions;
+  }
+  return out;
 }
 
-function fromFunctionCallItem(
-  item: ResponseFunctionToolCall,
-): AssistantModelMessage {
+function fromFunctionCallItem(item: ResponseFunctionToolCall): AssistantModelMessage {
   const toolCall: ToolCallPart = {
     type: "tool-call",
     toolCallId: item.call_id,
     toolName: item.name,
     input: parseJsonOrText(item.arguments).value,
   };
+
+  if ("extra_content" in item && item["extra_content"]) {
+    toolCall.providerOptions = item["extra_content"] as SharedV3ProviderOptions;
+  }
+
   return { role: "assistant", content: [toolCall] };
 }
 
@@ -321,9 +348,10 @@ function fromFunctionCallOutputItem(
   const output = toolOutputByCallId.get(item.call_id);
   if (!output) return undefined;
 
-  const result = typeof output.output === "string"
-    ? parseJsonOrText(output.output)
-    : { type: "text" as const, value: output.output.map(fromInputContentPart).join("") };
+  const result =
+    typeof output.output === "string"
+      ? parseJsonOrText(output.output)
+      : { type: "text" as const, value: output.output.map(fromInputContentPart).join("") };
 
   return {
     role: "tool",
@@ -369,62 +397,6 @@ export const convertToToolChoiceOptions = (
   };
 };
 
-function parseJsonOrText(
-  content: string,
-): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
-  try {
-    // oxlint-disable-next-line no-unsafe-assignment
-    return { type: "json", value: JSON.parse(content) };
-  } catch {
-    return { type: "text", value: content };
-  }
-}
-
-function parseReasoningOptions(
-  reasoning_effort: ChatCompletionsReasoningEffort | undefined,
-  reasoning: ChatCompletionsReasoningConfig | undefined,
-) {
-  const effort = reasoning?.effort ?? reasoning_effort;
-  const max_tokens = reasoning?.max_tokens;
-
-  if (reasoning?.enabled === false || effort === "none") {
-    return { reasoning: { enabled: false }, reasoning_effort: "none" };
-  }
-  if (!reasoning && effort === undefined) return {};
-
-  const out: {
-    reasoning: ChatCompletionsReasoningConfig;
-    reasoning_effort?: ChatCompletionsReasoningEffort;
-  } = { reasoning: {} };
-
-  if (effort) {
-    out.reasoning.enabled = true;
-    out.reasoning.effort = effort;
-    out.reasoning_effort = effort;
-  }
-  if (max_tokens) {
-    out.reasoning.enabled = true;
-    out.reasoning.max_tokens = max_tokens;
-  }
-  if (out.reasoning.enabled) {
-    out.reasoning.exclude = reasoning?.exclude;
-  }
-
-  return out;
-}
-
-function parsePromptCachingOptions(
-  prompt_cache_key: string | undefined,
-  cache_control: ChatCompletionsCacheControl | undefined,
-) {
-  const out: Record<string, unknown> = {};
-
-  if (prompt_cache_key) out["prompt_cache_key"] = prompt_cache_key;
-  if (cache_control) out["cache_control"] = cache_control;
-
-  return out;
-}
-
 // --- Response Flow ---
 
 export function toResponses(
@@ -444,9 +416,7 @@ export function toResponses(
     output,
     usage: result.totalUsage ? toResponsesUsage(result.totalUsage) : null,
     incomplete_details:
-      status === "incomplete"
-        ? { reason: toIncompleteReason(result.finishReason) }
-        : null,
+      status === "incomplete" ? { reason: toIncompleteReason(result.finishReason) } : null,
     created_at: now,
     completed_at: status === "completed" ? now : null,
     service_tier: resolveResponseServiceTier(result.providerMetadata),
@@ -481,9 +451,7 @@ export function toResponsesStreamResponse(
   return toResponse(toResponsesStream(result, model, metadata), responseInit);
 }
 
-function toOutputItems(
-  result: GenerateTextResult<ToolSet, Output.Output>,
-): ResponseOutputItem[] {
+function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): ResponseOutputItem[] {
   const output: ResponseOutputItem[] = [];
 
   // Add reasoning items
@@ -496,14 +464,19 @@ function toOutputItems(
   // Add function call items
   if (result.toolCalls && result.toolCalls.length > 0) {
     for (const tc of result.toolCalls) {
-      output.push({
+      const fnItem: ResponseFunctionToolCall = {
         type: "function_call",
         id: "fc_" + crypto.randomUUID(),
         call_id: tc.toolCallId,
         name: normalizeToolName(tc.toolName),
-        arguments: typeof tc.input === "string" ? tc.input : JSON.stringify(stripEmptyKeys(tc.input)),
+        arguments:
+          typeof tc.input === "string" ? tc.input : JSON.stringify(stripEmptyKeys(tc.input)),
         status: "completed",
-      });
+      };
+      if (tc.providerMetadata) {
+        (fnItem as Record<string, unknown>)["extra_content"] = tc.providerMetadata;
+      }
+      output.push(fnItem);
     }
   }
 
@@ -520,13 +493,18 @@ function toOutputItems(
   }
 
   if (textParts.length > 0 || result.toolCalls.length === 0) {
-    output.push({
+    const msgItem: ResponseOutputMessage = {
       type: "message",
       id: "msg_" + crypto.randomUUID(),
       role: "assistant",
       status: "completed",
-      content: textParts.length > 0 ? textParts : [{ type: "output_text", text: "", annotations: [] }],
-    });
+      content:
+        textParts.length > 0 ? textParts : [{ type: "output_text", text: "", annotations: [] }],
+    };
+    if (result.providerMetadata) {
+      (msgItem as Record<string, unknown>)["extra_content"] = result.providerMetadata;
+    }
+    output.push(msgItem);
   }
 
   return output;
@@ -545,8 +523,15 @@ function toReasoningOutputItem(reasoning: ReasoningOutput): ResponseReasoningIte
   }
 
   const providerMetadata = reasoning.providerMetadata ?? {};
+  (item as Record<string, unknown>)["extra_content"] = providerMetadata;
+
   for (const metadata of Object.values(providerMetadata)) {
-    if (metadata && typeof metadata === "object" && "redactedData" in metadata && typeof metadata["redactedData"] === "string") {
+    if (
+      metadata &&
+      typeof metadata === "object" &&
+      "redactedData" in metadata &&
+      typeof metadata["redactedData"] === "string"
+    ) {
       item.encrypted_content = metadata["redactedData"];
     }
   }
@@ -605,80 +590,6 @@ function toIncompleteReason(finishReason: FinishReason): string {
   }
 }
 
-function resolveResponseServiceTier(
-  providerMetadata: SharedV3ProviderMetadata | undefined,
-): ChatCompletionsServiceTier | undefined {
-  if (!providerMetadata) return;
-
-  for (const metadata of Object.values(providerMetadata)) {
-    const tier = parseReturnedServiceTier(
-      metadata["service_tier"] ??
-        (metadata["usage_metadata"] as JSONObject | undefined)?.["traffic_type"],
-    );
-    if (tier) return tier;
-  }
-}
-
-function parseReturnedServiceTier(value: unknown): ChatCompletionsServiceTier | undefined {
-  if (typeof value !== "string") return undefined;
-
-  const n = value.toLowerCase();
-  switch (n) {
-    case "traffic_type_unspecified":
-    case "auto":
-      return "auto";
-    case "default":
-    case "on_demand":
-    case "on-demand":
-    case "shared":
-      return "default";
-    case "on_demand_flex":
-    case "flex":
-      return "flex";
-    case "on_demand_priority":
-    case "priority":
-    case "performance":
-      return "priority";
-    case "provisioned_throughput":
-    case "scale":
-    case "reserved":
-    case "dedicated":
-    case "provisioned":
-    case "throughput":
-      return "scale";
-    default:
-      return undefined;
-  }
-}
-
-function normalizeToolName(name: string): string {
-  let out = "";
-  for (let i = 0; i < name.length; i++) {
-    if (out.length === 128) break;
-    // oxlint-disable-next-line unicorn/prefer-code-point
-    const c = name.charCodeAt(i);
-    if (
-      (c >= 48 && c <= 57) ||
-      (c >= 65 && c <= 90) ||
-      (c >= 97 && c <= 122) ||
-      c === 95 ||
-      c === 45 ||
-      c === 46
-    ) {
-      out += name[i];
-    } else {
-      out += "_";
-    }
-  }
-  return out;
-}
-
-function stripEmptyKeys(obj: unknown) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
-  delete (obj as Record<string, unknown>)[""];
-  return obj;
-}
-
 // --- Streaming ---
 
 export class ResponsesTransformStream extends TransformStream<
@@ -706,7 +617,9 @@ export class ResponsesTransformStream extends TransformStream<
       metadata,
     });
 
-    const ensureMessageItem = (controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>) => {
+    const ensureMessageItem = (
+      controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
+    ) => {
       if (messageItem) return;
 
       messageItem = {
@@ -786,9 +699,10 @@ export class ResponsesTransformStream extends TransformStream<
               id: "fc_" + crypto.randomUUID(),
               call_id: part.toolCallId,
               name: normalizeToolName(part.toolName),
-              arguments: typeof part.input === "string"
-                ? part.input
-                : JSON.stringify(stripEmptyKeys(part.input)),
+              arguments:
+                typeof part.input === "string"
+                  ? part.input
+                  : JSON.stringify(stripEmptyKeys(part.input)),
               status: "completed",
             };
             const fnOutputIndex = outputIndex++;
@@ -858,9 +772,7 @@ export class ResponsesTransformStream extends TransformStream<
               usage,
               completed_at: status === "completed" ? now : null,
               incomplete_details:
-                status === "incomplete"
-                  ? { reason: toIncompleteReason(part.finishReason) }
-                  : null,
+                status === "incomplete" ? { reason: toIncompleteReason(part.finishReason) } : null,
               service_tier: resolveResponseServiceTier(finishProviderMetadata),
               provider_metadata: finishProviderMetadata,
             };

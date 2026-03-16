@@ -1,4 +1,4 @@
-import type { GenerateTextResult, ToolSet, Output } from "ai";
+import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai";
 
 import { describe, expect, test } from "bun:test";
 
@@ -118,9 +118,7 @@ describe("Responses Converters", () => {
         {
           type: "message",
           role: "user",
-          content: [
-            { type: "input_text", text: "Describe this image" },
-          ],
+          content: [{ type: "input_text", text: "Describe this image" }],
         },
       ]);
       expect(messages).toEqual([
@@ -224,9 +222,9 @@ describe("Responses Converters", () => {
       expect(convertToTextCallOptions({ input: "hi", tool_choice: "auto" }).toolChoice).toBe(
         "auto",
       );
-      expect(
-        convertToTextCallOptions({ input: "hi", tool_choice: "required" }).toolChoice,
-      ).toBe("required");
+      expect(convertToTextCallOptions({ input: "hi", tool_choice: "required" }).toolChoice).toBe(
+        "required",
+      );
       expect(convertToTextCallOptions({ input: "hi", tool_choice: "none" }).toolChoice).toBe(
         "none",
       );
@@ -421,7 +419,7 @@ describe("Responses Converters", () => {
         inputTokens: 100,
         outputTokens: 50,
         totalTokens: 150,
-      });
+      } as unknown as LanguageModelUsage);
 
       expect(usage).toEqual({
         input_tokens: 100,
@@ -444,14 +442,14 @@ describe("Responses Converters", () => {
           textTokens: 20,
           reasoningTokens: 10,
         },
-      });
+      } as unknown as LanguageModelUsage);
 
       expect(usage.input_tokens_details).toEqual({ cached_tokens: 60 });
       expect(usage.output_tokens_details).toEqual({ reasoning_tokens: 10 });
     });
 
     test("should default to 0 when tokens undefined", () => {
-      const usage = toResponsesUsage({});
+      const usage = toResponsesUsage({} as unknown as LanguageModelUsage);
 
       expect(usage.input_tokens).toBe(0);
       expect(usage.output_tokens).toBe(0);

@@ -673,6 +673,7 @@ curl -X POST http://localhost:3000/v1/gateway/responses \
 ```
 
 Key features:
+
 - String or array `input` (message, function_call, function_call_output, reasoning items)
 - `instructions` field mapped to system message
 - `text` output format config (`json_schema` or `text`) replacing `response_format`

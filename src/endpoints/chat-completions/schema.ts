@@ -1,12 +1,27 @@
 import * as z from "zod";
 
 import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import {
+  CacheControlSchema as ChatCompletionsCacheControlSchema,
+  type CacheControl as ChatCompletionsCacheControl,
+  ReasoningEffortSchema as ChatCompletionsReasoningEffortSchema,
+  type ReasoningEffort as ChatCompletionsReasoningEffort,
+  ReasoningConfigSchema as ChatCompletionsReasoningConfigSchema,
+  type ReasoningConfig as ChatCompletionsReasoningConfig,
+  ServiceTierSchema as ChatCompletionsServiceTierSchema,
+  type ServiceTier as ChatCompletionsServiceTier,
+} from "../shared/schema";
 
-export const ChatCompletionsCacheControlSchema = z.object({
-  type: z.literal("ephemeral"),
-  ttl: z.string().optional(),
-});
-export type ChatCompletionsCacheControl = z.infer<typeof ChatCompletionsCacheControlSchema>;
+export {
+  ChatCompletionsCacheControlSchema,
+  type ChatCompletionsCacheControl,
+  ChatCompletionsReasoningEffortSchema,
+  type ChatCompletionsReasoningEffort,
+  ChatCompletionsReasoningConfigSchema,
+  type ChatCompletionsReasoningConfig,
+  ChatCompletionsServiceTierSchema,
+  type ChatCompletionsServiceTier,
+};
 
 export const ChatCompletionsContentPartTextSchema = z.object({
   type: z.literal("text"),
@@ -191,24 +206,6 @@ export const ChatCompletionsToolChoiceSchema = z.union([
 ]);
 export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
 
-export const ChatCompletionsReasoningEffortSchema = z.enum([
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-]);
-export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
-
-export const ChatCompletionsReasoningConfigSchema = z.object({
-  enabled: z.optional(z.boolean()),
-  effort: z.optional(ChatCompletionsReasoningEffortSchema),
-  max_tokens: z.optional(z.number()),
-  exclude: z.optional(z.boolean()),
-});
-export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
-
 export const ChatCompletionsResponseFormatJsonSchema = z.object({
   // FUTURE: consider support for legacy json_object (if demand)
   type: z.literal("json_schema"),
@@ -234,14 +231,6 @@ export const ChatCompletionsMetadataSchema = z.record(
   z.string().max(512),
 );
 export type ChatCompletionsMetadata = z.infer<typeof ChatCompletionsMetadataSchema>;
-export const ChatCompletionsServiceTierSchema = z.enum([
-  "auto",
-  "default",
-  "flex",
-  "scale",
-  "priority",
-]);
-export type ChatCompletionsServiceTier = z.infer<typeof ChatCompletionsServiceTierSchema>;
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),

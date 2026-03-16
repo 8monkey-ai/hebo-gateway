@@ -225,9 +225,7 @@ describe("Responses Handler", () => {
     const data = await parseResponse<Responses>(res);
     expect(data!.status).toBe("completed");
 
-    const fnCall = data!.output.find(
-      (o: { type: string }) => o.type === "function_call",
-    );
+    const fnCall = data!.output.find((o: { type: string }) => o.type === "function_call");
     expect(fnCall).toBeDefined();
   });
 

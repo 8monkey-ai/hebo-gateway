@@ -64,8 +64,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.request.parsed");
 
     if (hooks?.before) {
-      ctx.body =
-        ((await hooks.before(ctx as BeforeHookContext)) as ResponsesBody) ?? ctx.body;
+      ctx.body = ((await hooks.before(ctx as BeforeHookContext)) as ResponsesBody) ?? ctx.body;
       addSpanEvent("hebo.hooks.before.completed");
     }
 
@@ -97,10 +96,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     const { model: _model, stream, ...inputs } = ctx.body;
     // oxlint-disable-next-line no-unsafe-argument
     const textOptions = convertToTextCallOptions(inputs);
-    logger.trace(
-      { requestId: ctx.requestId, options: textOptions },
-      "[responses] AI SDK options",
-    );
+    logger.trace({ requestId: ctx.requestId, options: textOptions }, "[responses] AI SDK options");
     addSpanEvent("hebo.options.prepared");
     setSpanAttributes(getResponsesRequestAttributes(ctx.body, genAiSignalLevel));
 
@@ -131,16 +127,10 @@ export const responses = (config: GatewayConfig): Endpoint => {
             ctx.resolvedModelId!,
             bodyMetadata,
           );
-          logger.trace(
-            { requestId: ctx.requestId, result: streamResult },
-            "[responses] Responses",
-          );
+          logger.trace({ requestId: ctx.requestId, result: streamResult }, "[responses] Responses");
           addSpanEvent("hebo.result.transformed");
 
-          const genAiResponseAttrs = getResponsesResponseAttributes(
-            streamResult,
-            genAiSignalLevel,
-          );
+          const genAiResponseAttrs = getResponsesResponseAttributes(streamResult, genAiSignalLevel);
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);

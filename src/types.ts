@@ -65,7 +65,14 @@ export type GatewayContext = {
   /**
    * Result returned by the handler (pre-response).
    */
-  result?: ChatCompletions | ChatCompletionsStream | Embeddings | Model | ModelList | Responses | ResponsesStream;
+  result?:
+    | ChatCompletions
+    | ChatCompletionsStream
+    | Embeddings
+    | Model
+    | ModelList
+    | Responses
+    | ResponsesStream;
   /**
    * Response object returned by the handler.
    */
@@ -147,7 +154,9 @@ export type GatewayHooks = {
     | Embeddings
     | Responses
     | ResponsesStream
-    | Promise<void | ChatCompletions | ChatCompletionsStream | Embeddings | Responses | ResponsesStream>;
+    | Promise<
+        void | ChatCompletions | ChatCompletionsStream | Embeddings | Responses | ResponsesStream
+      >;
   /**
    * Runs after the lifecycle has produced the final Response.
    * @returns Replacement Response, or undefined to keep original.
