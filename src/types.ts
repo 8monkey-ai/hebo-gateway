@@ -152,10 +152,19 @@ export type GatewayHooks = {
     | ChatCompletions
     | ChatCompletionsStream
     | Embeddings
+    | Model
+    | ModelList
     | Responses
     | ResponsesStream
     | Promise<
-        void | ChatCompletions | ChatCompletionsStream | Embeddings | Responses | ResponsesStream
+        | void
+        | ChatCompletions
+        | ChatCompletionsStream
+        | Embeddings
+        | Model
+        | ModelList
+        | Responses
+        | ResponsesStream
       >;
   /**
    * Runs after the lifecycle has produced the final Response.

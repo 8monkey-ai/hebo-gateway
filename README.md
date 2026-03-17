@@ -83,7 +83,6 @@ export const gw = gateway({
 
 > [!NOTE]
 > Don't forget to install the Groq provider package too: `@ai-sdk/groq`.
-
 > [!TIP]
 > Why `withCanonicalIdsForX`? In most cases you want your gateway to route using model IDs that are consistent across providers (e.g. `openai/gpt-oss-20b` rather than `openai.gpt-oss-20b-v1:0`). We call that `Canonical IDs` - they are what enable routing, fallbacks, and policy rules. Without this wrapper, providers only understands their native IDs, which would make cross-provider routing impossible.
 
@@ -682,7 +681,6 @@ Key features:
 
 > [!NOTE]
 > This is a stateless implementation. `previous_response_id` chaining and server-side response storage (`store`) are not supported.
-
 > [!IMPORTANT]
 > **Audio Modality**: While `/chat/completions` supports `input_audio`, the [Open Responses API specification](https://www.openresponses.org/specification) does not yet define an audio content type. Consequently, audio input is currently not supported on the `/responses` and `/conversations` endpoints.
 

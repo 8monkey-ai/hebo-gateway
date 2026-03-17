@@ -195,10 +195,10 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
   const parts: AssistantContent = [];
 
   if (item.summary && item.summary.length > 0) {
+    const extra = (item as Record<string, unknown>)["extra_content"] as
+      | Record<string, unknown>
+      | undefined;
     for (const s of item.summary) {
-      const extra = (item as Record<string, unknown>)["extra_content"] as
-        | Record<string, unknown>
-        | undefined;
       parts.push({
         type: "reasoning",
         text: s.text,
