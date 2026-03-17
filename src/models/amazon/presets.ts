@@ -31,7 +31,7 @@ const NOVA_EMBEDDINGS_BASE = {
 
 export const novaMicro = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova-micro" as const, {
   ...NOVA_TEXT_BASE,
-  name: "Amazon Nova Micro",
+  name: "Nova Micro",
   created: "2024-12-03",
   knowledge: "2024-10",
   context: 128000,
@@ -39,7 +39,7 @@ export const novaMicro = presetFor<CanonicalModelId, CatalogModel>()("amazon/nov
 
 export const novaLite = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova-lite" as const, {
   ...NOVA_MULTIMODAL_BASE,
-  name: "Amazon Nova Lite",
+  name: "Nova Lite",
   created: "2024-12-03",
   knowledge: "2024-10",
   context: 300000,
@@ -47,7 +47,7 @@ export const novaLite = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova
 
 export const novaPro = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova-pro" as const, {
   ...NOVA_MULTIMODAL_BASE,
-  name: "Amazon Nova Pro",
+  name: "Nova Pro",
   created: "2024-12-03",
   knowledge: "2024-10",
   context: 300000,
@@ -57,7 +57,7 @@ export const novaPremier = presetFor<CanonicalModelId, CatalogModel>()(
   "amazon/nova-premier" as const,
   {
     ...NOVA_MULTIMODAL_BASE,
-    name: "Amazon Nova Premier",
+    name: "Nova Premier",
     created: "2024-12-03",
     knowledge: "2024-10",
     context: 1000000,
@@ -68,7 +68,7 @@ export const nova2Lite = presetFor<CanonicalModelId, CatalogModel>()(
   "amazon/nova-2-lite" as const,
   {
     ...NOVA_TEXT_BASE,
-    name: "Amazon Nova 2 Lite",
+    name: "Nova 2 Lite",
     created: "2025-12-01",
     knowledge: "2024-10",
     context: 128000,
@@ -79,7 +79,7 @@ export const nova2MultimodalEmbeddings = presetFor<CanonicalModelId, CatalogMode
   "amazon/nova-2-multimodal-embeddings" as const,
   {
     ...NOVA_EMBEDDINGS_BASE,
-    name: "Amazon Nova Multimodal Embeddings",
+    name: "Nova 2 Embeddings",
     created: "2025-10-28",
     context: 8000,
   } satisfies CatalogModel,
