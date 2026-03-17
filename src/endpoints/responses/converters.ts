@@ -21,6 +21,7 @@ import type {
 } from "ai";
 
 import { Output, jsonSchema, tool } from "ai";
+import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 
 import type {
@@ -409,7 +410,7 @@ export function toResponses(
   const status = toResponsesStatus(result.finishReason);
 
   return {
-    id: "resp_" + crypto.randomUUID(),
+    id: "resp_" + uuidv7(),
     object: "response",
     status,
     model,
@@ -466,7 +467,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
     for (const tc of result.toolCalls) {
       const fnItem: ResponseFunctionToolCall = {
         type: "function_call",
-        id: "fc_" + crypto.randomUUID(),
+        id: uuidv7(),
         call_id: tc.toolCallId,
         name: normalizeToolName(tc.toolName),
         arguments:
@@ -495,7 +496,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
   if (textParts.length > 0 || result.toolCalls.length === 0) {
     const msgItem: ResponseOutputMessage = {
       type: "message",
-      id: "msg_" + crypto.randomUUID(),
+      id: uuidv7(),
       role: "assistant",
       status: "completed",
       content:
@@ -513,7 +514,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
 function toReasoningOutputItem(reasoning: ReasoningOutput): ResponseReasoningItem {
   const item: ResponseReasoningItem = {
     type: "reasoning",
-    id: "rs_" + crypto.randomUUID(),
+    id: uuidv7(),
     summary: [],
     status: "completed",
   };
@@ -597,7 +598,7 @@ export class ResponsesTransformStream extends TransformStream<
   ResponsesStreamEvent | SseErrorFrame
 > {
   constructor(model: string, metadata?: Record<string, string> | null) {
-    const responseId = `resp_${crypto.randomUUID()}`;
+    const responseId = `resp_${uuidv7()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let outputIndex = 0;
     let messageItem: ResponseOutputMessage | undefined;
@@ -624,7 +625,7 @@ export class ResponsesTransformStream extends TransformStream<
 
       messageItem = {
         type: "message",
-        id: "msg_" + crypto.randomUUID(),
+        id: uuidv7(),
         role: "assistant",
         status: "in_progress",
         content: [],
@@ -696,7 +697,7 @@ export class ResponsesTransformStream extends TransformStream<
           case "tool-call": {
             const fnItem: ResponseFunctionToolCall = {
               type: "function_call",
-              id: "fc_" + crypto.randomUUID(),
+              id: uuidv7(),
               call_id: part.toolCallId,
               name: normalizeToolName(part.toolName),
               arguments:

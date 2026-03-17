@@ -101,7 +101,7 @@ describe("Responses Converters", () => {
       });
     });
 
-    test("should skip reasoning items in input", () => {
+    test("should convert reasoning items to assistant messages", () => {
       const messages = convertToModelMessages([
         {
           type: "reasoning",
@@ -109,8 +109,12 @@ describe("Responses Converters", () => {
         },
         { type: "message", role: "user", content: "Hi" },
       ]);
-      expect(messages).toHaveLength(1);
-      expect(messages[0]!.role).toBe("user");
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: [{ type: "reasoning", text: "I'm thinking...", providerOptions: undefined }],
+      });
+      expect(messages[1]).toEqual({ role: "user", content: "Hi" });
     });
 
     test("should convert user message with input content parts", () => {
