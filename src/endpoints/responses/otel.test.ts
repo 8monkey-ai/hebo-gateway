@@ -141,15 +141,31 @@ describe("Responses OTEL", () => {
       service_tier: "default",
     };
 
-    const attrs = getResponsesResponseAttributes(response, "recommended");
+    const attrs = getResponsesResponseAttributes(response, "recommended", "stop");
 
     expect(attrs["gen_ai.response.id"]).toBe("resp_123");
-    expect(attrs["gen_ai.response.finish_reasons"]).toEqual(["completed"]);
+    expect(attrs["gen_ai.response.finish_reasons"]).toEqual(["stop"]);
     expect(attrs["gen_ai.usage.input_tokens"]).toBe(10);
     expect(attrs["gen_ai.usage.output_tokens"]).toBe(20);
     expect(attrs["gen_ai.usage.total_tokens"]).toBe(30);
     expect(attrs["gen_ai.usage.cache_read.input_tokens"]).toBe(4);
     expect(attrs["gen_ai.usage.reasoning.output_tokens"]).toBe(6);
+  });
+
+  test("should use responses.status if finishReason is not provided", () => {
+    const response: Responses = {
+      id: "resp_123",
+      object: "response",
+      status: "completed",
+      model: "openai/gpt-5",
+      output: [],
+      usage: null,
+      created_at: 1700000000,
+      completed_at: 1700000001,
+    };
+
+    const attrs = getResponsesResponseAttributes(response, "recommended");
+    expect(attrs["gen_ai.response.finish_reasons"]).toEqual(["completed"]);
   });
 
   test("should map output messages in full mode", () => {

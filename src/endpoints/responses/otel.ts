@@ -1,4 +1,5 @@
 import type { Attributes } from "@opentelemetry/api";
+import type { FinishReason } from "ai";
 
 import type { Responses, ResponsesBody, ResponsesInputItem, ResponsesMessageItem } from "./schema";
 
@@ -136,6 +137,7 @@ export const getResponsesRequestAttributes = (
 export const getResponsesResponseAttributes = (
   responses: Responses,
   signalLevel?: TelemetrySignalLevel,
+  finishReason?: FinishReason,
 ): Attributes => {
   if (!signalLevel || signalLevel === "off") return {};
 
@@ -145,7 +147,7 @@ export const getResponsesResponseAttributes = (
 
   if (signalLevel !== "required") {
     Object.assign(attrs, {
-      "gen_ai.response.finish_reasons": [responses.status],
+      "gen_ai.response.finish_reasons": finishReason ? [finishReason] : [responses.status],
       "gen_ai.response.service_tier": responses.service_tier,
       "gen_ai.usage.total_tokens": responses.usage?.total_tokens,
       "gen_ai.usage.input_tokens": responses.usage?.input_tokens,

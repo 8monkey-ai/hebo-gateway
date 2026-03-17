@@ -130,7 +130,11 @@ export const responses = (config: GatewayConfig): Endpoint => {
           logger.trace({ requestId: ctx.requestId, result: streamResult }, "[responses] Responses");
           addSpanEvent("hebo.result.transformed");
 
-          const genAiResponseAttrs = getResponsesResponseAttributes(streamResult, genAiSignalLevel);
+          const genAiResponseAttrs = getResponsesResponseAttributes(
+            streamResult,
+            genAiSignalLevel,
+            res.finishReason,
+          );
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
@@ -171,7 +175,11 @@ export const responses = (config: GatewayConfig): Endpoint => {
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[responses] Responses");
     addSpanEvent("hebo.result.transformed");
 
-    const genAiResponseAttrs = getResponsesResponseAttributes(ctx.result, genAiSignalLevel);
+    const genAiResponseAttrs = getResponsesResponseAttributes(
+      ctx.result,
+      genAiSignalLevel,
+      result.finishReason,
+    );
     setSpanAttributes(genAiResponseAttrs);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
 
