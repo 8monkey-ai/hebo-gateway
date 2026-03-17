@@ -126,7 +126,7 @@ const ResponsesInputsSchema = z.object({
   instructions: z.string().optional(),
   tools: z.array(ResponsesToolSchema).optional(),
   tool_choice: ResponsesToolChoiceSchema.optional(),
-  max_tool_calls: z.number().int().optional(),
+  max_tool_calls: z.number().int().nonnegative().optional(),
   text: ResponsesTextConfigSchema.optional(),
   temperature: z.number().min(0).max(2).optional(),
   top_p: z.number().min(0).max(1.0).optional(),
