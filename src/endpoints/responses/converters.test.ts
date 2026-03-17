@@ -153,6 +153,16 @@ describe("Responses Converters", () => {
       expect(result.maxOutputTokens).toBe(500);
     });
 
+    test("should set stopWhen from max_tool_calls", () => {
+      const result = convertToTextCallOptions({
+        input: "hi",
+        max_tool_calls: 3,
+      });
+      // The function stepCountIs returns a function, we just check if it's defined
+      expect(result.stopWhen).toBeDefined();
+      expect(typeof result.stopWhen).toBe("function");
+    });
+
     test("should set frequency_penalty and presence_penalty", () => {
       const result = convertToTextCallOptions({
         input: "hi",

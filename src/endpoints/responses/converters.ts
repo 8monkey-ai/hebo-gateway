@@ -18,9 +18,10 @@ import type {
   UserModelMessage,
   ImagePart,
   FilePart,
+  StopCondition,
 } from "ai";
 
-import { Output, jsonSchema, tool } from "ai";
+import { Output, jsonSchema, tool, stepCountIs } from "ai";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 
@@ -68,6 +69,7 @@ export type TextCallOptions = {
   frequencyPenalty?: number;
   presencePenalty?: number;
   topP?: number;
+  stopWhen?: StopCondition<ToolSet> | Array<StopCondition<ToolSet>>;
   providerOptions: SharedV3ProviderOptions;
 };
 
@@ -85,6 +87,7 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
     frequency_penalty,
     presence_penalty,
     max_output_tokens,
+    max_tool_calls,
     reasoning_effort,
     reasoning,
     prompt_cache_key,
@@ -111,6 +114,7 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
     output: convertToOutput(text),
     temperature,
     maxOutputTokens: max_output_tokens,
+    stopWhen: max_tool_calls === undefined ? undefined : stepCountIs(max_tool_calls),
     frequencyPenalty: frequency_penalty,
     presencePenalty: presence_penalty,
     topP: top_p,
