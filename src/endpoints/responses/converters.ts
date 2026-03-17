@@ -647,7 +647,7 @@ export class ResponsesTransformStream extends TransformStream<
     const baseResponse = (): Responses => ({
       id: responseId,
       object: "response",
-      status: "incomplete",
+      status: "in_progress",
       model,
       output: [...outputItems],
       usage: null,
@@ -690,7 +690,7 @@ export class ResponsesTransformStream extends TransformStream<
 
         controller.enqueue({
           event: "response.in_progress",
-          data: { ...baseResponse(), status: "incomplete" },
+          data: baseResponse(),
         });
       },
 

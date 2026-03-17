@@ -217,7 +217,7 @@ export type ResponsesUsage = z.infer<typeof ResponsesUsageSchema>;
  * --- Response Object ---
  */
 
-export const ResponsesStatusSchema = z.enum(["completed", "failed", "incomplete"]);
+export const ResponsesStatusSchema = z.enum(["in_progress", "completed", "failed", "incomplete"]);
 export type ResponsesStatus = z.infer<typeof ResponsesStatusSchema>;
 
 export const ResponsesSchema = z.object({

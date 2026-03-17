@@ -255,6 +255,41 @@ describe("Responses Handler", () => {
     expect(result).toContain("data: [DONE]");
   });
 
+  test("should have in_progress status for initial streaming events", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "Say Hello world",
+      stream: true,
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+
+    const decoder = new TextDecoder();
+    let result = "";
+    for await (const chunk of res.body!) {
+      result += decoder.decode(chunk);
+    }
+
+    // Check response.created
+    const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);
+    expect(createdMatch).toBeTruthy();
+    const createdData = JSON.parse(createdMatch![1]!) as Responses;
+    expect(createdData.status).toBe("in_progress");
+
+    // Check response.in_progress
+    const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/);
+    expect(inProgressMatch).toBeTruthy();
+    const inProgressData = JSON.parse(inProgressMatch![1]!) as Responses;
+    expect(inProgressData.status).toBe("in_progress");
+
+    // Check response.completed
+    const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/);
+    expect(completedMatch).toBeTruthy();
+    const completedData = JSON.parse(completedMatch![1]!) as Responses;
+    expect(completedData.status).toBe("completed");
+  });
+
   test("should accept reasoning parameters", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
