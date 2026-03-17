@@ -642,13 +642,14 @@ export class ResponsesTransformStream extends TransformStream<
     let messageOutputIndex = -1;
     let contentIndex = 0;
     let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
+    const outputItems: ResponsesOutputItem[] = [];
 
     const baseResponse = (): Responses => ({
       id: responseId,
       object: "response",
       status: "incomplete",
       model,
-      output: [],
+      output: [...outputItems],
       usage: null,
       created_at: creationTime,
       completed_at: null,
@@ -668,6 +669,7 @@ export class ResponsesTransformStream extends TransformStream<
         content: [],
       };
       messageOutputIndex = outputIndex++;
+      outputItems.push(messageItem);
 
       controller.enqueue({
         event: "response.output_item.added",
@@ -744,6 +746,7 @@ export class ResponsesTransformStream extends TransformStream<
               status: "completed",
             };
             const fnOutputIndex = outputIndex++;
+            outputItems.push(fnItem);
 
             controller.enqueue({
               event: "response.output_item.added",
