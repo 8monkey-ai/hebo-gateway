@@ -251,16 +251,30 @@ function fromUserMessageItem(item: MessageItemUnion & { role: "user" }): UserMod
         content.push({ type: "text", text: part.text });
         break;
       case "input_image": {
-        const url = part.image_url ?? part.file_id;
-        if (url) {
-          content.push(fromImageInput(url));
+        if (part.image_url !== undefined) {
+          content.push(fromImageInput(part.image_url));
+        } else if (part.file_id !== undefined) {
+          content.push({ type: "image", image: part.file_id });
         }
         break;
       }
       case "input_file": {
-        const data = part.file_data ?? part.file_url ?? part.file_id;
-        if (data) {
-          content.push(fromFileInput(data, part.filename));
+        if (part.file_data !== undefined) {
+          content.push(fromFileInput(part.file_data, part.filename));
+        } else if (part.file_url !== undefined) {
+          content.push({
+            type: "file",
+            data: new URL(part.file_url),
+            filename: part.filename,
+            mediaType: "application/octet-stream",
+          });
+        } else if (part.file_id !== undefined) {
+          content.push({
+            type: "file",
+            data: part.file_id,
+            filename: part.filename,
+            mediaType: "application/octet-stream",
+          });
         }
         break;
       }
