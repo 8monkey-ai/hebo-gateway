@@ -297,4 +297,37 @@ describe("Responses Handler", () => {
     const data = await parseResponse<Responses>(res);
     expect(data!.metadata).toEqual({ user_id: "u-123" });
   });
+
+  test("should return original model ID even if resolved to a different ID", async () => {
+    const endpointWithHook = responses({
+      providers: {
+        groq: new MockProviderV3({
+          languageModels: {
+            "openai/gpt-oss-20b": mockLanguageModel,
+          },
+        }),
+      },
+      models: defineModelCatalog({
+        "openai/gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text", "file"], output: ["text"] },
+          providers: ["groq"],
+        },
+      }),
+      hooks: {
+        // oxlint-disable-next-line require-await
+        resolveModelId: async () => "openai/gpt-oss-20b",
+      },
+    });
+
+    const request = postJson(baseUrl, {
+      model: "alias-model",
+      input: "hi",
+    });
+
+    const res = await endpointWithHook.handler(request);
+    expect(res.status).toBe(200);
+    const data = (await parseResponse<Responses>(res))!;
+    expect(data.model).toBe("alias-model");
+  });
 });

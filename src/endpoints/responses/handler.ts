@@ -124,7 +124,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toResponses(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
-            ctx.resolvedModelId!,
+            ctx.modelId!,
             bodyMetadata,
           );
           logger.trace({ requestId: ctx.requestId, result: streamResult }, "[responses] Responses");
@@ -142,7 +142,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         ...textOptions,
       });
 
-      ctx.result = toResponsesStream(result, ctx.resolvedModelId, bodyMetadata);
+      ctx.result = toResponsesStream(result, ctx.modelId, bodyMetadata);
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
@@ -167,7 +167,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     logger.trace({ requestId: ctx.requestId, result }, "[responses] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
-    ctx.result = toResponses(result, ctx.resolvedModelId, bodyMetadata);
+    ctx.result = toResponses(result, ctx.modelId, bodyMetadata);
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[responses] Responses");
     addSpanEvent("hebo.result.transformed");
 
