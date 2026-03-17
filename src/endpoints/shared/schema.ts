@@ -35,11 +35,11 @@ export const MetadataSchema = z
   .optional();
 export type Metadata = z.infer<typeof MetadataSchema>;
 
-export const ItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
-export type ItemStatus = z.infer<typeof ItemStatusSchema>;
+export const ResponsesItemStatusSchema = z.enum(["in_progress", "completed", "incomplete"]);
+export type ResponsesItemStatus = z.infer<typeof ResponsesItemStatusSchema>;
 
-export const ImageDetailSchema = z.enum(["low", "high", "auto"]);
-export type ImageDetail = z.infer<typeof ImageDetailSchema>;
+export const ResponsesImageDetailSchema = z.enum(["low", "high", "auto"]);
+export type ResponsesImageDetail = z.infer<typeof ResponsesImageDetailSchema>;
 
 /**
  * --- Messaging Content & Items ---
@@ -47,33 +47,33 @@ export type ImageDetail = z.infer<typeof ImageDetailSchema>;
 
 // Content Parts
 
-export const ResponseInputTextSchema = z.object({
+export const ResponsesInputTextSchema = z.object({
   type: z.literal("input_text"),
   text: z.string(),
 });
-export type ResponseInputText = z.infer<typeof ResponseInputTextSchema>;
+export type ResponsesInputText = z.infer<typeof ResponsesInputTextSchema>;
 
-const ResponseInputImageURLSchema = z.object({
+const ResponsesInputImageURLSchema = z.object({
   type: z.literal("input_image"),
   image_url: z.string(),
   file_id: z.string().optional(),
-  detail: ImageDetailSchema.optional(),
+  detail: ResponsesImageDetailSchema.optional(),
 });
 
-const ResponseInputImageIDSchema = z.object({
+const ResponsesInputImageIDSchema = z.object({
   type: z.literal("input_image"),
   file_id: z.string(),
   image_url: z.string().optional(),
-  detail: ImageDetailSchema.optional(),
+  detail: ResponsesImageDetailSchema.optional(),
 });
 
-export const ResponseInputImageSchema = z.union([
-  ResponseInputImageURLSchema,
-  ResponseInputImageIDSchema,
+export const ResponsesInputImageSchema = z.union([
+  ResponsesInputImageURLSchema,
+  ResponsesInputImageIDSchema,
 ]);
-export type ResponseInputImage = z.infer<typeof ResponseInputImageSchema>;
+export type ResponsesInputImage = z.infer<typeof ResponsesInputImageSchema>;
 
-const ResponseInputFileDataSchema = z.object({
+const ResponsesInputFileDataSchema = z.object({
   type: z.literal("input_file"),
   file_data: z.string(),
   file_id: z.string().optional(),
@@ -81,7 +81,7 @@ const ResponseInputFileDataSchema = z.object({
   filename: z.string().optional(),
 });
 
-const ResponseInputFileIDSchema = z.object({
+const ResponsesInputFileIDSchema = z.object({
   type: z.literal("input_file"),
   file_id: z.string(),
   file_data: z.string().optional(),
@@ -89,7 +89,7 @@ const ResponseInputFileIDSchema = z.object({
   filename: z.string().optional(),
 });
 
-const ResponseInputFileURLSchema = z.object({
+const ResponsesInputFileURLSchema = z.object({
   type: z.literal("input_file"),
   file_url: z.string(),
   file_data: z.string().optional(),
@@ -97,131 +97,131 @@ const ResponseInputFileURLSchema = z.object({
   filename: z.string().optional(),
 });
 
-export const ResponseInputFileSchema = z.union([
-  ResponseInputFileDataSchema,
-  ResponseInputFileIDSchema,
-  ResponseInputFileURLSchema,
+export const ResponsesInputFileSchema = z.union([
+  ResponsesInputFileDataSchema,
+  ResponsesInputFileIDSchema,
+  ResponsesInputFileURLSchema,
 ]);
-export type ResponseInputFile = z.infer<typeof ResponseInputFileSchema>;
+export type ResponsesInputFile = z.infer<typeof ResponsesInputFileSchema>;
 
-export const ResponseInputContentSchema = z.union([
-  ResponseInputTextSchema,
-  ResponseInputImageURLSchema,
-  ResponseInputImageIDSchema,
-  ResponseInputFileDataSchema,
-  ResponseInputFileIDSchema,
-  ResponseInputFileURLSchema,
+export const ResponsesInputContentSchema = z.union([
+  ResponsesInputTextSchema,
+  ResponsesInputImageURLSchema,
+  ResponsesInputImageIDSchema,
+  ResponsesInputFileDataSchema,
+  ResponsesInputFileIDSchema,
+  ResponsesInputFileURLSchema,
 ]);
-export type ResponseInputContent = z.infer<typeof ResponseInputContentSchema>;
+export type ResponsesInputContent = z.infer<typeof ResponsesInputContentSchema>;
 
-export const ResponseOutputTextSchema = z.object({
+export const ResponsesOutputTextSchema = z.object({
   type: z.literal("output_text"),
   text: z.string(),
   annotations: z.array(z.unknown()).optional(),
 });
-export type ResponseOutputText = z.infer<typeof ResponseOutputTextSchema>;
+export type ResponsesOutputText = z.infer<typeof ResponsesOutputTextSchema>;
 
 // Message Items
 
-const MessageItemBaseSchema = z
+const ResponsesMessageItemBaseSchema = z
   .object({
     type: z.literal("message"),
     id: z.string().optional(),
-    status: ItemStatusSchema.optional(),
+    status: ResponsesItemStatusSchema.optional(),
   })
   .loose();
 
-const UserMessageSchema = MessageItemBaseSchema.extend({
+const ResponsesUserMessageSchema = ResponsesMessageItemBaseSchema.extend({
   role: z.literal("user"),
-  content: z.union([z.string(), z.array(ResponseInputContentSchema)]),
+  content: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
 });
 
-const AssistantMessageSchema = MessageItemBaseSchema.extend({
+const ResponsesAssistantMessageSchema = ResponsesMessageItemBaseSchema.extend({
   role: z.literal("assistant"),
-  content: z.union([z.string(), z.array(ResponseOutputTextSchema)]),
+  content: z.union([z.string(), z.array(ResponsesOutputTextSchema)]),
 });
 
-const SystemMessageSchema = MessageItemBaseSchema.extend({
+const ResponsesSystemMessageSchema = ResponsesMessageItemBaseSchema.extend({
   role: z.literal("system"),
-  content: z.union([z.string(), z.array(ResponseInputContentSchema)]),
+  content: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
 });
 
-const DeveloperMessageSchema = MessageItemBaseSchema.extend({
+const ResponsesDeveloperMessageSchema = ResponsesMessageItemBaseSchema.extend({
   role: z.literal("developer"),
-  content: z.union([z.string(), z.array(ResponseInputContentSchema)]),
+  content: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
 });
 
-export const MessageItemUnionSchema = z.discriminatedUnion("role", [
-  UserMessageSchema,
-  AssistantMessageSchema,
-  SystemMessageSchema,
-  DeveloperMessageSchema,
+export const ResponsesMessageItemSchema = z.discriminatedUnion("role", [
+  ResponsesUserMessageSchema,
+  ResponsesAssistantMessageSchema,
+  ResponsesSystemMessageSchema,
+  ResponsesDeveloperMessageSchema,
 ]);
-export type MessageItemUnion = z.infer<typeof MessageItemUnionSchema>;
+export type ResponsesMessageItem = z.infer<typeof ResponsesMessageItemSchema>;
 
 /**
  * --- Function ---
  */
 
-export const ResponseFunctionToolCallSchema = z
+export const ResponsesFunctionCallSchema = z
   .object({
     type: z.literal("function_call"),
     id: z.string().optional(),
     call_id: z.string(),
     name: z.string(),
     arguments: z.string(),
-    status: ItemStatusSchema.optional(),
+    status: ResponsesItemStatusSchema.optional(),
   })
   .loose();
-export type ResponseFunctionToolCall = z.infer<typeof ResponseFunctionToolCallSchema>;
+export type ResponsesFunctionCall = z.infer<typeof ResponsesFunctionCallSchema>;
 
-export const FunctionCallOutputSchema = z
+export const ResponsesFunctionCallOutputSchema = z
   .object({
     type: z.literal("function_call_output"),
     id: z.string().optional(),
     call_id: z.string(),
-    output: z.union([z.string(), z.array(ResponseInputContentSchema)]),
-    status: ItemStatusSchema.optional(),
+    output: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
+    status: ResponsesItemStatusSchema.optional(),
   })
   .loose();
-export type FunctionCallOutput = z.infer<typeof FunctionCallOutputSchema>;
+export type ResponsesFunctionCallOutput = z.infer<typeof ResponsesFunctionCallOutputSchema>;
 
 /**
  * --- Reasoning ---
  */
 
-export const ResponseSummaryTextSchema = z.object({
+export const ResponsesSummaryTextSchema = z.object({
   type: z.literal("summary_text"),
   text: z.string(),
 });
-export type ResponseSummaryText = z.infer<typeof ResponseSummaryTextSchema>;
+export type ResponsesSummaryText = z.infer<typeof ResponsesSummaryTextSchema>;
 
-export const ResponseReasoningTextSchema = z.object({
+export const ResponsesReasoningTextSchema = z.object({
   type: z.literal("reasoning_text"),
   text: z.string(),
 });
-export type ResponseReasoningText = z.infer<typeof ResponseReasoningTextSchema>;
+export type ResponsesReasoningText = z.infer<typeof ResponsesReasoningTextSchema>;
 
-export const ResponseReasoningItemSchema = z
+export const ResponsesReasoningItemSchema = z
   .object({
     type: z.literal("reasoning"),
     id: z.string().optional(),
-    summary: z.array(ResponseSummaryTextSchema),
-    content: z.array(ResponseReasoningTextSchema).optional(),
+    summary: z.array(ResponsesSummaryTextSchema),
+    content: z.array(ResponsesReasoningTextSchema).optional(),
     encrypted_content: z.string().optional(),
-    status: ItemStatusSchema.optional(),
+    status: ResponsesItemStatusSchema.optional(),
   })
   .loose();
-export type ResponseReasoningItem = z.infer<typeof ResponseReasoningItemSchema>;
+export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
 
 /**
  * --- Input Items ---
  */
 
-export const ResponseInputItemSchema = z.discriminatedUnion("type", [
-  MessageItemUnionSchema,
-  ResponseFunctionToolCallSchema,
-  FunctionCallOutputSchema,
-  ResponseReasoningItemSchema,
+export const ResponsesInputItemSchema = z.discriminatedUnion("type", [
+  ResponsesMessageItemSchema,
+  ResponsesFunctionCallSchema,
+  ResponsesFunctionCallOutputSchema,
+  ResponsesReasoningItemSchema,
 ]);
-export type ResponseInputItem = z.infer<typeof ResponseInputItemSchema>;
+export type ResponsesInputItem = z.infer<typeof ResponsesInputItemSchema>;

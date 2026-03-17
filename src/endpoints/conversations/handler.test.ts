@@ -10,7 +10,7 @@ import {
   type ConversationDeleted,
   type ConversationItem,
   type ConversationItemList,
-  type ResponseInputItem,
+  type ResponsesInputItem,
 } from "./schema";
 import { InMemoryStorage } from "./storage/memory";
 import { type ConversationStorage } from "./storage/types";
@@ -283,7 +283,7 @@ describe("Conversations Handler", () => {
     const itemInputs = [
       { type: "message", role: "user", content: "Message 1" },
       { type: "message", role: "user", content: "Message 2" },
-    ] as ResponseInputItem[];
+    ] as ResponsesInputItem[];
     const items = (await storage.addItems(conv.id, itemInputs))!;
     const item1Id = items[0]!.id;
     const item2Id = items[1]!.id;
@@ -336,7 +336,7 @@ describe("Conversations Handler", () => {
       type: "message",
       role: "user",
       content: `Msg ${i + 1}`,
-    })) as ResponseInputItem[];
+    })) as ResponsesInputItem[];
 
     const conv = await storage.createConversation({ items: itemInputs });
 
@@ -378,7 +378,7 @@ describe("Conversations Handler", () => {
       type: "message",
       role: "user",
       content: `Msg ${i + 1}`,
-    })) as ResponseInputItem[];
+    })) as ResponsesInputItem[];
 
     const conv = await storage.createConversation({ items: itemInputs });
 
@@ -540,7 +540,7 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_image" }] as unknown as ResponseInputItem[],
+          content: [{ type: "input_image" }] as unknown as ResponsesInputItem[],
         },
       ],
     });
@@ -553,7 +553,7 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_file" }] as unknown as ResponseInputItem[],
+          content: [{ type: "input_file" }] as unknown as ResponsesInputItem[],
         },
       ],
     });
@@ -572,7 +572,11 @@ describe("Conversations Handler", () => {
           type: "message",
           role: "user",
           content: [
-            { type: "input_image", image_url: null, file_id: null } as unknown as ResponseInputItem,
+            {
+              type: "input_image",
+              image_url: null,
+              file_id: null,
+            } as unknown as ResponsesInputItem,
           ],
         },
       ],

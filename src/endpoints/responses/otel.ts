@@ -1,6 +1,6 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import type { Responses, ResponsesBody, ResponseInputItem, MessageItemUnion } from "./schema";
+import type { Responses, ResponsesBody, ResponsesInputItem, ResponsesMessageItem } from "./schema";
 
 import { type TelemetrySignalLevel } from "../../types";
 
@@ -20,7 +20,7 @@ const toInputTextParts = (content: string | { type: string; text?: string }[]) =
   return result;
 };
 
-const toItemParts = (item: ResponseInputItem) => {
+const toItemParts = (item: ResponsesInputItem) => {
   switch (item.type) {
     case "message":
       return toMessageParts(item);
@@ -51,7 +51,7 @@ const toItemParts = (item: ResponseInputItem) => {
   }
 };
 
-const toMessageParts = (item: MessageItemUnion) => {
+const toMessageParts = (item: ResponsesMessageItem) => {
   switch (item.role) {
     case "assistant":
       return toInputTextParts(item.content);

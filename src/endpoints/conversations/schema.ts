@@ -3,37 +3,37 @@ import * as z from "zod";
 export {
   MetadataSchema,
   type Metadata,
-  ItemStatusSchema,
-  type ItemStatus,
-  ImageDetailSchema,
-  type ImageDetail,
-  ResponseInputTextSchema,
-  type ResponseInputText,
-  ResponseInputImageSchema,
-  type ResponseInputImage,
-  ResponseInputFileSchema,
-  type ResponseInputFile,
-  ResponseInputContentSchema,
-  type ResponseInputContent,
-  ResponseOutputTextSchema,
-  type ResponseOutputText,
-  MessageItemUnionSchema,
-  type MessageItemUnion,
-  ResponseFunctionToolCallSchema,
-  type ResponseFunctionToolCall,
-  FunctionCallOutputSchema,
-  type FunctionCallOutput,
-  ResponseSummaryTextSchema,
-  type ResponseSummaryText,
-  ResponseReasoningTextSchema,
-  type ResponseReasoningText,
-  ResponseReasoningItemSchema,
-  type ResponseReasoningItem,
-  ResponseInputItemSchema,
-  type ResponseInputItem,
+  ResponsesItemStatusSchema,
+  type ResponsesItemStatus,
+  ResponsesImageDetailSchema,
+  type ResponsesImageDetail,
+  ResponsesInputTextSchema,
+  type ResponsesInputText,
+  ResponsesInputImageSchema,
+  type ResponsesInputImage,
+  ResponsesInputFileSchema,
+  type ResponsesInputFile,
+  ResponsesInputContentSchema,
+  type ResponsesInputContent,
+  ResponsesOutputTextSchema,
+  type ResponsesOutputText,
+  ResponsesMessageItemSchema,
+  type ResponsesMessageItem,
+  ResponsesFunctionCallSchema,
+  type ResponsesFunctionCall,
+  ResponsesFunctionCallOutputSchema,
+  type ResponsesFunctionCallOutput,
+  ResponsesSummaryTextSchema,
+  type ResponsesSummaryText,
+  ResponsesReasoningTextSchema,
+  type ResponsesReasoningText,
+  ResponsesReasoningItemSchema,
+  type ResponsesReasoningItem,
+  ResponsesInputItemSchema,
+  type ResponsesInputItem,
 } from "../shared/schema";
 
-import { MetadataSchema, ResponseInputItemSchema } from "../shared/schema";
+import { MetadataSchema, ResponsesInputItemSchema } from "../shared/schema";
 
 /**
  * --- Entities ---
@@ -46,7 +46,7 @@ export const ConversationItemSchema = z
     created_at: z.number().int(),
   })
   .loose()
-  .and(ResponseInputItemSchema);
+  .and(ResponsesInputItemSchema);
 export type ConversationItem = z.infer<typeof ConversationItemSchema>;
 
 export const ConversationSchema = z.object({
@@ -69,7 +69,7 @@ export type ConversationDeleted = z.infer<typeof ConversationDeletedSchema>;
  */
 
 export const ConversationCreateParamsSchema = z.object({
-  items: z.array(ResponseInputItemSchema).max(1000).optional(),
+  items: z.array(ResponsesInputItemSchema).max(1000).optional(),
   metadata: MetadataSchema.optional(),
 });
 export type ConversationCreateParams = z.infer<typeof ConversationCreateParamsSchema>;
@@ -80,7 +80,7 @@ export const ConversationUpdateBodySchema = z.object({
 export type ConversationUpdateBody = z.infer<typeof ConversationUpdateBodySchema>;
 
 export const ConversationItemsAddBodySchema = z.object({
-  items: z.array(ResponseInputItemSchema).max(1000),
+  items: z.array(ResponsesInputItemSchema).max(1000),
 });
 export type ConversationItemsAddBody = z.infer<typeof ConversationItemsAddBodySchema>;
 

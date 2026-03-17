@@ -26,14 +26,14 @@ import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 
 import type {
-  ResponseInputItem,
-  MessageItemUnion,
-  ResponseFunctionToolCall,
-  FunctionCallOutput,
-  ResponseReasoningItem,
-  ResponseOutputText,
-  ResponseOutputMessage,
-  ResponseOutputItem,
+  ResponsesInputItem,
+  ResponsesMessageItem,
+  ResponsesFunctionCall,
+  ResponsesFunctionCallOutput,
+  ResponsesReasoningItem,
+  ResponsesOutputText,
+  ResponsesOutputMessage,
+  ResponsesOutputItem,
   ResponsesInputs,
   Responses,
   ResponsesUsage,
@@ -63,6 +63,7 @@ export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
   toolChoice?: ToolChoice<ToolSet>;
+  activeTools?: string[];
   output?: Output.Output;
   temperature?: number;
   maxOutputTokens?: number;
@@ -91,6 +92,7 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
     reasoning_effort,
     reasoning,
     prompt_cache_key,
+    parallel_tool_calls,
     extra_body,
     cache_control,
     ...rest
@@ -99,18 +101,23 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
   Object.assign(rest, parsePromptCachingOptions(prompt_cache_key, undefined, cache_control));
 
+  if (parallel_tool_calls !== undefined) {
+    Object.assign(rest, { parallel_tool_calls });
+  }
+
   if (extra_body) {
     for (const v of Object.values(extra_body)) {
       Object.assign(rest, v);
     }
   }
 
-  const { toolChoice: tc } = convertToToolChoiceOptions(tool_choice);
+  const { toolChoice: tc, activeTools } = convertToToolChoiceOptions(tool_choice);
 
   return {
     messages: convertToModelMessages(input, instructions),
     tools: convertToToolSet(tools),
     toolChoice: tc,
+    activeTools,
     output: convertToOutput(text),
     temperature,
     maxOutputTokens: max_output_tokens,
@@ -138,7 +145,7 @@ function convertToOutput(text: ResponsesTextConfig | undefined) {
 }
 
 export function convertToModelMessages(
-  input: string | ResponseInputItem[],
+  input: string | ResponsesInputItem[],
   instructions?: string,
 ): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
@@ -184,7 +191,7 @@ export function convertToModelMessages(
   return modelMessages;
 }
 
-function fromReasoningItem(item: ResponseReasoningItem): AssistantModelMessage {
+function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage {
   const parts: AssistantContent = [];
 
   if (item.summary && item.summary.length > 0) {
@@ -211,8 +218,8 @@ function fromReasoningItem(item: ResponseReasoningItem): AssistantModelMessage {
   return { role: "assistant", content: parts };
 }
 
-function indexToolOutputs(items: ResponseInputItem[]) {
-  const map = new Map<string, FunctionCallOutput>();
+function indexToolOutputs(items: ResponsesInputItem[]) {
+  const map = new Map<string, ResponsesFunctionCallOutput>();
   for (const item of items) {
     if (item.type === "function_call_output") {
       map.set(item.call_id, item);
@@ -221,7 +228,7 @@ function indexToolOutputs(items: ResponseInputItem[]) {
   return map;
 }
 
-function fromMessageItem(item: MessageItemUnion): ModelMessage {
+function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
   switch (item.role) {
     case "system":
     case "developer":
@@ -239,7 +246,7 @@ function fromMessageItem(item: MessageItemUnion): ModelMessage {
   }
 }
 
-function fromUserMessageItem(item: MessageItemUnion & { role: "user" }): UserModelMessage {
+function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): UserModelMessage {
   if (typeof item.content === "string") {
     return { role: "user", content: item.content };
   }
@@ -321,7 +328,7 @@ function fromInputContentPart(part: { type: string; text?: string }): string {
 }
 
 function fromAssistantMessageItem(
-  item: MessageItemUnion & { role: "assistant" },
+  item: ResponsesMessageItem & { role: "assistant" },
 ): AssistantModelMessage {
   if (typeof item.content === "string") {
     const out: AssistantModelMessage = { role: "assistant", content: item.content };
@@ -345,7 +352,7 @@ function fromAssistantMessageItem(
   return out;
 }
 
-function fromFunctionCallItem(item: ResponseFunctionToolCall): AssistantModelMessage {
+function fromFunctionCallItem(item: ResponsesFunctionCall): AssistantModelMessage {
   const toolCall: ToolCallPart = {
     type: "tool-call",
     toolCallId: item.call_id,
@@ -361,8 +368,8 @@ function fromFunctionCallItem(item: ResponseFunctionToolCall): AssistantModelMes
 }
 
 function fromFunctionCallOutputItem(
-  item: ResponseFunctionToolCall,
-  toolOutputByCallId: Map<string, FunctionCallOutput>,
+  item: ResponsesFunctionCall,
+  toolOutputByCallId: Map<string, ResponsesFunctionCallOutput>,
 ): ToolModelMessage | undefined {
   const output = toolOutputByCallId.get(item.call_id);
   if (!output) return undefined;
@@ -401,11 +408,23 @@ export const convertToToolSet = (tools: ResponsesTool[] | undefined): ToolSet | 
 
 export const convertToToolChoiceOptions = (
   toolChoice: ResponsesToolChoice | undefined,
-): { toolChoice?: ToolChoice<ToolSet> } => {
+): { toolChoice?: ToolChoice<ToolSet>; activeTools?: string[] } => {
   if (!toolChoice) return {};
 
-  if (toolChoice === "none" || toolChoice === "auto" || toolChoice === "required") {
-    return { toolChoice };
+  if (
+    toolChoice === "none" ||
+    toolChoice === "auto" ||
+    toolChoice === "required" ||
+    toolChoice === "validated"
+  ) {
+    return { toolChoice: toolChoice === "validated" ? "auto" : toolChoice };
+  }
+
+  if ("type" in toolChoice && toolChoice.type === "allowed_tools") {
+    return {
+      toolChoice: toolChoice.allowed_tools.mode,
+      activeTools: toolChoice.allowed_tools.tools.map((toolRef) => toolRef.name),
+    };
   }
 
   return {
@@ -470,8 +489,8 @@ export function toResponsesStreamResponse(
   return toResponse(toResponsesStream(result, model, metadata), responseInit);
 }
 
-function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): ResponseOutputItem[] {
-  const output: ResponseOutputItem[] = [];
+function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): ResponsesOutputItem[] {
+  const output: ResponsesOutputItem[] = [];
 
   // Add reasoning items
   for (const part of result.content) {
@@ -483,7 +502,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
   // Add function call items
   if (result.toolCalls && result.toolCalls.length > 0) {
     for (const tc of result.toolCalls) {
-      const fnItem: ResponseFunctionToolCall = {
+      const fnItem: ResponsesFunctionCall = {
         type: "function_call",
         id: uuidv7(),
         call_id: tc.toolCallId,
@@ -500,7 +519,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
   }
 
   // Add message output item
-  const textParts: ResponseOutputText[] = [];
+  const textParts: ResponsesOutputText[] = [];
   for (const part of result.content) {
     if (part.type === "text") {
       textParts.push({
@@ -512,7 +531,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
   }
 
   if (textParts.length > 0 || result.toolCalls.length === 0) {
-    const msgItem: ResponseOutputMessage = {
+    const msgItem: ResponsesOutputMessage = {
       type: "message",
       id: uuidv7(),
       role: "assistant",
@@ -529,8 +548,8 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
   return output;
 }
 
-function toReasoningOutputItem(reasoning: ReasoningOutput): ResponseReasoningItem {
-  const item: ResponseReasoningItem = {
+function toReasoningOutputItem(reasoning: ReasoningOutput): ResponsesReasoningItem {
+  const item: ResponsesReasoningItem = {
     type: "reasoning",
     id: uuidv7(),
     summary: [],
@@ -619,7 +638,7 @@ export class ResponsesTransformStream extends TransformStream<
     const responseId = `resp_${uuidv7()}`;
     const creationTime = Math.floor(Date.now() / 1000);
     let outputIndex = 0;
-    let messageItem: ResponseOutputMessage | undefined;
+    let messageItem: ResponsesOutputMessage | undefined;
     let messageOutputIndex = -1;
     let contentIndex = 0;
     let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
@@ -680,7 +699,7 @@ export class ResponsesTransformStream extends TransformStream<
             ensureMessageItem(controller);
 
             if (contentIndex === messageItem!.content.length) {
-              const textPart: ResponseOutputText = {
+              const textPart: ResponsesOutputText = {
                 type: "output_text",
                 text: "",
                 annotations: [],
@@ -713,7 +732,7 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "tool-call": {
-            const fnItem: ResponseFunctionToolCall = {
+            const fnItem: ResponsesFunctionCall = {
               type: "function_call",
               id: uuidv7(),
               call_id: part.toolCallId,

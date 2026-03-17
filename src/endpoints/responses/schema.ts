@@ -4,42 +4,42 @@ import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
 import {
   MetadataSchema,
-  ResponseInputItemSchema,
-  ResponseOutputTextSchema,
-  ResponseFunctionToolCallSchema,
-  ResponseReasoningItemSchema,
-  type ResponseOutputText,
+  ResponsesInputItemSchema,
+  ResponsesOutputTextSchema,
+  ResponsesFunctionCallSchema,
+  ResponsesReasoningItemSchema,
+  type ResponsesOutputText,
 } from "../shared/schema";
 
 export {
   MetadataSchema,
   type Metadata,
-  ItemStatusSchema,
-  type ItemStatus,
-  ResponseInputTextSchema,
-  type ResponseInputText,
-  ResponseInputImageSchema,
-  type ResponseInputImage,
-  ResponseInputFileSchema,
-  type ResponseInputFile,
-  ResponseInputContentSchema,
-  type ResponseInputContent,
-  ResponseOutputTextSchema,
-  type ResponseOutputText,
-  MessageItemUnionSchema,
-  type MessageItemUnion,
-  ResponseFunctionToolCallSchema,
-  type ResponseFunctionToolCall,
-  FunctionCallOutputSchema,
-  type FunctionCallOutput,
-  ResponseSummaryTextSchema,
-  type ResponseSummaryText,
-  ResponseReasoningTextSchema,
-  type ResponseReasoningText,
-  ResponseReasoningItemSchema,
-  type ResponseReasoningItem,
-  ResponseInputItemSchema,
-  type ResponseInputItem,
+  ResponsesItemStatusSchema,
+  type ResponsesItemStatus,
+  ResponsesInputTextSchema,
+  type ResponsesInputText,
+  ResponsesInputImageSchema,
+  type ResponsesInputImage,
+  ResponsesInputFileSchema,
+  type ResponsesInputFile,
+  ResponsesInputContentSchema,
+  type ResponsesInputContent,
+  ResponsesOutputTextSchema,
+  type ResponsesOutputText,
+  ResponsesMessageItemSchema,
+  type ResponsesMessageItem,
+  ResponsesFunctionCallSchema,
+  type ResponsesFunctionCall,
+  ResponsesFunctionCallOutputSchema,
+  type ResponsesFunctionCallOutput,
+  ResponsesSummaryTextSchema,
+  type ResponsesSummaryText,
+  ResponsesReasoningTextSchema,
+  type ResponsesReasoningText,
+  ResponsesReasoningItemSchema,
+  type ResponsesReasoningItem,
+  ResponsesInputItemSchema,
+  type ResponsesInputItem,
 } from "../shared/schema";
 
 import {
@@ -73,9 +73,18 @@ const ResponsesNamedFunctionToolChoiceSchema = z.object({
   name: z.string(),
 });
 
+const ResponsesAllowedFunctionToolChoiceSchema = z.object({
+  type: z.literal("allowed_tools"),
+  allowed_tools: z.object({
+    mode: z.enum(["none", "auto", "required"]),
+    tools: z.array(ResponsesNamedFunctionToolChoiceSchema).nonempty(),
+  }),
+});
+
 export const ResponsesToolChoiceSchema = z.union([
-  z.enum(["none", "auto", "required"]),
+  z.enum(["none", "auto", "required", "validated"]),
   ResponsesNamedFunctionToolChoiceSchema,
+  ResponsesAllowedFunctionToolChoiceSchema,
 ]);
 export type ResponsesToolChoice = z.infer<typeof ResponsesToolChoiceSchema>;
 
@@ -84,6 +93,7 @@ export type ResponsesToolChoice = z.infer<typeof ResponsesToolChoiceSchema>;
  */
 
 export const ResponsesTextFormatJsonSchema = z.object({
+  // FUTURE: Consider support for legacy json_object (if demand)
   type: z.literal("json_schema"),
   name: z.string(),
   description: z.string().optional(),
@@ -102,6 +112,8 @@ export const ResponsesTextFormatSchema = z.discriminatedUnion("type", [
 
 export const ResponsesTextConfigSchema = z.object({
   format: ResponsesTextFormatSchema.optional(),
+  // FUTURE: Support verbosity configuration
+  verbosity: z.enum(["low", "medium", "high"]).optional().meta({ extension: true }),
 });
 export type ResponsesTextConfig = z.infer<typeof ResponsesTextConfigSchema>;
 
@@ -110,7 +122,7 @@ export type ResponsesTextConfig = z.infer<typeof ResponsesTextConfigSchema>;
  */
 
 const ResponsesInputsSchema = z.object({
-  input: z.union([z.string(), z.array(ResponseInputItemSchema)]),
+  input: z.union([z.string(), z.array(ResponsesInputItemSchema)]),
   instructions: z.string().optional(),
   tools: z.array(ResponsesToolSchema).optional(),
   tool_choice: ResponsesToolChoiceSchema.optional(),
@@ -125,6 +137,20 @@ const ResponsesInputsSchema = z.object({
   prompt_cache_key: z.string().optional(),
   metadata: MetadataSchema,
   service_tier: ServiceTierSchema.optional(),
+
+  // FUTURE: Open Responses API orchestration configurations
+  // previous_response_id: z.string().optional(),
+  // safety_identifier: z.string().optional(),
+  // truncation: z.enum(["auto", "disabled"]).optional(),
+  // store: z.boolean().optional(),
+  // background: z.boolean().optional(),
+  // top_logprobs: z.number().int().optional(),
+  // include: z.array(z.string()).optional(),
+  // stream_options: z.object({ include_obfuscation: z.boolean().optional() }).optional(),
+
+  // These are handled by Vercel AI SDK explicitly:
+  parallel_tool_calls: z.boolean().optional().meta({ extension: true }),
+
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: CacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter
@@ -148,23 +174,23 @@ export type ResponsesBody = z.infer<typeof ResponsesBodySchema>;
  * --- Output Items ---
  */
 
-export const ResponseOutputMessageSchema = z
+export const ResponsesOutputMessageSchema = z
   .object({
     type: z.literal("message"),
     id: z.string(),
     role: z.literal("assistant"),
     status: z.enum(["in_progress", "completed", "incomplete"]),
-    content: z.array(ResponseOutputTextSchema),
+    content: z.array(ResponsesOutputTextSchema),
   })
   .loose();
-export type ResponseOutputMessage = z.infer<typeof ResponseOutputMessageSchema>;
+export type ResponsesOutputMessage = z.infer<typeof ResponsesOutputMessageSchema>;
 
-export const ResponseOutputItemSchema = z.discriminatedUnion("type", [
-  ResponseOutputMessageSchema,
-  ResponseFunctionToolCallSchema,
-  ResponseReasoningItemSchema,
+export const ResponsesOutputItemSchema = z.discriminatedUnion("type", [
+  ResponsesOutputMessageSchema,
+  ResponsesFunctionCallSchema,
+  ResponsesReasoningItemSchema,
 ]);
-export type ResponseOutputItem = z.infer<typeof ResponseOutputItemSchema>;
+export type ResponsesOutputItem = z.infer<typeof ResponsesOutputItemSchema>;
 
 /**
  * --- Response Usage ---
@@ -199,7 +225,7 @@ export const ResponsesSchema = z.object({
   object: z.literal("response"),
   status: ResponsesStatusSchema,
   model: z.string(),
-  output: z.array(ResponseOutputItemSchema),
+  output: z.array(ResponsesOutputItemSchema),
   usage: ResponsesUsageSchema.nullable(),
   incomplete_details: z
     .object({
@@ -230,7 +256,7 @@ export type ResponsesStreamEvent =
       {
         type: "response.output_item.added";
         output_index: number;
-        item: ResponseOutputItem;
+        item: ResponsesOutputItem;
       },
       "response.output_item.added"
     >
@@ -239,7 +265,7 @@ export type ResponsesStreamEvent =
         type: "response.content_part.added";
         output_index: number;
         content_index: number;
-        part: ResponseOutputText;
+        part: ResponsesOutputText;
       },
       "response.content_part.added"
     >
@@ -257,7 +283,7 @@ export type ResponsesStreamEvent =
         type: "response.content_part.done";
         output_index: number;
         content_index: number;
-        part: ResponseOutputText;
+        part: ResponsesOutputText;
       },
       "response.content_part.done"
     >
@@ -265,7 +291,7 @@ export type ResponsesStreamEvent =
       {
         type: "response.output_item.done";
         output_index: number;
-        item: ResponseOutputItem;
+        item: ResponsesOutputItem;
       },
       "response.output_item.done"
     >

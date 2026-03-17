@@ -683,6 +683,9 @@ Key features:
 > [!NOTE]
 > This is a stateless implementation. `previous_response_id` chaining and server-side response storage (`store`) are not supported.
 
+> [!IMPORTANT]
+> **Audio Modality**: While `/chat/completions` supports `input_audio`, the [Open Responses API specification](https://www.openresponses.org/specification) does not yet define an audio content type. Consequently, audio input is currently not supported on the `/responses` and `/conversations` endpoints.
+
 ### Prompt Caching
 
 The chat completions endpoint supports both implicit (provider-managed) and explicit prompt caching across OpenAI-compatible providers.
