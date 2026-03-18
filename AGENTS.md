@@ -42,6 +42,11 @@ If priorities conflict, apply this order:
 - Avoid extra abstraction layers in latency-sensitive code when they do not improve maintainability.
 - Keep branches and data-shape conversions explicit in hot paths for predictable performance.
 
+## Performance Learnings
+
+- **Use cheap string operations before heavyweight parsing.** When only a substring is needed (e.g. extracting a pathname), prefer `indexOf`/`slice` over constructing a `URL` or `RegExp` object. Fall back to full parsing only when the cheap path is insufficient.
+- **Avoid `delete` on objects in hot paths.** Deleting properties mutates V8/JSC hidden classes and forces objects into slower dictionary mode. Set to `undefined` instead, or construct a new object when removal semantics are required.
+
 ## Repository Map
 
 - `src/index.ts`: public entrypoint.
