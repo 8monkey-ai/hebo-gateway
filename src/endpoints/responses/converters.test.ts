@@ -470,4 +470,94 @@ describe("Responses Converters", () => {
       expect(usage.total_tokens).toBe(0);
     });
   });
+
+  describe("ResponsesTransformStream", () => {
+    test("should handle reasoning and text stream correctly", async () => {
+      const { ResponsesTransformStream } = await import("./converters");
+
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: "reasoning-start",
+            id: "r1",
+            providerMetadata: { unknown: { redactedData: "encrypted" } },
+          });
+          controller.enqueue({ type: "reasoning-delta", text: "Let me" });
+          controller.enqueue({ type: "reasoning-delta", text: " think..." });
+          controller.enqueue({ type: "reasoning-end", id: "r1" });
+          controller.enqueue({ type: "text-start", id: "1" });
+          controller.enqueue({ type: "text-delta", text: "Hello" });
+          controller.enqueue({ type: "text-end", id: "1" });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "stop",
+            totalUsage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new ResponsesTransformStream("openai/gpt-5"));
+      const reader = transformed.getReader();
+      const events: { event: string; data: any }[] = [];
+
+      // oxlint-disable-next-line no-await-in-loop
+      while (true) {
+        // oxlint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) events.push(value as { event: string; data: any });
+      }
+
+      // Initial events
+      expect(events[0]!.event).toBe("response.created");
+      expect(events[1]!.event).toBe("response.in_progress");
+
+      // Reasoning
+      const reasoningAdded = events.find(
+        (e) =>
+          e.event === "response.output_item.added" &&
+          // oxlint-disable-next-line no-unsafe-member-access
+          e.data.item.type === "reasoning",
+      );
+      expect(reasoningAdded).toBeDefined();
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(reasoningAdded!.data.item.encrypted_content).toBe("encrypted");
+
+      const reasoningDeltas = events.filter(
+        (e) => e.event === "response.reasoning_summary_text.delta",
+      );
+      expect(reasoningDeltas).toHaveLength(2);
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(reasoningDeltas[0]!.data.delta).toBe("Let me");
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(reasoningDeltas[1]!.data.delta).toBe(" think...");
+
+      // Text
+      const textAdded = events.find(
+        (e) =>
+          e.event === "response.output_item.added" &&
+          // oxlint-disable-next-line no-unsafe-member-access
+          e.data.item.type === "message",
+      );
+      expect(textAdded).toBeDefined();
+
+      const textDeltas = events.filter((e) => e.event === "response.output_text.delta");
+      expect(textDeltas).toHaveLength(1);
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(textDeltas[0]!.data.delta).toBe("Hello");
+
+      // Final response
+      const completed = events.find((e) => e.event === "response.completed");
+      expect(completed).toBeDefined();
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(completed!.data.status).toBe("completed");
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(completed!.data.output).toHaveLength(2);
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(completed!.data.output[0].type).toBe("reasoning");
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(completed!.data.output[1].type).toBe("message");
+    });
+  });
 });

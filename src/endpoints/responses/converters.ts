@@ -43,6 +43,7 @@ import type {
   ResponsesToolChoice,
   ResponsesTool,
   ResponsesTextConfig,
+  ResponsesSummaryText,
 } from "./schema";
 
 import type { SseErrorFrame } from "../../utils/stream";
@@ -641,6 +642,10 @@ export class ResponsesTransformStream extends TransformStream<
     let messageItem: ResponsesOutputMessage | undefined;
     let messageOutputIndex = -1;
     let contentIndex = 0;
+
+    let reasoningItem: ResponsesReasoningItem | undefined;
+    let reasoningOutputIndex = -1;
+    let summaryIndex = 0;
     let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
     const outputItems: ResponsesOutputItem[] = [];
 
@@ -658,6 +663,7 @@ export class ResponsesTransformStream extends TransformStream<
 
     const ensureMessageItem = (
       controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
+      providerMetadata?: SharedV3ProviderMetadata,
     ) => {
       if (messageItem) return;
 
@@ -668,6 +674,11 @@ export class ResponsesTransformStream extends TransformStream<
         status: "in_progress",
         content: [],
       };
+
+      if (providerMetadata) {
+        (messageItem as Record<string, unknown>)["extra_content"] = providerMetadata;
+      }
+
       messageOutputIndex = outputIndex++;
       outputItems.push(messageItem);
 
@@ -677,6 +688,46 @@ export class ResponsesTransformStream extends TransformStream<
           type: "response.output_item.added",
           output_index: messageOutputIndex,
           item: messageItem,
+        },
+      });
+    };
+
+    const ensureReasoningItem = (
+      controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
+      providerMetadata?: SharedV3ProviderMetadata,
+    ) => {
+      if (reasoningItem) return;
+
+      reasoningItem = {
+        type: "reasoning",
+        id: uuidv7(),
+        status: "in_progress",
+        summary: [],
+      };
+
+      if (providerMetadata) {
+        (reasoningItem as Record<string, unknown>)["extra_content"] = providerMetadata;
+        for (const meta of Object.values(providerMetadata)) {
+          if (
+            meta &&
+            typeof meta === "object" &&
+            "redactedData" in meta &&
+            typeof meta["redactedData"] === "string"
+          ) {
+            reasoningItem.encrypted_content = meta["redactedData"];
+          }
+        }
+      }
+
+      reasoningOutputIndex = outputIndex++;
+      outputItems.push(reasoningItem);
+
+      controller.enqueue({
+        event: "response.output_item.added",
+        data: {
+          type: "response.output_item.added",
+          output_index: reasoningOutputIndex,
+          item: reasoningItem,
         },
       });
     };
@@ -697,6 +748,82 @@ export class ResponsesTransformStream extends TransformStream<
       transform(part, controller) {
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
+          case "reasoning-start": {
+            ensureReasoningItem(controller, part.providerMetadata);
+            break;
+          }
+
+          case "reasoning-delta": {
+            ensureReasoningItem(controller);
+
+            if (summaryIndex === reasoningItem!.summary.length) {
+              const summaryPart: ResponsesSummaryText = {
+                type: "summary_text",
+                text: "",
+              };
+              reasoningItem!.summary.push(summaryPart);
+
+              controller.enqueue({
+                event: "response.reasoning_summary_part.added",
+                data: {
+                  type: "response.reasoning_summary_part.added",
+                  output_index: reasoningOutputIndex,
+                  summary_index: summaryIndex,
+                  part: summaryPart,
+                },
+              });
+            }
+
+            reasoningItem!.summary[summaryIndex]!.text += part.text;
+
+            controller.enqueue({
+              event: "response.reasoning_summary_text.delta",
+              data: {
+                type: "response.reasoning_summary_text.delta",
+                output_index: reasoningOutputIndex,
+                summary_index: summaryIndex,
+                delta: part.text,
+              },
+            });
+            break;
+          }
+
+          case "reasoning-end": {
+            if (reasoningItem && reasoningItem.summary.length > 0) {
+              const lastSummaryPart = reasoningItem.summary[summaryIndex];
+              if (lastSummaryPart) {
+                controller.enqueue({
+                  event: "response.reasoning_summary_part.done",
+                  data: {
+                    type: "response.reasoning_summary_part.done",
+                    output_index: reasoningOutputIndex,
+                    summary_index: summaryIndex,
+                    part: lastSummaryPart,
+                  },
+                });
+              }
+            }
+
+            if (reasoningItem) {
+              reasoningItem.status = "completed";
+              controller.enqueue({
+                event: "response.output_item.done",
+                data: {
+                  type: "response.output_item.done",
+                  output_index: reasoningOutputIndex,
+                  item: reasoningItem,
+                },
+              });
+              reasoningItem = undefined;
+            }
+            break;
+          }
+
+          case "text-start": {
+            ensureMessageItem(controller, part.providerMetadata);
+            break;
+          }
+
           case "text-delta": {
             ensureMessageItem(controller);
 
@@ -745,6 +872,9 @@ export class ResponsesTransformStream extends TransformStream<
                   : JSON.stringify(stripEmptyKeys(part.input)),
               status: "completed",
             };
+            if (part.providerMetadata) {
+              (fnItem as Record<string, unknown>)["extra_content"] = part.providerMetadata;
+            }
             const fnOutputIndex = outputIndex++;
             outputItems.push(fnItem);
 
@@ -774,6 +904,55 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "finish": {
+            // Ensure empty message item is emitted if no tool calls and no text
+            if (!messageItem && !outputItems.some((i) => i.type === "function_call")) {
+              ensureMessageItem(controller);
+              const textPart: ResponsesOutputText = {
+                type: "output_text",
+                text: "",
+                annotations: [],
+              };
+              messageItem!.content.push(textPart);
+              controller.enqueue({
+                event: "response.content_part.added",
+                data: {
+                  type: "response.content_part.added",
+                  output_index: messageOutputIndex,
+                  content_index: contentIndex,
+                  part: textPart,
+                },
+              });
+            }
+
+            // Close any open reasoning content parts
+            if (reasoningItem && reasoningItem.summary.length > 0) {
+              const lastSummaryPart = reasoningItem.summary[summaryIndex];
+              if (lastSummaryPart) {
+                controller.enqueue({
+                  event: "response.reasoning_summary_part.done",
+                  data: {
+                    type: "response.reasoning_summary_part.done",
+                    output_index: reasoningOutputIndex,
+                    summary_index: summaryIndex,
+                    part: lastSummaryPart,
+                  },
+                });
+              }
+            }
+
+            // Close reasoning item
+            if (reasoningItem) {
+              reasoningItem.status = "completed";
+              controller.enqueue({
+                event: "response.output_item.done",
+                data: {
+                  type: "response.output_item.done",
+                  output_index: reasoningOutputIndex,
+                  item: reasoningItem,
+                },
+              });
+            }
+
             // Close any open message content parts
             if (messageItem && messageItem.content.length > 0) {
               const lastPart = messageItem.content[contentIndex];

@@ -9,6 +9,7 @@ import {
   ResponsesFunctionCallSchema,
   ResponsesReasoningItemSchema,
   type ResponsesOutputText,
+  type ResponsesSummaryText,
 } from "../shared/schema";
 
 export {
@@ -271,6 +272,15 @@ export type ResponsesStreamEvent =
     >
   | SseFrame<
       {
+        type: "response.reasoning_summary_part.added";
+        output_index: number;
+        summary_index: number;
+        part: ResponsesSummaryText;
+      },
+      "response.reasoning_summary_part.added"
+    >
+  | SseFrame<
+      {
         type: "response.output_text.delta";
         output_index: number;
         content_index: number;
@@ -280,12 +290,30 @@ export type ResponsesStreamEvent =
     >
   | SseFrame<
       {
+        type: "response.reasoning_summary_text.delta";
+        output_index: number;
+        summary_index: number;
+        delta: string;
+      },
+      "response.reasoning_summary_text.delta"
+    >
+  | SseFrame<
+      {
         type: "response.content_part.done";
         output_index: number;
         content_index: number;
         part: ResponsesOutputText;
       },
       "response.content_part.done"
+    >
+  | SseFrame<
+      {
+        type: "response.reasoning_summary_part.done";
+        output_index: number;
+        summary_index: number;
+        part: ResponsesSummaryText;
+      },
+      "response.reasoning_summary_part.done"
     >
   | SseFrame<
       {
