@@ -21,7 +21,7 @@ import type {
   StopCondition,
 } from "ai";
 
-import { Output, jsonSchema, tool, stepCountIs } from "ai";
+import { Output, jsonSchema, tool, stepCountIs, type JSONValue } from "ai";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
 
@@ -232,14 +232,19 @@ function indexToolOutputs(items: ResponsesInputItem[]) {
 function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
   switch (item.role) {
     case "system":
-    case "developer":
-      return {
+    case "developer": {
+      const out: ModelMessage = {
         role: "system",
         content:
           typeof item.content === "string"
             ? item.content
             : item.content.map(fromInputContentPart).join(""),
       };
+      if ("cache_control" in item && item["cache_control"]) {
+        out.providerOptions = { unknown: { cache_control: item["cache_control"] as JSONValue } };
+      }
+      return out;
+    }
     case "user":
       return fromUserMessageItem(item);
     case "assistant":
@@ -248,48 +253,55 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
 }
 
 function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): UserModelMessage {
-  if (typeof item.content === "string") {
-    return { role: "user", content: item.content };
-  }
+  const out: UserModelMessage = { role: "user", content: "" };
 
-  const content: UserContent = [];
-  for (const part of item.content) {
-    switch (part.type) {
-      case "input_text":
-        content.push({ type: "text", text: part.text });
-        break;
-      case "input_image": {
-        if (part.image_url !== undefined) {
-          content.push(fromImageInput(part.image_url));
-        } else if (part.file_id !== undefined) {
-          content.push({ type: "image", image: part.file_id });
+  if (typeof item.content === "string") {
+    out.content = item.content;
+  } else {
+    const content: UserContent = [];
+    for (const part of item.content) {
+      switch (part.type) {
+        case "input_text":
+          content.push({ type: "text", text: part.text });
+          break;
+        case "input_image": {
+          if (part.image_url !== undefined) {
+            content.push(fromImageInput(part.image_url));
+          } else if (part.file_id !== undefined) {
+            content.push({ type: "image", image: part.file_id });
+          }
+          break;
         }
-        break;
-      }
-      case "input_file": {
-        if (part.file_data !== undefined) {
-          content.push(fromFileInput(part.file_data, part.filename));
-        } else if (part.file_url !== undefined) {
-          content.push({
-            type: "file",
-            data: new URL(part.file_url),
-            filename: part.filename,
-            mediaType: "application/octet-stream",
-          });
-        } else if (part.file_id !== undefined) {
-          content.push({
-            type: "file",
-            data: part.file_id,
-            filename: part.filename,
-            mediaType: "application/octet-stream",
-          });
+        case "input_file": {
+          if (part.file_data !== undefined) {
+            content.push(fromFileInput(part.file_data, part.filename));
+          } else if (part.file_url !== undefined) {
+            content.push({
+              type: "file",
+              data: new URL(part.file_url),
+              filename: part.filename,
+              mediaType: "application/octet-stream",
+            });
+          } else if (part.file_id !== undefined) {
+            content.push({
+              type: "file",
+              data: part.file_id,
+              filename: part.filename,
+              mediaType: "application/octet-stream",
+            });
+          }
+          break;
         }
-        break;
       }
     }
+    out.content = content;
   }
 
-  return { role: "user", content };
+  if ("cache_control" in item && item["cache_control"]) {
+    out.providerOptions = { unknown: { cache_control: item["cache_control"] as JSONValue } };
+  }
+
+  return out;
 }
 
 function fromImageInput(url: string): ImagePart | FilePart {
@@ -577,7 +589,10 @@ function toFunctionCallItem(
     id: uuidv7(),
     call_id: toolCallId,
     name: normalizeToolName(toolName),
-    arguments: typeof input === "string" ? input : JSON.stringify(stripEmptyKeys(input as Record<string, unknown>)),
+    arguments:
+      typeof input === "string"
+        ? input
+        : JSON.stringify(stripEmptyKeys(input as Record<string, unknown>)),
     status: "completed",
   };
 

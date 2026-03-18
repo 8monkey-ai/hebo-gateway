@@ -24,6 +24,24 @@ describe("Responses Converters", () => {
       ]);
     });
 
+    test("should map cache_control into providerOptions for messages", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "message",
+          role: "user",
+          content: "Hello",
+          cache_control: { type: "ephemeral" },
+        },
+      ]);
+      expect(messages).toEqual([
+        {
+          role: "user",
+          content: "Hello",
+          providerOptions: { unknown: { cache_control: { type: "ephemeral" } } },
+        },
+      ]);
+    });
+
     test("should convert message items to model messages", () => {
       const messages = convertToModelMessages([
         {
