@@ -503,19 +503,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
   // Add function call items
   if (result.toolCalls && result.toolCalls.length > 0) {
     for (const tc of result.toolCalls) {
-      const fnItem: ResponsesFunctionCall = {
-        type: "function_call",
-        id: uuidv7(),
-        call_id: tc.toolCallId,
-        name: normalizeToolName(tc.toolName),
-        arguments:
-          typeof tc.input === "string" ? tc.input : JSON.stringify(stripEmptyKeys(tc.input)),
-        status: "completed",
-      };
-      if (tc.providerMetadata) {
-        (fnItem as Record<string, unknown>)["extra_content"] = tc.providerMetadata;
-      }
-      output.push(fnItem);
+      output.push(toFunctionCallItem(tc.toolCallId, tc.toolName, tc.input, tc.providerMetadata));
     }
   }
 
@@ -573,6 +561,28 @@ function toReasoningOutputItem(reasoning: ReasoningOutput): ResponsesReasoningIt
     ) {
       item.encrypted_content = metadata["redactedData"];
     }
+  }
+
+  return item;
+}
+
+function toFunctionCallItem(
+  toolCallId: string,
+  toolName: string,
+  input: unknown,
+  providerMetadata?: SharedV3ProviderMetadata,
+): ResponsesFunctionCall {
+  const item: ResponsesFunctionCall = {
+    type: "function_call",
+    id: uuidv7(),
+    call_id: toolCallId,
+    name: normalizeToolName(toolName),
+    arguments: typeof input === "string" ? input : JSON.stringify(stripEmptyKeys(input as Record<string, unknown>)),
+    status: "completed",
+  };
+
+  if (providerMetadata) {
+    (item as Record<string, unknown>)["extra_content"] = providerMetadata;
   }
 
   return item;
@@ -732,6 +742,70 @@ export class ResponsesTransformStream extends TransformStream<
       });
     };
 
+    const closeReasoningItem = (
+      controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
+    ) => {
+      if (reasoningItem && reasoningItem.summary.length > 0) {
+        const lastSummaryPart = reasoningItem.summary[summaryIndex];
+        if (lastSummaryPart) {
+          controller.enqueue({
+            event: "response.reasoning_summary_part.done",
+            data: {
+              type: "response.reasoning_summary_part.done",
+              output_index: reasoningOutputIndex,
+              summary_index: summaryIndex,
+              part: lastSummaryPart,
+            },
+          });
+        }
+      }
+
+      if (reasoningItem) {
+        reasoningItem.status = "completed";
+        controller.enqueue({
+          event: "response.output_item.done",
+          data: {
+            type: "response.output_item.done",
+            output_index: reasoningOutputIndex,
+            item: reasoningItem,
+          },
+        });
+        reasoningItem = undefined;
+      }
+    };
+
+    const closeMessageItem = (
+      controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
+    ) => {
+      if (messageItem && messageItem.content.length > 0) {
+        const lastPart = messageItem.content[contentIndex];
+        if (lastPart) {
+          controller.enqueue({
+            event: "response.content_part.done",
+            data: {
+              type: "response.content_part.done",
+              output_index: messageOutputIndex,
+              content_index: contentIndex,
+              part: lastPart,
+            },
+          });
+        }
+      }
+
+      if (messageItem) {
+        messageItem.status = "completed";
+        controller.enqueue({
+          event: "response.output_item.done",
+          data: {
+            type: "response.output_item.done",
+            output_index: messageOutputIndex,
+            item: messageItem,
+          },
+        });
+        messageItem = undefined;
+      }
+    };
+
     super({
       start(controller) {
         controller.enqueue({
@@ -789,33 +863,7 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "reasoning-end": {
-            if (reasoningItem && reasoningItem.summary.length > 0) {
-              const lastSummaryPart = reasoningItem.summary[summaryIndex];
-              if (lastSummaryPart) {
-                controller.enqueue({
-                  event: "response.reasoning_summary_part.done",
-                  data: {
-                    type: "response.reasoning_summary_part.done",
-                    output_index: reasoningOutputIndex,
-                    summary_index: summaryIndex,
-                    part: lastSummaryPart,
-                  },
-                });
-              }
-            }
-
-            if (reasoningItem) {
-              reasoningItem.status = "completed";
-              controller.enqueue({
-                event: "response.output_item.done",
-                data: {
-                  type: "response.output_item.done",
-                  output_index: reasoningOutputIndex,
-                  item: reasoningItem,
-                },
-              });
-              reasoningItem = undefined;
-            }
+            closeReasoningItem(controller);
             break;
           }
 
@@ -861,20 +909,12 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "tool-call": {
-            const fnItem: ResponsesFunctionCall = {
-              type: "function_call",
-              id: uuidv7(),
-              call_id: part.toolCallId,
-              name: normalizeToolName(part.toolName),
-              arguments:
-                typeof part.input === "string"
-                  ? part.input
-                  : JSON.stringify(stripEmptyKeys(part.input)),
-              status: "completed",
-            };
-            if (part.providerMetadata) {
-              (fnItem as Record<string, unknown>)["extra_content"] = part.providerMetadata;
-            }
+            const fnItem = toFunctionCallItem(
+              part.toolCallId,
+              part.toolName,
+              part.input,
+              part.providerMetadata,
+            );
             const fnOutputIndex = outputIndex++;
             outputItems.push(fnItem);
 
@@ -924,63 +964,8 @@ export class ResponsesTransformStream extends TransformStream<
               });
             }
 
-            // Close any open reasoning content parts
-            if (reasoningItem && reasoningItem.summary.length > 0) {
-              const lastSummaryPart = reasoningItem.summary[summaryIndex];
-              if (lastSummaryPart) {
-                controller.enqueue({
-                  event: "response.reasoning_summary_part.done",
-                  data: {
-                    type: "response.reasoning_summary_part.done",
-                    output_index: reasoningOutputIndex,
-                    summary_index: summaryIndex,
-                    part: lastSummaryPart,
-                  },
-                });
-              }
-            }
-
-            // Close reasoning item
-            if (reasoningItem) {
-              reasoningItem.status = "completed";
-              controller.enqueue({
-                event: "response.output_item.done",
-                data: {
-                  type: "response.output_item.done",
-                  output_index: reasoningOutputIndex,
-                  item: reasoningItem,
-                },
-              });
-            }
-
-            // Close any open message content parts
-            if (messageItem && messageItem.content.length > 0) {
-              const lastPart = messageItem.content[contentIndex];
-              if (lastPart) {
-                controller.enqueue({
-                  event: "response.content_part.done",
-                  data: {
-                    type: "response.content_part.done",
-                    output_index: messageOutputIndex,
-                    content_index: contentIndex,
-                    part: lastPart,
-                  },
-                });
-              }
-            }
-
-            // Close message item
-            if (messageItem) {
-              messageItem.status = "completed";
-              controller.enqueue({
-                event: "response.output_item.done",
-                data: {
-                  type: "response.output_item.done",
-                  output_index: messageOutputIndex,
-                  item: messageItem,
-                },
-              });
-            }
+            closeReasoningItem(controller);
+            closeMessageItem(controller);
 
             const status = toResponsesStatus(part.finishReason);
             const usage = part.totalUsage ? toResponsesUsage(part.totalUsage) : null;
