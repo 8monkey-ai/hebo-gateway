@@ -92,6 +92,7 @@ describe("Responses Handler", () => {
   test("should return 405 for non-POST requests", async () => {
     const request = new Request(baseUrl, { method: "GET" });
     const res = await endpoint.handler(request);
+    expect(res.status).toBe(405);
     const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
@@ -108,6 +109,7 @@ describe("Responses Handler", () => {
       body: "invalid-json",
     });
     const res = await endpoint.handler(request);
+    expect(res.status).toBe(400);
     const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
@@ -121,6 +123,7 @@ describe("Responses Handler", () => {
   test("should return 400 for validation errors (missing input)", async () => {
     const request = postJson(baseUrl, { model: "openai/gpt-oss-20b" });
     const res = await endpoint.handler(request);
+    expect(res.status).toBe(400);
     const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
@@ -136,6 +139,7 @@ describe("Responses Handler", () => {
       input: "hi",
     });
     const res = await endpoint.handler(request);
+    expect(res.status).toBe(422);
     const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {

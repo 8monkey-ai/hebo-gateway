@@ -268,6 +268,8 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
           if (part.image_url !== undefined) {
             content.push(fromImageInput(part.image_url));
           } else if (part.file_id !== undefined) {
+            // Note: passing file_id as image data is provider-dependent.
+            // AI SDK's ImagePart.image expects Uint8Array | URL | string (base64 or URL).
             content.push({ type: "image", image: part.file_id });
           }
           break;
@@ -278,7 +280,7 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
           } else if (part.file_url !== undefined) {
             content.push({
               type: "file",
-              data: new URL(part.file_url),
+              data: parseUrl(part.file_url, "Invalid file URL"),
               filename: part.filename,
               mediaType: "application/octet-stream",
             });
@@ -304,6 +306,14 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
   return out;
 }
 
+function parseUrl(url: string, errorPrefix = "Invalid URL"): URL {
+  try {
+    return new URL(url);
+  } catch {
+    throw new GatewayError(`${errorPrefix}: ${url}`, 400);
+  }
+}
+
 function fromImageInput(url: string): ImagePart | FilePart {
   if (url.startsWith("data:")) {
     const { mimeType, dataStart } = parseDataUrl(url);
@@ -311,26 +321,34 @@ function fromImageInput(url: string): ImagePart | FilePart {
       throw new GatewayError("Invalid data URL", 400);
     }
     const base64Data = url.slice(dataStart);
-    return {
-      type: "image",
-      image: z.util.base64ToUint8Array(base64Data),
-      mediaType: mimeType,
-    };
+    try {
+      return {
+        type: "image",
+        image: z.util.base64ToUint8Array(base64Data),
+        mediaType: mimeType,
+      };
+    } catch {
+      throw new GatewayError("Invalid base64 data in image URL", 400);
+    }
   }
 
   return {
     type: "image",
-    image: new URL(url),
+    image: parseUrl(url, "Invalid image URL"),
   };
 }
 
 function fromFileInput(data: string, filename?: string): FilePart {
-  return {
-    type: "file",
-    data: z.util.base64ToUint8Array(data),
-    filename,
-    mediaType: "application/octet-stream",
-  };
+  try {
+    return {
+      type: "file",
+      data: z.util.base64ToUint8Array(data),
+      filename,
+      mediaType: "application/octet-stream",
+    };
+  } catch {
+    throw new GatewayError("Invalid base64 data in file input", 400);
+  }
 }
 
 function fromInputContentPart(part: { type: string; text?: string }): string {
@@ -430,6 +448,7 @@ export const convertToToolChoiceOptions = (
     toolChoice === "required" ||
     toolChoice === "validated"
   ) {
+    // FUTURE: this is right now google specific, which is not supported by AI SDK, until then, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
     return { toolChoice: toolChoice === "validated" ? "auto" : toolChoice };
   }
 
@@ -1009,6 +1028,7 @@ export class ResponsesTransformStream extends TransformStream<
             controller.enqueue({
               data: part.error instanceof Error ? part.error : new Error(String(part.error)),
             });
+            break;
           }
         }
       },

@@ -362,9 +362,16 @@ function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheContro
     return fromFilePart(url.slice(dataStart), mimeType, undefined, cacheControl);
   }
 
+  let imageUrl: URL;
+  try {
+    imageUrl = new URL(url);
+  } catch {
+    throw new GatewayError(`Invalid image URL: ${url}`, 400);
+  }
+
   const out: ImagePart = {
     type: "image" as const,
-    image: new URL(url),
+    image: imageUrl,
   };
   if (cacheControl) {
     out.providerOptions = {
@@ -380,10 +387,17 @@ function fromFilePart(
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
+  let decodedData: Uint8Array;
+  try {
+    decodedData = z.util.base64ToUint8Array(base64Data);
+  } catch {
+    throw new GatewayError("Invalid base64 data in file part", 400);
+  }
+
   if (mediaType.startsWith("image/")) {
     const out: ImagePart = {
       type: "image" as const,
-      image: z.util.base64ToUint8Array(base64Data),
+      image: decodedData,
       mediaType,
     };
     if (cacheControl) {
@@ -396,7 +410,7 @@ function fromFilePart(
 
   const out: FilePart = {
     type: "file" as const,
-    data: z.util.base64ToUint8Array(base64Data),
+    data: decodedData,
     filename,
     mediaType,
   };

@@ -118,7 +118,7 @@ export type GatewayHooks = {
    */
   onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
   /**
-   * Runs after request JSON is parsed and validated for chat completions / embeddings.
+   * Runs after request JSON is parsed and validated for chat completions / embeddings / responses.
    * @returns Replacement parsed body, or undefined to keep original.
    */
   before?: (

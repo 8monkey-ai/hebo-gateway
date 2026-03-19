@@ -576,6 +576,8 @@ describe("Responses Converters", () => {
       expect(completed!.data.output[0].type).toBe("reasoning");
       // oxlint-disable-next-line no-unsafe-member-access
       expect(completed!.data.output[1].type).toBe("message");
+      // oxlint-disable-next-line no-unsafe-member-access
+      expect(completed!.data.output[1].content[0].text).toBe("Hello");
     });
   });
 });
