@@ -130,6 +130,17 @@ export const gpt51CodexMax = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const gpt51CodexMini = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.1-codex-mini" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.1 Codex Mini",
+    created: "2025-11-13",
+    knowledge: "2024-09",
+    context: 400000,
+  } satisfies CatalogModel,
+);
+
 export const gpt5Codex = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/gpt-5-codex" as const,
   {
@@ -188,6 +199,66 @@ export const gpt53Codex = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const gpt53CodexSpark = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.3-codex-spark" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.3 Codex Spark",
+    created: "2026-02-05",
+    knowledge: "2025-08",
+    context: 128000,
+  } satisfies CatalogModel,
+);
+
+export const gpt53Chat = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.3-chat" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.3 Chat",
+    created: "2026-03-03",
+    knowledge: "2025-08",
+    context: 128000,
+  } satisfies CatalogModel,
+);
+
+export const gpt54 = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.4" as const, {
+  ...GPT_BASE,
+  name: "GPT-5.4",
+  created: "2026-03-05",
+  knowledge: "2025-08",
+  context: 1050000,
+} satisfies CatalogModel);
+
+export const gpt54Mini = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.4-mini" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.4 Mini",
+    created: "2026-03-17",
+    knowledge: "2025-08",
+    context: 400000,
+  } satisfies CatalogModel,
+);
+
+export const gpt54Nano = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.4-nano" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.4 Nano",
+    created: "2026-03-17",
+    knowledge: "2025-08",
+    context: 400000,
+  } satisfies CatalogModel,
+);
+
+export const gpt54Pro = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.4-pro" as const, {
+  ...GPT_PRO_BASE,
+  name: "GPT-5.4 Pro",
+  created: "2026-03-05",
+  knowledge: "2025-08",
+  context: 1050000,
+} satisfies CatalogModel);
+
 export const textEmbedding3Small = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/text-embedding-3-small" as const,
   {
@@ -238,16 +309,31 @@ const gptOssGroups = {
 
 const gptAtomic = {
   v5: [gpt5, gpt5Mini, gpt5Nano, gpt5Pro],
-  "v5.1": [gpt51, gpt51Chat, gpt51Codex, gpt51CodexMax],
+  "v5.1": [gpt51, gpt51Chat, gpt51Codex, gpt51CodexMax, gpt51CodexMini],
   "v5.2": [gpt52, gpt52Chat, gpt52Pro, gpt52Codex],
-  "v5.3": [gpt53Codex],
-  codex: [gpt5Codex, gpt51Codex, gpt51CodexMax, gpt52Codex, gpt53Codex],
-  chat: [gpt51Chat, gpt52Chat],
-  pro: [gpt5Pro, gpt52Pro],
+  "v5.3": [gpt53Codex, gpt53CodexSpark, gpt53Chat],
+  "v5.4": [gpt54, gpt54Mini, gpt54Nano, gpt54Pro],
+  codex: [
+    gpt5Codex,
+    gpt51Codex,
+    gpt51CodexMax,
+    gpt51CodexMini,
+    gpt52Codex,
+    gpt53Codex,
+    gpt53CodexSpark,
+  ],
+  chat: [gpt51Chat, gpt52Chat, gpt53Chat],
+  pro: [gpt5Pro, gpt52Pro, gpt54Pro],
 } as const;
 
 const gptGroups = {
-  "v5.x": [...gptAtomic["v5"], ...gptAtomic["v5.1"], ...gptAtomic["v5.2"], ...gptAtomic["v5.3"]],
+  "v5.x": [
+    ...gptAtomic["v5"],
+    ...gptAtomic["v5.1"],
+    ...gptAtomic["v5.2"],
+    ...gptAtomic["v5.3"],
+    ...gptAtomic["v5.4"],
+  ],
 } as const;
 
 const textEmbeddingsAtomic = {
@@ -268,7 +354,7 @@ export const gptOss = {
 export const gpt = {
   ...gptAtomic,
   ...gptGroups,
-  latest: [gpt52, gpt5Mini, gpt5Nano],
+  latest: [gpt54, gpt54Mini, gpt54Nano],
   all: Object.values(gptAtomic).flat(),
 } as const;
 
