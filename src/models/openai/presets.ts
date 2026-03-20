@@ -130,6 +130,17 @@ export const gpt51CodexMax = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const gpt51CodexMini = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.1-codex-mini" as const,
+  {
+    ...GPT_BASE,
+    name: "GPT-5.1 Codex Mini",
+    created: "2025-11-13",
+    knowledge: "2024-09",
+    context: 400000,
+  } satisfies CatalogModel,
+);
+
 export const gpt5Codex = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/gpt-5-codex" as const,
   {
@@ -207,17 +218,6 @@ export const gpt53Chat = presetFor<CanonicalModelId, CatalogModel>()(
     created: "2026-03-03",
     knowledge: "2025-08",
     context: 128000,
-  } satisfies CatalogModel,
-);
-
-export const gpt51CodexMini = presetFor<CanonicalModelId, CatalogModel>()(
-  "openai/gpt-5.1-codex-mini" as const,
-  {
-    ...GPT_BASE,
-    name: "GPT-5.1 Codex Mini",
-    created: "2025-11-13",
-    knowledge: "2024-09",
-    context: 400000,
   } satisfies CatalogModel,
 );
 
