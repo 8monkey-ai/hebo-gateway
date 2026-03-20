@@ -204,7 +204,7 @@ export const gpt53CodexSpark = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...GPT_BASE,
     name: "GPT-5.3 Codex Spark",
-    created: "2026-02-12",
+    created: "2026-02-05",
     knowledge: "2025-08",
     context: 128000,
   } satisfies CatalogModel,
