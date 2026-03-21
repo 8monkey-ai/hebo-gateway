@@ -100,7 +100,7 @@ const LLAMA_4_BASE = {
   },
   capabilities: ["attachments", "tool_call", "temperature"] as const,
   context: 1000000,
-  providers: ["groq", "vertex", "bedrock"] as const,
+  providers: ["groq", "bedrock", "vertex"] as const,
 } satisfies DeepPartial<CatalogModel>;
 
 export const llama4Scout = presetFor<CanonicalModelId, CatalogModel>()(
