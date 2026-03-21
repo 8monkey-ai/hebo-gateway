@@ -9,7 +9,7 @@ const COMMAND_BASE = {
     output: ["text"] as const,
   },
   capabilities: ["tool_call", "structured_output", "reasoning", "temperature"] as const,
-  providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["azure", "cohere"] as const satisfies readonly CanonicalProviderId[],
   knowledge: "2024-06",
 } satisfies DeepPartial<CatalogModel>;
 
@@ -19,7 +19,7 @@ const COMMAND_VISION_BASE = {
     output: ["text"] as const,
   },
   capabilities: ["structured_output", "reasoning", "temperature"] as const,
-  providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["azure", "cohere"] as const satisfies readonly CanonicalProviderId[],
   knowledge: "2024-06",
 } satisfies DeepPartial<CatalogModel>;
 
@@ -28,7 +28,7 @@ const EMBED_V3_BASE = {
     input: ["text", "image"] as const,
     output: ["embedding"] as const,
   },
-  providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["azure", "cohere"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const EMBED_V4_BASE = {
@@ -36,7 +36,7 @@ const EMBED_V4_BASE = {
     input: ["text", "image", "pdf"] as const,
     output: ["embedding"] as const,
   },
-  providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["azure", "cohere"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const commandA = presetFor<CanonicalModelId, CatalogModel>()("cohere/command-a" as const, {
@@ -81,7 +81,7 @@ export const commandR = presetFor<CanonicalModelId, CatalogModel>()("cohere/comm
   name: "Cohere Command R",
   created: "2024-08-01",
   context: 128000,
-  providers: ["cohere", "bedrock"],
+  providers: ["azure", "cohere", "bedrock"],
 } satisfies CatalogModel);
 
 export const commandRPlus = presetFor<CanonicalModelId, CatalogModel>()(
@@ -91,7 +91,7 @@ export const commandRPlus = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Cohere Command R+",
     created: "2024-08-01",
     context: 128000,
-    providers: ["cohere", "bedrock"],
+    providers: ["azure", "cohere", "bedrock"],
   } satisfies CatalogModel,
 );
 
@@ -110,7 +110,7 @@ export const embed4 = presetFor<CanonicalModelId, CatalogModel>()("cohere/embed-
   name: "Cohere 4 Embeddings",
   created: "2025-04-15",
   context: 128000,
-  providers: ["cohere", "bedrock"],
+  providers: ["azure", "cohere", "bedrock"],
 } satisfies CatalogModel);
 
 export const embedEnglishV3 = presetFor<CanonicalModelId, CatalogModel>()(
@@ -120,7 +120,7 @@ export const embedEnglishV3 = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Cohere Embed English v3",
     created: "2024-02-07",
     context: 512,
-    providers: ["cohere", "bedrock"],
+    providers: ["azure", "cohere", "bedrock"],
   } satisfies CatalogModel,
 );
 
@@ -142,7 +142,7 @@ export const embedMultilingualV3 = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Cohere Embed Multilingual v3",
     created: "2024-02-07",
     context: 512,
-    providers: ["cohere", "bedrock"],
+    providers: ["azure", "cohere", "bedrock"],
   } satisfies CatalogModel,
 );
 
