@@ -66,6 +66,10 @@
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js"
     },
+    "./endpoints/responses": {
+      "types": "./dist/endpoints/responses/index.d.ts",
+      "import": "./dist/endpoints/responses/index.js"
+    },
     "./storage/memory": {
       "types": "./dist/endpoints/conversations/storage/memory.d.ts",
       "import": "./dist/endpoints/conversations/storage/memory.js",

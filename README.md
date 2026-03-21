@@ -13,6 +13,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 ## 🍌 Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
+- 🔄 /responses endpoint implementing the Open Responses API (stateless).
 - 💬 /conversations endpoint built on top of the Responses API.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
@@ -82,7 +83,6 @@ export const gw = gateway({
 
 > [!NOTE]
 > Don't forget to install the Groq provider package too: `@ai-sdk/groq`.
-
 > [!TIP]
 > Why `withCanonicalIdsForX`? In most cases you want your gateway to route using model IDs that are consistent across providers (e.g. `openai/gpt-oss-20b` rather than `openai.gpt-oss-20b-v1:0`). We call that `Canonical IDs` - they are what enable routing, fallbacks, and policy rules. Without this wrapper, providers only understands their native IDs, which would make cross-provider routing impossible.
 
@@ -656,6 +656,33 @@ The response follows the standard OpenAI list object:
   "has_more": false
 }
 ```
+
+### Responses
+
+Hebo Gateway provides a `/responses` endpoint implementing the [Open Responses API](https://www.openresponses.org/specification) (stateless). It accepts the same models, providers, hooks, and extensions as `/chat/completions` but uses the Responses API request/response format.
+
+```bash
+curl -X POST http://localhost:3000/v1/gateway/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/gpt-oss-20b",
+    "input": "Tell me a joke about monkeys",
+    "instructions": "You are a comedian."
+  }'
+```
+
+Key features:
+
+- String or array `input` (message, function_call, function_call_output, reasoning items)
+- `instructions` field mapped to system message
+- `text` output format config (`json_schema` or `text`) replacing `response_format`
+- Named SSE streaming events (`response.created`, `response.output_text.delta`, `response.completed`, etc.)
+- All chat-completions extensions supported (`cache_control`, `reasoning`, `extra_body`, `provider_metadata`)
+
+> [!NOTE]
+> This is a stateless implementation. `previous_response_id` chaining and server-side response storage (`store`) are not supported.
+> [!IMPORTANT]
+> **Audio Modality**: While `/chat/completions` supports `input_audio`, the [Open Responses API specification](https://www.openresponses.org/specification) does not yet define an audio content type. Consequently, audio input is currently not supported on the `/responses` and `/conversations` endpoints.
 
 ### Prompt Caching
 

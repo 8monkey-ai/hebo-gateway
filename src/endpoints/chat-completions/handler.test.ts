@@ -393,4 +393,37 @@ describe("Chat Completions Handler", () => {
     const data = (await parseResponse<ChatCompletions>(res))!;
     expect(data.choices[0]!.message.content).toBe("Hello from AI");
   });
+
+  test("should return original model ID even if resolved to a different ID", async () => {
+    const endpointWithHook = chatCompletions({
+      providers: {
+        groq: new MockProviderV3({
+          languageModels: {
+            "openai/gpt-oss-20b": mockLanguageModel,
+          },
+        }),
+      },
+      models: defineModelCatalog({
+        "openai/gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text", "file"], output: ["text"] },
+          providers: ["groq"],
+        },
+      }),
+      hooks: {
+        // oxlint-disable-next-line require-await
+        resolveModelId: async () => "openai/gpt-oss-20b",
+      },
+    });
+
+    const request = postJson(baseUrl, {
+      model: "alias-model",
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const res = await endpointWithHook.handler(request);
+    expect(res.status).toBe(200);
+    const data = (await parseResponse<ChatCompletions>(res))!;
+    expect(data.model).toBe("alias-model");
+  });
 });
