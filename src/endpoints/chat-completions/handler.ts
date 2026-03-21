@@ -136,7 +136,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
-            ctx.modelId!,
+            ctx.resolvedModelId!,
           );
           logger.trace(
             { requestId: ctx.requestId, result: streamResult },
@@ -156,7 +156,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         ...textOptions,
       });
 
-      ctx.result = toChatCompletionsStream(result, ctx.modelId);
+      ctx.result = toChatCompletionsStream(result, ctx.resolvedModelId);
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
@@ -182,7 +182,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.ai-sdk.completed");
 
     // Transform result.
-    ctx.result = toChatCompletions(result, ctx.modelId);
+    ctx.result = toChatCompletions(result, ctx.resolvedModelId);
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[chat] ChatCompletions");
     addSpanEvent("hebo.result.transformed");
 

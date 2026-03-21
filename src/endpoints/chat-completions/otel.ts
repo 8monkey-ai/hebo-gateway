@@ -121,6 +121,19 @@ const toMessageParts = (message: ChatCompletionsMessage) => {
   }
 };
 
+const getInputMessages = (body: ChatCompletionsBody): string[] => {
+  // FUTURE: move system instructions from messages to here
+  // blocker: https://github.com/langfuse/langfuse/issues/11607
+  // "gen_ai.system_instructions": inputs.messages
+  //   .filter((m) => m.role === "system")
+  //   .map((m) => JSON.stringify(toTextPart(m.content))),
+  return (
+    body.messages
+      //.filter((m) => m.role !== "system")
+      .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) }))
+  );
+};
+
 export const getChatRequestAttributes = (
   body: ChatCompletionsBody,
   signalLevel?: TelemetrySignalLevel,
@@ -159,14 +172,7 @@ export const getChatRequestAttributes = (
 
   if (signalLevel === "full") {
     Object.assign(attrs, {
-      // FUTURE: move system instructions from messages to here
-      // blocker: https://github.com/langfuse/langfuse/issues/11607
-      // "gen_ai.system_instructions": inputs.messages
-      //   .filter((m) => m.role === "system")
-      //   .map((m) => JSON.stringify(toTextPart(m.content))),
-      "gen_ai.input.messages": body.messages
-        //.filter((m) => m.role !== "system")
-        .map((m) => JSON.stringify({ role: m.role, parts: toMessageParts(m) })),
+      "gen_ai.input.messages": getInputMessages(body),
       "gen_ai.tool.definitions": body.tools?.map((toolDefinition) =>
         JSON.stringify(toolDefinition),
       ),
@@ -174,6 +180,16 @@ export const getChatRequestAttributes = (
   }
 
   return attrs;
+};
+
+const getOutputMessages = (completions: ChatCompletions): string[] | undefined => {
+  return completions.choices?.map((c) =>
+    JSON.stringify({
+      role: c.message.role,
+      parts: toMessageParts(c.message),
+      finish_reason: c.finish_reason,
+    }),
+  );
 };
 
 export const getChatResponseAttributes = (
@@ -202,13 +218,7 @@ export const getChatResponseAttributes = (
 
   if (signalLevel === "full") {
     Object.assign(attrs, {
-      "gen_ai.output.messages": completions.choices?.map((c) =>
-        JSON.stringify({
-          role: c.message.role,
-          parts: toMessageParts(c.message),
-          finish_reason: c.finish_reason,
-        }),
-      ),
+      "gen_ai.output.messages": getOutputMessages(completions),
     });
   }
 

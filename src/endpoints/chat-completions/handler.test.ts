@@ -394,7 +394,7 @@ describe("Chat Completions Handler", () => {
     expect(data.choices[0]!.message.content).toBe("Hello from AI");
   });
 
-  test("should return original model ID even if resolved to a different ID", async () => {
+  test("should return resolved model ID if routed to a different model", async () => {
     const endpointWithHook = chatCompletions({
       providers: {
         groq: new MockProviderV3({
@@ -424,6 +424,6 @@ describe("Chat Completions Handler", () => {
     const res = await endpointWithHook.handler(request);
     expect(res.status).toBe(200);
     const data = (await parseResponse<ChatCompletions>(res))!;
-    expect(data.model).toBe("alias-model");
+    expect(data.model).toBe("openai/gpt-oss-20b");
   });
 });

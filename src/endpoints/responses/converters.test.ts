@@ -307,7 +307,7 @@ describe("Responses Converters", () => {
         "openai/gpt-5",
       );
 
-      expect(result.id).toStartWith("resp_");
+      expect(result.id).toBeString();
       expect(result.object).toBe("response");
       expect(result.status).toBe("completed");
       expect(result.model).toBe("openai/gpt-5");

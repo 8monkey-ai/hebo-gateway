@@ -116,7 +116,7 @@ describe("Responses OTEL", () => {
 
   test("should map response attributes in recommended mode", () => {
     const response: Responses = {
-      id: "resp_123",
+      id: "018e69ba-a82d-7fb4-9c5d-010b9a89c836",
       object: "response",
       status: "completed",
       model: "openai/gpt-5",
@@ -143,7 +143,7 @@ describe("Responses OTEL", () => {
 
     const attrs = getResponsesResponseAttributes(response, "recommended", "stop");
 
-    expect(attrs["gen_ai.response.id"]).toBe("resp_123");
+    expect(attrs["gen_ai.response.id"]).toBe("018e69ba-a82d-7fb4-9c5d-010b9a89c836");
     expect(attrs["gen_ai.response.finish_reasons"]).toEqual(["stop"]);
     expect(attrs["gen_ai.usage.input_tokens"]).toBe(10);
     expect(attrs["gen_ai.usage.output_tokens"]).toBe(20);
@@ -154,7 +154,7 @@ describe("Responses OTEL", () => {
 
   test("should use responses.status if finishReason is not provided", () => {
     const response: Responses = {
-      id: "resp_123",
+      id: "018e69ba-a82d-7fb4-9c5d-010b9a89c836",
       object: "response",
       status: "completed",
       model: "openai/gpt-5",
@@ -170,7 +170,7 @@ describe("Responses OTEL", () => {
 
   test("should map output messages in full mode", () => {
     const response: Responses = {
-      id: "resp_123",
+      id: "018e69ba-a82d-7fb4-9c5d-010b9a89c836",
       object: "response",
       status: "completed",
       model: "openai/gpt-5",
@@ -197,9 +197,9 @@ describe("Responses OTEL", () => {
     expect(attrs["gen_ai.output.messages"]).toEqual([
       JSON.stringify({
         type: "message",
+        status: "completed",
         role: "assistant",
         parts: [{ type: "text", content: "Hi there" }],
-        status: "completed",
       }),
     ]);
   });

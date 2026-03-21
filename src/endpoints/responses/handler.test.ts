@@ -159,7 +159,7 @@ describe("Responses Handler", () => {
     const data = await parseResponse<Responses>(res);
     expect(data).toMatchObject({
       // oxlint-disable-next-line no-unsafe-assignment
-      id: expect.stringMatching(/^resp_/),
+      id: expect.any(String),
       object: "response",
       status: "completed",
       model: "openai/gpt-oss-20b",
@@ -337,7 +337,7 @@ describe("Responses Handler", () => {
     expect(data!.metadata).toEqual({ user_id: "u-123" });
   });
 
-  test("should return original model ID even if resolved to a different ID", async () => {
+  test("should return resolved model ID if routed to a different model", async () => {
     const endpointWithHook = responses({
       providers: {
         groq: new MockProviderV3({
@@ -367,6 +367,6 @@ describe("Responses Handler", () => {
     const res = await endpointWithHook.handler(request);
     expect(res.status).toBe(200);
     const data = (await parseResponse<Responses>(res))!;
-    expect(data.model).toBe("alias-model");
+    expect(data.model).toBe("openai/gpt-oss-20b");
   });
 });

@@ -576,6 +576,15 @@ export class ChatCompletionsTransformStream extends TransformStream<
 
     super({
       transform(part, controller) {
+        // We explicitly omit several stream part types from the AI SDK:
+        // - 'text-start', 'text-end', 'reasoning-start', 'reasoning-end':
+        //   Unlike the stateful /responses endpoint, the OpenAI-compatible /chat/completions
+        //   format is a stateless stream of deltas. We do not need to emit explicit lifecycle
+        //   events for content items, so we only process the '-delta' events.
+        // - 'tool-input-*' ('start', 'delta', 'end'): We wait for the final 'tool-call'
+        //   event to emit the fully-formed tool call at once.
+        // - 'tool-result', 'tool-error', etc.: Not relayed in this direction.
+        // - 'start', 'start-step', 'abort', 'source', 'file': Ignored or handled elsewhere.
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "text-delta": {

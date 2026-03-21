@@ -195,30 +195,35 @@ export function convertToModelMessages(
 function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage {
   const parts: AssistantContent = [];
 
-  if (item.summary && item.summary.length > 0) {
-    const extra = (item as Record<string, unknown>)["extra_content"] as
-      | Record<string, unknown>
-      | undefined;
-    for (const s of item.summary) {
+  if (!item.summary || item.summary.length === 0) {
+    return { role: "assistant", content: parts };
+  }
+
+  const extra = (item as Record<string, unknown>)["extra_content"] as
+    | Record<string, unknown>
+    | undefined;
+
+  for (const s of item.summary) {
+    if (extra || item.encrypted_content) {
+      const unknownOpts: Record<string, unknown> = extra ? { ...extra } : {};
+      if (item.encrypted_content) {
+        unknownOpts["redactedData"] = item.encrypted_content;
+      }
       parts.push({
         type: "reasoning",
         text: s.text,
-        providerOptions:
-          extra || item.encrypted_content
-            ? {
-                unknown: {
-                  ...extra,
-                  redactedData: item.encrypted_content,
-                },
-              }
-            : undefined,
+        providerOptions: { unknown: unknownOpts as Record<string, JSONValue> },
+      });
+    } else {
+      parts.push({
+        type: "reasoning",
+        text: s.text,
       });
     }
   }
 
   return { role: "assistant", content: parts };
 }
-
 function indexToolOutputs(items: ResponsesInputItem[]) {
   const map = new Map<string, ResponsesFunctionCallOutput>();
   for (const item of items) {
@@ -479,7 +484,7 @@ export function toResponses(
   const status = toResponsesStatus(result.finishReason);
 
   return {
-    id: "resp_" + uuidv7(),
+    id: uuidv7(),
     object: "response",
     status,
     model,
@@ -662,6 +667,8 @@ function toResponsesStatus(finishReason: FinishReason): ResponsesStatus {
 }
 
 function toIncompleteReason(finishReason: FinishReason): string {
+  // This switch only handles reasons that result in an "incomplete" status
+  // ('stop', 'tool-calls', 'error', 'other' are handled by their respective statuses).
   // oxlint-disable-next-line switch-exhaustiveness-check
   switch (finishReason) {
     case "length":
@@ -680,7 +687,7 @@ export class ResponsesTransformStream extends TransformStream<
   ResponsesStreamEvent | SseErrorFrame
 > {
   constructor(model: string, metadata?: Record<string, string> | null) {
-    const responseId = `resp_${uuidv7()}`;
+    const responseId = uuidv7();
     const creationTime = Math.floor(Date.now() / 1000);
     let outputIndex = 0;
     let messageItem: ResponsesOutputMessage | undefined;
@@ -693,19 +700,29 @@ export class ResponsesTransformStream extends TransformStream<
     let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
     const outputItems: ResponsesOutputItem[] = [];
 
-    const baseResponse = (): Responses => ({
+    const createResponse = (
+      status: ResponsesStatus,
+      usage: ResponsesUsage | null,
+      completedAt: number | null,
+      incompleteDetails?: Responses["incomplete_details"],
+      serviceTier?: Responses["service_tier"],
+      providerMetadata?: SharedV3ProviderMetadata,
+    ): Responses => ({
       id: responseId,
       object: "response",
-      status: "in_progress",
+      status,
       model,
-      output: [...outputItems],
-      usage: null,
+      output: outputItems.slice(),
+      usage,
       created_at: creationTime,
-      completed_at: null,
+      completed_at: completedAt,
+      incomplete_details: incompleteDetails,
+      service_tier: serviceTier,
       metadata,
+      provider_metadata: providerMetadata,
     });
 
-    const ensureMessageItem = (
+    const initMessageItem = (
       controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
       providerMetadata?: SharedV3ProviderMetadata,
     ) => {
@@ -736,7 +753,7 @@ export class ResponsesTransformStream extends TransformStream<
       });
     };
 
-    const ensureReasoningItem = (
+    const initReasoningItem = (
       controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
       providerMetadata?: SharedV3ProviderMetadata,
     ) => {
@@ -844,25 +861,32 @@ export class ResponsesTransformStream extends TransformStream<
       start(controller) {
         controller.enqueue({
           event: "response.created",
-          data: baseResponse(),
+          data: createResponse("in_progress", null, null),
         });
 
         controller.enqueue({
           event: "response.in_progress",
-          data: baseResponse(),
+          data: createResponse("in_progress", null, null),
         });
       },
 
       transform(part, controller) {
+        // We explicitly omit several stream part types from the AI SDK:
+        // - 'text-end': Item closure is handled generically on 'finish' / 'finish-step'
+        // - 'tool-input-*' ('start', 'delta', 'end'): The AI SDK streams tool arguments chunk-by-chunk, but our API schema requires sending the fully-formed tool call at once. We ignore the chunks and wait for the final 'tool-call' event.
+        // - 'tool-result', 'tool-error', 'tool-output-denied': These only occur if the server executes the tools on behalf of the user. Our gateway only relays the model's request to call a tool back to the client.
+        // - 'start', 'start-step': Metadata events that do not map to our output items.
+        // - 'abort': Stream cancellation is handled at the network/abort-controller level.
+        // - 'source', 'file': No current schema support in the Responses format.
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "reasoning-start": {
-            ensureReasoningItem(controller, part.providerMetadata);
+            initReasoningItem(controller, part.providerMetadata);
             break;
           }
 
           case "reasoning-delta": {
-            ensureReasoningItem(controller);
+            initReasoningItem(controller);
 
             if (summaryIndex === reasoningItem!.summary.length) {
               const summaryPart: ResponsesSummaryText = {
@@ -902,12 +926,12 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "text-start": {
-            ensureMessageItem(controller, part.providerMetadata);
+            initMessageItem(controller, part.providerMetadata);
             break;
           }
 
           case "text-delta": {
-            ensureMessageItem(controller);
+            initMessageItem(controller);
 
             if (contentIndex === messageItem!.content.length) {
               const textPart: ResponsesOutputText = {
@@ -980,7 +1004,7 @@ export class ResponsesTransformStream extends TransformStream<
           case "finish": {
             // Ensure empty message item is emitted if no tool calls and no text
             if (!messageItem && !outputItems.some((i) => i.type === "function_call")) {
-              ensureMessageItem(controller);
+              initMessageItem(controller);
               const textPart: ResponsesOutputText = {
                 type: "output_text",
                 text: "",
@@ -1004,17 +1028,17 @@ export class ResponsesTransformStream extends TransformStream<
             const status = toResponsesStatus(part.finishReason);
             const usage = part.totalUsage ? toResponsesUsage(part.totalUsage) : null;
             const now = Math.floor(Date.now() / 1000);
+            const incompleteDetails =
+              status === "incomplete" ? { reason: toIncompleteReason(part.finishReason) } : null;
 
-            const finalResponse: Responses = {
-              ...baseResponse(),
+            const finalResponse: Responses = createResponse(
               status,
               usage,
-              completed_at: status === "completed" ? now : null,
-              incomplete_details:
-                status === "incomplete" ? { reason: toIncompleteReason(part.finishReason) } : null,
-              service_tier: resolveResponseServiceTier(finishProviderMetadata),
-              provider_metadata: finishProviderMetadata,
-            };
+              status === "completed" ? now : null,
+              incompleteDetails,
+              resolveResponseServiceTier(finishProviderMetadata),
+              finishProviderMetadata,
+            );
 
             const eventName = status === "failed" ? "response.failed" : "response.completed";
             controller.enqueue({

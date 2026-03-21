@@ -114,7 +114,7 @@ export const ResponsesTextFormatSchema = z.discriminatedUnion("type", [
 export const ResponsesTextConfigSchema = z.object({
   format: ResponsesTextFormatSchema.optional(),
   // FUTURE: Support verbosity configuration
-  verbosity: z.enum(["low", "medium", "high"]).optional().meta({ extension: true }),
+  verbosity: z.enum(["low", "medium", "high"]).optional(),
 });
 export type ResponsesTextConfig = z.infer<typeof ResponsesTextConfigSchema>;
 
@@ -138,6 +138,7 @@ const ResponsesInputsSchema = z.object({
   prompt_cache_key: z.string().optional(),
   metadata: MetadataSchema,
   service_tier: ServiceTierSchema.optional(),
+  parallel_tool_calls: z.boolean().optional(),
 
   // FUTURE: Open Responses API orchestration configurations
   // previous_response_id: z.string().optional(),
@@ -148,9 +149,6 @@ const ResponsesInputsSchema = z.object({
   // top_logprobs: z.number().int().optional(),
   // include: z.array(z.string()).optional(),
   // stream_options: z.object({ include_obfuscation: z.boolean().optional() }).optional(),
-
-  // These are handled by Vercel AI SDK explicitly:
-  parallel_tool_calls: z.boolean().optional().meta({ extension: true }),
 
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: CacheControlSchema.optional().meta({ extension: true }),
@@ -250,80 +248,104 @@ export type Responses = z.infer<typeof ResponsesSchema>;
  * --- Stream Event Types ---
  */
 
+export type ResponseCreatedEvent = SseFrame<Responses, "response.created">;
+
+export type ResponseInProgressEvent = SseFrame<Responses, "response.in_progress">;
+
+export type ResponseOutputItemAddedEvent = SseFrame<
+  {
+    type: "response.output_item.added";
+    output_index: number;
+    item: ResponsesOutputItem;
+  },
+  "response.output_item.added"
+>;
+
+export type ResponseContentPartAddedEvent = SseFrame<
+  {
+    type: "response.content_part.added";
+    output_index: number;
+    content_index: number;
+    part: ResponsesOutputText;
+  },
+  "response.content_part.added"
+>;
+
+export type ResponseReasoningSummaryPartAddedEvent = SseFrame<
+  {
+    type: "response.reasoning_summary_part.added";
+    output_index: number;
+    summary_index: number;
+    part: ResponsesSummaryText;
+  },
+  "response.reasoning_summary_part.added"
+>;
+
+export type ResponseOutputTextDeltaEvent = SseFrame<
+  {
+    type: "response.output_text.delta";
+    output_index: number;
+    content_index: number;
+    delta: string;
+  },
+  "response.output_text.delta"
+>;
+
+export type ResponseReasoningSummaryTextDeltaEvent = SseFrame<
+  {
+    type: "response.reasoning_summary_text.delta";
+    output_index: number;
+    summary_index: number;
+    delta: string;
+  },
+  "response.reasoning_summary_text.delta"
+>;
+
+export type ResponseContentPartDoneEvent = SseFrame<
+  {
+    type: "response.content_part.done";
+    output_index: number;
+    content_index: number;
+    part: ResponsesOutputText;
+  },
+  "response.content_part.done"
+>;
+
+export type ResponseReasoningSummaryPartDoneEvent = SseFrame<
+  {
+    type: "response.reasoning_summary_part.done";
+    output_index: number;
+    summary_index: number;
+    part: ResponsesSummaryText;
+  },
+  "response.reasoning_summary_part.done"
+>;
+
+export type ResponseOutputItemDoneEvent = SseFrame<
+  {
+    type: "response.output_item.done";
+    output_index: number;
+    item: ResponsesOutputItem;
+  },
+  "response.output_item.done"
+>;
+
+export type ResponseCompletedEvent = SseFrame<Responses, "response.completed">;
+
+export type ResponseFailedEvent = SseFrame<Responses, "response.failed">;
+
 export type ResponsesStreamEvent =
-  | SseFrame<Responses, "response.created">
-  | SseFrame<Responses, "response.in_progress">
-  | SseFrame<
-      {
-        type: "response.output_item.added";
-        output_index: number;
-        item: ResponsesOutputItem;
-      },
-      "response.output_item.added"
-    >
-  | SseFrame<
-      {
-        type: "response.content_part.added";
-        output_index: number;
-        content_index: number;
-        part: ResponsesOutputText;
-      },
-      "response.content_part.added"
-    >
-  | SseFrame<
-      {
-        type: "response.reasoning_summary_part.added";
-        output_index: number;
-        summary_index: number;
-        part: ResponsesSummaryText;
-      },
-      "response.reasoning_summary_part.added"
-    >
-  | SseFrame<
-      {
-        type: "response.output_text.delta";
-        output_index: number;
-        content_index: number;
-        delta: string;
-      },
-      "response.output_text.delta"
-    >
-  | SseFrame<
-      {
-        type: "response.reasoning_summary_text.delta";
-        output_index: number;
-        summary_index: number;
-        delta: string;
-      },
-      "response.reasoning_summary_text.delta"
-    >
-  | SseFrame<
-      {
-        type: "response.content_part.done";
-        output_index: number;
-        content_index: number;
-        part: ResponsesOutputText;
-      },
-      "response.content_part.done"
-    >
-  | SseFrame<
-      {
-        type: "response.reasoning_summary_part.done";
-        output_index: number;
-        summary_index: number;
-        part: ResponsesSummaryText;
-      },
-      "response.reasoning_summary_part.done"
-    >
-  | SseFrame<
-      {
-        type: "response.output_item.done";
-        output_index: number;
-        item: ResponsesOutputItem;
-      },
-      "response.output_item.done"
-    >
-  | SseFrame<Responses, "response.completed">
-  | SseFrame<Responses, "response.failed">;
+  | ResponseCreatedEvent
+  | ResponseInProgressEvent
+  | ResponseOutputItemAddedEvent
+  | ResponseContentPartAddedEvent
+  | ResponseReasoningSummaryPartAddedEvent
+  | ResponseOutputTextDeltaEvent
+  | ResponseReasoningSummaryTextDeltaEvent
+  | ResponseContentPartDoneEvent
+  | ResponseReasoningSummaryPartDoneEvent
+  | ResponseOutputItemDoneEvent
+  | ResponseCompletedEvent
+  | ResponseFailedEvent;
 
 export type ResponsesStream = ReadableStream<ResponsesStreamEvent | SseErrorFrame>;
