@@ -147,8 +147,12 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
+#### Azure AI Foundry
+
+[Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others. If you keep Azure's default deployment names (which match the model ID), `stripNamespace` and `normalizeDelimiters` handle the translation automatically:
+
 ```ts
-import { createAzure } from "@ai-sdk/openai";
+import { createAzure } from "@ai-sdk/azure";
 import { gateway, withCanonicalIds } from "@hebo-ai/gateway";
 
 const azure = withCanonicalIds(
@@ -157,9 +161,9 @@ const azure = withCanonicalIds(
     apiKey: process.env["AZURE_API_KEY"],
   }),
   {
-    mapping: {
-      "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
-      "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
+    options: {
+      stripNamespace: true,
+      normalizeDelimiters: true,
     },
   },
 );
@@ -169,9 +173,28 @@ const gw = gateway({
     azure,
   },
   models: {
-    // ...your models pointing at canonical IDs above
+    // canonical IDs are automatically normalized to Azure deployment names
+    // e.g. "anthropic/claude-sonnet-4.5" → "claude-sonnet-4-5"
+    // e.g. "openai/gpt-4.1-mini" → "gpt-4-1-mini"
   },
 });
+```
+
+If you use custom deployment names, provide an explicit `mapping` instead:
+
+```ts
+const azure = withCanonicalIds(
+  createAzure({
+    resourceName: process.env["AZURE_RESOURCE_NAME"],
+    apiKey: process.env["AZURE_API_KEY"],
+  }),
+  {
+    mapping: {
+      "openai/gpt-4.1-mini": "my-gpt-deployment",
+      "anthropic/claude-sonnet-4.5": "my-claude-deployment",
+    },
+  },
+);
 ```
 
 ### Models
