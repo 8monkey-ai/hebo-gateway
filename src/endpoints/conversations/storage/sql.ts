@@ -130,9 +130,9 @@ export class SqlStorage implements ConversationStorage {
     params: {
       metadata?: ConversationMetadata;
       items?: ConversationItemInput[];
-    },
-    executor: QueryExecutor = this.executor,
+    }
   ): Promise<ConversationEntity> {
+    const executor = this.executor;
     const { placeholder: p, quote: q } = this.config;
     const isGreptime = this.config.types.index === "TIME";
     const id = isGreptime ? uuidv4() : uuidv7();
