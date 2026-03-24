@@ -60,27 +60,19 @@ import {
   resolveResponseServiceTier,
   normalizeToolName,
   stripEmptyKeys,
+  parseBase64,
+  parseImageInput,
+  mapLanguageModelUsage,
+  toToolSet,
+  extractReasoningMetadata,
+  type TextCallOptions,
 } from "../shared/converters";
-
-export type TextCallOptions = {
-  messages: ModelMessage[];
-  tools?: ToolSet;
-  toolChoice?: ToolChoice<ToolSet>;
-  activeTools?: Array<keyof ToolSet>;
-  output?: Output.Output;
-  temperature?: number;
-  maxOutputTokens?: number;
-  frequencyPenalty?: number;
-  presencePenalty?: number;
-  seed?: number;
-  stopSequences?: string[];
-  topP?: number;
-  providerOptions: SharedV3ProviderOptions;
-};
 
 // --- Request Flow ---
 
-export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCallOptions {
+export function convertToChatCompletionsTextCallOptions(
+  params: ChatCompletionsInputs,
+): TextCallOptions {
   const {
     messages,
     tools,
@@ -115,11 +107,11 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     }
   }
 
-  const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
+  const { toolChoice, activeTools } = convertToChatCompletionsToolChoiceOptions(tool_choice);
 
   return {
-    messages: convertToModelMessages(messages),
-    tools: convertToToolSet(tools),
+    messages: convertToChatCompletionsModelMessages(messages),
+    tools: convertToChatCompletionsToolSet(tools),
     toolChoice,
     activeTools,
     output: convertToOutput(response_format),
@@ -149,7 +141,9 @@ function convertToOutput(responseFormat: ChatCompletionsResponseFormat | undefin
   });
 }
 
-export function convertToModelMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
+export function convertToChatCompletionsModelMessages(
+  messages: ChatCompletionsMessage[],
+): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -354,45 +348,32 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
 }
 
 function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
-  if (url.startsWith("data:")) {
-    const { mimeType, dataStart } = parseDataUrl(url);
-    if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
-      throw new GatewayError("Invalid data URL", 400);
-    }
-    return fromFilePart(url.slice(dataStart), mimeType, undefined, cacheControl);
-  }
+  const { image, mediaType } = parseImageInput(url, "Invalid image URL");
 
-  let imageUrl: URL;
-  try {
-    imageUrl = new URL(url);
-  } catch {
-    throw new GatewayError(`Invalid image URL: ${url}`, 400);
-  }
-
-  const out: ImagePart = {
-    type: "image" as const,
-    image: imageUrl,
-  };
-  if (cacheControl) {
-    out.providerOptions = {
-      unknown: { cache_control: cacheControl },
+  if (image instanceof URL) {
+    const out: ImagePart = {
+      type: "image" as const,
+      image,
     };
+    if (cacheControl) {
+      out.providerOptions = {
+        unknown: { cache_control: cacheControl },
+      };
+    }
+    return out;
   }
-  return out;
+
+  return fromFilePart(image, mediaType ?? "image/jpeg", undefined, cacheControl);
 }
 
 function fromFilePart(
-  base64Data: string,
+  data: string | Uint8Array,
   mediaType: string,
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
-  let decodedData: Uint8Array;
-  try {
-    decodedData = z.util.base64ToUint8Array(base64Data);
-  } catch {
-    throw new GatewayError("Invalid base64 data in file part", 400);
-  }
+  const decodedData =
+    typeof data === "string" ? parseBase64(data, "Invalid base64 data in file part") : data;
 
   if (mediaType.startsWith("image/")) {
     const out: ImagePart = {
@@ -422,23 +403,17 @@ function fromFilePart(
   return out;
 }
 
-export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
-  if (!tools) {
-    return;
-  }
+export const convertToChatCompletionsToolSet = (
+  tools: ChatCompletionsTool[] | undefined,
+): ToolSet | undefined =>
+  toToolSet(tools, (t) => ({
+    name: t.function.name,
+    description: t.function.description,
+    parameters: t.function.parameters,
+    strict: t.function.strict,
+  }));
 
-  const toolSet: ToolSet = {};
-  for (const t of tools) {
-    toolSet[t.function.name] = tool({
-      description: t.function.description,
-      inputSchema: jsonSchema(t.function.parameters),
-      strict: t.function.strict,
-    });
-  }
-  return toolSet;
-};
-
-export const convertToToolChoiceOptions = (
+export const convertToChatCompletionsToolChoiceOptions = (
   toolChoice: ChatCompletionsToolChoice | undefined,
 ): {
   toolChoice?: ToolChoice<ToolSet>;
@@ -727,20 +702,7 @@ export function toReasoningDetail(
   index: number,
 ): ChatCompletionsReasoningDetail {
   const providerMetadata = reasoning.providerMetadata ?? {};
-
-  let redactedData: string | undefined;
-  let signature: string | undefined;
-
-  for (const metadata of Object.values(providerMetadata)) {
-    if (metadata && typeof metadata === "object") {
-      if ("redactedData" in metadata && typeof metadata["redactedData"] === "string") {
-        redactedData = metadata["redactedData"];
-      }
-      if ("signature" in metadata && typeof metadata["signature"] === "string") {
-        signature = metadata["signature"];
-      }
-    }
-  }
+  const { redactedData, signature } = extractReasoningMetadata(providerMetadata);
 
   if (redactedData) {
     return {
@@ -763,31 +725,23 @@ export function toReasoningDetail(
 }
 
 export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
-  const out: ChatCompletionsUsage = {};
+  const mapped = mapLanguageModelUsage(usage);
 
-  const prompt = usage.inputTokens;
-  if (prompt !== undefined) out.prompt_tokens = prompt;
+  const out: ChatCompletionsUsage = {
+    prompt_tokens: mapped.prompt_tokens,
+    completion_tokens: mapped.completion_tokens,
+    total_tokens: mapped.total_tokens,
+  };
 
-  const completion = usage.outputTokens;
-  if (completion !== undefined) out.completion_tokens = completion;
-
-  if (prompt !== undefined || completion !== undefined || usage.totalTokens !== undefined) {
-    out.total_tokens = usage.totalTokens ?? (prompt ?? 0) + (completion ?? 0);
+  if (mapped.reasoning_tokens !== undefined) {
+    out.completion_tokens_details = { reasoning_tokens: mapped.reasoning_tokens };
   }
 
-  const reasoning = usage.outputTokenDetails?.reasoningTokens;
-  if (reasoning !== undefined) out.completion_tokens_details = { reasoning_tokens: reasoning };
-
-  const cached = usage.inputTokenDetails?.cacheReadTokens;
-  const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens;
-  if (cached !== undefined || cacheWrite !== undefined) {
-    out.prompt_tokens_details = {};
-    if (cached !== undefined) {
-      out.prompt_tokens_details.cached_tokens = cached;
-    }
-    if (cacheWrite !== undefined) {
-      out.prompt_tokens_details.cache_write_tokens = cacheWrite;
-    }
+  if (mapped.cached_tokens !== undefined || mapped.cache_write_tokens !== undefined) {
+    out.prompt_tokens_details = {
+      cached_tokens: mapped.cached_tokens,
+      cache_write_tokens: mapped.cache_write_tokens,
+    };
   }
 
   return out;

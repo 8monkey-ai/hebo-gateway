@@ -10,8 +10,8 @@ import {
   type ConversationDeleted,
   type ConversationItem,
   type ConversationItemList,
-  type ResponsesInputItem,
 } from "./schema";
+import { type ResponsesInputItem } from "../responses/schema";
 import { InMemoryStorage } from "./storage/memory";
 import { type ConversationStorage } from "./storage/types";
 

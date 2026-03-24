@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import type { ChatCompletionsToolMessage } from "./schema";
 
 import {
-  convertToTextCallOptions,
+  convertToChatCompletionsTextCallOptions,
   toChatCompletions,
   toChatCompletionsAssistantMessage,
   toChatCompletionsToolCall,
@@ -318,9 +318,9 @@ describe("Chat Completions Converters", () => {
     });
   });
 
-  describe("convertToTextCallOptions", () => {
+  describe("convertToChatCompletionsTextCallOptions", () => {
     test("should use max_completion_tokens when present", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         max_completion_tokens: 200,
       });
@@ -328,7 +328,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should use max_tokens when max_completion_tokens is absent", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         max_tokens: 100,
       });
@@ -336,7 +336,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should favor max_completion_tokens over max_tokens when both are present", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         max_tokens: 100,
         max_completion_tokens: 200,
@@ -345,14 +345,14 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should handle neither being present", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
       });
       expect(result.maxOutputTokens).toBeUndefined();
     });
 
     test("should convert response_format json_schema to output.object", async () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         response_format: {
           type: "json_schema",
@@ -391,7 +391,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should treat response_format text as default text output", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         response_format: {
           type: "text",
@@ -402,7 +402,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should convert input_audio content parts to file user content", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [
           {
             role: "user",
@@ -431,7 +431,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map tool_choice 'validated' to 'auto'", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tool_choice: "validated",
       });
@@ -439,7 +439,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map allowed_tools to activeTools and auto mode", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tool_choice: {
           type: "allowed_tools",
@@ -460,7 +460,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map allowed_tools required mode to required", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tool_choice: {
           type: "allowed_tools",
@@ -481,7 +481,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should convert function tools into tool set entries", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tools: [
           {
@@ -503,7 +503,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map prompt cache options into providerOptions.unknown", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "system", content: "You are concise." }],
         prompt_cache_key: "tenant:docs:v1",
         prompt_cache_retention: "24h",
@@ -522,7 +522,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should sync retention from cache_control ttl", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "system", content: "You are concise." }],
         cache_control: {
           type: "ephemeral",
@@ -542,7 +542,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should preserve cache_control on message and content parts", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [
           {
             role: "system",
@@ -568,7 +568,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map service_tier into providerOptions.unknown", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToChatCompletionsTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         service_tier: "priority",
       });

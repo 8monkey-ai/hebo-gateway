@@ -3,21 +3,21 @@ import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai
 import { describe, expect, test } from "bun:test";
 
 import {
-  convertToTextCallOptions,
-  convertToModelMessages,
+  convertToResponsesTextCallOptions,
+  convertToResponsesModelMessages,
   toResponses,
   toResponsesUsage,
 } from "./converters";
 
 describe("Responses Converters", () => {
-  describe("convertToModelMessages", () => {
+  describe("convertToResponsesModelMessages", () => {
     test("should convert string input to single user message", () => {
-      const messages = convertToModelMessages("Hello world");
+      const messages = convertToResponsesModelMessages("Hello world");
       expect(messages).toEqual([{ role: "user", content: "Hello world" }]);
     });
 
     test("should prepend instructions as system message", () => {
-      const messages = convertToModelMessages("Hi", "You are a helpful assistant.");
+      const messages = convertToResponsesModelMessages("Hi", "You are a helpful assistant.");
       expect(messages).toEqual([
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: "Hi" },
@@ -25,7 +25,7 @@ describe("Responses Converters", () => {
     });
 
     test("should map cache_control into providerOptions for messages", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         {
           type: "message",
           role: "user",
@@ -43,7 +43,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert message items to model messages", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         {
           type: "message",
           role: "user",
@@ -54,7 +54,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert system and developer messages to system role", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         { type: "message", role: "system", content: "System prompt" },
         { type: "message", role: "developer", content: "Dev prompt" },
         { type: "message", role: "user", content: "Hi" },
@@ -65,7 +65,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert assistant message with output_text content", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         {
           type: "message",
           role: "assistant",
@@ -78,7 +78,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert function_call and function_call_output items", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         {
           type: "function_call",
           call_id: "call_1",
@@ -120,7 +120,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert reasoning items to assistant messages", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         {
           type: "reasoning",
           summary: [{ type: "summary_text", text: "I'm thinking..." }],
@@ -136,7 +136,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert user message with input content parts", () => {
-      const messages = convertToModelMessages([
+      const messages = convertToResponsesModelMessages([
         {
           type: "message",
           role: "user",
@@ -152,9 +152,9 @@ describe("Responses Converters", () => {
     });
   });
 
-  describe("convertToTextCallOptions", () => {
+  describe("convertToResponsesTextCallOptions", () => {
     test("should set temperature and top_p", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         temperature: 0.7,
         top_p: 0.9,
@@ -164,7 +164,7 @@ describe("Responses Converters", () => {
     });
 
     test("should set max_output_tokens", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         max_output_tokens: 500,
       });
@@ -172,7 +172,7 @@ describe("Responses Converters", () => {
     });
 
     test("should set stopWhen from max_tool_calls", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         max_tool_calls: 3,
       });
@@ -182,7 +182,7 @@ describe("Responses Converters", () => {
     });
 
     test("should set frequency_penalty and presence_penalty", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         frequency_penalty: 0.5,
         presence_penalty: -0.5,
@@ -192,7 +192,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert text json_schema format to output", async () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         text: {
           format: {
@@ -226,7 +226,7 @@ describe("Responses Converters", () => {
     });
 
     test("should treat text format 'text' as no output config", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         text: { format: { type: "text" } },
       });
@@ -234,7 +234,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert function tools to tool set", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         tools: [
           {
@@ -251,19 +251,19 @@ describe("Responses Converters", () => {
     });
 
     test("should convert tool_choice auto/required/none", () => {
-      expect(convertToTextCallOptions({ input: "hi", tool_choice: "auto" }).toolChoice).toBe(
-        "auto",
-      );
-      expect(convertToTextCallOptions({ input: "hi", tool_choice: "required" }).toolChoice).toBe(
-        "required",
-      );
-      expect(convertToTextCallOptions({ input: "hi", tool_choice: "none" }).toolChoice).toBe(
-        "none",
-      );
+      expect(
+        convertToResponsesTextCallOptions({ input: "hi", tool_choice: "auto" }).toolChoice,
+      ).toBe("auto");
+      expect(
+        convertToResponsesTextCallOptions({ input: "hi", tool_choice: "required" }).toolChoice,
+      ).toBe("required");
+      expect(
+        convertToResponsesTextCallOptions({ input: "hi", tool_choice: "none" }).toolChoice,
+      ).toBe("none");
     });
 
     test("should convert named tool_choice", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         tool_choice: { type: "function", name: "my_tool" },
       });
@@ -271,7 +271,7 @@ describe("Responses Converters", () => {
     });
 
     test("should map prompt_cache_key into providerOptions", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         prompt_cache_key: "my-key",
       });
@@ -282,7 +282,7 @@ describe("Responses Converters", () => {
     });
 
     test("should map service_tier into providerOptions", () => {
-      const result = convertToTextCallOptions({
+      const result = convertToResponsesTextCallOptions({
         input: "hi",
         service_tier: "priority",
       });

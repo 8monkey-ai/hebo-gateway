@@ -31,7 +31,11 @@ import {
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
-import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
+import {
+  convertToChatCompletionsTextCallOptions,
+  toChatCompletions,
+  toChatCompletionsStream,
+} from "./converters";
 import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
 import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
 
@@ -101,7 +105,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Convert inputs to AI SDK call options.
     const { model: _model, stream, ...inputs } = ctx.body;
     // oxlint-disable-next-line no-unsafe-argument
-    const textOptions = convertToTextCallOptions(inputs);
+    const textOptions = convertToChatCompletionsTextCallOptions(inputs);
     logger.trace(
       {
         requestId: ctx.requestId,

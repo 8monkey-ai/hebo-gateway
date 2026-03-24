@@ -1,39 +1,6 @@
 import * as z from "zod";
 
-export {
-  MetadataSchema,
-  type Metadata,
-  ResponsesItemStatusSchema,
-  type ResponsesItemStatus,
-  ResponsesImageDetailSchema,
-  type ResponsesImageDetail,
-  ResponsesInputTextSchema,
-  type ResponsesInputText,
-  ResponsesInputImageSchema,
-  type ResponsesInputImage,
-  ResponsesInputFileSchema,
-  type ResponsesInputFile,
-  ResponsesInputContentSchema,
-  type ResponsesInputContent,
-  ResponsesOutputTextSchema,
-  type ResponsesOutputText,
-  ResponsesMessageItemSchema,
-  type ResponsesMessageItem,
-  ResponsesFunctionCallSchema,
-  type ResponsesFunctionCall,
-  ResponsesFunctionCallOutputSchema,
-  type ResponsesFunctionCallOutput,
-  ResponsesSummaryTextSchema,
-  type ResponsesSummaryText,
-  ResponsesReasoningTextSchema,
-  type ResponsesReasoningText,
-  ResponsesReasoningItemSchema,
-  type ResponsesReasoningItem,
-  ResponsesInputItemSchema,
-  type ResponsesInputItem,
-} from "../shared/schema";
-
-import { MetadataSchema, ResponsesInputItemSchema } from "../shared/schema";
+import { MetadataSchema, ResponsesInputItemSchema } from "../responses/schema";
 
 /**
  * --- Entities ---

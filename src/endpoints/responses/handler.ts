@@ -31,7 +31,7 @@ import {
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
-import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
+import { convertToResponsesTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
 import { ResponsesBodySchema, type ResponsesBody } from "./schema";
 
@@ -95,7 +95,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
     const { model: _model, stream, ...inputs } = ctx.body;
     // oxlint-disable-next-line no-unsafe-argument
-    const textOptions = convertToTextCallOptions(inputs);
+    const textOptions = convertToResponsesTextCallOptions(inputs);
     logger.trace({ requestId: ctx.requestId, options: textOptions }, "[responses] AI SDK options");
     addSpanEvent("hebo.options.prepared");
     setSpanAttributes(getResponsesRequestAttributes(ctx.body, genAiSignalLevel));

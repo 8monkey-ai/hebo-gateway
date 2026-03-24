@@ -1,7 +1,37 @@
-import type { JSONObject, SharedV3ProviderMetadata } from "@ai-sdk/provider";
-import type { JSONValue } from "ai";
+import type { JSONObject, SharedV3ProviderMetadata, SharedV3ProviderOptions } from "@ai-sdk/provider";
+import {
+  tool,
+  jsonSchema,
+  type JSONValue,
+  type LanguageModelUsage,
+  type ToolSet,
+  type ModelMessage,
+  type ToolChoice,
+  type Output,
+  type StopCondition,
+} from "ai";
+import { z } from "zod";
 
+import { GatewayError } from "../../errors/gateway";
+import { parseDataUrl } from "../../utils/url";
 import type { ReasoningConfig, ReasoningEffort, CacheControl, ServiceTier } from "./schema";
+
+export type TextCallOptions = {
+  messages: ModelMessage[];
+  tools?: ToolSet;
+  toolChoice?: ToolChoice<ToolSet>;
+  activeTools?: string[];
+  output?: Output.Output;
+  temperature?: number;
+  maxOutputTokens?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  seed?: number;
+  topP?: number;
+  stopSequences?: string[];
+  stopWhen?: StopCondition<ToolSet> | Array<StopCondition<ToolSet>>;
+  providerOptions: SharedV3ProviderOptions;
+};
 
 export function parseJsonOrText(
   content: string,
@@ -12,6 +42,51 @@ export function parseJsonOrText(
   } catch {
     return { type: "text", value: content };
   }
+}
+
+export function parseBase64(base64: string, errorMsg: string): Uint8Array {
+  try {
+    return z.util.base64ToUint8Array(base64);
+  } catch {
+    throw new GatewayError(errorMsg, 400);
+  }
+}
+
+export function parseImageInput(
+  url: string,
+  errorPrefix = "Invalid image URL",
+): { image: Uint8Array | URL; mediaType?: string } {
+  if (url.startsWith("data:")) {
+    const { mimeType, dataStart } = parseDataUrl(url);
+    if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
+      throw new GatewayError("Invalid data URL", 400);
+    }
+    return {
+      image: parseBase64(url.slice(dataStart), "Invalid base64 data in image URL"),
+      mediaType: mimeType,
+    };
+  }
+
+  try {
+    return { image: new URL(url) };
+  } catch {
+    throw new GatewayError(`${errorPrefix}: ${url}`, 400);
+  }
+}
+
+export function mapLanguageModelUsage(usage: LanguageModelUsage) {
+  const prompt = usage.inputTokens ?? 0;
+  const completion = usage.outputTokens ?? 0;
+  const total = usage.totalTokens ?? prompt + completion;
+
+  return {
+    prompt_tokens: prompt,
+    completion_tokens: completion,
+    total_tokens: total,
+    cached_tokens: usage.inputTokenDetails?.cacheReadTokens,
+    cache_write_tokens: usage.inputTokenDetails?.cacheWriteTokens,
+    reasoning_tokens: usage.outputTokenDetails?.reasoningTokens,
+  };
 }
 
 export function parseReasoningOptions(
@@ -153,4 +228,51 @@ export function stripEmptyKeys(obj: unknown) {
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
   delete (obj as Record<string, unknown>)[""];
   return obj;
+}
+
+export function extractReasoningMetadata(
+  providerMetadata: SharedV3ProviderMetadata | undefined,
+): { redactedData?: string; signature?: string } {
+  if (!providerMetadata) return {};
+
+  for (const metadata of Object.values(providerMetadata)) {
+    if (metadata && typeof metadata === "object") {
+      let redactedData: string | undefined;
+      let signature: string | undefined;
+      let found = false;
+
+      if ("redactedData" in metadata && typeof metadata["redactedData"] === "string") {
+        redactedData = metadata["redactedData"];
+        found = true;
+      }
+      if ("signature" in metadata && typeof metadata["signature"] === "string") {
+        signature = metadata["signature"];
+        found = true;
+      }
+
+      if (found) {
+        return { redactedData, signature };
+      }
+    }
+  }
+
+  return {};
+}
+
+export function toToolSet<T>(
+  tools: T[] | undefined,
+  map: (t: T) => { name: string; description?: string; parameters: any; strict?: boolean },
+): ToolSet | undefined {
+  if (!tools) return;
+
+  const toolSet: ToolSet = {};
+  for (const t of tools) {
+    const { name, description, parameters, strict } = map(t);
+    toolSet[name] = tool({
+      description,
+      inputSchema: jsonSchema(parameters),
+      strict,
+    });
+  }
+  return toolSet;
 }

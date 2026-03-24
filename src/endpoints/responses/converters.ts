@@ -58,26 +58,18 @@ import {
   resolveResponseServiceTier,
   normalizeToolName,
   stripEmptyKeys,
+  parseBase64,
+  parseImageInput,
+  mapLanguageModelUsage,
+  toToolSet,
+  extractReasoningMetadata,
+  type TextCallOptions,
 } from "../shared/converters";
-
-export type TextCallOptions = {
-  messages: ModelMessage[];
-  tools?: ToolSet;
-  toolChoice?: ToolChoice<ToolSet>;
-  activeTools?: string[];
-  output?: Output.Output;
-  temperature?: number;
-  maxOutputTokens?: number;
-  frequencyPenalty?: number;
-  presencePenalty?: number;
-  topP?: number;
-  stopWhen?: StopCondition<ToolSet> | Array<StopCondition<ToolSet>>;
-  providerOptions: SharedV3ProviderOptions;
-};
 
 // --- Request Flow ---
 
-export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptions {
+export function convertToResponsesTextCallOptions(params: ResponsesInputs): TextCallOptions {
+
   const {
     input,
     instructions,
@@ -112,11 +104,11 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
     }
   }
 
-  const { toolChoice: tc, activeTools } = convertToToolChoiceOptions(tool_choice);
+  const { toolChoice: tc, activeTools } = convertToResponsesToolChoiceOptions(tool_choice);
 
   return {
-    messages: convertToModelMessages(input, instructions),
-    tools: convertToToolSet(tools),
+    messages: convertToResponsesModelMessages(input, instructions),
+    tools: convertToResponsesToolSet(tools),
     toolChoice: tc,
     activeTools,
     output: convertToOutput(text),
@@ -145,7 +137,7 @@ function convertToOutput(text: ResponsesTextConfig | undefined) {
   });
 }
 
-export function convertToModelMessages(
+export function convertToResponsesModelMessages(
   input: string | ResponsesInputItem[],
   instructions?: string,
 ): ModelMessage[] {
@@ -320,40 +312,21 @@ function parseUrl(url: string, errorPrefix = "Invalid URL"): URL {
 }
 
 function fromImageInput(url: string): ImagePart | FilePart {
-  if (url.startsWith("data:")) {
-    const { mimeType, dataStart } = parseDataUrl(url);
-    if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
-      throw new GatewayError("Invalid data URL", 400);
-    }
-    const base64Data = url.slice(dataStart);
-    try {
-      return {
-        type: "image",
-        image: z.util.base64ToUint8Array(base64Data),
-        mediaType: mimeType,
-      };
-    } catch {
-      throw new GatewayError("Invalid base64 data in image URL", 400);
-    }
-  }
-
+  const { image, mediaType } = parseImageInput(url, "Invalid image URL");
   return {
     type: "image",
-    image: parseUrl(url, "Invalid image URL"),
+    image,
+    mediaType,
   };
 }
 
 function fromFileInput(data: string, filename?: string): FilePart {
-  try {
-    return {
-      type: "file",
-      data: z.util.base64ToUint8Array(data),
-      filename,
-      mediaType: "application/octet-stream",
-    };
-  } catch {
-    throw new GatewayError("Invalid base64 data in file input", 400);
-  }
+  return {
+    type: "file",
+    data: parseBase64(data, "Invalid base64 data in file input"),
+    filename,
+    mediaType: "application/octet-stream",
+  };
 }
 
 function fromInputContentPart(part: { type: string; text?: string }): string {
@@ -428,21 +401,15 @@ function fromFunctionCallOutputItem(
   };
 }
 
-export const convertToToolSet = (tools: ResponsesTool[] | undefined): ToolSet | undefined => {
-  if (!tools) return;
+export const convertToResponsesToolSet = (tools: ResponsesTool[] | undefined): ToolSet | undefined =>
+  toToolSet(tools, (t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters,
+    strict: t.strict,
+  }));
 
-  const toolSet: ToolSet = {};
-  for (const t of tools) {
-    toolSet[t.name] = tool({
-      description: t.description,
-      inputSchema: jsonSchema(t.parameters),
-      strict: t.strict,
-    });
-  }
-  return toolSet;
-};
-
-export const convertToToolChoiceOptions = (
+export const convertToResponsesToolChoiceOptions = (
   toolChoice: ResponsesToolChoice | undefined,
 ): { toolChoice?: ToolChoice<ToolSet>; activeTools?: string[] } => {
   if (!toolChoice) return {};
@@ -588,15 +555,9 @@ function toReasoningOutputItem(reasoning: ReasoningOutput): ResponsesReasoningIt
   const providerMetadata = reasoning.providerMetadata ?? {};
   (item as Record<string, unknown>)["extra_content"] = providerMetadata;
 
-  for (const metadata of Object.values(providerMetadata)) {
-    if (
-      metadata &&
-      typeof metadata === "object" &&
-      "redactedData" in metadata &&
-      typeof metadata["redactedData"] === "string"
-    ) {
-      item.encrypted_content = metadata["redactedData"];
-    }
+  const { redactedData } = extractReasoningMetadata(providerMetadata);
+  if (redactedData) {
+    item.encrypted_content = redactedData;
   }
 
   return item;
@@ -628,23 +589,20 @@ function toFunctionCallItem(
 }
 
 export function toResponsesUsage(usage: LanguageModelUsage): ResponsesUsage {
-  const input = usage.inputTokens ?? 0;
-  const output = usage.outputTokens ?? 0;
+  const mapped = mapLanguageModelUsage(usage);
 
   const result: ResponsesUsage = {
-    input_tokens: input,
-    output_tokens: output,
-    total_tokens: usage.totalTokens ?? input + output,
+    input_tokens: mapped.prompt_tokens,
+    output_tokens: mapped.completion_tokens,
+    total_tokens: mapped.total_tokens,
   };
 
-  const cached = usage.inputTokenDetails?.cacheReadTokens;
-  if (cached !== undefined) {
-    result.input_tokens_details = { cached_tokens: cached };
+  if (mapped.cached_tokens !== undefined) {
+    result.input_tokens_details = { cached_tokens: mapped.cached_tokens };
   }
 
-  const reasoning = usage.outputTokenDetails?.reasoningTokens;
-  if (reasoning !== undefined) {
-    result.output_tokens_details = { reasoning_tokens: reasoning };
+  if (mapped.reasoning_tokens !== undefined) {
+    result.output_tokens_details = { reasoning_tokens: mapped.reasoning_tokens };
   }
 
   return result;
@@ -768,15 +726,9 @@ export class ResponsesTransformStream extends TransformStream<
 
       if (providerMetadata) {
         (reasoningItem as Record<string, unknown>)["extra_content"] = providerMetadata;
-        for (const meta of Object.values(providerMetadata)) {
-          if (
-            meta &&
-            typeof meta === "object" &&
-            "redactedData" in meta &&
-            typeof meta["redactedData"] === "string"
-          ) {
-            reasoningItem.encrypted_content = meta["redactedData"];
-          }
+        const { redactedData } = extractReasoningMetadata(providerMetadata);
+        if (redactedData) {
+          reasoningItem.encrypted_content = redactedData;
         }
       }
 
