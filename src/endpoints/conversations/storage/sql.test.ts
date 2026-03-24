@@ -233,18 +233,18 @@ describe("SQLite Storage (In-Memory)", () => {
           type: "message",
           role: "user",
           content: "hello from nested tx",
-        }
-      ]
+        },
+      ],
     });
 
     // Verification
     expect(conv.id).toBeDefined();
-    
+
     // Fetch the inserted items
     const items = await storage.listItems(conv.id, { limit: 10 });
     expect(items).toBeDefined();
     expect(items!.length).toBe(1);
-    expect((items![0] as Record<string, unknown>).content).toBe("hello from nested tx");
+    expect((items![0] as Record<string, unknown>)["content"]).toBe("hello from nested tx");
 
     db.close();
   });

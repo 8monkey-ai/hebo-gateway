@@ -161,7 +161,8 @@ function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
         const txExecutor = createBunSqliteExecutor(tx as unknown as BunSql);
-        txExecutor.transaction = (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor);
+        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) =>
+          f(txExecutor);
         return fn(txExecutor);
       });
     },
