@@ -26,10 +26,13 @@ export interface ConversationQueryOptions {
 }
 
 export interface ConversationStorage {
-  createConversation(params: {
-    metadata?: ConversationMetadata;
-    items?: ConversationItemInput[];
-  }): Promise<ConversationEntity>;
+  createConversation(
+    params: {
+      metadata?: ConversationMetadata;
+      items?: ConversationItemInput[];
+    },
+    executor?: unknown,
+  ): Promise<ConversationEntity>;
 
   getConversation(id: string): Promise<ConversationEntity | undefined>;
 

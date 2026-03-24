@@ -215,4 +215,37 @@ describe("SQLite Storage (In-Memory)", () => {
 
     db.close();
   });
+
+  test("should handle nested transactions inside createConversation correctly", async () => {
+    const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({ dialect });
+    await storage.migrate();
+
+    // Pass items directly to createConversation to trigger the nested transaction flow
+    // The createConversation method will open a transaction and then pass the `tx` object
+    // to addItemsInternal, which will then call `.transaction` again on the `tx` object.
+    const conv = await storage.createConversation({
+      metadata: { org: "test" },
+      items: [
+        {
+          type: "message",
+          role: "user",
+          content: "hello from nested tx",
+        }
+      ]
+    });
+
+    // Verification
+    expect(conv.id).toBeDefined();
+    
+    // Fetch the inserted items
+    const items = await storage.listItems(conv.id, { limit: 10 });
+    expect(items).toBeDefined();
+    expect(items!.length).toBe(1);
+    expect((items![0] as Record<string, unknown>).content).toBe("hello from nested tx");
+
+    db.close();
+  });
 });

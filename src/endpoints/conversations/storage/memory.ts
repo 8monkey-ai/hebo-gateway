@@ -76,10 +76,13 @@ export class InMemoryStorage implements ConversationStorage {
     return item;
   }
 
-  createConversation(params: {
-    metadata?: ConversationMetadata;
-    items?: ConversationItemInput[];
-  }): Promise<ConversationEntity> {
+  createConversation(
+    params: {
+      metadata?: ConversationMetadata;
+      items?: ConversationItemInput[];
+    },
+    _executor?: unknown,
+  ): Promise<ConversationEntity> {
     const id = uuidv7();
     const conversation: ConversationEntity = {
       id,

@@ -153,9 +153,11 @@ function createPostgresJsExecutor(
       return { changes: Number(result.count ?? 0) };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
-      return (await (sql as PostgresJsSql).begin((tx) =>
-        fn(createPostgresJsExecutor(tx, mapParams)),
-      )) as T;
+      return (await (sql as PostgresJsSql).begin((tx) => {
+        const txExecutor = createPostgresJsExecutor(tx, mapParams);
+        txExecutor.transaction = (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor);
+        return fn(txExecutor);
+      })) as T;
     },
   };
   return executor;
@@ -197,7 +199,9 @@ function createBunPostgresExecutor(
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
-        return fn(createBunPostgresExecutor(tx as unknown as BunSql, mapParams));
+        const txExecutor = createBunPostgresExecutor(tx as unknown as BunSql, mapParams);
+        txExecutor.transaction = (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor);
+        return fn(txExecutor);
       });
     },
   };

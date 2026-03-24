@@ -126,17 +126,20 @@ export class SqlStorage implements ConversationStorage {
     }
   }
 
-  createConversation(params: {
-    metadata?: ConversationMetadata;
-    items?: ConversationItemInput[];
-  }): Promise<ConversationEntity> {
+  createConversation(
+    params: {
+      metadata?: ConversationMetadata;
+      items?: ConversationItemInput[];
+    },
+    executor: QueryExecutor = this.executor,
+  ): Promise<ConversationEntity> {
     const { placeholder: p, quote: q } = this.config;
     const isGreptime = this.config.types.index === "TIME";
     const id = isGreptime ? uuidv4() : uuidv7();
     const metadata = params.metadata ?? null;
     const now = new Date();
 
-    return this.executor.transaction(async (tx) => {
+    return executor.transaction(async (tx) => {
       await tx.run(
         `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
           0,
