@@ -149,7 +149,7 @@ If an adapter is not yet provided, you can create your own by wrapping the provi
 
 #### Azure AI Foundry
 
-[Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others. If you keep Azure's default deployment names (which match the model ID), `stripNamespace` and `normalizeDelimiters` handle the translation automatically:
+[Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others. If you keep Azure's default deployment names, `stripNamespace` is typically enough:
 
 ```ts
 import { createAzure } from "@ai-sdk/azure";
@@ -163,7 +163,6 @@ const azure = withCanonicalIds(
   {
     options: {
       stripNamespace: true,
-      normalizeDelimiters: true,
     },
   },
 );
@@ -173,14 +172,30 @@ const gw = gateway({
     azure,
   },
   models: {
-    // canonical IDs are automatically normalized to Azure deployment names
-    // e.g. "anthropic/claude-sonnet-4.5" → "claude-sonnet-4-5"
-    // e.g. "openai/gpt-4.1-mini" → "gpt-4-1-mini"
+    // canonical IDs are translated to Azure deployment names
+    // e.g. "openai/gpt-4.1-mini" → "gpt-4.1-mini"
   },
 });
 ```
 
-If you use custom deployment names, provide an explicit `mapping` instead:
+If your deployment names replace dots with hyphens for specific model families, scope delimiter normalization to those namespaces:
+
+```ts
+const azure = withCanonicalIds(
+  createAzure({
+    resourceName: process.env["AZURE_RESOURCE_NAME"],
+    apiKey: process.env["AZURE_API_KEY"],
+  }),
+  {
+    options: {
+      stripNamespace: true,
+      normalizeDelimiters: ["anthropic"],
+    },
+  },
+);
+```
+
+If you use fully custom deployment names, provide an explicit `mapping`:
 
 ```ts
 const azure = withCanonicalIds(
