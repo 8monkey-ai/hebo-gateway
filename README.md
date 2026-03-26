@@ -149,7 +149,9 @@ If an adapter is not yet provided, you can create your own by wrapping the provi
 
 #### Azure AI Foundry
 
-[Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others. If you keep Azure's default deployment names, `stripNamespace` is typically enough:
+[Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others.
+
+The simplest setup is to **name each Azure deployment after the model portion of its canonical ID** (e.g. deploy `anthropic/claude-sonnet-4.5` as `claude-sonnet-4.5`). The default `stripNamespace` option handles this automatically:
 
 ```ts
 import { createAzure } from "@ai-sdk/azure";
@@ -160,11 +162,6 @@ const azure = withCanonicalIds(
     resourceName: process.env["AZURE_RESOURCE_NAME"],
     apiKey: process.env["AZURE_API_KEY"],
   }),
-  {
-    options: {
-      stripNamespace: true,
-    },
-  },
 );
 
 const gw = gateway({
@@ -172,30 +169,13 @@ const gw = gateway({
     azure,
   },
   models: {
-    // canonical IDs are translated to Azure deployment names
+    // canonical IDs map to deployment names automatically
     // e.g. "openai/gpt-4.1-mini" → "gpt-4.1-mini"
   },
 });
 ```
 
-If your deployment names replace dots with hyphens for specific model families, scope delimiter normalization to those namespaces:
-
-```ts
-const azure = withCanonicalIds(
-  createAzure({
-    resourceName: process.env["AZURE_RESOURCE_NAME"],
-    apiKey: process.env["AZURE_API_KEY"],
-  }),
-  {
-    options: {
-      stripNamespace: true,
-      normalizeDelimiters: ["anthropic"],
-    },
-  },
-);
-```
-
-If you use fully custom deployment names, provide an explicit `mapping`:
+If your deployment names differ from the canonical IDs, provide an explicit `mapping`:
 
 ```ts
 const azure = withCanonicalIds(
