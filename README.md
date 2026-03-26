@@ -151,7 +151,7 @@ If an adapter is not yet provided, you can create your own by wrapping the provi
 
 [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others.
 
-The simplest setup is to **name each Azure deployment after the model portion of its canonical ID** (e.g. deploy `anthropic/claude-sonnet-4.5` as `claude-sonnet-4.5`). The default `stripNamespace` option handles this automatically:
+The simplest setup is to **name each Azure deployment after its Hebo canonical ID** (e.g. name the deployment `claude-sonnet-4.5` for `anthropic/claude-sonnet-4.5`):
 
 ```ts
 import { createAzure } from "@ai-sdk/azure";
@@ -169,8 +169,7 @@ const gw = gateway({
     azure,
   },
   models: {
-    // canonical IDs map to deployment names automatically
-    // e.g. "openai/gpt-4.1-mini" → "gpt-4.1-mini"
+    // e.g. "openai/gpt-4.1-mini" resolves to deployment "gpt-4.1-mini"
   },
 });
 ```
