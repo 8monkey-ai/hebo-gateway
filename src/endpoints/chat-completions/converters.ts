@@ -21,8 +21,7 @@ import type {
   FilePart,
 } from "ai";
 
-import { Output, jsonSchema, tool } from "ai";
-import { z } from "zod";
+import { Output, jsonSchema } from "ai";
 
 import type {
   ChatCompletionsToolCall,
@@ -50,9 +49,7 @@ import type {
 } from "./schema";
 import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
-import { GatewayError } from "../../errors/gateway";
 import { toResponse } from "../../utils/response";
-import { parseDataUrl } from "../../utils/url";
 import {
   parseJsonOrText,
   parseReasoningOptions,

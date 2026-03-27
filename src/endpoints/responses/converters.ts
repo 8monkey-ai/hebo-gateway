@@ -18,12 +18,10 @@ import type {
   UserModelMessage,
   ImagePart,
   FilePart,
-  StopCondition,
 } from "ai";
 
-import { Output, jsonSchema, tool, stepCountIs, type JSONValue } from "ai";
+import { Output, jsonSchema, stepCountIs, type JSONValue } from "ai";
 import { v7 as uuidv7 } from "uuid";
-import { z } from "zod";
 
 import type {
   ResponsesInputItem,
@@ -50,7 +48,6 @@ import type { SseErrorFrame } from "../../utils/stream";
 
 import { GatewayError } from "../../errors/gateway";
 import { toResponse } from "../../utils/response";
-import { parseDataUrl } from "../../utils/url";
 import {
   parseJsonOrText,
   parseReasoningOptions,
@@ -69,7 +66,6 @@ import {
 // --- Request Flow ---
 
 export function convertToResponsesTextCallOptions(params: ResponsesInputs): TextCallOptions {
-
   const {
     input,
     instructions,
@@ -401,7 +397,9 @@ function fromFunctionCallOutputItem(
   };
 }
 
-export const convertToResponsesToolSet = (tools: ResponsesTool[] | undefined): ToolSet | undefined =>
+export const convertToResponsesToolSet = (
+  tools: ResponsesTool[] | undefined,
+): ToolSet | undefined =>
   toToolSet(tools, (t) => ({
     name: t.name,
     description: t.description,
@@ -815,12 +813,18 @@ export class ResponsesTransformStream extends TransformStream<
       start(controller) {
         controller.enqueue({
           event: "response.created",
-          data: createResponse("in_progress", null, null),
+          data: {
+            type: "response.created",
+            response: createResponse("in_progress", null, null),
+          },
         });
 
         controller.enqueue({
           event: "response.in_progress",
-          data: createResponse("in_progress", null, null),
+          data: {
+            type: "response.in_progress",
+            response: createResponse("in_progress", null, null),
+          },
         });
       },
 
@@ -973,6 +977,7 @@ export class ResponsesTransformStream extends TransformStream<
                 event: "response.content_part.added",
                 data: {
                   type: "response.content_part.added",
+                  item_id: messageItem!.id,
                   output_index: messageOutputIndex,
                   content_index: contentIndex,
                   part: textPart,
@@ -998,11 +1003,23 @@ export class ResponsesTransformStream extends TransformStream<
               finishProviderMetadata,
             );
 
-            const eventName = status === "failed" ? "response.failed" : "response.completed";
-            controller.enqueue({
-              event: eventName,
-              data: finalResponse,
-            });
+            if (status === "failed") {
+              controller.enqueue({
+                event: "response.failed",
+                data: {
+                  type: "response.failed",
+                  response: finalResponse,
+                },
+              });
+            } else {
+              controller.enqueue({
+                event: "response.completed",
+                data: {
+                  type: "response.completed",
+                  response: finalResponse,
+                },
+              });
+            }
             break;
           }
 

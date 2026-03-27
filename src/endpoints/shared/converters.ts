@@ -261,7 +261,7 @@ export function extractReasoningMetadata(
 
 export function toToolSet<T>(
   tools: T[] | undefined,
-  map: (t: T) => { name: string; description?: string; parameters: any; strict?: boolean },
+  map: (t: T) => { name: string; description?: string; parameters: unknown; strict?: boolean },
 ): ToolSet | undefined {
   if (!tools) return;
 

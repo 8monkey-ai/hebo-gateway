@@ -568,16 +568,13 @@ describe("Responses Converters", () => {
       // Final response
       const completed = events.find((e) => e.event === "response.completed");
       expect(completed).toBeDefined();
-      // oxlint-disable-next-line no-unsafe-member-access
-      expect(completed!.data.status).toBe("completed");
-      // oxlint-disable-next-line no-unsafe-member-access
-      expect(completed!.data.output).toHaveLength(2);
-      // oxlint-disable-next-line no-unsafe-member-access
-      expect(completed!.data.output[0].type).toBe("reasoning");
-      // oxlint-disable-next-line no-unsafe-member-access
-      expect(completed!.data.output[1].type).toBe("message");
-      // oxlint-disable-next-line no-unsafe-member-access
-      expect(completed!.data.output[1].content[0].text).toBe("Hello");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      const completedResponse = (completed!.data as any).response;
+      expect(completedResponse.status).toBe("completed");
+      expect(completedResponse.output).toHaveLength(2);
+      expect(completedResponse.output[0].type).toBe("reasoning");
+      expect(completedResponse.output[1].type).toBe("message");
+      expect(completedResponse.output[1].content[0].text).toBe("Hello");
     });
   });
 });

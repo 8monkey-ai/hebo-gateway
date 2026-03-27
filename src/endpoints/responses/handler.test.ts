@@ -278,19 +278,22 @@ describe("Responses Handler", () => {
     // Check response.created
     const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);
     expect(createdMatch).toBeTruthy();
-    const createdData = JSON.parse(createdMatch![1]!) as Responses;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const createdData = JSON.parse(createdMatch![1]!).response as Responses;
     expect(createdData.status).toBe("in_progress");
 
     // Check response.in_progress
     const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/);
     expect(inProgressMatch).toBeTruthy();
-    const inProgressData = JSON.parse(inProgressMatch![1]!) as Responses;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const inProgressData = JSON.parse(inProgressMatch![1]!).response as Responses;
     expect(inProgressData.status).toBe("in_progress");
 
     // Check response.completed
     const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/);
     expect(completedMatch).toBeTruthy();
-    const completedData = JSON.parse(completedMatch![1]!) as Responses;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const completedData = JSON.parse(completedMatch![1]!).response as Responses;
     expect(completedData.status).toBe("completed");
   });
 
