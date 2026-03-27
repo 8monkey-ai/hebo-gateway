@@ -147,26 +147,31 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
+For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
+
+For other providers, use `withCanonicalIds` with an explicit `mapping`:
+
 ```ts
-import { createAzure } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { gateway, withCanonicalIds } from "@hebo-ai/gateway";
 
-const azure = withCanonicalIds(
-  createAzure({
-    resourceName: process.env["AZURE_RESOURCE_NAME"],
-    apiKey: process.env["AZURE_API_KEY"],
+const myProvider = withCanonicalIds(
+  createOpenAICompatible({
+    name: "my-provider",
+    baseURL: "https://api.my-provider.com/v1",
+    apiKey: process.env["MY_PROVIDER_API_KEY"],
   }),
   {
     mapping: {
-      "openai/gpt-4.1-mini": "your-gpt-4.1-mini-deployment-name",
-      "openai/text-embedding-3-small": "your-embeddings-3-small-deployment-name",
+      "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
+      "anthropic/claude-sonnet-4.5": "claude-sonnet-4-5",
     },
   },
 );
 
 const gw = gateway({
   providers: {
-    azure,
+    myProvider,
   },
   models: {
     // ...your models pointing at canonical IDs above
