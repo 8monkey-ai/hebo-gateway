@@ -147,48 +147,36 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
 
-#### Azure AI Foundry
+For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
 
-[Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) provides a single OpenAI-compatible endpoint for all models — OpenAI, Claude, Llama, Mistral, and others.
-
-The simplest setup is to **name each Azure deployment after its Hebo canonical ID** (e.g. name the deployment `claude-sonnet-4.5` for `anthropic/claude-sonnet-4.5`):
+For other providers, use `withCanonicalIds` with an explicit `mapping`:
 
 ```ts
-import { createAzure } from "@ai-sdk/azure";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { gateway, withCanonicalIds } from "@hebo-ai/gateway";
 
-const azure = withCanonicalIds(
-  createAzure({
-    resourceName: process.env["AZURE_RESOURCE_NAME"],
-    apiKey: process.env["AZURE_API_KEY"],
+const myProvider = withCanonicalIds(
+  createOpenAICompatible({
+    name: "my-provider",
+    baseURL: "https://api.my-provider.com/v1",
+    apiKey: process.env["MY_PROVIDER_API_KEY"],
   }),
+  {
+    mapping: {
+      "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
+      "anthropic/claude-sonnet-4.5": "claude-sonnet-4-5",
+    },
+  },
 );
 
 const gw = gateway({
   providers: {
-    azure,
+    myProvider,
   },
   models: {
-    // e.g. "openai/gpt-4.1-mini" resolves to deployment "gpt-4.1-mini"
+    // ...your models pointing at canonical IDs above
   },
 });
-```
-
-If your deployment names differ from the canonical IDs, provide an explicit `mapping`:
-
-```ts
-const azure = withCanonicalIds(
-  createAzure({
-    resourceName: process.env["AZURE_RESOURCE_NAME"],
-    apiKey: process.env["AZURE_API_KEY"],
-  }),
-  {
-    mapping: {
-      "openai/gpt-4.1-mini": "my-gpt-deployment",
-      "anthropic/claude-sonnet-4.5": "my-claude-deployment",
-    },
-  },
-);
 ```
 
 ### Models
