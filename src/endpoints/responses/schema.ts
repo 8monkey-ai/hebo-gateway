@@ -404,9 +404,9 @@ export type Responses = z.infer<typeof ResponsesSchema>;
  * --- Stream Event Types ---
  */
 
-export type ResponseCreatedEvent = SseFrame<Responses, "response.created">;
+export type ResponseCreatedEvent = SseFrame<{ type: "response.created"; response: Responses }, "response.created">;
 
-export type ResponseInProgressEvent = SseFrame<Responses, "response.in_progress">;
+export type ResponseInProgressEvent = SseFrame<{ type: "response.in_progress"; response: Responses }, "response.in_progress">;
 
 export type ResponseOutputItemAddedEvent = SseFrame<
   {
@@ -420,6 +420,7 @@ export type ResponseOutputItemAddedEvent = SseFrame<
 export type ResponseContentPartAddedEvent = SseFrame<
   {
     type: "response.content_part.added";
+    item_id: string;
     output_index: number;
     content_index: number;
     part: ResponsesOutputText;
@@ -430,6 +431,7 @@ export type ResponseContentPartAddedEvent = SseFrame<
 export type ResponseReasoningSummaryPartAddedEvent = SseFrame<
   {
     type: "response.reasoning_summary_part.added";
+    item_id: string;
     output_index: number;
     summary_index: number;
     part: ResponsesSummaryText;
@@ -440,6 +442,7 @@ export type ResponseReasoningSummaryPartAddedEvent = SseFrame<
 export type ResponseOutputTextDeltaEvent = SseFrame<
   {
     type: "response.output_text.delta";
+    item_id: string;
     output_index: number;
     content_index: number;
     delta: string;
@@ -450,6 +453,7 @@ export type ResponseOutputTextDeltaEvent = SseFrame<
 export type ResponseReasoningSummaryTextDeltaEvent = SseFrame<
   {
     type: "response.reasoning_summary_text.delta";
+    item_id: string;
     output_index: number;
     summary_index: number;
     delta: string;
@@ -460,6 +464,7 @@ export type ResponseReasoningSummaryTextDeltaEvent = SseFrame<
 export type ResponseContentPartDoneEvent = SseFrame<
   {
     type: "response.content_part.done";
+    item_id: string;
     output_index: number;
     content_index: number;
     part: ResponsesOutputText;
@@ -470,6 +475,7 @@ export type ResponseContentPartDoneEvent = SseFrame<
 export type ResponseReasoningSummaryPartDoneEvent = SseFrame<
   {
     type: "response.reasoning_summary_part.done";
+    item_id: string;
     output_index: number;
     summary_index: number;
     part: ResponsesSummaryText;
@@ -486,9 +492,31 @@ export type ResponseOutputItemDoneEvent = SseFrame<
   "response.output_item.done"
 >;
 
-export type ResponseCompletedEvent = SseFrame<Responses, "response.completed">;
+export type ResponseFunctionCallArgumentsDeltaEvent = SseFrame<
+  {
+    type: "response.function_call_arguments.delta";
+    output_index: number;
+    item_id: string;
+    call_id: string;
+    delta: string;
+  },
+  "response.function_call_arguments.delta"
+>;
 
-export type ResponseFailedEvent = SseFrame<Responses, "response.failed">;
+export type ResponseFunctionCallArgumentsDoneEvent = SseFrame<
+  {
+    type: "response.function_call_arguments.done";
+    output_index: number;
+    item_id: string;
+    call_id: string;
+    arguments: string;
+  },
+  "response.function_call_arguments.done"
+>;
+
+export type ResponseCompletedEvent = SseFrame<{ type: "response.completed"; response: Responses }, "response.completed">;
+
+export type ResponseFailedEvent = SseFrame<{ type: "response.failed"; response: Responses }, "response.failed">;
 
 export type ResponsesStreamEvent =
   | ResponseCreatedEvent
@@ -501,6 +529,8 @@ export type ResponsesStreamEvent =
   | ResponseContentPartDoneEvent
   | ResponseReasoningSummaryPartDoneEvent
   | ResponseOutputItemDoneEvent
+  | ResponseFunctionCallArgumentsDeltaEvent
+  | ResponseFunctionCallArgumentsDoneEvent
   | ResponseCompletedEvent
   | ResponseFailedEvent;
 

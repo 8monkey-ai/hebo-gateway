@@ -755,6 +755,7 @@ export class ResponsesTransformStream extends TransformStream<
             event: "response.reasoning_summary_part.done",
             data: {
               type: "response.reasoning_summary_part.done",
+              item_id: reasoningItem.id!,
               output_index: reasoningOutputIndex,
               summary_index: summaryIndex,
               part: lastSummaryPart,
@@ -787,6 +788,7 @@ export class ResponsesTransformStream extends TransformStream<
             event: "response.content_part.done",
             data: {
               type: "response.content_part.done",
+              item_id: messageItem.id,
               output_index: messageOutputIndex,
               content_index: contentIndex,
               part: lastPart,
@@ -851,6 +853,7 @@ export class ResponsesTransformStream extends TransformStream<
                 event: "response.reasoning_summary_part.added",
                 data: {
                   type: "response.reasoning_summary_part.added",
+                  item_id: reasoningItem!.id!,
                   output_index: reasoningOutputIndex,
                   summary_index: summaryIndex,
                   part: summaryPart,
@@ -864,6 +867,7 @@ export class ResponsesTransformStream extends TransformStream<
               event: "response.reasoning_summary_text.delta",
               data: {
                 type: "response.reasoning_summary_text.delta",
+                item_id: reasoningItem!.id!,
                 output_index: reasoningOutputIndex,
                 summary_index: summaryIndex,
                 delta: part.text,
@@ -897,6 +901,7 @@ export class ResponsesTransformStream extends TransformStream<
                 event: "response.content_part.added",
                 data: {
                   type: "response.content_part.added",
+                  item_id: messageItem!.id,
                   output_index: messageOutputIndex,
                   content_index: contentIndex,
                   part: textPart,
@@ -910,6 +915,7 @@ export class ResponsesTransformStream extends TransformStream<
               event: "response.output_text.delta",
               data: {
                 type: "response.output_text.delta",
+                item_id: messageItem!.id,
                 output_index: messageOutputIndex,
                 content_index: contentIndex,
                 delta: part.text,
