@@ -101,7 +101,10 @@ function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
-        return fn(createBunMysqlExecutor(tx as unknown as BunSql));
+        const txExecutor = createBunMysqlExecutor(tx as unknown as BunSql);
+        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) =>
+          f(txExecutor);
+        return fn(txExecutor);
       });
     },
   };
