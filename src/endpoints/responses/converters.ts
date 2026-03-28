@@ -20,7 +20,7 @@ import type {
   FilePart,
 } from "ai";
 
-import { Output, jsonSchema, stepCountIs, type JSONValue } from "ai";
+import { Output, jsonSchema, stepCountIs, tool, type JSONValue } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
 import type {
@@ -57,15 +57,13 @@ import {
   stripEmptyKeys,
   parseBase64,
   parseImageInput,
-  mapLanguageModelUsage,
-  toToolSet,
   extractReasoningMetadata,
   type TextCallOptions,
 } from "../shared/converters";
 
 // --- Request Flow ---
 
-export function convertToResponsesTextCallOptions(params: ResponsesInputs): TextCallOptions {
+export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptions {
   const {
     input,
     instructions,
@@ -100,11 +98,11 @@ export function convertToResponsesTextCallOptions(params: ResponsesInputs): Text
     }
   }
 
-  const { toolChoice: tc, activeTools } = convertToResponsesToolChoiceOptions(tool_choice);
+  const { toolChoice: tc, activeTools } = convertToToolChoiceOptions(tool_choice);
 
   return {
-    messages: convertToResponsesModelMessages(input, instructions),
-    tools: convertToResponsesToolSet(tools),
+    messages: convertToModelMessages(input, instructions),
+    tools: convertToToolSet(tools),
     toolChoice: tc,
     activeTools,
     output: convertToOutput(text),
@@ -133,7 +131,7 @@ function convertToOutput(text: ResponsesTextConfig | undefined) {
   });
 }
 
-export function convertToResponsesModelMessages(
+export function convertToModelMessages(
   input: string | ResponsesInputItem[],
   instructions?: string,
 ): ModelMessage[] {
@@ -397,17 +395,23 @@ function fromFunctionCallOutputItem(
   };
 }
 
-export const convertToResponsesToolSet = (
-  tools: ResponsesTool[] | undefined,
-): ToolSet | undefined =>
-  toToolSet(tools, (t) => ({
-    name: t.name,
-    description: t.description,
-    parameters: t.parameters,
-    strict: t.strict,
-  }));
+export const convertToToolSet = (tools: ResponsesTool[] | undefined): ToolSet | undefined => {
+  if (!tools) {
+    return;
+  }
 
-export const convertToResponsesToolChoiceOptions = (
+  const toolSet: ToolSet = {};
+  for (const t of tools) {
+    toolSet[t.name] = tool({
+      description: t.description,
+      inputSchema: jsonSchema(t.parameters),
+      strict: t.strict,
+    });
+  }
+  return toolSet;
+};
+
+export const convertToToolChoiceOptions = (
   toolChoice: ResponsesToolChoice | undefined,
 ): { toolChoice?: ToolChoice<ToolSet>; activeTools?: string[] } => {
   if (!toolChoice) return {};
@@ -587,20 +591,22 @@ function toFunctionCallItem(
 }
 
 export function toResponsesUsage(usage: LanguageModelUsage): ResponsesUsage {
-  const mapped = mapLanguageModelUsage(usage);
-
   const result: ResponsesUsage = {
-    input_tokens: mapped.prompt_tokens,
-    output_tokens: mapped.completion_tokens,
-    total_tokens: mapped.total_tokens,
+    input_tokens: usage.inputTokens ?? 0,
+    output_tokens: usage.outputTokens ?? 0,
+    total_tokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
   };
 
-  if (mapped.cached_tokens !== undefined) {
-    result.input_tokens_details = { cached_tokens: mapped.cached_tokens };
+  if (usage.inputTokenDetails?.cacheReadTokens !== undefined) {
+    result.input_tokens_details = {
+      cached_tokens: usage.inputTokenDetails.cacheReadTokens,
+    };
   }
 
-  if (mapped.reasoning_tokens !== undefined) {
-    result.output_tokens_details = { reasoning_tokens: mapped.reasoning_tokens };
+  if (usage.outputTokenDetails?.reasoningTokens !== undefined) {
+    result.output_tokens_details = {
+      reasoning_tokens: usage.outputTokenDetails.reasoningTokens,
+    };
   }
 
   return result;

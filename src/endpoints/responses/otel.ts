@@ -68,45 +68,6 @@ const toMessageParts = (item: ResponsesMessageItem) => {
   }
 };
 
-const getInputMessages = (body: ResponsesBody): string[] => {
-  const inputMessages: string[] = [];
-
-  if (body.instructions) {
-    // FUTURE: move system instructions from messages to here
-    // blocker: https://github.com/langfuse/langfuse/issues/11607
-    inputMessages.push(
-      JSON.stringify({
-        role: "system",
-        parts: [{ type: "text", content: body.instructions }],
-      }),
-    );
-  }
-
-  if (typeof body.input === "string") {
-    inputMessages.push(
-      JSON.stringify({
-        role: "user",
-        parts: [{ type: "text", content: body.input }],
-      }),
-    );
-  } else if (Array.isArray(body.input)) {
-    for (const item of body.input) {
-      if (item.type === "message") {
-        inputMessages.push(
-          JSON.stringify({
-            role: item.role,
-            parts: toItemParts(item),
-          }),
-        );
-      } else {
-        inputMessages.push(JSON.stringify({ type: item.type, parts: toItemParts(item) }));
-      }
-    }
-  }
-
-  return inputMessages;
-};
-
 export const getResponsesRequestAttributes = (
   body: ResponsesBody,
   signalLevel?: TelemetrySignalLevel,
@@ -134,33 +95,48 @@ export const getResponsesRequestAttributes = (
   }
 
   if (signalLevel === "full") {
+    const inputMessages: string[] = [];
+
+    if (body.instructions) {
+      // FUTURE: move system instructions from messages to here
+      // blocker: https://github.com/langfuse/langfuse/issues/11607
+      inputMessages.push(
+        JSON.stringify({
+          role: "system",
+          parts: [{ type: "text", content: body.instructions }],
+        }),
+      );
+    }
+
+    if (typeof body.input === "string") {
+      inputMessages.push(
+        JSON.stringify({
+          role: "user",
+          parts: [{ type: "text", content: body.input }],
+        }),
+      );
+    } else if (Array.isArray(body.input)) {
+      for (const item of body.input) {
+        if (item.type === "message") {
+          inputMessages.push(
+            JSON.stringify({
+              role: item.role,
+              parts: toItemParts(item),
+            }),
+          );
+        } else {
+          inputMessages.push(JSON.stringify({ type: item.type, parts: toItemParts(item) }));
+        }
+      }
+    }
+
     Object.assign(attrs, {
-      "gen_ai.input.messages": getInputMessages(body),
+      "gen_ai.input.messages": inputMessages,
       "gen_ai.tool.definitions": body.tools?.map((toolDef) => JSON.stringify(toolDef)),
     });
   }
 
   return attrs;
-};
-
-const getOutputMessages = (responses: Responses): string[] | undefined => {
-  if (!responses.output) return undefined;
-  return responses.output.map((item) => {
-    const base: Record<string, unknown> = {
-      type: item.type,
-      status: item.status,
-    };
-
-    if (item.type === "message") {
-      base["role"] = item.role;
-      base["parts"] = item.content.map((c) => ({ type: "text", content: c.text }));
-    } else if (item.type === "function_call") {
-      base["name"] = item.name;
-      base["arguments"] = item.arguments;
-    }
-
-    return JSON.stringify(base);
-  });
 };
 
 export const getResponsesResponseAttributes = (
@@ -189,7 +165,22 @@ export const getResponsesResponseAttributes = (
 
   if (signalLevel === "full") {
     Object.assign(attrs, {
-      "gen_ai.output.messages": getOutputMessages(responses),
+      "gen_ai.output.messages": responses.output?.map((item) => {
+        const base: Record<string, unknown> = {
+          type: item.type,
+          status: item.status,
+        };
+
+        if (item.type === "message") {
+          base["role"] = item.role;
+          base["parts"] = item.content.map((c) => ({ type: "text", content: c.text }));
+        } else if (item.type === "function_call") {
+          base["name"] = item.name;
+          base["arguments"] = item.arguments;
+        }
+
+        return JSON.stringify(base);
+      }),
     });
   }
 

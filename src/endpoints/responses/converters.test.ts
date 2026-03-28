@@ -3,21 +3,64 @@ import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai
 import { describe, expect, test } from "bun:test";
 
 import {
-  convertToResponsesTextCallOptions,
-  convertToResponsesModelMessages,
+  convertToTextCallOptions,
+  convertToModelMessages,
   toResponses,
   toResponsesUsage,
 } from "./converters";
+import {
+  type ResponsesInputItem,
+  type ResponsesStreamEvent,
+  type ResponseOutputItemAddedEvent,
+  type ResponseReasoningSummaryTextDeltaEvent,
+  type ResponseOutputTextDeltaEvent,
+  type ResponseCompletedEvent,
+  type ResponsesOutputItem,
+  type ResponsesOutputMessage,
+} from "./schema";
+
+const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
+  ({
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    inputTokenDetails: {
+      cacheReadTokens: undefined,
+      cacheWriteTokens: undefined,
+      noCacheTokens: undefined,
+    },
+    outputTokenDetails: {
+      textTokens: undefined,
+      reasoningTokens: undefined,
+    },
+    ...overrides,
+  }) as LanguageModelUsage;
+
+const mockGenerateTextResult = (
+  overrides: Partial<GenerateTextResult<ToolSet, Output.Output>>,
+): GenerateTextResult<ToolSet, Output.Output> =>
+  ({
+    text: "",
+    toolCalls: [],
+    toolResults: [],
+    finishReason: "stop",
+    usage: mockUsage(),
+    totalUsage: mockUsage(),
+    warnings: [],
+    content: [],
+    response: { id: "res-1", modelId: "mock", timestamp: new Date() },
+    ...overrides,
+  }) as GenerateTextResult<ToolSet, Output.Output>;
 
 describe("Responses Converters", () => {
-  describe("convertToResponsesModelMessages", () => {
+  describe("convertToModelMessages", () => {
     test("should convert string input to single user message", () => {
-      const messages = convertToResponsesModelMessages("Hello world");
+      const messages = convertToModelMessages("Hello world");
       expect(messages).toEqual([{ role: "user", content: "Hello world" }]);
     });
 
     test("should prepend instructions as system message", () => {
-      const messages = convertToResponsesModelMessages("Hi", "You are a helpful assistant.");
+      const messages = convertToModelMessages("Hi", "You are a helpful assistant.");
       expect(messages).toEqual([
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: "Hi" },
@@ -25,14 +68,14 @@ describe("Responses Converters", () => {
     });
 
     test("should map cache_control into providerOptions for messages", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         {
           type: "message",
           role: "user",
           content: "Hello",
           cache_control: { type: "ephemeral" },
         },
-      ]);
+      ] satisfies ResponsesInputItem[]);
       expect(messages).toEqual([
         {
           role: "user",
@@ -43,42 +86,42 @@ describe("Responses Converters", () => {
     });
 
     test("should convert message items to model messages", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         {
           type: "message",
           role: "user",
           content: "What is the weather?",
         },
-      ]);
+      ] satisfies ResponsesInputItem[]);
       expect(messages).toEqual([{ role: "user", content: "What is the weather?" }]);
     });
 
     test("should convert system and developer messages to system role", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         { type: "message", role: "system", content: "System prompt" },
         { type: "message", role: "developer", content: "Dev prompt" },
         { type: "message", role: "user", content: "Hi" },
-      ]);
+      ] satisfies ResponsesInputItem[]);
       expect(messages[0]).toEqual({ role: "system", content: "System prompt" });
       expect(messages[1]).toEqual({ role: "system", content: "Dev prompt" });
       expect(messages[2]).toEqual({ role: "user", content: "Hi" });
     });
 
     test("should convert assistant message with output_text content", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         {
           type: "message",
           role: "assistant",
           content: [{ type: "output_text", text: "Hello!" }],
         },
-      ]);
+      ] satisfies ResponsesInputItem[]);
       expect(messages).toEqual([
         { role: "assistant", content: [{ type: "text", text: "Hello!" }] },
       ]);
     });
 
     test("should convert function_call and function_call_output items", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         {
           type: "function_call",
           call_id: "call_1",
@@ -90,7 +133,7 @@ describe("Responses Converters", () => {
           call_id: "call_1",
           output: '{"temp":72}',
         },
-      ]);
+      ] satisfies ResponsesInputItem[]);
 
       expect(messages).toHaveLength(2);
       // Assistant message with tool call
@@ -120,13 +163,13 @@ describe("Responses Converters", () => {
     });
 
     test("should convert reasoning items to assistant messages", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         {
           type: "reasoning",
           summary: [{ type: "summary_text", text: "I'm thinking..." }],
         },
         { type: "message", role: "user", content: "Hi" },
-      ]);
+      ] satisfies ResponsesInputItem[]);
       expect(messages).toHaveLength(2);
       expect(messages[0]).toEqual({
         role: "assistant",
@@ -136,13 +179,13 @@ describe("Responses Converters", () => {
     });
 
     test("should convert user message with input content parts", () => {
-      const messages = convertToResponsesModelMessages([
+      const messages = convertToModelMessages([
         {
           type: "message",
           role: "user",
           content: [{ type: "input_text", text: "Describe this image" }],
         },
-      ]);
+      ] satisfies ResponsesInputItem[]);
       expect(messages).toEqual([
         {
           role: "user",
@@ -152,9 +195,9 @@ describe("Responses Converters", () => {
     });
   });
 
-  describe("convertToResponsesTextCallOptions", () => {
+  describe("convertToTextCallOptions", () => {
     test("should set temperature and top_p", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         temperature: 0.7,
         top_p: 0.9,
@@ -164,7 +207,7 @@ describe("Responses Converters", () => {
     });
 
     test("should set max_output_tokens", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         max_output_tokens: 500,
       });
@@ -172,7 +215,7 @@ describe("Responses Converters", () => {
     });
 
     test("should set stopWhen from max_tool_calls", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         max_tool_calls: 3,
       });
@@ -182,7 +225,7 @@ describe("Responses Converters", () => {
     });
 
     test("should set frequency_penalty and presence_penalty", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         frequency_penalty: 0.5,
         presence_penalty: -0.5,
@@ -192,7 +235,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert text json_schema format to output", async () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         text: {
           format: {
@@ -212,21 +255,23 @@ describe("Responses Converters", () => {
 
       expect(result.output!.name).toBe("object");
 
-      const parsed = await result.output!.parseCompleteOutput(
+      const parsed = (await result.output!.parseCompleteOutput(
         { text: '{"city":"SF"}' },
         {
-          // oxlint-disable-next-line no-unsafe-assignment
-          response: {} as any,
-          // oxlint-disable-next-line no-unsafe-assignment
-          usage: {} as any,
+          response: {
+            id: "res-1",
+            modelId: "mock",
+            timestamp: new Date(),
+          } as GenerateTextResult<ToolSet, never>["response"],
+          usage: mockUsage(),
           finishReason: "stop",
         },
-      );
+      )) as unknown;
       expect(parsed).toEqual({ city: "SF" });
     });
 
     test("should treat text format 'text' as no output config", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         text: { format: { type: "text" } },
       });
@@ -234,7 +279,7 @@ describe("Responses Converters", () => {
     });
 
     test("should convert function tools to tool set", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         tools: [
           {
@@ -251,19 +296,19 @@ describe("Responses Converters", () => {
     });
 
     test("should convert tool_choice auto/required/none", () => {
-      expect(
-        convertToResponsesTextCallOptions({ input: "hi", tool_choice: "auto" }).toolChoice,
-      ).toBe("auto");
-      expect(
-        convertToResponsesTextCallOptions({ input: "hi", tool_choice: "required" }).toolChoice,
-      ).toBe("required");
-      expect(
-        convertToResponsesTextCallOptions({ input: "hi", tool_choice: "none" }).toolChoice,
-      ).toBe("none");
+      expect(convertToTextCallOptions({ input: "hi", tool_choice: "auto" }).toolChoice).toBe(
+        "auto",
+      );
+      expect(convertToTextCallOptions({ input: "hi", tool_choice: "required" }).toolChoice).toBe(
+        "required",
+      );
+      expect(convertToTextCallOptions({ input: "hi", tool_choice: "none" }).toolChoice).toBe(
+        "none",
+      );
     });
 
     test("should convert named tool_choice", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         tool_choice: { type: "function", name: "my_tool" },
       });
@@ -271,7 +316,7 @@ describe("Responses Converters", () => {
     });
 
     test("should map prompt_cache_key into providerOptions", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         prompt_cache_key: "my-key",
       });
@@ -282,7 +327,7 @@ describe("Responses Converters", () => {
     });
 
     test("should map service_tier into providerOptions", () => {
-      const result = convertToResponsesTextCallOptions({
+      const result = convertToTextCallOptions({
         input: "hi",
         service_tier: "priority",
       });
@@ -296,14 +341,13 @@ describe("Responses Converters", () => {
   describe("toResponses", () => {
     test("should produce a valid response object", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "stop",
           text: "Hello!",
           content: [{ type: "text", text: "Hello!" }],
-          toolCalls: [],
-          totalUsage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          usage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+        }),
         "openai/gpt-5",
       );
 
@@ -323,20 +367,19 @@ describe("Responses Converters", () => {
 
     test("should include tool call output items", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "tool-calls",
-          text: "",
-          content: [],
           toolCalls: [
             {
+              type: "tool-call",
               toolCallId: "call_1",
               toolName: "get_weather",
               input: { city: "SF" },
             },
           ],
-          totalUsage: { inputTokens: 15, outputTokens: 10, totalTokens: 25 },
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          usage: mockUsage({ inputTokens: 15, outputTokens: 10, totalTokens: 25 }),
+          totalUsage: mockUsage({ inputTokens: 15, outputTokens: 10, totalTokens: 25 }),
+        }),
         "openai/gpt-5",
       );
 
@@ -353,17 +396,16 @@ describe("Responses Converters", () => {
 
     test("should include reasoning output items", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "stop",
           text: "42",
           content: [
             { type: "reasoning", text: "Let me think..." },
             { type: "text", text: "42" },
           ],
-          toolCalls: [],
-          totalUsage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          usage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+        }),
         "openai/gpt-5",
       );
 
@@ -376,14 +418,13 @@ describe("Responses Converters", () => {
 
     test("should set incomplete status for length finish reason", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "length",
           text: "Partial...",
           content: [{ type: "text", text: "Partial..." }],
-          toolCalls: [],
-          totalUsage: { inputTokens: 10, outputTokens: 100, totalTokens: 110 },
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          usage: mockUsage({ inputTokens: 10, outputTokens: 100, totalTokens: 110 }),
+          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 100, totalTokens: 110 }),
+        }),
         "openai/gpt-5",
       );
 
@@ -394,14 +435,11 @@ describe("Responses Converters", () => {
 
     test("should set failed status for error finish reason", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "error",
-          text: "",
-          content: [],
-          toolCalls: [],
-          totalUsage: { inputTokens: 5, outputTokens: 0, totalTokens: 5 },
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          usage: mockUsage({ inputTokens: 5, outputTokens: 0, totalTokens: 5 }),
+          totalUsage: mockUsage({ inputTokens: 5, outputTokens: 0, totalTokens: 5 }),
+        }),
         "openai/gpt-5",
       );
 
@@ -410,14 +448,13 @@ describe("Responses Converters", () => {
 
     test("should pass through metadata", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "stop",
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
-          toolCalls: [],
-          totalUsage: { inputTokens: 5, outputTokens: 2, totalTokens: 7 },
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          usage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
+          totalUsage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
+        }),
         "openai/gpt-5",
         { user_id: "u-123" },
       );
@@ -427,17 +464,16 @@ describe("Responses Converters", () => {
 
     test("should normalize service_tier from providerMetadata", () => {
       const result = toResponses(
-        {
+        mockGenerateTextResult({
           finishReason: "stop",
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
-          toolCalls: [],
-          totalUsage: { inputTokens: 5, outputTokens: 2, totalTokens: 7 },
-          warnings: [],
+          usage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
+          totalUsage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
           providerMetadata: {
             openai: { service_tier: "flex" },
           },
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+        }),
         "openai/gpt-5",
       );
 
@@ -447,11 +483,13 @@ describe("Responses Converters", () => {
 
   describe("toResponsesUsage", () => {
     test("should map basic token counts", () => {
-      const usage = toResponsesUsage({
-        inputTokens: 100,
-        outputTokens: 50,
-        totalTokens: 150,
-      } as unknown as LanguageModelUsage);
+      const usage = toResponsesUsage(
+        mockUsage({
+          inputTokens: 100,
+          outputTokens: 50,
+          totalTokens: 150,
+        }),
+      );
 
       expect(usage).toEqual({
         input_tokens: 100,
@@ -461,27 +499,35 @@ describe("Responses Converters", () => {
     });
 
     test("should include cached token details", () => {
-      const usage = toResponsesUsage({
-        inputTokens: 100,
-        outputTokens: 20,
-        totalTokens: 120,
-        inputTokenDetails: {
-          cacheReadTokens: 60,
-          cacheWriteTokens: undefined,
-          noCacheTokens: undefined,
-        },
-        outputTokenDetails: {
-          textTokens: 20,
-          reasoningTokens: 10,
-        },
-      } as unknown as LanguageModelUsage);
+      const usage = toResponsesUsage(
+        mockUsage({
+          inputTokens: 100,
+          outputTokens: 20,
+          totalTokens: 120,
+          inputTokenDetails: {
+            cacheReadTokens: 60,
+            cacheWriteTokens: undefined,
+            noCacheTokens: undefined,
+          },
+          outputTokenDetails: {
+            textTokens: 20,
+            reasoningTokens: 10,
+          },
+        }),
+      );
 
       expect(usage.input_tokens_details).toEqual({ cached_tokens: 60 });
       expect(usage.output_tokens_details).toEqual({ reasoning_tokens: 10 });
     });
 
     test("should default to 0 when tokens undefined", () => {
-      const usage = toResponsesUsage({} as unknown as LanguageModelUsage);
+      const usage = toResponsesUsage(
+        mockUsage({
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+        }),
+      );
 
       expect(usage.input_tokens).toBe(0);
       expect(usage.output_tokens).toBe(0);
@@ -509,7 +555,7 @@ describe("Responses Converters", () => {
           controller.enqueue({
             type: "finish",
             finishReason: "stop",
-            totalUsage: { inputTokens: 5, outputTokens: 5, totalTokens: 10 },
+            totalUsage: mockUsage({ inputTokens: 5, outputTokens: 5, totalTokens: 10 }),
           });
           controller.close();
         },
@@ -517,14 +563,16 @@ describe("Responses Converters", () => {
 
       const transformed = stream.pipeThrough(new ResponsesTransformStream("openai/gpt-5"));
       const reader = transformed.getReader();
-      const events: { event: string; data: any }[] = [];
+      const events: ResponsesStreamEvent[] = [];
 
       // oxlint-disable-next-line no-await-in-loop
       while (true) {
         // oxlint-disable-next-line no-await-in-loop
         const { done, value } = await reader.read();
         if (done) break;
-        if (value) events.push(value as { event: string; data: any });
+        if (value && "event" in (value as object)) {
+          events.push(value as ResponsesStreamEvent);
+        }
       }
 
       // Initial events
@@ -533,48 +581,49 @@ describe("Responses Converters", () => {
 
       // Reasoning
       const reasoningAdded = events.find(
-        (e) =>
-          e.event === "response.output_item.added" &&
-          // oxlint-disable-next-line no-unsafe-member-access
-          e.data.item.type === "reasoning",
+        (e): e is ResponseOutputItemAddedEvent =>
+          e.event === "response.output_item.added" && e.data.item.type === "reasoning",
       );
       expect(reasoningAdded).toBeDefined();
-      // oxlint-disable-next-line no-unsafe-member-access
-      expect(reasoningAdded!.data.item.encrypted_content).toBe("encrypted");
+      expect(
+        (reasoningAdded!.data.item as Extract<ResponsesOutputItem, { type: "reasoning" }>)
+          .encrypted_content,
+      ).toBe("encrypted");
 
       const reasoningDeltas = events.filter(
-        (e) => e.event === "response.reasoning_summary_text.delta",
+        (e): e is ResponseReasoningSummaryTextDeltaEvent =>
+          e.event === "response.reasoning_summary_text.delta",
       );
       expect(reasoningDeltas).toHaveLength(2);
-      // oxlint-disable-next-line no-unsafe-member-access
       expect(reasoningDeltas[0]!.data.delta).toBe("Let me");
-      // oxlint-disable-next-line no-unsafe-member-access
       expect(reasoningDeltas[1]!.data.delta).toBe(" think...");
 
       // Text
       const textAdded = events.find(
-        (e) =>
-          e.event === "response.output_item.added" &&
-          // oxlint-disable-next-line no-unsafe-member-access
-          e.data.item.type === "message",
+        (e): e is ResponseOutputItemAddedEvent =>
+          e.event === "response.output_item.added" && e.data.item.type === "message",
       );
       expect(textAdded).toBeDefined();
 
-      const textDeltas = events.filter((e) => e.event === "response.output_text.delta");
+      const textDeltas = events.filter(
+        (e): e is ResponseOutputTextDeltaEvent => e.event === "response.output_text.delta",
+      );
       expect(textDeltas).toHaveLength(1);
-      // oxlint-disable-next-line no-unsafe-member-access
       expect(textDeltas[0]!.data.delta).toBe("Hello");
 
       // Final response
-      const completed = events.find((e) => e.event === "response.completed");
+      const completed = events.find(
+        (e): e is ResponseCompletedEvent => e.event === "response.completed",
+      );
       expect(completed).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-      const completedResponse = (completed!.data as any).response;
+      const completedResponse = completed!.data.response;
       expect(completedResponse.status).toBe("completed");
       expect(completedResponse.output).toHaveLength(2);
-      expect(completedResponse.output[0].type).toBe("reasoning");
-      expect(completedResponse.output[1].type).toBe("message");
-      expect(completedResponse.output[1].content[0].text).toBe("Hello");
+      expect(completedResponse.output[0]!.type).toBe("reasoning");
+      expect(completedResponse.output[1]!.type).toBe("message");
+      expect((completedResponse.output[1] as ResponsesOutputMessage).content[0]!.text).toBe(
+        "Hello",
+      );
     });
   });
 });

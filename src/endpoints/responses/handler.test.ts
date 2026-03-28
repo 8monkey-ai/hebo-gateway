@@ -229,7 +229,7 @@ describe("Responses Handler", () => {
     const data = await parseResponse<Responses>(res);
     expect(data!.status).toBe("completed");
 
-    const fnCall = data!.output.find((o: { type: string }) => o.type === "function_call");
+    const fnCall = data!.output.find((o) => o.type === "function_call");
     expect(fnCall).toBeDefined();
   });
 
@@ -278,22 +278,19 @@ describe("Responses Handler", () => {
     // Check response.created
     const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);
     expect(createdMatch).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const createdData = JSON.parse(createdMatch![1]!).response as Responses;
+    const createdData = (JSON.parse(createdMatch![1]!) as { response: Responses }).response;
     expect(createdData.status).toBe("in_progress");
 
     // Check response.in_progress
     const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/);
     expect(inProgressMatch).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const inProgressData = JSON.parse(inProgressMatch![1]!).response as Responses;
+    const inProgressData = (JSON.parse(inProgressMatch![1]!) as { response: Responses }).response;
     expect(inProgressData.status).toBe("in_progress");
 
     // Check response.completed
     const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/);
     expect(completedMatch).toBeTruthy();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const completedData = JSON.parse(completedMatch![1]!).response as Responses;
+    const completedData = (JSON.parse(completedMatch![1]!) as { response: Responses }).response;
     expect(completedData.status).toBe("completed");
   });
 

@@ -13,7 +13,6 @@ import {
 } from "./schema";
 import { type ResponsesInputItem } from "../responses/schema";
 import { InMemoryStorage } from "./storage/memory";
-import { type ConversationStorage } from "./storage/types";
 
 describe("Conversations Handler", () => {
   let config: GatewayConfig;
@@ -186,7 +185,7 @@ describe("Conversations Handler", () => {
         call_id: "call_123",
         output: "Rainy, 15°C",
       },
-    ];
+    ] satisfies ResponsesInputItem[];
 
     // 1. Create conversation with these items
     const createRes = await endpoint.handler(
@@ -204,26 +203,19 @@ describe("Conversations Handler", () => {
     const items = (await parseResponse<ConversationItemList>(itemsRes))!;
     expect(items.data).toHaveLength(5);
 
-    type TestItem = {
-      cache_control: { type: string };
-      extra_content: { vertex: { thought_signature: string } };
-      role: string;
-    };
-    const [sys, user, assistant, call] = items.data as unknown as [
-      TestItem,
-      TestItem,
-      TestItem,
-      TestItem,
-      TestItem,
-    ];
+    const [sys, user, assistant, call] = items.data;
 
     // Verify messages
-    expect(sys.cache_control).toEqual({ type: "ephemeral" });
-    expect(user.cache_control).toEqual({ type: "ephemeral" });
-    expect(assistant.extra_content.vertex.thought_signature).toBe("sig_assistant_123");
+    expect(sys).toMatchObject({ cache_control: { type: "ephemeral" } });
+    expect(user).toMatchObject({ cache_control: { type: "ephemeral" } });
+    expect(assistant).toMatchObject({
+      extra_content: { vertex: { thought_signature: "sig_assistant_123" } },
+    });
 
     // Verify function items
-    expect(call.extra_content.vertex.thought_signature).toBe("sig_call_456");
+    expect(call).toMatchObject({
+      extra_content: { vertex: { thought_signature: "sig_call_456" } },
+    });
   });
 
   test("should preserve extra payload when adding items to existing conversation", async () => {
@@ -243,7 +235,7 @@ describe("Conversations Handler", () => {
             content: "Hello",
             cache_control: { type: "ephemeral" },
           },
-        ],
+        ] satisfies ResponsesInputItem[],
       }),
     );
     expect(addItemRes.status).toBe(200);
@@ -253,13 +245,12 @@ describe("Conversations Handler", () => {
       new Request(`http://localhost/conversations/${conv.id}/items`),
     );
     const items = (await parseResponse<ConversationItemList>(itemsRes))!;
-    const item = items.data[0] as unknown as {
-      role?: string;
-      cache_control?: { type: string };
-    };
+    const item = items.data[0]!;
 
-    expect(item.role).toBe("user");
-    expect(item.cache_control).toEqual({ type: "ephemeral" });
+    expect(item).toMatchObject({
+      role: "user",
+      cache_control: { type: "ephemeral" },
+    });
   });
 
   test("should reject invalid metadata", async () => {
@@ -267,7 +258,7 @@ describe("Conversations Handler", () => {
 
     // 1. Invalid value type (number)
     const req1 = postJson("http://localhost/conversations", {
-      metadata: { count: 123 } as unknown as Record<string, string>,
+      metadata: { count: 123 },
     });
     const res1 = await endpoint.handler(req1);
     expect(res1.status).toBe(400);
@@ -275,15 +266,13 @@ describe("Conversations Handler", () => {
 
   test("should manage individual items", async () => {
     const endpoint = conversations(config);
-    const storage =
-      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage!;
+    const storage = config.storage!;
 
     const conv = await storage.createConversation({});
     const itemInputs = [
       { type: "message", role: "user", content: "Message 1" },
       { type: "message", role: "user", content: "Message 2" },
-    ] as ResponsesInputItem[];
+    ] satisfies ResponsesInputItem[];
     const items = (await storage.addItems(conv.id, itemInputs))!;
     const item1Id = items[0]!.id;
     const item2Id = items[1]!.id;
@@ -328,15 +317,13 @@ describe("Conversations Handler", () => {
 
   test("should handle pagination (has_more)", async () => {
     const endpoint = conversations(config);
-    const storage =
-      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage!;
+    const storage = config.storage!;
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
       role: "user",
       content: `Msg ${i + 1}`,
-    })) as ResponsesInputItem[];
+    })) satisfies ResponsesInputItem[];
 
     const conv = await storage.createConversation({ items: itemInputs });
 
@@ -370,15 +357,13 @@ describe("Conversations Handler", () => {
 
   test("should handle pagination with after and order=desc", async () => {
     const endpoint = conversations(config);
-    const storage =
-      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage!;
+    const storage = config.storage!;
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
       role: "user",
       content: `Msg ${i + 1}`,
-    })) as ResponsesInputItem[];
+    })) satisfies ResponsesInputItem[];
 
     const conv = await storage.createConversation({ items: itemInputs });
 
@@ -437,9 +422,7 @@ describe("Conversations Handler", () => {
 
   test("should enforce limit constraints", async () => {
     const endpoint = conversations(config);
-    const storage =
-      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage!;
+    const storage = config.storage!;
 
     const conv = await storage.createConversation({});
 
@@ -488,9 +471,7 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
 
     // 1. Maintain item ID during addItems
-    const storage =
-      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage!;
+    const storage = config.storage!;
     const conv = await storage.createConversation({});
 
     const customItemId = "item_custom_123";
@@ -540,7 +521,7 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_image" }] as unknown as ResponsesInputItem[],
+          content: [{ type: "input_image" }],
         },
       ],
     });
@@ -553,7 +534,7 @@ describe("Conversations Handler", () => {
         {
           type: "message",
           role: "user",
-          content: [{ type: "input_file" }] as unknown as ResponsesInputItem[],
+          content: [{ type: "input_file" }],
         },
       ],
     });
@@ -561,9 +542,7 @@ describe("Conversations Handler", () => {
     expect(resFile.status).toBe(400);
 
     // 3. Add item with empty input_image
-    const storage =
-      (endpoint as unknown as { _parsedConfig?: { storage: ConversationStorage } })._parsedConfig
-        ?.storage ?? config.storage!;
+    const storage = config.storage!;
     const conv = await storage.createConversation({});
 
     const reqAdd = postJson(`http://localhost/conversations/${conv.id}/items`, {
@@ -576,7 +555,7 @@ describe("Conversations Handler", () => {
               type: "input_image",
               image_url: null,
               file_id: null,
-            } as unknown as ResponsesInputItem,
+            },
           ],
         },
       ],

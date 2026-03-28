@@ -21,7 +21,7 @@ import type {
   FilePart,
 } from "ai";
 
-import { Output, jsonSchema } from "ai";
+import { Output, jsonSchema, tool } from "ai";
 
 import type {
   ChatCompletionsToolCall,
@@ -59,17 +59,13 @@ import {
   stripEmptyKeys,
   parseBase64,
   parseImageInput,
-  mapLanguageModelUsage,
-  toToolSet,
   extractReasoningMetadata,
   type TextCallOptions,
 } from "../shared/converters";
 
 // --- Request Flow ---
 
-export function convertToChatCompletionsTextCallOptions(
-  params: ChatCompletionsInputs,
-): TextCallOptions {
+export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCallOptions {
   const {
     messages,
     tools,
@@ -104,11 +100,11 @@ export function convertToChatCompletionsTextCallOptions(
     }
   }
 
-  const { toolChoice, activeTools } = convertToChatCompletionsToolChoiceOptions(tool_choice);
+  const { toolChoice, activeTools } = convertToToolChoiceOptions(tool_choice);
 
   return {
-    messages: convertToChatCompletionsModelMessages(messages),
-    tools: convertToChatCompletionsToolSet(tools),
+    messages: convertToModelMessages(messages),
+    tools: convertToToolSet(tools),
     toolChoice,
     activeTools,
     output: convertToOutput(response_format),
@@ -138,9 +134,7 @@ function convertToOutput(responseFormat: ChatCompletionsResponseFormat | undefin
   });
 }
 
-export function convertToChatCompletionsModelMessages(
-  messages: ChatCompletionsMessage[],
-): ModelMessage[] {
+export function convertToModelMessages(messages: ChatCompletionsMessage[]): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
   const toolById = indexToolMessages(messages);
 
@@ -400,17 +394,23 @@ function fromFilePart(
   return out;
 }
 
-export const convertToChatCompletionsToolSet = (
-  tools: ChatCompletionsTool[] | undefined,
-): ToolSet | undefined =>
-  toToolSet(tools, (t) => ({
-    name: t.function.name,
-    description: t.function.description,
-    parameters: t.function.parameters,
-    strict: t.function.strict,
-  }));
+export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
+  if (!tools) {
+    return;
+  }
 
-export const convertToChatCompletionsToolChoiceOptions = (
+  const toolSet: ToolSet = {};
+  for (const t of tools) {
+    toolSet[t.function.name] = tool({
+      description: t.function.description,
+      inputSchema: jsonSchema(t.function.parameters),
+      strict: t.function.strict,
+    });
+  }
+  return toolSet;
+};
+
+export const convertToToolChoiceOptions = (
   toolChoice: ChatCompletionsToolChoice | undefined,
 ): {
   toolChoice?: ToolChoice<ToolSet>;
@@ -722,23 +722,31 @@ export function toReasoningDetail(
 }
 
 export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
-  const mapped = mapLanguageModelUsage(usage);
+  const out: ChatCompletionsUsage = {};
 
-  const out: ChatCompletionsUsage = {
-    prompt_tokens: mapped.prompt_tokens,
-    completion_tokens: mapped.completion_tokens,
-    total_tokens: mapped.total_tokens,
-  };
+  const prompt = usage.inputTokens;
+  if (prompt !== undefined) out.prompt_tokens = prompt;
 
-  if (mapped.reasoning_tokens !== undefined) {
-    out.completion_tokens_details = { reasoning_tokens: mapped.reasoning_tokens };
+  const completion = usage.outputTokens;
+  if (completion !== undefined) out.completion_tokens = completion;
+
+  if (prompt !== undefined || completion !== undefined || usage.totalTokens !== undefined) {
+    out.total_tokens = usage.totalTokens ?? (prompt ?? 0) + (completion ?? 0);
   }
 
-  if (mapped.cached_tokens !== undefined || mapped.cache_write_tokens !== undefined) {
-    out.prompt_tokens_details = {
-      cached_tokens: mapped.cached_tokens,
-      cache_write_tokens: mapped.cache_write_tokens,
-    };
+  const reasoning = usage.outputTokenDetails?.reasoningTokens;
+  if (reasoning !== undefined) out.completion_tokens_details = { reasoning_tokens: reasoning };
+
+  const cached = usage.inputTokenDetails?.cacheReadTokens;
+  const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens;
+  if (cached !== undefined || cacheWrite !== undefined) {
+    out.prompt_tokens_details = {};
+    if (cached !== undefined) {
+      out.prompt_tokens_details.cached_tokens = cached;
+    }
+    if (cacheWrite !== undefined) {
+      out.prompt_tokens_details.cache_write_tokens = cacheWrite;
+    }
   }
 
   return out;

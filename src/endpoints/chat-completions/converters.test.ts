@@ -1,11 +1,18 @@
-import type { GenerateTextResult, ToolSet, Output, TextPart, FilePart } from "ai";
+import type {
+  GenerateTextResult,
+  ToolSet,
+  Output,
+  TextPart,
+  FilePart,
+  LanguageModelUsage,
+} from "ai";
 
 import { describe, expect, test } from "bun:test";
 
 import type { ChatCompletionsToolMessage } from "./schema";
 
 import {
-  convertToChatCompletionsTextCallOptions,
+  convertToTextCallOptions,
   toChatCompletions,
   toChatCompletionsAssistantMessage,
   toChatCompletionsToolCall,
@@ -13,6 +20,39 @@ import {
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
+
+const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
+  ({
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    inputTokenDetails: {
+      cacheReadTokens: undefined,
+      cacheWriteTokens: undefined,
+      noCacheTokens: undefined,
+    },
+    outputTokenDetails: {
+      textTokens: undefined,
+      reasoningTokens: undefined,
+    },
+    ...overrides,
+  }) as LanguageModelUsage;
+
+const mockGenerateTextResult = (
+  overrides: Partial<GenerateTextResult<ToolSet, Output.Output>>,
+): GenerateTextResult<ToolSet, Output.Output> =>
+  ({
+    text: "",
+    toolCalls: [],
+    toolResults: [],
+    finishReason: "stop",
+    usage: mockUsage(),
+    totalUsage: mockUsage(),
+    warnings: [],
+    content: [],
+    response: { id: "res-1", modelId: "mock", timestamp: new Date() },
+    ...overrides,
+  }) as GenerateTextResult<ToolSet, Output.Output>;
 
 describe("Chat Completions Converters", () => {
   describe("fromChatCompletionsToolResultMessage", () => {
@@ -117,7 +157,8 @@ describe("Chat Completions Converters", () => {
 
   describe("toChatCompletionsAssistantMessage", () => {
     test("should pass through providerMetadata to extra_content", () => {
-      const mockResult = {
+      const mockResult = mockGenerateTextResult({
+        text: "hello",
         content: [
           {
             type: "text",
@@ -129,8 +170,7 @@ describe("Chat Completions Converters", () => {
             },
           },
         ],
-        toolCalls: [],
-      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
+      });
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -142,10 +182,11 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should pass through providerMetadata to tool calls", () => {
-      const mockResult = {
-        content: [],
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
         toolCalls: [
           {
+            type: "tool-call",
             toolCallId: "call_123",
             toolName: "get_weather",
             input: { location: "London" },
@@ -154,7 +195,7 @@ describe("Chat Completions Converters", () => {
             },
           },
         ],
-      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
+      });
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -164,7 +205,8 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should extract reasoning_details from reasoning parts", () => {
-      const mockResult = {
+      const mockResult = mockGenerateTextResult({
+        text: "Final answer.",
         content: [
           {
             type: "reasoning",
@@ -181,8 +223,7 @@ describe("Chat Completions Converters", () => {
           },
         ],
         reasoningText: "I am thinking...",
-        toolCalls: [],
-      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
+      });
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -199,7 +240,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should handle redacted/encrypted reasoning", () => {
-      const mockResult = {
+      const mockResult = mockGenerateTextResult({
         content: [
           {
             type: "reasoning",
@@ -211,8 +252,7 @@ describe("Chat Completions Converters", () => {
             },
           },
         ],
-        toolCalls: [],
-      } as unknown as GenerateTextResult<ToolSet, Output.Output>;
+      });
 
       const message = toChatCompletionsAssistantMessage(mockResult);
 
@@ -318,9 +358,9 @@ describe("Chat Completions Converters", () => {
     });
   });
 
-  describe("convertToChatCompletionsTextCallOptions", () => {
+  describe("convertToTextCallOptions", () => {
     test("should use max_completion_tokens when present", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         max_completion_tokens: 200,
       });
@@ -328,7 +368,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should use max_tokens when max_completion_tokens is absent", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         max_tokens: 100,
       });
@@ -336,7 +376,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should favor max_completion_tokens over max_tokens when both are present", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         max_tokens: 100,
         max_completion_tokens: 200,
@@ -345,14 +385,14 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should handle neither being present", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
       });
       expect(result.maxOutputTokens).toBeUndefined();
     });
 
     test("should convert response_format json_schema to output.object", async () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         response_format: {
           type: "json_schema",
@@ -374,24 +414,26 @@ describe("Chat Completions Converters", () => {
 
       expect(result.output!.name).toBe("object");
 
-      const parsed = await result.output!.parseCompleteOutput(
+      const parsed = (await result.output!.parseCompleteOutput(
         {
           text: '{"city":"San Francisco"}',
         },
         {
-          // oxlint-disable-next-line no-unsafe-assignment
-          response: {} as any,
-          // oxlint-disable-next-line no-unsafe-assignment
-          usage: {} as any,
+          response: {
+            id: "res-1",
+            modelId: "mock",
+            timestamp: new Date(),
+          } as GenerateTextResult<ToolSet, never>["response"],
+          usage: mockUsage(),
           finishReason: "stop",
         },
-      );
+      )) as unknown;
 
       expect(parsed).toEqual({ city: "San Francisco" });
     });
 
     test("should treat response_format text as default text output", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         response_format: {
           type: "text",
@@ -402,7 +444,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should convert input_audio content parts to file user content", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [
           {
             role: "user",
@@ -431,7 +473,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map tool_choice 'validated' to 'auto'", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tool_choice: "validated",
       });
@@ -439,7 +481,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map allowed_tools to activeTools and auto mode", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tool_choice: {
           type: "allowed_tools",
@@ -460,7 +502,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map allowed_tools required mode to required", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tool_choice: {
           type: "allowed_tools",
@@ -481,7 +523,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should convert function tools into tool set entries", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         tools: [
           {
@@ -503,7 +545,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map prompt cache options into providerOptions.unknown", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "system", content: "You are concise." }],
         prompt_cache_key: "tenant:docs:v1",
         prompt_cache_retention: "24h",
@@ -522,7 +564,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should sync retention from cache_control ttl", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "system", content: "You are concise." }],
         cache_control: {
           type: "ephemeral",
@@ -542,7 +584,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should preserve cache_control on message and content parts", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [
           {
             role: "system",
@@ -568,7 +610,7 @@ describe("Chat Completions Converters", () => {
     });
 
     test("should map service_tier into providerOptions.unknown", () => {
-      const result = convertToChatCompletionsTextCallOptions({
+      const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
         service_tier: "priority",
       });
@@ -593,19 +635,16 @@ describe("Chat Completions Converters", () => {
     for (const { provider, value, expected } of returnedServiceTierCases) {
       test(`should normalize returned ${provider} service tier ${value}`, () => {
         const completion = toChatCompletions(
-          {
+          mockGenerateTextResult({
             finishReason: "stop",
             text: "hello",
             content: [{ type: "text", text: "hello" }],
-            toolCalls: [],
-            usage: {},
-            warnings: [],
             providerMetadata: {
               [provider]: {
                 service_tier: value,
               },
             },
-          } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          }),
           "openai/gpt-5",
         );
 
@@ -624,13 +663,10 @@ describe("Chat Completions Converters", () => {
     for (const { trafficType, expected } of geminiTrafficTypeCases) {
       test(`should parse Gemini trafficType fallback ${trafficType}`, () => {
         const completion = toChatCompletions(
-          {
+          mockGenerateTextResult({
             finishReason: "stop",
             text: "hello",
             content: [{ type: "text", text: "hello" }],
-            toolCalls: [],
-            usage: {},
-            warnings: [],
             providerMetadata: {
               vertex: {
                 usage_metadata: {
@@ -638,7 +674,7 @@ describe("Chat Completions Converters", () => {
                 },
               },
             },
-          } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+          }),
           "google/gemini-2.5-pro",
         );
 
@@ -648,14 +684,11 @@ describe("Chat Completions Converters", () => {
 
     test("should not set service_tier when metadata is missing", () => {
       const completion = toChatCompletions(
-        {
+        mockGenerateTextResult({
           finishReason: "stop",
           text: "hello",
           content: [{ type: "text", text: "hello" }],
-          toolCalls: [],
-          usage: {},
-          warnings: [],
-        } as unknown as GenerateTextResult<ToolSet, Output.Output>,
+        }),
         "openai/gpt-5",
       );
 
