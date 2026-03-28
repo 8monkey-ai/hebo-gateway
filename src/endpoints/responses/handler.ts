@@ -33,7 +33,7 @@ import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
-import { ResponsesBodySchema, type ResponsesBody } from "./schema";
+import { ResponsesBodySchema, type ResponsesBody, type ResponsesInputs } from "./schema";
 
 export const responses = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -48,8 +48,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     }
 
     try {
-      // oxlint-disable-next-line no-unsafe-assignment
-      ctx.body = await ctx.request.json();
+      ctx.body = (await ctx.request.json()) as ResponsesBody;
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
@@ -94,8 +93,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     setSpanAttributes(genAiGeneralAttrs);
 
     const { model: _model, stream, ...inputs } = ctx.body;
-    // oxlint-disable-next-line no-unsafe-argument
-    const textOptions = convertToTextCallOptions(inputs);
+    const textOptions = convertToTextCallOptions(inputs as ResponsesInputs);
     logger.trace({ requestId: ctx.requestId, options: textOptions }, "[responses] AI SDK options");
     addSpanEvent("hebo.options.prepared");
     setSpanAttributes(getResponsesRequestAttributes(ctx.body, genAiSignalLevel));

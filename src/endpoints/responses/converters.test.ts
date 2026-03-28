@@ -7,6 +7,7 @@ import {
   convertToModelMessages,
   toResponses,
   toResponsesUsage,
+  ResponsesTransformStream,
 } from "./converters";
 import {
   type ResponsesInputItem,
@@ -520,25 +521,21 @@ describe("Responses Converters", () => {
       expect(usage.output_tokens_details).toEqual({ reasoning_tokens: 10 });
     });
 
-    test("should default to 0 when tokens undefined", () => {
+    test("should calculate total_tokens when totalTokens is missing", () => {
       const usage = toResponsesUsage(
         mockUsage({
-          inputTokens: 0,
-          outputTokens: 0,
-          totalTokens: 0,
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: undefined,
         }),
       );
 
-      expect(usage.input_tokens).toBe(0);
-      expect(usage.output_tokens).toBe(0);
-      expect(usage.total_tokens).toBe(0);
+      expect(usage.total_tokens).toBe(15);
     });
   });
 
   describe("ResponsesTransformStream", () => {
     test("should handle reasoning and text stream correctly", async () => {
-      const { ResponsesTransformStream } = await import("./converters");
-
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -565,7 +562,6 @@ describe("Responses Converters", () => {
       const reader = transformed.getReader();
       const events: ResponsesStreamEvent[] = [];
 
-      // oxlint-disable-next-line no-await-in-loop
       while (true) {
         // oxlint-disable-next-line no-await-in-loop
         const { done, value } = await reader.read();

@@ -31,13 +31,13 @@ describe("Embeddings Handler", () => {
       openai: new MockProviderV3({
         embeddingModels: {
           "text-embedding-3-small": new MockEmbeddingModelV3({
-            // oxlint-disable-next-line require-await
-            doEmbed: async (options) => ({
-              embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
-              usage: { tokens: 10 },
-              providerMetadata: { provider: { key: "value" } },
-              warnings: [],
-            }),
+            doEmbed: (options) =>
+              Promise.resolve({
+                embeddings: options.values.map(() => [0.1, 0.2, 0.3]),
+                usage: { tokens: 10 },
+                providerMetadata: { provider: { key: "value" } },
+                warnings: [],
+              }),
           }),
         },
       }),

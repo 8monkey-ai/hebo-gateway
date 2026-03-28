@@ -101,6 +101,13 @@ const ResponsesMessageItemBaseSchema = z
     type: z.literal("message"),
     id: z.string().optional(),
     status: ResponsesItemStatusSchema.optional(),
+    // Extension origin: Gemini
+    extra_content: z
+      .record(z.string(), z.record(z.string(), z.unknown()))
+      .optional()
+      .meta({ extension: true }),
+    // Extension origin: Anthropic/OpenRouter/Vercel
+    cache_control: CacheControlSchema.optional().meta({ extension: true }),
   })
   .loose();
 
@@ -144,6 +151,13 @@ export const ResponsesFunctionCallSchema = z
     name: z.string(),
     arguments: z.string(),
     status: ResponsesItemStatusSchema.optional(),
+    // Extension origin: Gemini
+    extra_content: z
+      .record(z.string(), z.record(z.string(), z.unknown()))
+      .optional()
+      .meta({ extension: true }),
+    // Extension origin: Anthropic/OpenRouter/Vercel
+    cache_control: CacheControlSchema.optional().meta({ extension: true }),
   })
   .loose();
 export type ResponsesFunctionCall = z.infer<typeof ResponsesFunctionCallSchema>;
@@ -155,6 +169,13 @@ export const ResponsesFunctionCallOutputSchema = z
     call_id: z.string(),
     output: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
     status: ResponsesItemStatusSchema.optional(),
+    // Extension origin: Gemini
+    extra_content: z
+      .record(z.string(), z.record(z.string(), z.unknown()))
+      .optional()
+      .meta({ extension: true }),
+    // Extension origin: Anthropic/OpenRouter/Vercel
+    cache_control: CacheControlSchema.optional().meta({ extension: true }),
   })
   .loose();
 export type ResponsesFunctionCallOutput = z.infer<typeof ResponsesFunctionCallOutputSchema>;
@@ -183,6 +204,11 @@ export const ResponsesReasoningItemSchema = z
     content: z.array(ResponsesReasoningTextSchema).optional(),
     encrypted_content: z.string().optional(),
     status: ResponsesItemStatusSchema.optional(),
+    // Extension origin: Gemini
+    extra_content: z
+      .record(z.string(), z.record(z.string(), z.unknown()))
+      .optional()
+      .meta({ extension: true }),
   })
   .loose();
 export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
@@ -336,6 +362,11 @@ export const ResponsesOutputMessageSchema = z
     role: z.literal("assistant"),
     status: z.enum(["in_progress", "completed", "incomplete"]),
     content: z.array(ResponsesOutputTextSchema),
+    // Extension origin: Gemini
+    extra_content: z
+      .record(z.string(), z.record(z.string(), z.unknown()))
+      .optional()
+      .meta({ extension: true }),
   })
   .loose();
 export type ResponsesOutputMessage = z.infer<typeof ResponsesOutputMessageSchema>;
@@ -404,9 +435,15 @@ export type Responses = z.infer<typeof ResponsesSchema>;
  * --- Stream Event Types ---
  */
 
-export type ResponseCreatedEvent = SseFrame<{ type: "response.created"; response: Responses }, "response.created">;
+export type ResponseCreatedEvent = SseFrame<
+  { type: "response.created"; response: Responses },
+  "response.created"
+>;
 
-export type ResponseInProgressEvent = SseFrame<{ type: "response.in_progress"; response: Responses }, "response.in_progress">;
+export type ResponseInProgressEvent = SseFrame<
+  { type: "response.in_progress"; response: Responses },
+  "response.in_progress"
+>;
 
 export type ResponseOutputItemAddedEvent = SseFrame<
   {
@@ -514,9 +551,15 @@ export type ResponseFunctionCallArgumentsDoneEvent = SseFrame<
   "response.function_call_arguments.done"
 >;
 
-export type ResponseCompletedEvent = SseFrame<{ type: "response.completed"; response: Responses }, "response.completed">;
+export type ResponseCompletedEvent = SseFrame<
+  { type: "response.completed"; response: Responses },
+  "response.completed"
+>;
 
-export type ResponseFailedEvent = SseFrame<{ type: "response.failed"; response: Responses }, "response.failed">;
+export type ResponseFailedEvent = SseFrame<
+  { type: "response.failed"; response: Responses },
+  "response.failed"
+>;
 
 export type ResponsesStreamEvent =
   | ResponseCreatedEvent

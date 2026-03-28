@@ -33,7 +33,11 @@ import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
-import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
+import {
+  ChatCompletionsBodySchema,
+  type ChatCompletionsBody,
+  type ChatCompletionsInputs,
+} from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -50,8 +54,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Parse + validate input.
     try {
-      // oxlint-disable-next-line no-unsafe-assignment
-      ctx.body = await ctx.request.json();
+      ctx.body = (await ctx.request.json()) as ChatCompletionsBody;
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
@@ -100,8 +103,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const { model: _model, stream, ...inputs } = ctx.body;
-    // oxlint-disable-next-line no-unsafe-argument
-    const textOptions = convertToTextCallOptions(inputs);
+    const textOptions = convertToTextCallOptions(inputs as ChatCompletionsInputs);
     logger.trace(
       {
         requestId: ctx.requestId,

@@ -11,13 +11,12 @@ const baseUrl = "http://localhost/chat/completions";
 
 describe("Chat Completions Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
-    // oxlint-disable-next-line require-await
-    doGenerate: async (options) => {
+    doGenerate: (options) => {
       const isStructuredOutput = options.responseFormat?.type === "json";
       const isToolCall = options.tools && options.tools.length > 0;
 
       if (isToolCall) {
-        return {
+        return Promise.resolve({
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: {
             inputTokens: { total: 15, noCache: 15, cacheRead: 20, cacheWrite: 0 },
@@ -33,11 +32,11 @@ describe("Chat Completions Handler", () => {
           ],
           providerMetadata: { provider: { key: "value" } },
           warnings: [],
-        };
+        });
       }
 
       if (isStructuredOutput) {
-        return {
+        return Promise.resolve({
           finishReason: { unified: "stop", raw: "stop" },
           usage: {
             inputTokens: { total: 10, noCache: 10, cacheRead: 20, cacheWrite: 0 },
@@ -51,10 +50,10 @@ describe("Chat Completions Handler", () => {
           ],
           providerMetadata: { provider: { key: "value" } },
           warnings: [],
-        };
+        });
       }
 
-      return {
+      return Promise.resolve({
         finishReason: { unified: "stop", raw: "stop" },
         usage: {
           inputTokens: { total: 10, noCache: 10, cacheRead: 20, cacheWrite: 0 },
@@ -68,27 +67,27 @@ describe("Chat Completions Handler", () => {
         ],
         providerMetadata: { provider: { key: "value" } },
         warnings: [],
-      };
+      });
     },
-    // oxlint-disable-next-line require-await
-    doStream: async () => ({
-      stream: simulateReadableStream({
-        chunks: [
-          { type: "text-start", id: "1" },
-          { type: "text-delta", delta: "Hello", id: "1" },
-          { type: "text-delta", delta: " world", id: "1" },
-          { type: "text-end", id: "1" },
-          {
-            type: "finish",
-            finishReason: { unified: "stop", raw: "stop" },
-            usage: {
-              inputTokens: { total: 5, noCache: 5, cacheRead: 20, cacheWrite: 0 },
-              outputTokens: { total: 5, text: 5, reasoning: 10 },
+    doStream: () =>
+      Promise.resolve({
+        stream: simulateReadableStream({
+          chunks: [
+            { type: "text-start", id: "1" },
+            { type: "text-delta", delta: "Hello", id: "1" },
+            { type: "text-delta", delta: " world", id: "1" },
+            { type: "text-end", id: "1" },
+            {
+              type: "finish",
+              finishReason: { unified: "stop", raw: "stop" },
+              usage: {
+                inputTokens: { total: 5, noCache: 5, cacheRead: 20, cacheWrite: 0 },
+                outputTokens: { total: 5, text: 5, reasoning: 10 },
+              },
             },
-          },
-        ],
+          ],
+        }),
       }),
-    }),
   });
 
   const endpoint = chatCompletions({
@@ -411,8 +410,7 @@ describe("Chat Completions Handler", () => {
         },
       }),
       hooks: {
-        // oxlint-disable-next-line require-await
-        resolveModelId: async () => "openai/gpt-oss-20b",
+        resolveModelId: () => "openai/gpt-oss-20b",
       },
     });
 

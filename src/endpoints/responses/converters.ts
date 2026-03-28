@@ -185,20 +185,23 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
     return { role: "assistant", content: parts };
   }
 
-  const extra = (item as Record<string, unknown>)["extra_content"] as
-    | Record<string, unknown>
-    | undefined;
+  const extra = item.extra_content as SharedV3ProviderOptions | undefined;
 
   for (const s of item.summary) {
     if (extra || item.encrypted_content) {
-      const unknownOpts: Record<string, unknown> = extra ? { ...extra } : {};
+      const providerOptions: SharedV3ProviderOptions = extra ? { ...extra } : {};
+
       if (item.encrypted_content) {
-        unknownOpts["redactedData"] = item.encrypted_content;
+        providerOptions["unknown"] = {
+          ...providerOptions["unknown"],
+          redactedData: item.encrypted_content,
+        };
       }
+
       parts.push({
         type: "reasoning",
         text: s.text,
-        providerOptions: { unknown: unknownOpts as Record<string, JSONValue> },
+        providerOptions,
       });
     } else {
       parts.push({
@@ -231,8 +234,19 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
             ? item.content
             : item.content.map(fromInputContentPart).join(""),
       };
-      if ("cache_control" in item && item["cache_control"]) {
-        out.providerOptions = { unknown: { cache_control: item["cache_control"] as JSONValue } };
+
+      if (item.extra_content) {
+        out.providerOptions = item.extra_content as SharedV3ProviderOptions;
+      }
+
+      if (item.cache_control) {
+        out.providerOptions = {
+          ...out.providerOptions,
+          ["unknown"]: {
+            ...out.providerOptions?.["unknown"],
+            cache_control: item.cache_control as JSONValue,
+          },
+        };
       }
       return out;
     }
@@ -290,8 +304,18 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
     out.content = content;
   }
 
-  if ("cache_control" in item && item["cache_control"]) {
-    out.providerOptions = { unknown: { cache_control: item["cache_control"] as JSONValue } };
+  if (item.extra_content) {
+    out.providerOptions = item.extra_content as SharedV3ProviderOptions;
+  }
+
+  if (item.cache_control) {
+    out.providerOptions = {
+      ...out.providerOptions,
+      ["unknown"]: {
+        ...out.providerOptions?.["unknown"],
+        cache_control: item.cache_control as JSONValue,
+      },
+    };
   }
 
   return out;
@@ -333,25 +357,35 @@ function fromInputContentPart(part: { type: string; text?: string }): string {
 function fromAssistantMessageItem(
   item: ResponsesMessageItem & { role: "assistant" },
 ): AssistantModelMessage {
+  let content: string | AssistantContent;
   if (typeof item.content === "string") {
-    const out: AssistantModelMessage = { role: "assistant", content: item.content };
-    if ("extra_content" in item && item["extra_content"]) {
-      out.providerOptions = item["extra_content"] as SharedV3ProviderOptions;
+    content = item.content;
+  } else {
+    const parts: AssistantContent = [];
+    for (const part of item.content) {
+      if (part.type === "output_text") {
+        parts.push({ type: "text", text: part.text });
+      }
     }
-    return out;
+    content = parts.length > 0 ? parts : "";
   }
 
-  const parts: AssistantContent = [];
-  for (const part of item.content) {
-    if (part.type === "output_text") {
-      parts.push({ type: "text", text: part.text });
-    }
+  const out: AssistantModelMessage = { role: "assistant", content };
+
+  if (item.extra_content) {
+    out.providerOptions = item.extra_content as SharedV3ProviderOptions;
   }
 
-  const out: AssistantModelMessage = { role: "assistant", content: parts.length > 0 ? parts : "" };
-  if ("extra_content" in item && item["extra_content"]) {
-    out.providerOptions = item["extra_content"] as SharedV3ProviderOptions;
+  if (item.cache_control) {
+    out.providerOptions = {
+      ...out.providerOptions,
+      ["unknown"]: {
+        ...out.providerOptions?.["unknown"],
+        cache_control: item.cache_control as JSONValue,
+      },
+    };
   }
+
   return out;
 }
 
@@ -363,8 +397,18 @@ function fromFunctionCallItem(item: ResponsesFunctionCall): AssistantModelMessag
     input: parseJsonOrText(item.arguments).value,
   };
 
-  if ("extra_content" in item && item["extra_content"]) {
-    toolCall.providerOptions = item["extra_content"] as SharedV3ProviderOptions;
+  if (item.extra_content) {
+    toolCall.providerOptions = item.extra_content as SharedV3ProviderOptions;
+  }
+
+  if (item.cache_control) {
+    toolCall.providerOptions = {
+      ...toolCall.providerOptions,
+      ["unknown"]: {
+        ...toolCall.providerOptions?.["unknown"],
+        cache_control: item.cache_control as JSONValue,
+      },
+    };
   }
 
   return { role: "assistant", content: [toolCall] };
@@ -534,7 +578,7 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
         textParts.length > 0 ? textParts : [{ type: "output_text", text: "", annotations: [] }],
     };
     if (result.providerMetadata) {
-      (msgItem as Record<string, unknown>)["extra_content"] = result.providerMetadata;
+      msgItem.extra_content = result.providerMetadata;
     }
     output.push(msgItem);
   }
@@ -555,7 +599,7 @@ function toReasoningOutputItem(reasoning: ReasoningOutput): ResponsesReasoningIt
   }
 
   const providerMetadata = reasoning.providerMetadata ?? {};
-  (item as Record<string, unknown>)["extra_content"] = providerMetadata;
+  item.extra_content = providerMetadata;
 
   const { redactedData } = extractReasoningMetadata(providerMetadata);
   if (redactedData) {
@@ -584,7 +628,7 @@ function toFunctionCallItem(
   };
 
   if (providerMetadata) {
-    (item as Record<string, unknown>)["extra_content"] = providerMetadata;
+    item.extra_content = providerMetadata;
   }
 
   return item;
@@ -699,7 +743,7 @@ export class ResponsesTransformStream extends TransformStream<
       };
 
       if (providerMetadata) {
-        (messageItem as Record<string, unknown>)["extra_content"] = providerMetadata;
+        messageItem.extra_content = providerMetadata;
       }
 
       messageOutputIndex = outputIndex++;
@@ -729,7 +773,7 @@ export class ResponsesTransformStream extends TransformStream<
       };
 
       if (providerMetadata) {
-        (reasoningItem as Record<string, unknown>)["extra_content"] = providerMetadata;
+        reasoningItem.extra_content = providerMetadata;
         const { redactedData } = extractReasoningMetadata(providerMetadata);
         if (redactedData) {
           reasoningItem.encrypted_content = redactedData;

@@ -1,7 +1,6 @@
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   if (!v || typeof v !== "object" || Array.isArray(v)) return false;
-  // oxlint-disable-next-line no-unsafe-assignment
-  const proto = Object.getPrototypeOf(v);
+  const proto = Object.getPrototypeOf(v) as unknown;
   return proto === Object.prototype || proto === null;
 }
 

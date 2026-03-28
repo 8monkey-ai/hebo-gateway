@@ -1,4 +1,8 @@
-import type { JSONObject, SharedV3ProviderMetadata, SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type {
+  JSONObject,
+  SharedV3ProviderMetadata,
+  SharedV3ProviderOptions,
+} from "@ai-sdk/provider";
 import {
   tool,
   jsonSchema,
@@ -37,8 +41,7 @@ export function parseJsonOrText(
   content: string,
 ): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
   try {
-    // oxlint-disable-next-line no-unsafe-assignment
-    return { type: "json", value: JSON.parse(content) };
+    return { type: "json", value: JSON.parse(content) as JSONValue };
   } catch {
     return { type: "text", value: content };
   }
@@ -230,9 +233,10 @@ export function stripEmptyKeys(obj: unknown) {
   return obj;
 }
 
-export function extractReasoningMetadata(
-  providerMetadata: SharedV3ProviderMetadata | undefined,
-): { redactedData?: string; signature?: string } {
+export function extractReasoningMetadata(providerMetadata: SharedV3ProviderMetadata | undefined): {
+  redactedData?: string;
+  signature?: string;
+} {
   if (!providerMetadata) return {};
 
   for (const metadata of Object.values(providerMetadata)) {

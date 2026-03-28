@@ -26,7 +26,7 @@ import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { getEmbeddingsRequestAttributes, getEmbeddingsResponseAttributes } from "./otel";
-import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema";
+import { EmbeddingsBodySchema, type EmbeddingsBody, type EmbeddingsInputs } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -43,8 +43,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Parse + validate input.
     try {
-      // oxlint-disable-next-line no-unsafe-assignment
-      ctx.body = await ctx.request.json();
+      ctx.body = (await ctx.request.json()) as EmbeddingsBody;
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
@@ -92,8 +91,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const { model: _model, ...inputs } = ctx.body;
-    // oxlint-disable-next-line no-unsafe-argument
-    const embedOptions = convertToEmbedCallOptions(inputs);
+    const embedOptions = convertToEmbedCallOptions(inputs as EmbeddingsInputs);
     logger.trace(
       { requestId: ctx.requestId, options: embedOptions },
       "[embeddings] AI SDK options",
