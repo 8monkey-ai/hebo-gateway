@@ -424,7 +424,9 @@ export const convertToToolChoiceOptions = (
     return { toolChoice };
   }
 
-  // FUTURE: this is right now google specific, which is not supported by AI SDK, until then, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+  // FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
+  // we temporarily map it to auto for now
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
   if (toolChoice === "validated") {
     return { toolChoice: "auto" };
   }

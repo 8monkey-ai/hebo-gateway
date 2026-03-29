@@ -226,7 +226,8 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
           typeof item.content === "string"
             ? item.content
             : item.content
-                // FUTURE: Support multimodal content in system messages (currently limited to text by AI SDK)
+                // FUTURE: Support multimodal content in system messages (currently limited to
+                // text by AI SDK)
                 .filter((p): p is ResponsesInputText => p.type === "input_text")
                 .map((p) => p.text)
                 .join(""),
@@ -496,7 +497,9 @@ export const convertToToolChoiceOptions = (
     toolChoice === "required" ||
     toolChoice === "validated"
   ) {
-    // FUTURE: this is right now google specific, which is not supported by AI SDK, until then, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+    // FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
+    // we temporarily map it to auto for now
+    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
     return { toolChoice: toolChoice === "validated" ? "auto" : toolChoice };
   }
 
@@ -911,8 +914,12 @@ export class ResponsesTransformStream extends TransformStream<
       transform(part, controller) {
         // We explicitly omit several stream part types from the AI SDK:
         // - 'text-end': Item closure is handled generically on 'finish' / 'finish-step'
-        // - 'tool-input-*' ('start', 'delta', 'end'): The AI SDK streams tool arguments chunk-by-chunk, but our API schema requires sending the fully-formed tool call at once. We ignore the chunks and wait for the final 'tool-call' event.
-        // - 'tool-result', 'tool-error', 'tool-output-denied': These only occur if the server executes the tools on behalf of the user. Our gateway only relays the model's request to call a tool back to the client.
+        // - 'tool-input-*' ('start', 'delta', 'end'): The AI SDK streams tool arguments
+        //   chunk-by-chunk, but our API schema requires sending the fully-formed tool call at once.
+        //   We ignore the chunks and wait for the final 'tool-call' event.
+        // - 'tool-result', 'tool-error', 'tool-output-denied': These only occur if the server
+        //   executes the tools on behalf of the user. Our gateway only relays the model's
+        //   request to call a tool back to the client.
         // - 'start', 'start-step': Metadata events that do not map to our output items.
         // - 'abort': Stream cancellation is handled at the network/abort-controller level.
         // - 'source', 'file': No current schema support in the Responses format.

@@ -138,9 +138,8 @@ export class SqlStorage implements ConversationStorage {
 
     return this.executor.transaction(async (tx) => {
       await tx.run(
-        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
-          0,
-        )}, ${p(1)}, ${p(2)})`,
+        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) ` +
+          `VALUES (${p(0)}, ${p(1)}, ${p(2)})`,
         [id, metadata, now],
       );
 
@@ -240,10 +239,13 @@ export class SqlStorage implements ConversationStorage {
 
     return this.executor.transaction(async (tx) => {
       // Unified approach: Fetch original created_at to verify existence and preserve it.
-      // 1. Existence check: Ensure the conversation exists before updating (returning undefined if missing).
-      //    This prevents clients from accidentally creating "zombie" conversations with custom IDs.
-      // 2. Consistency: Standard SQL (Postgres/MySQL/SQLite) preserves the original creation timestamp.
-      // 3. Deduplication: GreptimeDB requires the EXACT same Time Index (created_at) to deduplicate the row.
+      // 1. Existence check: Ensure the conversation exists before updating (returning
+      //    undefined if missing). This prevents clients from accidentally creating
+      //    "zombie" conversations with custom IDs.
+      // 2. Consistency: Standard SQL (Postgres/MySQL/SQLite) preserves the original
+      //    creation timestamp.
+      // 3. Deduplication: GreptimeDB requires the EXACT same Time Index (created_at)
+      //    to deduplicate the row.
       const conversation = await this.getConversationInternal(id, tx);
 
       if (!conversation) return;
@@ -254,9 +256,8 @@ export class SqlStorage implements ConversationStorage {
       const suffix = upsertSuffix?.(q, pk, updateCols) ?? "";
 
       await tx.run(
-        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) VALUES (${p(
-          0,
-        )}, ${p(1)}, ${p(2)}) ${suffix}`,
+        `INSERT INTO ${q("conversations")} (${q("id")}, ${q("metadata")}, ${q("created_at")}) ` +
+          `VALUES (${p(0)}, ${p(1)}, ${p(2)}) ${suffix}`,
         [id, metadata ?? null, new Date(createdAt)],
       );
 
