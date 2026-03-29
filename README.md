@@ -664,8 +664,6 @@ Hebo Gateway provides a `/responses` endpoint implementing the [Open Responses A
 
 > [!NOTE]
 > This is a stateless implementation. `previous_response_id` chaining and server-side response storage (`store`) are not supported.
-> [!IMPORTANT]
-> **Audio Modality**: While `/chat/completions` supports `input_audio`, the [Open Responses API specification](https://www.openresponses.org/specification) does not yet define an audio content type. Consequently, audio input is currently not supported on the `/responses` and `/conversations` endpoints.
 
 ### Prompt Caching
 

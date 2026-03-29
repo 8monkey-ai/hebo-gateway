@@ -1,4 +1,12 @@
-import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage } from "ai";
+import type {
+  GenerateTextResult,
+  ToolSet,
+  Output,
+  LanguageModelUsage,
+  UserModelMessage,
+  FilePart,
+  ToolModelMessage,
+} from "ai";
 
 import { describe, expect, test } from "bun:test";
 
@@ -193,6 +201,79 @@ describe("Responses Converters", () => {
           content: [{ type: "text", text: "Describe this image" }],
         },
       ]);
+    });
+
+    test("should convert user message with input audio content part", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_audio",
+              input_audio: {
+                data: "aGVsbG8=",
+                format: "wav",
+              },
+            },
+          ],
+        },
+      ] satisfies ResponsesInputItem[]);
+
+      expect(messages).toHaveLength(1);
+      const userMessage = messages[0] as UserModelMessage;
+      expect(userMessage.role).toBe("user");
+      expect(Array.isArray(userMessage.content)).toBe(true);
+
+      const content = userMessage.content as Array<{ type: string }>;
+      const part = content[0] as FilePart;
+      expect(part.type).toBe("file");
+      expect(part.mediaType).toBe("audio/wav");
+      expect(part.data).toBeInstanceOf(Uint8Array);
+      expect(Array.from(part.data as Uint8Array)).toEqual([104, 101, 108, 108, 111]);
+    });
+
+    test("should convert function_call_output items with audio", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "function_call",
+          call_id: "call_1",
+          name: "get_audio",
+          arguments: "{}",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output: [
+            {
+              type: "input_audio",
+              input_audio: {
+                data: "aGVsbG8=",
+                format: "wav",
+              },
+            },
+          ],
+        },
+      ] satisfies ResponsesInputItem[]);
+
+      expect(messages).toHaveLength(2);
+      const toolMessage = messages[1] as ToolModelMessage;
+      expect(toolMessage.role).toBe("tool");
+      expect(toolMessage.content[0]).toEqual({
+        type: "tool-result",
+        toolCallId: "call_1",
+        toolName: "get_audio",
+        output: {
+          type: "content",
+          value: [
+            {
+              type: "file-data",
+              data: "aGVsbG8=",
+              mediaType: "audio/wav",
+            },
+          ],
+        },
+      });
     });
   });
 

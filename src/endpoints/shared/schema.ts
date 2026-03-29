@@ -28,3 +28,34 @@ export type ReasoningConfig = z.infer<typeof ReasoningConfigSchema>;
 
 export const ServiceTierSchema = z.enum(["auto", "default", "flex", "scale", "priority"]);
 export type ServiceTier = z.infer<typeof ServiceTierSchema>;
+
+export const InputAudioFormatSchema = z.enum([
+  "x-aac",
+  "flac",
+  "mp3",
+  "m4a",
+  "mpeg",
+  "mpga",
+  "mp4",
+  "ogg",
+  "pcm",
+  "wav",
+  "webm",
+]);
+export type InputAudioFormat = z.infer<typeof InputAudioFormatSchema>;
+
+export const InputAudioSchema = z.object({
+  data: z.string(),
+  // only wav and mp3 are official by OpenAI, rest is taken from Gemini support:
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/audio-understanding
+  format: InputAudioFormatSchema,
+});
+export type InputAudio = z.infer<typeof InputAudioSchema>;
+
+export const ContentPartAudioSchema = z.object({
+  type: z.literal("input_audio"),
+  input_audio: InputAudioSchema,
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+});
+export type ContentPartAudio = z.infer<typeof ContentPartAudioSchema>;

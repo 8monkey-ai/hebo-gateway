@@ -339,6 +339,20 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         }
         break;
       }
+      case "input_audio": {
+        const out: FilePart = {
+          type: "file",
+          data: parseBase64(part.input_audio.data, "Invalid base64 data in audio input"),
+          mediaType: `audio/${part.input_audio.format}`,
+        };
+        if (part.cache_control) {
+          out.providerOptions = {
+            unknown: { cache_control: part.cache_control },
+          };
+        }
+        result.push(out);
+        break;
+      }
     }
   }
   return result;
@@ -440,6 +454,15 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
       } else if (part.file_id !== undefined) {
         value.push({ type: "file-id", fileId: part.file_id });
       }
+      continue;
+    }
+
+    if (part.type === "input_audio") {
+      value.push({
+        type: "file-data",
+        data: part.input_audio.data,
+        mediaType: `audio/${part.input_audio.format}`,
+      });
       continue;
     }
   }

@@ -512,6 +512,53 @@ describe("Conversations Handler", () => {
     expect(listData.data[0]!.id).toBe("msg_1");
   });
 
+  test("should support input_audio content parts", async () => {
+    const endpoint = conversations(config);
+
+    // 1. Create conversation with audio item
+    const audioItem = {
+      type: "message",
+      role: "user",
+      content: [
+        {
+          type: "input_audio",
+          input_audio: {
+            data: "aGVsbG8=",
+            format: "wav",
+          },
+        },
+      ],
+    } satisfies ResponsesInputItem;
+
+    const createRes = await endpoint.handler(
+      postJson("http://localhost/conversations", {
+        items: [audioItem],
+      }),
+    );
+    expect(createRes.status).toBe(200);
+    const conv = (await parseResponse<Conversation>(createRes))!;
+
+    // 2. Retrieve items and verify audio content
+    const itemsRes = await endpoint.handler(
+      new Request(`http://localhost/conversations/${conv.id}/items`),
+    );
+    const items = (await parseResponse<ConversationItemList>(itemsRes))!;
+    expect(items.data).toHaveLength(1);
+
+    const item = items.data[0]!;
+    expect(item.type).toBe("message");
+    if (item.type === "message" && Array.isArray(item.content)) {
+      const part = item.content[0]!;
+      expect(part.type).toBe("input_audio");
+      if (part.type === "input_audio") {
+        expect(part.input_audio.data).toBe("aGVsbG8=");
+        expect(part.input_audio.format).toBe("wav");
+      }
+    } else {
+      throw new Error("Expected message item with content array");
+    }
+  });
+
   test("should reject empty input_image and input_file payloads", async () => {
     const endpoint = conversations(config);
 

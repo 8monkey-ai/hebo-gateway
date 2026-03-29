@@ -35,6 +35,58 @@ describe("Responses OTEL", () => {
     ]);
   });
 
+  test("should map multimodal input content parts to schema-compatible parts", () => {
+    const body: ResponsesBody = {
+      model: "openai/gpt-5",
+      input: [
+        {
+          type: "message",
+          role: "user",
+          content: [
+            { type: "input_text", text: "What is in this image and audio?" },
+            { type: "input_image", image_url: "https://example.com/cat.png" },
+            { type: "input_image", image_url: "data:image/png;base64,AAAA" },
+            { type: "input_audio", input_audio: { data: "AAAA", format: "wav" } },
+            {
+              type: "input_file",
+              file_data: "AAAA",
+              filename: "brochure.pdf",
+            },
+          ],
+        },
+      ],
+    };
+
+    const attrs = getResponsesRequestAttributes(body, "full");
+
+    expect(attrs["gen_ai.input.messages"]).toEqual([
+      JSON.stringify({
+        role: "user",
+        parts: [
+          { type: "text", content: "What is in this image and audio?" },
+          { type: "uri", modality: "image", uri: "https://example.com/cat.png" },
+          {
+            type: "blob",
+            modality: "image",
+            content: "[REDACTED_BINARY_DATA]",
+            mime_type: "image/png",
+          },
+          {
+            type: "blob",
+            modality: "audio",
+            content: "[REDACTED_BINARY_DATA]",
+            mime_type: "audio/wav",
+          },
+          {
+            type: "blob",
+            modality: "file",
+            content: "[REDACTED_BINARY_DATA]",
+          },
+        ],
+      }),
+    ]);
+  });
+
   test("should include instructions as system message in full mode", () => {
     const body: ResponsesBody = {
       model: "openai/gpt-5",

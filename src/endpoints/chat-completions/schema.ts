@@ -10,6 +10,8 @@ import {
   type ReasoningConfig as ChatCompletionsReasoningConfig,
   ServiceTierSchema as ChatCompletionsServiceTierSchema,
   type ServiceTier as ChatCompletionsServiceTier,
+  ContentPartAudioSchema as ChatCompletionsContentPartAudioSchema,
+  type ContentPartAudio as ChatCompletionsContentPartAudio,
 } from "../shared/schema";
 
 export {
@@ -21,6 +23,8 @@ export {
   type ChatCompletionsReasoningConfig,
   ChatCompletionsServiceTierSchema,
   type ChatCompletionsServiceTier,
+  ChatCompletionsContentPartAudioSchema,
+  type ChatCompletionsContentPartAudio,
 };
 
 export const ChatCompletionsContentPartTextSchema = z.object({
@@ -47,30 +51,6 @@ export const ChatCompletionsContentPartFileSchema = z.object({
     data: z.string(),
     media_type: z.string(),
     filename: z.string().optional(),
-  }),
-  // Extension origin: OpenRouter/Vercel/Anthropic
-  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
-});
-
-export const ChatCompletionsContentPartAudioSchema = z.object({
-  type: z.literal("input_audio"),
-  input_audio: z.object({
-    data: z.string(),
-    // only wav and mp3 are official by OpenAI, rest is taken from Gemini support:
-    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/audio-understanding
-    format: z.enum([
-      "x-aac",
-      "flac",
-      "mp3",
-      "m4a",
-      "mpeg",
-      "mpga",
-      "mp4",
-      "ogg",
-      "pcm",
-      "wav",
-      "webm",
-    ]),
   }),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),

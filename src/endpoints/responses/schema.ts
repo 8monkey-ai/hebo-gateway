@@ -84,6 +84,7 @@ export const ResponsesInputContentSchema = z.union([
   ResponsesInputFileDataSchema,
   ResponsesInputFileIDSchema,
   ResponsesInputFileURLSchema,
+  ResponsesInputAudioSchema,
 ]);
 export type ResponsesInputContent = z.infer<typeof ResponsesInputContentSchema>;
 
@@ -226,6 +227,8 @@ import {
   type ReasoningEffort as ResponsesReasoningEffort,
   type ReasoningConfig as ResponsesReasoningConfig,
   type ServiceTier as ResponsesServiceTier,
+  ContentPartAudioSchema as ResponsesInputAudioSchema,
+  type ContentPartAudio as ResponsesInputAudio,
 } from "../shared/schema";
 
 export {
@@ -237,6 +240,8 @@ export {
   type ResponsesReasoningConfig,
   ResponsesServiceTierSchema,
   type ResponsesServiceTier,
+  ResponsesInputAudioSchema,
+  type ResponsesInputAudio,
 };
 
 /**

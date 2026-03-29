@@ -1,24 +1,74 @@
 import type { Attributes } from "@opentelemetry/api";
 import type { FinishReason } from "ai";
 
-import type { Responses, ResponsesBody, ResponsesInputItem, ResponsesMessageItem } from "./schema";
+import type {
+  Responses,
+  ResponsesBody,
+  ResponsesInputContent,
+  ResponsesInputItem,
+  ResponsesMessageItem,
+} from "./schema";
 
 import { type TelemetrySignalLevel } from "../../types";
+import { parseDataUrl } from "../../utils/url";
 
-const toInputTextParts = (content: string | { type: string; text?: string }[]) => {
+const toBlobPart = (modality: string, mimeType?: string) => {
+  const part: Record<string, unknown> = {
+    type: "blob",
+    modality,
+    content: "[REDACTED_BINARY_DATA]",
+  };
+  if (mimeType) part["mime_type"] = mimeType;
+  return part;
+};
+
+const toInputParts = (content: string | ResponsesInputContent[]) => {
+  if (typeof content === "string") return [{ type: "text", content }];
+
+  const parts: Record<string, unknown>[] = [];
+
+  for (const part of content) {
+    switch (part.type) {
+      case "input_text":
+        parts.push({ type: "text", content: part.text });
+        break;
+      case "input_image": {
+        const url = part.image_url;
+        if (url && url.slice(0, 5).toLowerCase() === "data:") {
+          const { mimeType } = parseDataUrl(url);
+          parts.push(toBlobPart("image", mimeType || undefined));
+        } else if (url) {
+          parts.push({ type: "uri", modality: "image", uri: url });
+        } else if (part.file_id) {
+          parts.push({ type: "blob", modality: "image", content: `file_id:${part.file_id}` });
+        }
+        break;
+      }
+      case "input_audio":
+        parts.push(toBlobPart("audio", `audio/${part.input_audio.format}`));
+        break;
+      case "input_file": {
+        if (part.file_data) {
+          parts.push(toBlobPart("file"));
+        } else if (part.file_url) {
+          parts.push({ type: "uri", modality: "file", uri: part.file_url });
+        } else if (part.file_id) {
+          parts.push({ type: "blob", modality: "file", content: `file_id:${part.file_id}` });
+        }
+        break;
+      }
+    }
+  }
+
+  return parts;
+};
+
+const toOutputTextParts = (content: string | { type: string; text: string }[]) => {
   if (typeof content === "string") {
     return [{ type: "text", content }];
   }
 
-  const result = [];
-  if (Array.isArray(content)) {
-    for (const part of content) {
-      if ("text" in part && typeof part.text === "string") {
-        result.push({ type: "text", content: part.text });
-      }
-    }
-  }
-  return result;
+  return content.map((part) => ({ type: "text", content: part.text }));
 };
 
 const toItemParts = (item: ResponsesInputItem) => {
@@ -42,9 +92,7 @@ const toItemParts = (item: ResponsesInputItem) => {
           response:
             typeof item.output === "string"
               ? item.output
-              : item.output
-                  .map((p) => ("text" in p && typeof p.text === "string" ? p.text : ""))
-                  .join(""),
+              : item.output.map((p) => (p.type === "input_text" ? p.text : "")).join(""),
         },
       ];
     case "reasoning":
@@ -55,14 +103,13 @@ const toItemParts = (item: ResponsesInputItem) => {
 const toMessageParts = (item: ResponsesMessageItem) => {
   switch (item.role) {
     case "assistant":
-      return toInputTextParts(item.content);
+      return toOutputTextParts(item.content);
     case "user":
     case "developer":
-      return toInputTextParts(item.content);
-    // FUTURE: remove once Langfuse supports gen_ai.system_instructions
-    // https://github.com/langfuse/langfuse/issues/11607
     case "system":
-      return toInputTextParts(item.content);
+      // FUTURE: remove once Langfuse supports gen_ai.system_instructions
+      // https://github.com/langfuse/langfuse/issues/11607
+      return toInputParts(item.content);
     default:
       return [];
   }
