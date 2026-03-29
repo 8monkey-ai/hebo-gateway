@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { MetadataSchema, ResponsesInputItemSchema } from "../responses/schema";
+import { ResponsesMetadataSchema, ResponsesInputItemSchema } from "../responses/schema";
 
 /**
  * --- Entities ---
@@ -20,7 +20,7 @@ export const ConversationSchema = z.object({
   id: z.string(),
   object: z.literal("conversation"),
   created_at: z.number().int(),
-  metadata: MetadataSchema,
+  metadata: ResponsesMetadataSchema,
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
 
@@ -37,12 +37,12 @@ export type ConversationDeleted = z.infer<typeof ConversationDeletedSchema>;
 
 export const ConversationCreateParamsSchema = z.object({
   items: z.array(ResponsesInputItemSchema).max(1000).optional(),
-  metadata: MetadataSchema.optional(),
+  metadata: ResponsesMetadataSchema.optional(),
 });
 export type ConversationCreateParams = z.infer<typeof ConversationCreateParamsSchema>;
 
 export const ConversationUpdateBodySchema = z.object({
-  metadata: MetadataSchema,
+  metadata: ResponsesMetadataSchema,
 });
 export type ConversationUpdateBody = z.infer<typeof ConversationUpdateBodySchema>;
 
@@ -97,7 +97,7 @@ export const ConversationListParamsSchema = z.preprocess(
     return rest;
   },
   ConversationItemListParamsSchema.extend({
-    metadata: MetadataSchema.optional(),
+    metadata: ResponsesMetadataSchema.optional(),
   }),
 );
 export type ConversationListParams = z.infer<typeof ConversationListParamsSchema>;
