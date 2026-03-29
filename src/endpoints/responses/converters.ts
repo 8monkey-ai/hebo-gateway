@@ -123,6 +123,7 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
 
 function convertToOutput(text: ResponsesTextConfig | undefined) {
   if (!text?.format || text.format.type === "text") {
+    // FUTURE: Support text.verbosity when AI SDK adds top-level support
     return;
   }
 

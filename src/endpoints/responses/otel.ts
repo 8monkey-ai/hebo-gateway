@@ -147,6 +147,7 @@ export const getResponsesRequestAttributes = (
       "gen_ai.request.presence_penalty": body.presence_penalty,
       "gen_ai.request.temperature": body.temperature,
       "gen_ai.request.top_p": body.top_p,
+      // FUTURE: Support text.verbosity configuration
     });
 
     if (body.metadata) {

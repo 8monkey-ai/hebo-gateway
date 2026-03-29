@@ -294,7 +294,7 @@ export const ResponsesTextFormatSchema = z.discriminatedUnion("type", [
 export const ResponsesTextConfigSchema = z.object({
   format: ResponsesTextFormatSchema.optional(),
   // FUTURE: Support verbosity configuration
-  verbosity: z.enum(["low", "medium", "high"]).optional(),
+  // verbosity: z.enum(["low", "medium", "high"]).optional(),
 });
 export type ResponsesTextConfig = z.infer<typeof ResponsesTextConfigSchema>;
 
