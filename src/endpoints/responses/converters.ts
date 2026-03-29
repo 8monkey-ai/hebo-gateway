@@ -37,6 +37,7 @@ import type {
   Responses,
   ResponsesUsage,
   ResponsesStatus,
+  ResponsesItemStatus,
   ResponsesStream,
   ResponsesStreamEvent,
   ResponsesToolChoice,
@@ -662,6 +663,7 @@ function toFunctionCallItem(
   toolName: string,
   input: unknown,
   providerMetadata?: SharedV3ProviderMetadata,
+  status: ResponsesItemStatus = "completed",
 ): ResponsesFunctionCall {
   const item: ResponsesFunctionCall = {
     type: "function_call",
@@ -672,7 +674,7 @@ function toFunctionCallItem(
       typeof input === "string"
         ? input
         : JSON.stringify(stripEmptyKeys(input as Record<string, unknown>)),
-    status: "completed",
+    status,
   };
 
   if (providerMetadata) {
@@ -753,6 +755,10 @@ export class ResponsesTransformStream extends TransformStream<
     let summaryIndex = 0;
     let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
     const outputItems: ResponsesOutputItem[] = [];
+    const inProgressToolCalls = new Map<
+      string,
+      { outputIndex: number; item: ResponsesFunctionCall; accumulatedArgs: string }
+    >();
 
     const createResponse = (
       status: ResponsesStatus,
@@ -895,9 +901,6 @@ export class ResponsesTransformStream extends TransformStream<
       transform(part, controller) {
         // We explicitly omit several stream part types from the AI SDK:
         // - 'text-end': Item closure is handled generically on 'finish' / 'finish-step'
-        // - 'tool-input-*' ('start', 'delta', 'end'): The AI SDK streams tool arguments
-        //   chunk-by-chunk, but our API schema requires sending the fully-formed tool call at once.
-        //   We ignore the chunks and wait for the final 'tool-call' event.
         // - 'tool-result', 'tool-error', 'tool-output-denied': These only occur if the server
         //   executes the tools on behalf of the user. Our gateway only relays the model's
         //   request to call a tool back to the client.
@@ -906,6 +909,75 @@ export class ResponsesTransformStream extends TransformStream<
         // - 'source', 'file': No current schema support in the Responses format.
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
+          case "tool-input-start": {
+            const item: ResponsesFunctionCall = {
+              type: "function_call",
+              id: uuidv7(),
+              call_id: part.id,
+              name: normalizeToolName(part.toolName),
+              arguments: "",
+              status: "in_progress",
+            };
+            if (part.providerMetadata) {
+              item.extra_content = part.providerMetadata;
+            }
+
+            const fnOutputIndex = outputIndex++;
+            outputItems.push(item);
+            inProgressToolCalls.set(part.id, {
+              outputIndex: fnOutputIndex,
+              item,
+              accumulatedArgs: "",
+            });
+
+            controller.enqueue({
+              event: "response.output_item.added",
+              data: {
+                type: "response.output_item.added",
+                output_index: fnOutputIndex,
+                item,
+              },
+            });
+            break;
+          }
+
+          case "tool-input-delta": {
+            const inProgress = inProgressToolCalls.get(part.id);
+            if (!inProgress) break;
+
+            inProgress.accumulatedArgs += part.delta;
+            inProgress.item.arguments = inProgress.accumulatedArgs;
+
+            controller.enqueue({
+              event: "response.function_call_arguments.delta",
+              data: {
+                type: "response.function_call_arguments.delta",
+                output_index: inProgress.outputIndex,
+                item_id: inProgress.item.id!,
+                call_id: part.id,
+                delta: part.delta,
+              },
+            });
+            break;
+          }
+
+          case "tool-input-end": {
+            const inProgress = inProgressToolCalls.get(part.id);
+            if (!inProgress) break;
+
+            controller.enqueue({
+              event: "response.function_call_arguments.done",
+              data: {
+                type: "response.function_call_arguments.done",
+                output_index: inProgress.outputIndex,
+                item_id: inProgress.item.id!,
+                call_id: part.id,
+                arguments: inProgress.accumulatedArgs,
+              },
+            });
+            break;
+          }
+
           case "reasoning-start": {
             if (reasoningItem) break;
 
@@ -1021,23 +1093,41 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "tool-call": {
-            const fnItem = toFunctionCallItem(
-              part.toolCallId,
-              part.toolName,
-              part.input,
-              part.providerMetadata,
-            );
-            const fnOutputIndex = outputIndex++;
-            outputItems.push(fnItem);
+            const inProgress = inProgressToolCalls.get(part.toolCallId);
+            let fnItem: ResponsesFunctionCall;
+            let fnOutputIndex: number;
 
-            controller.enqueue({
-              event: "response.output_item.added",
-              data: {
-                type: "response.output_item.added",
-                output_index: fnOutputIndex,
-                item: fnItem,
-              },
-            });
+            if (inProgress) {
+              fnItem = inProgress.item;
+              fnOutputIndex = inProgress.outputIndex;
+
+              // Update with final parsed input if possible
+              fnItem.arguments =
+                typeof part.input === "string"
+                  ? part.input
+                  : JSON.stringify(stripEmptyKeys(part.input as Record<string, unknown>));
+              fnItem.status = "completed";
+
+              inProgressToolCalls.delete(part.toolCallId);
+            } else {
+              fnItem = toFunctionCallItem(
+                part.toolCallId,
+                part.toolName,
+                part.input,
+                part.providerMetadata,
+              );
+              fnOutputIndex = outputIndex++;
+              outputItems.push(fnItem);
+
+              controller.enqueue({
+                event: "response.output_item.added",
+                data: {
+                  type: "response.output_item.added",
+                  output_index: fnOutputIndex,
+                  item: fnItem,
+                },
+              });
+            }
 
             controller.enqueue({
               event: "response.output_item.done",
