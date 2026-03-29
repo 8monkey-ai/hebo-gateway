@@ -48,7 +48,6 @@ import type {
 
 import type { SseErrorFrame } from "../../utils/stream";
 
-import { GatewayError } from "../../errors/gateway";
 import { toResponse } from "../../utils/response";
 import {
   parseJsonOrText,
@@ -59,6 +58,7 @@ import {
   stripEmptyKeys,
   parseBase64,
   parseImageInput,
+  parseUrl,
   extractReasoningMetadata,
   type TextCallOptions,
 } from "../shared/converters";
@@ -268,16 +268,8 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
   return out;
 }
 
-function parseUrl(url: string, errorPrefix = "Invalid URL"): URL {
-  try {
-    return new URL(url);
-  } catch {
-    throw new GatewayError(`${errorPrefix}: ${url}`, 400);
-  }
-}
-
 function fromImageInput(url: string): ImagePart | FilePart {
-  const { image, mediaType } = parseImageInput(url, "Invalid image URL");
+  const { image, mediaType } = parseImageInput(url);
   return {
     type: "image",
     image,
@@ -288,7 +280,7 @@ function fromImageInput(url: string): ImagePart | FilePart {
 function fromFileInput(data: string, filename?: string): FilePart {
   return {
     type: "file",
-    data: parseBase64(data, "Invalid base64 data in file input"),
+    data: parseBase64(data),
     filename,
     mediaType: "application/octet-stream",
   };
@@ -325,7 +317,7 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         } else if (part.file_url !== undefined) {
           result.push({
             type: "file",
-            data: parseUrl(part.file_url, "Invalid file URL"),
+            data: parseUrl(part.file_url),
             filename: part.filename,
             mediaType: "application/octet-stream",
           });
@@ -342,7 +334,7 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
       case "input_audio": {
         const out: FilePart = {
           type: "file",
-          data: parseBase64(part.input_audio.data, "Invalid base64 data in audio input"),
+          data: parseBase64(part.input_audio.data),
           mediaType: `audio/${part.input_audio.format}`,
         };
         if (part.cache_control) {

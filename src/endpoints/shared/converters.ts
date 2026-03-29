@@ -47,18 +47,15 @@ export function parseJsonOrText(
   }
 }
 
-export function parseBase64(base64: string, errorMsg: string): Uint8Array {
+export function parseBase64(base64: string): Uint8Array {
   try {
     return z.util.base64ToUint8Array(base64);
-  } catch {
-    throw new GatewayError(errorMsg, 400);
+  } catch (error) {
+    throw new GatewayError("Invalid base64 data", 400, undefined, error);
   }
 }
 
-export function parseImageInput(
-  url: string,
-  errorPrefix = "Invalid image URL",
-): { image: string | URL; mediaType?: string } {
+export function parseImageInput(url: string): { image: string | URL; mediaType?: string } {
   const dataPrefix = "data:";
   if (url.startsWith(dataPrefix)) {
     const { mimeType, dataStart } = parseDataUrl(url);
@@ -73,8 +70,16 @@ export function parseImageInput(
 
   try {
     return { image: new URL(url) };
-  } catch {
-    throw new GatewayError(`${errorPrefix}: ${url}`, 400);
+  } catch (error) {
+    throw new GatewayError("Invalid image URL", 400, undefined, error);
+  }
+}
+
+export function parseUrl(url: string): URL {
+  try {
+    return new URL(url);
+  } catch (error) {
+    throw new GatewayError("Invalid URL", 400, undefined, error);
   }
 }
 

@@ -339,7 +339,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
 }
 
 function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
-  const { image, mediaType } = parseImageInput(url, "Invalid image URL");
+  const { image, mediaType } = parseImageInput(url);
 
   if (image instanceof URL) {
     const out: ImagePart = {
@@ -363,8 +363,7 @@ function fromFilePart(
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
-  const decodedData =
-    typeof data === "string" ? parseBase64(data, "Invalid base64 data in file part") : data;
+  const decodedData = typeof data === "string" ? parseBase64(data) : data;
 
   if (mediaType.startsWith("image/")) {
     const out: ImagePart = {
