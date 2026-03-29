@@ -157,17 +157,14 @@ describe("Responses Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse<Responses>(res);
     expect(data).toMatchObject({
-      // oxlint-disable-next-line no-unsafe-assignment
-      id: expect.any(String),
+      id: expect.any(String) as unknown as string,
       object: "response",
       status: "completed",
       model: "openai/gpt-oss-20b",
-      // oxlint-disable-next-line no-unsafe-assignment
-      created_at: expect.any(Number),
-      // oxlint-disable-next-line no-unsafe-assignment
-      completed_at: expect.any(Number),
+      created_at: expect.any(Number) as unknown as number,
+      completed_at: expect.any(Number) as unknown as number,
       provider_metadata: { provider: { key: "value" } },
-    });
+    } satisfies Partial<Responses>);
     expect(data!.output).toHaveLength(1);
     expect(data!.output[0]!.type).toBe("message");
     expect(data!.usage).toMatchObject({
@@ -334,6 +331,17 @@ describe("Responses Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse<Responses>(res);
     expect(data!.metadata).toEqual({ user_id: "u-123" });
+  });
+
+  test("should reject empty metadata keys", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "hi",
+      metadata: { "": "value" },
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(400);
   });
 
   test("should return resolved model ID if routed to a different model", async () => {

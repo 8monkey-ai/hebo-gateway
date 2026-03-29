@@ -792,40 +792,6 @@ export class ResponsesTransformStream extends TransformStream<
       });
     };
 
-    const initReasoningItem = (
-      controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
-      providerMetadata?: SharedV3ProviderMetadata,
-    ) => {
-      if (reasoningItem) return;
-
-      reasoningItem = {
-        type: "reasoning",
-        id: uuidv7(),
-        status: "in_progress",
-        summary: [],
-      };
-
-      if (providerMetadata) {
-        reasoningItem.extra_content = providerMetadata;
-        const { redactedData } = extractReasoningMetadata(providerMetadata);
-        if (redactedData) {
-          reasoningItem.encrypted_content = redactedData;
-        }
-      }
-
-      reasoningOutputIndex = outputIndex++;
-      outputItems.push(reasoningItem);
-
-      controller.enqueue({
-        event: "response.output_item.added",
-        data: {
-          type: "response.output_item.added",
-          output_index: reasoningOutputIndex,
-          item: reasoningItem,
-        },
-      });
-    };
-
     const closeReasoningItem = (
       controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
     ) => {
@@ -926,13 +892,39 @@ export class ResponsesTransformStream extends TransformStream<
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "reasoning-start": {
-            initReasoningItem(controller, part.providerMetadata);
+            if (reasoningItem) break;
+
+            reasoningItem = {
+              type: "reasoning",
+              id: uuidv7(),
+              status: "in_progress",
+              summary: [],
+            };
+
+            const providerMetadata = part.providerMetadata;
+            if (providerMetadata) {
+              reasoningItem.extra_content = providerMetadata;
+              const { redactedData } = extractReasoningMetadata(providerMetadata);
+              if (redactedData) {
+                reasoningItem.encrypted_content = redactedData;
+              }
+            }
+
+            reasoningOutputIndex = outputIndex++;
+            outputItems.push(reasoningItem);
+
+            controller.enqueue({
+              event: "response.output_item.added",
+              data: {
+                type: "response.output_item.added",
+                output_index: reasoningOutputIndex,
+                item: reasoningItem,
+              },
+            });
             break;
           }
 
           case "reasoning-delta": {
-            initReasoningItem(controller);
-
             if (summaryIndex === reasoningItem!.summary.length) {
               const summaryPart: ResponsesSummaryText = {
                 type: "summary_text",
@@ -978,8 +970,6 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "text-delta": {
-            initMessageItem(controller);
-
             if (contentIndex === messageItem!.content.length) {
               const textPart: ResponsesOutputText = {
                 type: "output_text",

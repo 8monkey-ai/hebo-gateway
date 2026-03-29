@@ -103,6 +103,9 @@ export const responses = (config: GatewayConfig): Endpoint => {
       middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
+    // Capture the optional metadata to be echoed back in the final response.
+    // Unlike OpenAI's /chat/completions, our Responses API explicitly supports
+    // returning request metadata to the client.
     const bodyMetadata = ctx.body.metadata;
 
     if (stream) {

@@ -3,7 +3,7 @@ import * as z from "zod";
 import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
 export const MetadataSchema = z
-  .record(z.string().max(64), z.string().max(512))
+  .record(z.string().min(1).max(64), z.string().max(512))
   .nullable()
   .optional();
 export type Metadata = z.infer<typeof MetadataSchema>;
@@ -96,20 +96,18 @@ export type ResponsesOutputText = z.infer<typeof ResponsesOutputTextSchema>;
 
 // Message Items
 
-const ResponsesMessageItemBaseSchema = z
-  .object({
-    type: z.literal("message"),
-    id: z.string().optional(),
-    status: ResponsesItemStatusSchema.optional(),
-    // Extension origin: Gemini
-    extra_content: z
-      .record(z.string(), z.record(z.string(), z.unknown()))
-      .optional()
-      .meta({ extension: true }),
-    // Extension origin: Anthropic/OpenRouter/Vercel
-    cache_control: CacheControlSchema.optional().meta({ extension: true }),
-  })
-  .loose();
+const ResponsesMessageItemBaseSchema = z.object({
+  type: z.literal("message"),
+  id: z.string().optional(),
+  status: ResponsesItemStatusSchema.optional(),
+  // Extension origin: Gemini
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
+  // Extension origin: Anthropic/OpenRouter/Vercel
+  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+});
 
 const ResponsesUserMessageSchema = ResponsesMessageItemBaseSchema.extend({
   role: z.literal("user"),
@@ -143,41 +141,37 @@ export type ResponsesMessageItem = z.infer<typeof ResponsesMessageItemSchema>;
  * --- Function ---
  */
 
-export const ResponsesFunctionCallSchema = z
-  .object({
-    type: z.literal("function_call"),
-    id: z.string().optional(),
-    call_id: z.string(),
-    name: z.string(),
-    arguments: z.string(),
-    status: ResponsesItemStatusSchema.optional(),
-    // Extension origin: Gemini
-    extra_content: z
-      .record(z.string(), z.record(z.string(), z.unknown()))
-      .optional()
-      .meta({ extension: true }),
-    // Extension origin: Anthropic/OpenRouter/Vercel
-    cache_control: CacheControlSchema.optional().meta({ extension: true }),
-  })
-  .loose();
+export const ResponsesFunctionCallSchema = z.object({
+  type: z.literal("function_call"),
+  id: z.string().optional(),
+  call_id: z.string(),
+  name: z.string(),
+  arguments: z.string(),
+  status: ResponsesItemStatusSchema.optional(),
+  // Extension origin: Gemini
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
+  // Extension origin: Anthropic/OpenRouter/Vercel
+  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+});
 export type ResponsesFunctionCall = z.infer<typeof ResponsesFunctionCallSchema>;
 
-export const ResponsesFunctionCallOutputSchema = z
-  .object({
-    type: z.literal("function_call_output"),
-    id: z.string().optional(),
-    call_id: z.string(),
-    output: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
-    status: ResponsesItemStatusSchema.optional(),
-    // Extension origin: Gemini
-    extra_content: z
-      .record(z.string(), z.record(z.string(), z.unknown()))
-      .optional()
-      .meta({ extension: true }),
-    // Extension origin: Anthropic/OpenRouter/Vercel
-    cache_control: CacheControlSchema.optional().meta({ extension: true }),
-  })
-  .loose();
+export const ResponsesFunctionCallOutputSchema = z.object({
+  type: z.literal("function_call_output"),
+  id: z.string().optional(),
+  call_id: z.string(),
+  output: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
+  status: ResponsesItemStatusSchema.optional(),
+  // Extension origin: Gemini
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
+  // Extension origin: Anthropic/OpenRouter/Vercel
+  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+});
 export type ResponsesFunctionCallOutput = z.infer<typeof ResponsesFunctionCallOutputSchema>;
 
 /**
@@ -196,21 +190,19 @@ export const ResponsesReasoningTextSchema = z.object({
 });
 export type ResponsesReasoningText = z.infer<typeof ResponsesReasoningTextSchema>;
 
-export const ResponsesReasoningItemSchema = z
-  .object({
-    type: z.literal("reasoning"),
-    id: z.string().optional(),
-    summary: z.array(ResponsesSummaryTextSchema),
-    content: z.array(ResponsesReasoningTextSchema).optional(),
-    encrypted_content: z.string().optional(),
-    status: ResponsesItemStatusSchema.optional(),
-    // Extension origin: Gemini
-    extra_content: z
-      .record(z.string(), z.record(z.string(), z.unknown()))
-      .optional()
-      .meta({ extension: true }),
-  })
-  .loose();
+export const ResponsesReasoningItemSchema = z.object({
+  type: z.literal("reasoning"),
+  id: z.string().optional(),
+  summary: z.array(ResponsesSummaryTextSchema),
+  content: z.array(ResponsesReasoningTextSchema).optional(),
+  encrypted_content: z.string().optional(),
+  status: ResponsesItemStatusSchema.optional(),
+  // Extension origin: Gemini
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
+});
 export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
 
 /**
@@ -344,7 +336,7 @@ const ResponsesInputsSchema = z.object({
 });
 export type ResponsesInputs = z.infer<typeof ResponsesInputsSchema>;
 
-export const ResponsesBodySchema = z.looseObject({
+export const ResponsesBodySchema = z.object({
   model: z.string(),
   stream: z.boolean().optional(),
   ...ResponsesInputsSchema.shape,
@@ -355,20 +347,18 @@ export type ResponsesBody = z.infer<typeof ResponsesBodySchema>;
  * --- Output Items ---
  */
 
-export const ResponsesOutputMessageSchema = z
-  .object({
-    type: z.literal("message"),
-    id: z.string(),
-    role: z.literal("assistant"),
-    status: z.enum(["in_progress", "completed", "incomplete"]),
-    content: z.array(ResponsesOutputTextSchema),
-    // Extension origin: Gemini
-    extra_content: z
-      .record(z.string(), z.record(z.string(), z.unknown()))
-      .optional()
-      .meta({ extension: true }),
-  })
-  .loose();
+export const ResponsesOutputMessageSchema = z.object({
+  type: z.literal("message"),
+  id: z.string(),
+  role: z.literal("assistant"),
+  status: z.enum(["in_progress", "completed", "incomplete"]),
+  content: z.array(ResponsesOutputTextSchema),
+  // Extension origin: Gemini
+  extra_content: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .optional()
+    .meta({ extension: true }),
+});
 export type ResponsesOutputMessage = z.infer<typeof ResponsesOutputMessageSchema>;
 
 export const ResponsesOutputItemSchema = z.discriminatedUnion("type", [

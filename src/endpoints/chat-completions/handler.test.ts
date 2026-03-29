@@ -174,11 +174,9 @@ describe("Chat Completions Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse<ChatCompletions>(res);
     expect(data).toEqual({
-      // oxlint-disable-next-line no-unsafe-assignment
-      id: expect.stringMatching(/^chatcmpl-/),
+      id: expect.stringMatching(/^chatcmpl-/) as unknown as string,
       object: "chat.completion",
-      // oxlint-disable-next-line no-unsafe-assignment
-      created: expect.any(Number),
+      created: expect.any(Number) as unknown as number,
       model: "openai/gpt-oss-20b",
       choices: [
         {
@@ -203,7 +201,7 @@ describe("Chat Completions Handler", () => {
         },
       },
       provider_metadata: { provider: { key: "value" } },
-    });
+    } satisfies Partial<ChatCompletions>);
   });
 
   test("should accept input_audio content parts", async () => {
@@ -254,11 +252,9 @@ describe("Chat Completions Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse<ChatCompletions>(res);
     expect(data).toEqual({
-      // oxlint-disable-next-line no-unsafe-assignment
-      id: expect.stringMatching(/^chatcmpl-/),
+      id: expect.stringMatching(/^chatcmpl-/) as unknown as string,
       object: "chat.completion",
-      // oxlint-disable-next-line no-unsafe-assignment
-      created: expect.any(Number),
+      created: expect.any(Number) as unknown as number,
       model: "openai/gpt-oss-20b",
       choices: [
         {
@@ -293,7 +289,7 @@ describe("Chat Completions Handler", () => {
         },
       },
       provider_metadata: { provider: { key: "value" } },
-    });
+    } satisfies Partial<ChatCompletions>);
   });
 
   test("should generate streaming completion successfully", async () => {
