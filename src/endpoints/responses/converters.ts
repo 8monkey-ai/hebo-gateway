@@ -26,6 +26,8 @@ import { v7 as uuidv7 } from "uuid";
 import type {
   ResponsesInputItem,
   ResponsesMessageItem,
+  ResponsesInputText,
+  ResponsesInputContent,
   ResponsesFunctionCall,
   ResponsesFunctionCallOutput,
   ResponsesReasoningItem,
@@ -185,30 +187,21 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
     return { role: "assistant", content: parts };
   }
 
-  const extra = item.extra_content as SharedV3ProviderOptions | undefined;
+  let providerOptions: SharedV3ProviderOptions | undefined;
+  if (item.extra_content || item.encrypted_content) {
+    providerOptions = (item.extra_content as SharedV3ProviderOptions) ?? { unknown: {} };
+    if (item.encrypted_content) {
+      ((providerOptions ??= { unknown: {} })["unknown"] ??= {})["redactedData"] =
+        item.encrypted_content;
+    }
+  }
 
   for (const s of item.summary) {
-    if (extra || item.encrypted_content) {
-      const providerOptions: SharedV3ProviderOptions = extra ? { ...extra } : {};
-
-      if (item.encrypted_content) {
-        providerOptions["unknown"] = {
-          ...providerOptions["unknown"],
-          redactedData: item.encrypted_content,
-        };
-      }
-
-      parts.push({
-        type: "reasoning",
-        text: s.text,
-        providerOptions,
-      });
-    } else {
-      parts.push({
-        type: "reasoning",
-        text: s.text,
-      });
-    }
+    parts.push({
+      type: "reasoning",
+      text: s.text,
+      providerOptions,
+    });
   }
 
   return { role: "assistant", content: parts };
@@ -232,7 +225,11 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
         content:
           typeof item.content === "string"
             ? item.content
-            : item.content.map(fromInputContentPart).join(""),
+            : item.content
+                // FUTURE: Support multimodal content in system messages (currently limited to text by AI SDK)
+                .filter((p): p is ResponsesInputText => p.type === "input_text")
+                .map((p) => p.text)
+                .join(""),
       };
 
       if (item.extra_content) {
@@ -240,13 +237,8 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
       }
 
       if (item.cache_control) {
-        out.providerOptions = {
-          ...out.providerOptions,
-          ["unknown"]: {
-            ...out.providerOptions?.["unknown"],
-            cache_control: item.cache_control as JSONValue,
-          },
-        };
+        ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
+          item.cache_control as JSONValue;
       }
       return out;
     }
@@ -258,64 +250,18 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
 }
 
 function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): UserModelMessage {
-  const out: UserModelMessage = { role: "user", content: "" };
-
-  if (typeof item.content === "string") {
-    out.content = item.content;
-  } else {
-    const content: UserContent = [];
-    for (const part of item.content) {
-      switch (part.type) {
-        case "input_text":
-          content.push({ type: "text", text: part.text });
-          break;
-        case "input_image": {
-          if (part.image_url !== undefined) {
-            content.push(fromImageInput(part.image_url));
-          } else if (part.file_id !== undefined) {
-            // Note: passing file_id as image data is provider-dependent.
-            // AI SDK's ImagePart.image expects Uint8Array | URL | string (base64 or URL).
-            content.push({ type: "image", image: part.file_id });
-          }
-          break;
-        }
-        case "input_file": {
-          if (part.file_data !== undefined) {
-            content.push(fromFileInput(part.file_data, part.filename));
-          } else if (part.file_url !== undefined) {
-            content.push({
-              type: "file",
-              data: parseUrl(part.file_url, "Invalid file URL"),
-              filename: part.filename,
-              mediaType: "application/octet-stream",
-            });
-          } else if (part.file_id !== undefined) {
-            content.push({
-              type: "file",
-              data: part.file_id,
-              filename: part.filename,
-              mediaType: "application/octet-stream",
-            });
-          }
-          break;
-        }
-      }
-    }
-    out.content = content;
-  }
+  const out: UserModelMessage = {
+    role: "user",
+    content: fromInputContent(item.content),
+  };
 
   if (item.extra_content) {
     out.providerOptions = item.extra_content as SharedV3ProviderOptions;
   }
 
   if (item.cache_control) {
-    out.providerOptions = {
-      ...out.providerOptions,
-      ["unknown"]: {
-        ...out.providerOptions?.["unknown"],
-        cache_control: item.cache_control as JSONValue,
-      },
-    };
+    ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
+      item.cache_control as JSONValue;
   }
 
   return out;
@@ -347,11 +293,54 @@ function fromFileInput(data: string, filename?: string): FilePart {
   };
 }
 
-function fromInputContentPart(part: { type: string; text?: string }): string {
-  if ("text" in part && typeof part.text === "string") {
-    return part.text;
+/**
+ * Converts input content (string or multimodal parts) into UserContent for messages.
+ * Uses unified ImagePart/FilePart schemas for the array case.
+ */
+function fromInputContent(content: string | ResponsesInputContent[]): UserContent {
+  if (typeof content === "string") {
+    return content;
   }
-  return "";
+
+  const result: UserContent = [];
+  for (const part of content) {
+    switch (part.type) {
+      case "input_text":
+        result.push({ type: "text", text: part.text });
+        break;
+      case "input_image": {
+        if (part.image_url !== undefined) {
+          result.push(fromImageInput(part.image_url));
+        } else if (part.file_id !== undefined) {
+          // Note: passing file_id as image data is provider-dependent.
+          // AI SDK's ImagePart.image expects Uint8Array | URL | string (base64 or URL).
+          result.push({ type: "image", image: part.file_id });
+        }
+        break;
+      }
+      case "input_file": {
+        if (part.file_data !== undefined) {
+          result.push(fromFileInput(part.file_data, part.filename));
+        } else if (part.file_url !== undefined) {
+          result.push({
+            type: "file",
+            data: parseUrl(part.file_url, "Invalid file URL"),
+            filename: part.filename,
+            mediaType: "application/octet-stream",
+          });
+        } else if (part.file_id !== undefined) {
+          result.push({
+            type: "file",
+            data: part.file_id,
+            filename: part.filename,
+            mediaType: "application/octet-stream",
+          });
+        }
+        break;
+      }
+    }
+  }
+  return result;
 }
 
 function fromAssistantMessageItem(
@@ -377,13 +366,8 @@ function fromAssistantMessageItem(
   }
 
   if (item.cache_control) {
-    out.providerOptions = {
-      ...out.providerOptions,
-      ["unknown"]: {
-        ...out.providerOptions?.["unknown"],
-        cache_control: item.cache_control as JSONValue,
-      },
-    };
+    ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
+      item.cache_control as JSONValue;
   }
 
   return out;
@@ -402,16 +386,67 @@ function fromFunctionCallItem(item: ResponsesFunctionCall): AssistantModelMessag
   }
 
   if (item.cache_control) {
-    toolCall.providerOptions = {
-      ...toolCall.providerOptions,
-      ["unknown"]: {
-        ...toolCall.providerOptions?.["unknown"],
-        cache_control: item.cache_control as JSONValue,
-      },
-    };
+    ((toolCall.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
+      item.cache_control as JSONValue;
   }
 
   return { role: "assistant", content: [toolCall] };
+}
+
+/**
+ * Converts a tool result (string or multimodal parts) into the schema required by ToolResultPart.
+ */
+function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPart["output"] {
+  if (typeof output === "string") {
+    return parseJsonOrText(output);
+  }
+
+  const value: any[] = [];
+  for (const part of output) {
+    if (part.type === "input_text") {
+      value.push({ type: "text", text: part.text });
+      continue;
+    }
+
+    if (part.type === "input_image") {
+      if (part.image_url !== undefined) {
+        const { image, mediaType } = parseImageInput(part.image_url);
+        if (image instanceof URL) {
+          value.push({ type: "image-url", url: image.toString() });
+        } else {
+          value.push({
+            type: "image-data",
+            data: image,
+            mediaType: mediaType!,
+          });
+        }
+      } else if (part.file_id !== undefined) {
+        value.push({ type: "image-file-id", fileId: part.file_id });
+      }
+      continue;
+    }
+
+    if (part.type === "input_file") {
+      if (part.file_data !== undefined) {
+        value.push({
+          type: "file-data",
+          data: part.file_data,
+          mediaType: "application/octet-stream",
+          filename: part.filename,
+        });
+      } else if (part.file_url !== undefined) {
+        value.push({ type: "file-url", url: part.file_url });
+      } else if (part.file_id !== undefined) {
+        value.push({ type: "file-id", fileId: part.file_id });
+      }
+      continue;
+    }
+  }
+
+  return {
+    type: "content",
+    value: value as (ToolResultPart["output"] & { type: "content" })["value"],
+  };
 }
 
 function fromFunctionCallOutputItem(
@@ -421,11 +456,6 @@ function fromFunctionCallOutputItem(
   const output = toolOutputByCallId.get(item.call_id);
   if (!output) return undefined;
 
-  const result =
-    typeof output.output === "string"
-      ? parseJsonOrText(output.output)
-      : { type: "text" as const, value: output.output.map(fromInputContentPart).join("") };
-
   return {
     role: "tool",
     content: [
@@ -433,7 +463,7 @@ function fromFunctionCallOutputItem(
         type: "tool-result",
         toolCallId: item.call_id,
         toolName: item.name,
-        output: result,
+        output: fromToolOutput(output.output),
       } satisfies ToolResultPart,
     ],
   };

@@ -58,14 +58,15 @@ export function parseBase64(base64: string, errorMsg: string): Uint8Array {
 export function parseImageInput(
   url: string,
   errorPrefix = "Invalid image URL",
-): { image: Uint8Array | URL; mediaType?: string } {
-  if (url.startsWith("data:")) {
+): { image: string | URL; mediaType?: string } {
+  const dataPrefix = "data:";
+  if (url.startsWith(dataPrefix)) {
     const { mimeType, dataStart } = parseDataUrl(url);
-    if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
+    if (!mimeType || dataStart <= dataPrefix.length || dataStart >= url.length) {
       throw new GatewayError("Invalid data URL", 400);
     }
     return {
-      image: parseBase64(url.slice(dataStart), "Invalid base64 data in image URL"),
+      image: url.slice(dataStart),
       mediaType: mimeType,
     };
   }
