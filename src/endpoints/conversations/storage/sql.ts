@@ -12,7 +12,7 @@ import type { SqlDialect, QueryExecutor } from "./dialects/types";
 
 import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 
-const rowMapper = createRowMapper<any>([
+const rowMapper = createRowMapper<ConversationEntity | ConversationItemEntity>([
   parseJson("data"),
   parseJson("metadata"),
   toMilliseconds("created_at"),

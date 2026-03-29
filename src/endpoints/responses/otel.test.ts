@@ -250,8 +250,8 @@ describe("Responses OTEL", () => {
       JSON.stringify({
         type: "message",
         status: "completed",
-        role: "assistant",
         parts: [{ type: "text", content: "Hi there" }],
+        role: "assistant",
       }),
     ]);
   });

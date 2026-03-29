@@ -15,6 +15,9 @@ export const CacheControlSchema = z.object({
 });
 export type CacheControl = z.infer<typeof CacheControlSchema>;
 
+export const ProviderMetadataSchema = z.record(z.string(), z.record(z.string(), z.unknown()));
+export type ProviderMetadata = z.infer<typeof ProviderMetadataSchema>;
+
 export const ReasoningEffortSchema = z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]);
 export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>;
 

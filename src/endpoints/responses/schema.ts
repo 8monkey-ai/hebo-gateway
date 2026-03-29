@@ -102,10 +102,7 @@ const ResponsesMessageItemBaseSchema = z.object({
   id: z.string().optional(),
   status: ResponsesItemStatusSchema.optional(),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter/Vercel
   cache_control: ResponsesCacheControlSchema.optional().meta({ extension: true }),
 });
@@ -150,10 +147,7 @@ export const ResponsesFunctionCallSchema = z.object({
   arguments: z.string(),
   status: ResponsesItemStatusSchema.optional(),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter/Vercel
   cache_control: ResponsesCacheControlSchema.optional().meta({ extension: true }),
 });
@@ -166,10 +160,7 @@ export const ResponsesFunctionCallOutputSchema = z.object({
   output: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
   status: ResponsesItemStatusSchema.optional(),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter/Vercel
   cache_control: ResponsesCacheControlSchema.optional().meta({ extension: true }),
 });
@@ -199,10 +190,7 @@ export const ResponsesReasoningItemSchema = z.object({
   encrypted_content: z.string().optional(),
   status: ResponsesItemStatusSchema.optional(),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
 
@@ -223,10 +211,12 @@ import {
   ReasoningEffortSchema as ResponsesReasoningEffortSchema,
   ReasoningConfigSchema as ResponsesReasoningConfigSchema,
   ServiceTierSchema as ResponsesServiceTierSchema,
+  ProviderMetadataSchema as ResponsesProviderMetadataSchema,
   type CacheControl as ResponsesCacheControl,
   type ReasoningEffort as ResponsesReasoningEffort,
   type ReasoningConfig as ResponsesReasoningConfig,
   type ServiceTier as ResponsesServiceTier,
+  type ProviderMetadata as ResponsesProviderMetadata,
   ContentPartAudioSchema as ResponsesInputAudioSchema,
   type ContentPartAudio as ResponsesInputAudio,
 } from "../shared/schema";
@@ -240,6 +230,8 @@ export {
   type ResponsesReasoningConfig,
   ResponsesServiceTierSchema,
   type ResponsesServiceTier,
+  ResponsesProviderMetadataSchema,
+  type ResponsesProviderMetadata,
   ResponsesInputAudioSchema,
   type ResponsesInputAudio,
 };
@@ -343,10 +335,7 @@ const ResponsesInputsSchema = z.object({
   // Extension origin: OpenRouter
   reasoning_effort: ResponsesReasoningEffortSchema.optional().meta({ extension: true }),
   // Extension origin: Gemini extra_body
-  extra_body: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_body: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ResponsesInputs = z.infer<typeof ResponsesInputsSchema>;
 
@@ -368,10 +357,7 @@ export const ResponsesOutputMessageSchema = z.object({
   status: z.enum(["in_progress", "completed", "incomplete"]),
   content: z.array(ResponsesOutputTextSchema),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ResponsesOutputMessage = z.infer<typeof ResponsesOutputMessageSchema>;
 
@@ -428,10 +414,7 @@ export const ResponsesSchema = z.object({
   service_tier: ResponsesServiceTierSchema.optional(),
   metadata: ResponsesMetadataSchema,
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  provider_metadata: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type Responses = z.infer<typeof ResponsesSchema>;
 

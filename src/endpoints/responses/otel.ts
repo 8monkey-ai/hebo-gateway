@@ -12,8 +12,23 @@ import type {
 import { type TelemetrySignalLevel } from "../../types";
 import { parseDataUrl } from "../../utils/url";
 
-const toBlobPart = (modality: string, mimeType?: string) => {
-  const part: Record<string, unknown> = {
+type TelemetryPart = {
+  type: string;
+  [key: string]: unknown;
+};
+
+type TelemetryMessageLog = {
+  role?: string;
+  type?: string;
+  status?: string;
+  name?: string;
+  arguments?: string;
+  parts: TelemetryPart[];
+  [key: string]: unknown;
+};
+
+const toBlobPart = (modality: string, mimeType?: string): TelemetryPart => {
+  const part: TelemetryPart = {
     type: "blob",
     modality,
     content: "[REDACTED_BINARY_DATA]",
@@ -22,10 +37,10 @@ const toBlobPart = (modality: string, mimeType?: string) => {
   return part;
 };
 
-const toInputParts = (content: string | ResponsesInputContent[]) => {
+const toInputParts = (content: string | ResponsesInputContent[]): TelemetryPart[] => {
   if (typeof content === "string") return [{ type: "text", content }];
 
-  const parts: Record<string, unknown>[] = [];
+  const parts: TelemetryPart[] = [];
 
   for (const part of content) {
     switch (part.type) {
@@ -63,7 +78,7 @@ const toInputParts = (content: string | ResponsesInputContent[]) => {
   return parts;
 };
 
-const toOutputTextParts = (content: string | { type: string; text: string }[]) => {
+const toOutputTextParts = (content: string | { type: string; text: string }[]): TelemetryPart[] => {
   if (typeof content === "string") {
     return [{ type: "text", content }];
   }
@@ -71,7 +86,7 @@ const toOutputTextParts = (content: string | { type: string; text: string }[]) =
   return content.map((part) => ({ type: "text", content: part.text }));
 };
 
-const toItemParts = (item: ResponsesInputItem) => {
+const toItemParts = (item: ResponsesInputItem): TelemetryPart[] => {
   switch (item.type) {
     case "message":
       return toMessageParts(item);
@@ -100,7 +115,7 @@ const toItemParts = (item: ResponsesInputItem) => {
   }
 };
 
-const toMessageParts = (item: ResponsesMessageItem) => {
+const toMessageParts = (item: ResponsesMessageItem): TelemetryPart[] => {
   switch (item.role) {
     case "assistant":
       return toOutputTextParts(item.content);
@@ -151,7 +166,7 @@ export const getResponsesRequestAttributes = (
         JSON.stringify({
           role: "system",
           parts: [{ type: "text", content: body.instructions }],
-        }),
+        } satisfies TelemetryMessageLog),
       );
     }
 
@@ -160,7 +175,7 @@ export const getResponsesRequestAttributes = (
         JSON.stringify({
           role: "user",
           parts: [{ type: "text", content: body.input }],
-        }),
+        } satisfies TelemetryMessageLog),
       );
     } else if (Array.isArray(body.input)) {
       for (const item of body.input) {
@@ -169,10 +184,15 @@ export const getResponsesRequestAttributes = (
             JSON.stringify({
               role: item.role,
               parts: toItemParts(item),
-            }),
+            } satisfies TelemetryMessageLog),
           );
         } else {
-          inputMessages.push(JSON.stringify({ type: item.type, parts: toItemParts(item) }));
+          inputMessages.push(
+            JSON.stringify({
+              type: item.type,
+              parts: toItemParts(item),
+            } satisfies TelemetryMessageLog),
+          );
         }
       }
     }
@@ -213,17 +233,18 @@ export const getResponsesResponseAttributes = (
   if (signalLevel === "full") {
     Object.assign(attrs, {
       "gen_ai.output.messages": responses.output?.map((item) => {
-        const base: Record<string, unknown> = {
+        const base: TelemetryMessageLog = {
           type: item.type,
           status: item.status,
+          parts: [],
         };
 
         if (item.type === "message") {
-          base["role"] = item.role;
-          base["parts"] = item.content.map((c) => ({ type: "text", content: c.text }));
+          base.role = item.role;
+          base.parts = item.content.map((c) => ({ type: "text", content: c.text }));
         } else if (item.type === "function_call") {
-          base["name"] = item.name;
-          base["arguments"] = item.arguments;
+          base.name = item.name;
+          base.arguments = item.arguments;
         }
 
         return JSON.stringify(base);

@@ -3,7 +3,6 @@ import type {
   GenerateTextResult,
   StreamTextResult,
   FinishReason,
-  ToolChoice,
   ToolCallPart,
   ToolResultPart,
   ToolSet,
@@ -61,6 +60,7 @@ import {
   parseUrl,
   extractReasoningMetadata,
   type TextCallOptions,
+  type ToolChoiceOptions,
 } from "../shared/converters";
 
 // --- Request Flow ---
@@ -503,7 +503,7 @@ export const convertToToolSet = (tools: ResponsesTool[] | undefined): ToolSet | 
 
 export const convertToToolChoiceOptions = (
   toolChoice: ResponsesToolChoice | undefined,
-): { toolChoice?: ToolChoice<ToolSet>; activeTools?: string[] } => {
+): ToolChoiceOptions => {
   if (!toolChoice) return {};
 
   if (

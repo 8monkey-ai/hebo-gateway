@@ -20,6 +20,11 @@ import { GatewayError } from "../../errors/gateway";
 import { parseDataUrl } from "../../utils/url";
 import type { ReasoningConfig, ReasoningEffort, CacheControl, ServiceTier } from "./schema";
 
+export type ToolChoiceOptions = {
+  toolChoice?: ToolChoice<ToolSet>;
+  activeTools?: string[];
+};
+
 export type TextCallOptions = {
   messages: ModelMessage[];
   tools?: ToolSet;
@@ -235,7 +240,7 @@ export function normalizeToolName(name: string): string {
 
 export function stripEmptyKeys(obj: unknown) {
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
-  delete (obj as Record<string, unknown>)[""];
+  delete (obj as JSONObject)[""];
   return obj;
 }
 

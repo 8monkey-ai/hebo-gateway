@@ -3,7 +3,6 @@ import type {
   GenerateTextResult,
   StreamTextResult,
   FinishReason,
-  ToolChoice,
   ToolCallPart,
   ToolResultPart,
   ToolSet,
@@ -61,6 +60,7 @@ import {
   parseImageInput,
   extractReasoningMetadata,
   type TextCallOptions,
+  type ToolChoiceOptions,
 } from "../shared/converters";
 
 // --- Request Flow ---
@@ -411,10 +411,7 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
 
 export const convertToToolChoiceOptions = (
   toolChoice: ChatCompletionsToolChoice | undefined,
-): {
-  toolChoice?: ToolChoice<ToolSet>;
-  activeTools?: Array<keyof ToolSet>;
-} => {
+): ToolChoiceOptions => {
   if (!toolChoice) {
     return {};
   }
