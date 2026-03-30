@@ -39,6 +39,8 @@ bun install @hebo-ai/gateway
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
+- Endpoints
+  - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/conversations](#conversations)
 - OpenAI Extensions
   - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching)
 - Advanced Usage
@@ -564,6 +566,66 @@ export const handler = awsLambdaEventHandler({
 });
 ```
 
+## 🚀 Endpoints
+
+Hebo Gateway provides several OpenAI-compatible and standard-based endpoints.
+
+### `/chat/completions`
+
+The primary endpoint for generating chat completions. It supports:
+
+- Streaming responses (Server-Sent Events).
+- Tool calling / Function calling.
+- Advanced extensions like [Reasoning](#reasoning), [Service Tier](#service-tier), and [Prompt Caching](#prompt-caching).
+- Usage tracking and metadata.
+
+### `/embeddings`
+
+Generates vector representations for text inputs, compatible with OpenAI's embeddings API.
+
+### `/models`
+
+Lists all available models in your [Model Catalog](#models), including their capabilities and metadata.
+
+### `/responses`
+
+Hebo Gateway provides a `/responses` endpoint implementing the [Open Responses API](https://www.openresponses.org/specification). It accepts the same models, providers, hooks, and extensions as `/chat/completions` but uses the Responses API request/response format.
+
+> [!NOTE]
+> This is **currently** a stateless implementation. We are working on supporting server-side response storage (`store`) and `previous_response_id` chaining in a future update.
+
+### `/conversations`
+
+Hebo Gateway provides a dedicated `/conversations` endpoint for managing persistent conversation state. It is designed as an extension of the [OpenAI Conversations API](https://developers.openai.com/api/reference/typescript/resources/conversations) and supports standard CRUD operations alongside advanced listing with metadata filtering.
+
+#### List & Filter Conversations
+
+You can list conversations with standard cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
+
+```bash
+# List conversations for a specific user
+curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
+```
+
+The response follows the standard OpenAI list object:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "conv_abc123",
+      "object": "conversation",
+      "created_at": 1678531200,
+      "metadata": { "user_id": "123" }
+    }
+  ],
+  "first_id": "conv_abc123",
+  "last_id": "conv_abc123",
+  "has_more": false
+}
+```
+
 ## 🧠 OpenAI Extensions
 
 ### Reasoning
@@ -625,45 +687,6 @@ Provider-specific mapping:
 - **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
 
 When available, the resolved value is echoed back on response as `service_tier`.
-
-### Conversations
-
-Hebo Gateway provides a dedicated `/conversations` endpoint for managing persistent conversation state. It is designed as an extension of the [OpenAI Conversations API](https://developers.openai.com/api/reference/typescript/resources/conversations) and supports standard CRUD operations alongside advanced listing with metadata filtering.
-
-#### List & Filter Conversations
-
-You can list conversations with standard cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
-
-```bash
-# List conversations for a specific user
-curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
-```
-
-The response follows the standard OpenAI list object:
-
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "conv_abc123",
-      "object": "conversation",
-      "created_at": 1678531200,
-      "metadata": { "user_id": "123" }
-    }
-  ],
-  "first_id": "conv_abc123",
-  "last_id": "conv_abc123",
-  "has_more": false
-}
-```
-
-### Responses
-
-Hebo Gateway provides a `/responses` endpoint implementing the [Open Responses API](https://www.openresponses.org/specification) (stateless). It accepts the same models, providers, hooks, and extensions as `/chat/completions` but uses the Responses API request/response format.
-
-> [!NOTE]
-> This is a stateless implementation. `previous_response_id` chaining and server-side response storage (`store`) are not supported.
 
 ### Prompt Caching
 

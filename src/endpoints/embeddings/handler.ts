@@ -43,7 +43,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Parse + validate input.
     try {
-      ctx.body = (await ctx.request.json()) as EmbeddingsBody;
+      // oxlint-disable-next-line no-unsafe-assignment
+      ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }

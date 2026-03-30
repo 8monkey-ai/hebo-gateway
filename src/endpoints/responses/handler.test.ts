@@ -5,7 +5,12 @@ import { describe, expect, test } from "bun:test";
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
 import { responses } from "./handler";
-import { type Responses } from "./schema";
+import {
+  type ResponseCompletedEvent,
+  type ResponseCreatedEvent,
+  type ResponseInProgressEvent,
+  type Responses,
+} from "./schema";
 
 const baseUrl = "http://localhost/responses";
 
@@ -300,19 +305,21 @@ describe("Responses Handler", () => {
     // Check response.created
     const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);
     expect(createdMatch).toBeTruthy();
-    const createdData = (JSON.parse(createdMatch![1]!) as { response: Responses }).response;
+    const createdData = (JSON.parse(createdMatch![1]!) as ResponseCreatedEvent["data"]).response;
     expect(createdData.status).toBe("in_progress");
 
     // Check response.in_progress
     const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/);
     expect(inProgressMatch).toBeTruthy();
-    const inProgressData = (JSON.parse(inProgressMatch![1]!) as { response: Responses }).response;
+    const inProgressData = (JSON.parse(inProgressMatch![1]!) as ResponseInProgressEvent["data"])
+      .response;
     expect(inProgressData.status).toBe("in_progress");
 
     // Check response.completed
     const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/);
     expect(completedMatch).toBeTruthy();
-    const completedData = (JSON.parse(completedMatch![1]!) as { response: Responses }).response;
+    const completedData = (JSON.parse(completedMatch![1]!) as ResponseCompletedEvent["data"])
+      .response;
     expect(completedData.status).toBe("completed");
   });
 

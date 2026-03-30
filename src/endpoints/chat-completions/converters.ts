@@ -358,17 +358,17 @@ function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheContro
 }
 
 function fromFilePart(
-  data: string | Uint8Array,
+  base64Data: string,
   mediaType: string,
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
-  const decodedData = typeof data === "string" ? parseBase64(data) : data;
+  const data = parseBase64(base64Data);
 
   if (mediaType.startsWith("image/")) {
     const out: ImagePart = {
       type: "image" as const,
-      image: decodedData,
+      image: data,
       mediaType,
     };
     if (cacheControl) {
@@ -381,7 +381,7 @@ function fromFilePart(
 
   const out: FilePart = {
     type: "file" as const,
-    data: decodedData,
+    data: data,
     filename,
     mediaType,
   };

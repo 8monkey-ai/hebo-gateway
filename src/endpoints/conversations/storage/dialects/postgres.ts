@@ -102,7 +102,7 @@ function createPgExecutor(
           return { changes: Number(res.rowCount ?? 0) };
         },
         transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
-      } as QueryExecutor;
+      } satisfies QueryExecutor;
 
       try {
         const result = await fn(txExecutor);

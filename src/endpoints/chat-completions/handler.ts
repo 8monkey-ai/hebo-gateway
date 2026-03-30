@@ -54,7 +54,8 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Parse + validate input.
     try {
-      ctx.body = (await ctx.request.json()) as ChatCompletionsBody;
+      // oxlint-disable-next-line no-unsafe-assignment
+      ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }

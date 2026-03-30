@@ -36,7 +36,7 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
       reasoningTokens: undefined,
     },
     ...overrides,
-  }) as LanguageModelUsage;
+  }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
   overrides: Partial<GenerateTextResult<ToolSet, Output.Output>>,
@@ -52,7 +52,7 @@ const mockGenerateTextResult = (
     content: [],
     response: { id: "res-1", modelId: "mock", timestamp: new Date() },
     ...overrides,
-  }) as GenerateTextResult<ToolSet, Output.Output>;
+  }) satisfies GenerateTextResult<ToolSet, Output.Output>;
 
 describe("Chat Completions Converters", () => {
   describe("fromChatCompletionsToolResultMessage", () => {
@@ -423,7 +423,7 @@ describe("Chat Completions Converters", () => {
             id: "res-1",
             modelId: "mock",
             timestamp: new Date(),
-          } as GenerateTextResult<ToolSet, never>["response"],
+          } satisfies GenerateTextResult<ToolSet, never>["response"],
           usage: mockUsage(),
           finishReason: "stop",
         },

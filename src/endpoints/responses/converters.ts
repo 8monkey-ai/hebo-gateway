@@ -307,8 +307,6 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         if (part.image_url !== undefined) {
           result.push(fromImageInput(part.image_url));
         } else if (part.file_id !== undefined) {
-          // Note: passing file_id as image data is provider-dependent.
-          // AI SDK's ImagePart.image expects Uint8Array | URL | string (base64 or URL).
           result.push({ type: "image", image: part.file_id });
         }
         break;

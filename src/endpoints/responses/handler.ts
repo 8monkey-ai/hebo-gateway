@@ -48,7 +48,8 @@ export const responses = (config: GatewayConfig): Endpoint => {
     }
 
     try {
-      ctx.body = (await ctx.request.json()) as ResponsesBody;
+      // oxlint-disable-next-line no-unsafe-assignment
+      ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
@@ -103,11 +104,6 @@ export const responses = (config: GatewayConfig): Endpoint => {
       middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
-    // Capture the optional metadata to be echoed back in the final response.
-    // Unlike OpenAI's /chat/completions, our Responses API explicitly supports
-    // returning request metadata to the client.
-    const bodyMetadata = ctx.body.metadata;
-
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
       const result = streamText({
@@ -126,7 +122,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
           const streamResult = toResponses(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
-            bodyMetadata,
+            ctx.body.metadata,
           );
           logger.trace({ requestId: ctx.requestId, result: streamResult }, "[responses] Responses");
           addSpanEvent("hebo.result.transformed");
@@ -147,7 +143,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         ...textOptions,
       });
 
-      ctx.result = toResponsesStream(result, ctx.resolvedModelId, bodyMetadata);
+      ctx.result = toResponsesStream(result, ctx.resolvedModelId, ctx.body.metadata);
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
@@ -172,7 +168,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     logger.trace({ requestId: ctx.requestId, result }, "[responses] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
-    ctx.result = toResponses(result, ctx.resolvedModelId, bodyMetadata);
+    ctx.result = toResponses(result, ctx.resolvedModelId, ctx.body.metadata);
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[responses] Responses");
     addSpanEvent("hebo.result.transformed");
 
