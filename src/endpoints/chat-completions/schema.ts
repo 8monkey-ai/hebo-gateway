@@ -1,12 +1,35 @@
 import * as z from "zod";
 
 import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import {
+  CacheControlSchema as ChatCompletionsCacheControlSchema,
+  type CacheControl as ChatCompletionsCacheControl,
+  ReasoningEffortSchema as ChatCompletionsReasoningEffortSchema,
+  type ReasoningEffort as ChatCompletionsReasoningEffort,
+  ReasoningConfigSchema as ChatCompletionsReasoningConfigSchema,
+  type ReasoningConfig as ChatCompletionsReasoningConfig,
+  ServiceTierSchema as ChatCompletionsServiceTierSchema,
+  type ServiceTier as ChatCompletionsServiceTier,
+  ProviderMetadataSchema as ChatCompletionsProviderMetadataSchema,
+  type ProviderMetadata as ChatCompletionsProviderMetadata,
+  ContentPartAudioSchema as ChatCompletionsContentPartAudioSchema,
+  type ContentPartAudio as ChatCompletionsContentPartAudio,
+} from "../shared/schema";
 
-export const ChatCompletionsCacheControlSchema = z.object({
-  type: z.literal("ephemeral"),
-  ttl: z.string().optional(),
-});
-export type ChatCompletionsCacheControl = z.infer<typeof ChatCompletionsCacheControlSchema>;
+export {
+  ChatCompletionsCacheControlSchema,
+  type ChatCompletionsCacheControl,
+  ChatCompletionsReasoningEffortSchema,
+  type ChatCompletionsReasoningEffort,
+  ChatCompletionsReasoningConfigSchema,
+  type ChatCompletionsReasoningConfig,
+  ChatCompletionsServiceTierSchema,
+  type ChatCompletionsServiceTier,
+  ChatCompletionsProviderMetadataSchema,
+  type ChatCompletionsProviderMetadata,
+  ChatCompletionsContentPartAudioSchema,
+  type ChatCompletionsContentPartAudio,
+};
 
 export const ChatCompletionsContentPartTextSchema = z.object({
   type: z.literal("text"),
@@ -37,30 +60,6 @@ export const ChatCompletionsContentPartFileSchema = z.object({
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
 
-export const ChatCompletionsContentPartAudioSchema = z.object({
-  type: z.literal("input_audio"),
-  input_audio: z.object({
-    data: z.string(),
-    // only wav and mp3 are official by OpenAI, rest is taken from Gemini support:
-    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/multimodal/audio-understanding
-    format: z.enum([
-      "x-aac",
-      "flac",
-      "mp3",
-      "m4a",
-      "mpeg",
-      "mpga",
-      "mp4",
-      "ogg",
-      "pcm",
-      "wav",
-      "webm",
-    ]),
-  }),
-  // Extension origin: OpenRouter/Vercel/Anthropic
-  cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
-});
-
 export const ChatCompletionsContentPartSchema = z.discriminatedUnion("type", [
   ChatCompletionsContentPartTextSchema,
   ChatCompletionsContentPartImageSchema,
@@ -77,10 +76,7 @@ export const ChatCompletionsToolCallSchema = z.object({
     name: z.string(),
   }),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ChatCompletionsProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsToolCall = z.infer<typeof ChatCompletionsToolCallSchema>;
 
@@ -130,10 +126,7 @@ export const ChatCompletionsAssistantMessageSchema = z.object({
     .optional()
     .meta({ extension: true }),
   // Extension origin: Gemini
-  extra_content: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_content: ChatCompletionsProviderMetadataSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
 });
@@ -191,24 +184,6 @@ export const ChatCompletionsToolChoiceSchema = z.union([
 ]);
 export type ChatCompletionsToolChoice = z.infer<typeof ChatCompletionsToolChoiceSchema>;
 
-export const ChatCompletionsReasoningEffortSchema = z.enum([
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-]);
-export type ChatCompletionsReasoningEffort = z.infer<typeof ChatCompletionsReasoningEffortSchema>;
-
-export const ChatCompletionsReasoningConfigSchema = z.object({
-  enabled: z.optional(z.boolean()),
-  effort: z.optional(ChatCompletionsReasoningEffortSchema),
-  max_tokens: z.optional(z.number()),
-  exclude: z.optional(z.boolean()),
-});
-export type ChatCompletionsReasoningConfig = z.infer<typeof ChatCompletionsReasoningConfigSchema>;
-
 export const ChatCompletionsResponseFormatJsonSchema = z.object({
   // FUTURE: consider support for legacy json_object (if demand)
   type: z.literal("json_schema"),
@@ -234,14 +209,6 @@ export const ChatCompletionsMetadataSchema = z.record(
   z.string().max(512),
 );
 export type ChatCompletionsMetadata = z.infer<typeof ChatCompletionsMetadataSchema>;
-export const ChatCompletionsServiceTierSchema = z.enum([
-  "auto",
-  "default",
-  "flex",
-  "scale",
-  "priority",
-]);
-export type ChatCompletionsServiceTier = z.infer<typeof ChatCompletionsServiceTierSchema>;
 
 const ChatCompletionsInputsSchema = z.object({
   messages: z.array(ChatCompletionsMessageSchema),
@@ -267,10 +234,7 @@ const ChatCompletionsInputsSchema = z.object({
   reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
   // Extension origin: Gemini extra_body
   // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview#extra_body
-  extra_body: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  extra_body: ChatCompletionsProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 
@@ -328,10 +292,7 @@ export const ChatCompletionsSchema = z.object({
   usage: ChatCompletionsUsageSchema.nullable(),
   service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  provider_metadata: ChatCompletionsProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletions = z.infer<typeof ChatCompletionsSchema>;
 
@@ -366,10 +327,7 @@ export const ChatCompletionsChunkSchema = z.object({
   usage: ChatCompletionsUsageSchema.nullable(),
   service_tier: ChatCompletionsServiceTierSchema.optional(),
   // Extension origin: Vercel AI Gateway
-  provider_metadata: z
-    .record(z.string(), z.record(z.string(), z.unknown()))
-    .optional()
-    .meta({ extension: true }),
+  provider_metadata: ChatCompletionsProviderMetadataSchema.optional().meta({ extension: true }),
 });
 export type ChatCompletionsChunk = z.infer<typeof ChatCompletionsChunkSchema>;
 export type ChatCompletionsStream = ReadableStream<SseFrame<ChatCompletionsChunk> | SseErrorFrame>;

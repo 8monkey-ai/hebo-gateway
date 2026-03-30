@@ -1,13 +1,8 @@
-import type {
-  SharedV3ProviderOptions,
-  SharedV3ProviderMetadata,
-  JSONObject,
-} from "@ai-sdk/provider";
+import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
   FinishReason,
-  ToolChoice,
   ToolCallPart,
   ToolResultPart,
   ToolSet,
@@ -17,7 +12,6 @@ import type {
   LanguageModelUsage,
   TextStreamPart,
   ReasoningOutput,
-  JSONValue,
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
@@ -27,7 +21,6 @@ import type {
 } from "ai";
 
 import { Output, jsonSchema, tool } from "ai";
-import { z } from "zod";
 
 import type {
   ChatCompletionsToolCall,
@@ -48,35 +41,27 @@ import type {
   ChatCompletionsChoiceDelta,
   ChatCompletionsChunk,
   ChatCompletionsToolCallDelta,
-  ChatCompletionsReasoningEffort,
-  ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningDetail,
   ChatCompletionsResponseFormat,
   ChatCompletionsContentPartText,
   ChatCompletionsCacheControl,
-  ChatCompletionsServiceTier,
 } from "./schema";
 import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
-import { GatewayError } from "../../errors/gateway";
 import { toResponse } from "../../utils/response";
-import { parseDataUrl } from "../../utils/url";
-
-export type TextCallOptions = {
-  messages: ModelMessage[];
-  tools?: ToolSet;
-  toolChoice?: ToolChoice<ToolSet>;
-  activeTools?: Array<keyof ToolSet>;
-  output?: Output.Output;
-  temperature?: number;
-  maxOutputTokens?: number;
-  frequencyPenalty?: number;
-  presencePenalty?: number;
-  seed?: number;
-  stopSequences?: string[];
-  topP?: number;
-  providerOptions: SharedV3ProviderOptions;
-};
+import {
+  parseJsonOrText,
+  parseReasoningOptions,
+  parsePromptCachingOptions,
+  resolveResponseServiceTier,
+  normalizeToolName,
+  stripEmptyKeys,
+  parseBase64,
+  parseImageInput,
+  extractReasoningMetadata,
+  type TextCallOptions,
+  type ToolChoiceOptions,
+} from "../shared/converters";
 
 // --- Request Flow ---
 
@@ -354,24 +339,22 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
 }
 
 function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
-  if (url.startsWith("data:")) {
-    const { mimeType, dataStart } = parseDataUrl(url);
-    if (!mimeType || dataStart <= "data:".length || dataStart >= url.length) {
-      throw new GatewayError("Invalid data URL", 400);
+  const { image, mediaType } = parseImageInput(url);
+
+  if (image instanceof URL) {
+    const out: ImagePart = {
+      type: "image" as const,
+      image,
+    };
+    if (cacheControl) {
+      out.providerOptions = {
+        unknown: { cache_control: cacheControl },
+      };
     }
-    return fromFilePart(url.slice(dataStart), mimeType, undefined, cacheControl);
+    return out;
   }
 
-  const out: ImagePart = {
-    type: "image" as const,
-    image: new URL(url),
-  };
-  if (cacheControl) {
-    out.providerOptions = {
-      unknown: { cache_control: cacheControl },
-    };
-  }
-  return out;
+  return fromFilePart(image, mediaType ?? "image/jpeg", undefined, cacheControl);
 }
 
 function fromFilePart(
@@ -380,10 +363,12 @@ function fromFilePart(
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
+  const data = parseBase64(base64Data);
+
   if (mediaType.startsWith("image/")) {
     const out: ImagePart = {
       type: "image" as const,
-      image: z.util.base64ToUint8Array(base64Data),
+      image: data,
       mediaType,
     };
     if (cacheControl) {
@@ -396,7 +381,7 @@ function fromFilePart(
 
   const out: FilePart = {
     type: "file" as const,
-    data: z.util.base64ToUint8Array(base64Data),
+    data: data,
     filename,
     mediaType,
   };
@@ -426,10 +411,7 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
 
 export const convertToToolChoiceOptions = (
   toolChoice: ChatCompletionsToolChoice | undefined,
-): {
-  toolChoice?: ToolChoice<ToolSet>;
-  activeTools?: Array<keyof ToolSet>;
-} => {
+): ToolChoiceOptions => {
   if (!toolChoice) {
     return {};
   }
@@ -438,7 +420,9 @@ export const convertToToolChoiceOptions = (
     return { toolChoice };
   }
 
-  // FUTURE: this is right now google specific, which is not supported by AI SDK, until then, we temporarily map it to auto for now https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+  // FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
+  // we temporarily map it to auto for now
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
   if (toolChoice === "validated") {
     return { toolChoice: "auto" };
   }
@@ -471,77 +455,6 @@ function parseToolResult(
     };
   }
   return parseJsonOrText(content);
-}
-
-function parseJsonOrText(
-  content: string,
-): { type: "json"; value: JSONValue } | { type: "text"; value: string } {
-  try {
-    // oxlint-disable-next-line no-unsafe-assignment
-    return { type: "json", value: JSON.parse(content) };
-  } catch {
-    return { type: "text", value: content };
-  }
-}
-
-function parseReasoningOptions(
-  reasoning_effort: ChatCompletionsReasoningEffort | undefined,
-  reasoning: ChatCompletionsReasoningConfig | undefined,
-) {
-  const effort = reasoning?.effort ?? reasoning_effort;
-  const max_tokens = reasoning?.max_tokens;
-
-  if (reasoning?.enabled === false || effort === "none") {
-    return { reasoning: { enabled: false }, reasoning_effort: "none" };
-  }
-  if (!reasoning && effort === undefined) return {};
-
-  const out: {
-    reasoning: ChatCompletionsReasoningConfig;
-    reasoning_effort?: ChatCompletionsReasoningEffort;
-  } = { reasoning: {} };
-
-  if (effort) {
-    out.reasoning.enabled = true;
-    out.reasoning.effort = effort;
-    out.reasoning_effort = effort;
-  }
-  if (max_tokens) {
-    out.reasoning.enabled = true;
-    out.reasoning.max_tokens = max_tokens;
-  }
-  if (out.reasoning.enabled) {
-    out.reasoning.exclude = reasoning?.exclude;
-  }
-
-  return out;
-}
-
-function parsePromptCachingOptions(
-  prompt_cache_key: string | undefined,
-  prompt_cache_retention: "in_memory" | "24h" | undefined,
-  cache_control: ChatCompletionsCacheControl | undefined,
-) {
-  const out: Record<string, unknown> = {};
-
-  let retention = prompt_cache_retention;
-  if (!retention && cache_control?.ttl) {
-    retention = cache_control.ttl === "24h" ? "24h" : "in_memory";
-  }
-
-  let control = cache_control;
-  if (!control && retention) {
-    control = {
-      type: "ephemeral",
-      ttl: retention === "24h" ? "24h" : "5m",
-    };
-  }
-
-  if (prompt_cache_key) out["prompt_cache_key"] = prompt_cache_key;
-  if (retention) out["prompt_cache_retention"] = retention;
-  if (control) out["cache_control"] = control;
-
-  return out;
 }
 
 // --- Response Flow ---
@@ -633,6 +546,15 @@ export class ChatCompletionsTransformStream extends TransformStream<
 
     super({
       transform(part, controller) {
+        // We explicitly omit several stream part types from the AI SDK:
+        // - 'text-start', 'text-end', 'reasoning-start', 'reasoning-end':
+        //   Unlike the stateful /responses endpoint, the OpenAI-compatible /chat/completions
+        //   format is a stateless stream of deltas. We do not need to emit explicit lifecycle
+        //   events for content items, so we only process the '-delta' events.
+        // - 'tool-input-*' ('start', 'delta', 'end'): We wait for the final 'tool-call'
+        //   event to emit the fully-formed tool call at once.
+        // - 'tool-result', 'tool-error', etc.: Not relayed in this direction.
+        // - 'start', 'start-step', 'abort', 'source', 'file': Ignored or handled elsewhere.
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "text-delta": {
@@ -715,57 +637,6 @@ export class ChatCompletionsTransformStream extends TransformStream<
   }
 }
 
-function resolveResponseServiceTier(
-  providerMetadata: SharedV3ProviderMetadata | undefined,
-): ChatCompletionsServiceTier | undefined {
-  if (!providerMetadata) return;
-
-  for (const metadata of Object.values(providerMetadata)) {
-    const tier = parseReturnedServiceTier(
-      metadata["service_tier"] ??
-        (metadata["usage_metadata"] as JSONObject | undefined)?.["traffic_type"],
-    );
-    if (tier) return tier;
-  }
-}
-
-function parseReturnedServiceTier(value: unknown): ChatCompletionsServiceTier | undefined {
-  if (typeof value !== "string") return undefined;
-
-  const n = value.toLowerCase();
-  switch (n) {
-    case "traffic_type_unspecified":
-    case "auto":
-      return "auto";
-
-    case "default":
-    case "on_demand":
-    case "on-demand":
-    case "shared":
-      return "default";
-
-    case "on_demand_flex":
-    case "flex":
-      return "flex";
-
-    case "on_demand_priority":
-    case "priority":
-    case "performance":
-      return "priority";
-
-    case "provisioned_throughput":
-    case "scale":
-    case "reserved":
-    case "dedicated":
-    case "provisioned":
-    case "throughput":
-      return "scale";
-
-    default:
-      return undefined;
-  }
-}
-
 export const toChatCompletionsAssistantMessage = (
   result: GenerateTextResult<ToolSet, Output.Output>,
 ): ChatCompletionsAssistantMessage => {
@@ -826,20 +697,7 @@ export function toReasoningDetail(
   index: number,
 ): ChatCompletionsReasoningDetail {
   const providerMetadata = reasoning.providerMetadata ?? {};
-
-  let redactedData: string | undefined;
-  let signature: string | undefined;
-
-  for (const metadata of Object.values(providerMetadata)) {
-    if (metadata && typeof metadata === "object") {
-      if ("redactedData" in metadata && typeof metadata["redactedData"] === "string") {
-        redactedData = metadata["redactedData"];
-      }
-      if ("signature" in metadata && typeof metadata["signature"] === "string") {
-        signature = metadata["signature"];
-      }
-    }
-  }
+  const { redactedData, signature } = extractReasoningMetadata(providerMetadata);
 
   if (redactedData) {
     return {
@@ -912,40 +770,6 @@ export function toChatCompletionsToolCall(
   }
 
   return out;
-}
-
-function normalizeToolName(name: string): string {
-  // some models hallucinate invalid characters
-  // normalize to valid characters [^A-Za-z0-9_-.] (non regex for perf)
-  // https://modelcontextprotocol.io/specification/draft/server/tools#tool-names
-  let out = "";
-  for (let i = 0; i < name.length; i++) {
-    if (out.length === 128) break;
-
-    // oxlint-disable-next-line unicorn/prefer-code-point
-    const c = name.charCodeAt(i);
-
-    if (
-      (c >= 48 && c <= 57) ||
-      (c >= 65 && c <= 90) ||
-      (c >= 97 && c <= 122) ||
-      c === 95 ||
-      c === 45 ||
-      c === 46
-    ) {
-      out += name[i];
-    } else {
-      out += "_";
-    }
-  }
-  return out;
-}
-
-function stripEmptyKeys(obj: unknown) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
-  // some models hallucinate empty parameters
-  delete (obj as Record<string, unknown>)[""];
-  return obj;
 }
 
 export const toChatCompletionsFinishReason = (

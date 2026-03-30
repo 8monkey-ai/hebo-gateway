@@ -11,9 +11,7 @@ export function toConversation(entity: ConversationEntity): Conversation {
 }
 
 export function toConversationItem(entity: ConversationItemEntity): ConversationItem {
-  const item: Record<string, unknown> = {
-    object: "conversation.item",
-  };
+  const item: Record<string, unknown> = {};
 
   for (const key in entity) {
     if (key === "conversation_id") continue;
@@ -21,8 +19,10 @@ export function toConversationItem(entity: ConversationItemEntity): Conversation
       item["created_at"] = Math.floor(entity["created_at"] / 1000);
       continue;
     }
-    item[key] = entity[key];
+    item[key] = entity[key as keyof typeof entity];
   }
+
+  item["object"] = "conversation.item";
 
   return item as unknown as ConversationItem;
 }

@@ -50,7 +50,8 @@ describe("Postgres Dialect (Mocked)", () => {
     expect(insertConv!.sql).toContain(
       'INSERT INTO "conversations" ("id", "metadata", "created_at") VALUES ($1, $2, $3)',
     );
-    // Verify JSON mapping (pg natively supports JSON objects, so it doesn't stringify)
+    // Verify JSON mapping (pg natively supports JSON objects, so it doesn't
+    // stringify)
     expect(insertConv!.params[1]).toEqual(metadata);
     // Verify Date mapping (should be number for BIGINT)
     expect(typeof insertConv!.params[2]).toBe("number");

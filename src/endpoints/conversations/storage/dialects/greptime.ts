@@ -67,8 +67,10 @@ function dateToGreptimeString(v: unknown) {
 // coerces JavaScript types differently. There is no unified parameter format:
 //
 // 1. Timestamps:
-//    - `pg` requires a strictly formatted string (YYYY-MM-DD HH:mm:ss.SSS). It fails on BigInt.
-//    - `postgresjs` requires a BigInt (milliseconds). It parses strings into ISO formats which GreptimeDB rejects.
+//    - `pg` requires a strictly formatted string (YYYY-MM-DD HH:mm:ss.SSS).
+//      It fails on BigInt.
+//    - `postgresjs` requires a BigInt (milliseconds). It parses strings into ISO
+//       formats which GreptimeDB rejects.
 //    - `Bun.SQL` is flexible, but we use BigInt for consistency with postgresjs.
 //
 // 2. JSON:

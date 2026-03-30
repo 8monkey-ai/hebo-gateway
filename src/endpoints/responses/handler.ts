@@ -6,7 +6,7 @@ import {
   type GenerateTextResult,
   type ToolSet,
 } from "ai";
-import * as z from "zod/mini";
+import * as z from "zod";
 
 import type {
   AfterHookContext,
@@ -31,56 +31,47 @@ import {
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import { prepareForwardHeaders } from "../../utils/request";
-import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
-import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
-import {
-  ChatCompletionsBodySchema,
-  type ChatCompletionsBody,
-  type ChatCompletionsInputs,
-} from "./schema";
+import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
+import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
+import { ResponsesBodySchema, type ResponsesBody, type ResponsesInputs } from "./schema";
 
-export const chatCompletions = (config: GatewayConfig): Endpoint => {
+export const responses = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
 
   const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
-    ctx.operation = "chat";
+    ctx.operation = "responses";
     addSpanEvent("hebo.handler.started");
 
-    // Guard: enforce HTTP method early.
     if (!ctx.request || ctx.request.method !== "POST") {
       throw new GatewayError("Method Not Allowed", 405);
     }
 
-    // Parse + validate input.
     try {
       // oxlint-disable-next-line no-unsafe-assignment
       ctx.body = await ctx.request.json();
     } catch {
       throw new GatewayError("Invalid JSON", 400);
     }
-    logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[chat] ChatCompletionsBody");
+    logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[responses] ResponsesBody");
     addSpanEvent("hebo.request.deserialized");
 
-    const parsed = ChatCompletionsBodySchema.safeParse(ctx.body);
+    const parsed = ResponsesBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
-      // FUTURE: consider adding body shape to metadata
       throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
     }
     ctx.body = parsed.data;
     addSpanEvent("hebo.request.parsed");
 
     if (hooks?.before) {
-      ctx.body =
-        ((await hooks.before(ctx as BeforeHookContext)) as ChatCompletionsBody) ?? ctx.body;
+      ctx.body = ((await hooks.before(ctx as BeforeHookContext)) as ResponsesBody) ?? ctx.body;
       addSpanEvent("hebo.hooks.before.completed");
     }
 
-    // Resolve model + provider (hooks may override defaults).
     ctx.modelId = ctx.body.model;
     ctx.resolvedModelId =
       (await hooks?.resolveModelId?.(ctx as ResolveModelHookContext)) ?? ctx.modelId;
-    logger.debug(`[chat] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
+    logger.debug(`[responses] resolved ${ctx.modelId} to ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.model.resolved");
 
     const override = await hooks?.resolveProvider?.(ctx as ResolveProviderHookContext);
@@ -90,38 +81,29 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: ctx.operation,
+        operation: "chat",
       });
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
     ctx.resolvedProviderId = languageModel.provider;
-    logger.debug(`[chat] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
+    logger.debug(`[responses] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
     const genAiSignalLevel = cfg.telemetry?.signals?.gen_ai;
     const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
     setSpanAttributes(genAiGeneralAttrs);
 
-    // Convert inputs to AI SDK call options.
     const { model: _model, stream, ...inputs } = ctx.body;
-    const textOptions = convertToTextCallOptions(inputs as ChatCompletionsInputs);
-    logger.trace(
-      {
-        requestId: ctx.requestId,
-        options: textOptions,
-      },
-      "[chat] AI SDK options",
-    );
+    const textOptions = convertToTextCallOptions(inputs as ResponsesInputs);
+    logger.trace({ requestId: ctx.requestId, options: textOptions }, "[responses] AI SDK options");
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getChatRequestAttributes(ctx.body, genAiSignalLevel));
+    setSpanAttributes(getResponsesRequestAttributes(ctx.body, genAiSignalLevel));
 
-    // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
       middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
-    // Execute request (streaming vs. non-streaming).
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
       const result = streamText({
@@ -137,17 +119,19 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onError: () => {},
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
-          const streamResult = toChatCompletions(
+          const streamResult = toResponses(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
+            ctx.body.metadata,
           );
-          logger.trace(
-            { requestId: ctx.requestId, result: streamResult },
-            "[chat] ChatCompletions",
-          );
+          logger.trace({ requestId: ctx.requestId, result: streamResult }, "[responses] Responses");
           addSpanEvent("hebo.result.transformed");
 
-          const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
+          const genAiResponseAttrs = getResponsesResponseAttributes(
+            streamResult,
+            genAiSignalLevel,
+            res.finishReason,
+          );
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
           recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
@@ -159,7 +143,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         ...textOptions,
       });
 
-      ctx.result = toChatCompletionsStream(result, ctx.resolvedModelId);
+      ctx.result = toResponsesStream(result, ctx.resolvedModelId, ctx.body.metadata);
 
       if (hooks?.after) {
         ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
@@ -181,15 +165,18 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       },
       ...textOptions,
     });
-    logger.trace({ requestId: ctx.requestId, result }, "[chat] AI SDK result");
+    logger.trace({ requestId: ctx.requestId, result }, "[responses] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
 
-    // Transform result.
-    ctx.result = toChatCompletions(result, ctx.resolvedModelId);
-    logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[chat] ChatCompletions");
+    ctx.result = toResponses(result, ctx.resolvedModelId, ctx.body.metadata);
+    logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[responses] Responses");
     addSpanEvent("hebo.result.transformed");
 
-    const genAiResponseAttrs = getChatResponseAttributes(ctx.result, genAiSignalLevel);
+    const genAiResponseAttrs = getResponsesResponseAttributes(
+      ctx.result,
+      genAiSignalLevel,
+      result.finishReason,
+    );
     setSpanAttributes(genAiResponseAttrs);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
 
