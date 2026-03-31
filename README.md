@@ -620,11 +620,6 @@ It supports:
 - Canonical model ID resolution.
 - Provider-specific availability filtering.
 
-> [!IMPORTANT]
-> **Compatibility & Roadmap:**
-
-- **Pagination**: Cursor-based listing.
-
 ### `/responses`
 
 Hebo Gateway provides a `/responses` endpoint implementing the [Open Responses API](https://www.openresponses.org/reference).
