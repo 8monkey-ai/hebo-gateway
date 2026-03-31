@@ -24,7 +24,9 @@ import {
   type ResponseReasoningSummaryTextDeltaEvent,
   type ResponseOutputTextDeltaEvent,
   type ResponseCompletedEvent,
+  type ResponseOutputItemDoneEvent,
   type ResponsesOutputItem,
+  type ResponsesFunctionCall,
   type ResponsesOutputMessage,
 } from "./schema";
 
@@ -730,6 +732,58 @@ describe("Responses Converters", () => {
       expect((completedResponse.output[1] as ResponsesOutputMessage).content[0]!.text).toBe(
         "Hello",
       );
+    });
+
+    test("should carry final tool-call metadata onto the streamed item when inProgress", async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: "tool-input-start",
+            id: "call_1",
+            toolName: "test_tool",
+            providerMetadata: { test: { initial: "metadata" } },
+          });
+          controller.enqueue({
+            type: "tool-input-delta",
+            id: "call_1",
+            delta: '{"arg":',
+          });
+          controller.enqueue({
+            type: "tool-call",
+            toolCallId: "call_1",
+            toolName: "test_tool",
+            input: { arg: "value" },
+            providerMetadata: { test: { final: "metadata" } },
+          });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "stop",
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new ResponsesTransformStream("test-model"));
+      const reader = transformed.getReader();
+      const events: ResponsesStreamEvent[] = [];
+
+      while (true) {
+        // oxlint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value && "event" in (value as object)) {
+          events.push(value as ResponsesStreamEvent);
+        }
+      }
+
+      const toolCallDoneEvent = events.find(
+        (e): e is ResponseOutputItemDoneEvent =>
+          e.event === "response.output_item.done" && e.data.item.type === "function_call",
+      );
+
+      expect(toolCallDoneEvent).toBeDefined();
+      const item = toolCallDoneEvent!.data.item as ResponsesFunctionCall;
+      expect(item.extra_content).toEqual({ test: { final: "metadata" } });
     });
   });
 });

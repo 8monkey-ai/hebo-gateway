@@ -134,7 +134,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
-        onError: () => {},
+        onError: (error) => {
+          logger.debug({ requestId: ctx.requestId, error }, "[chat] Stream error");
+        },
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(

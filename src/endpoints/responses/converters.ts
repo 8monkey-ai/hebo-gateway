@@ -1112,6 +1112,10 @@ export class ResponsesTransformStream extends TransformStream<
                   : JSON.stringify(stripEmptyKeys(part.input as Record<string, unknown>));
               fnItem.status = "completed";
 
+              if (part.providerMetadata) {
+                fnItem.extra_content = part.providerMetadata;
+              }
+
               inProgressToolCalls.delete(part.toolCallId);
             } else {
               fnItem = toFunctionCallItem(

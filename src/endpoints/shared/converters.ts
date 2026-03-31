@@ -81,8 +81,8 @@ export function parseImageInput(url: string): { image: string | URL; mediaType?:
 }
 
 export function parseReasoningOptions(
-  reasoning_effort: ReasoningEffort | undefined,
-  reasoning: ReasoningConfig | undefined,
+  reasoning_effort?: ReasoningEffort,
+  reasoning?: ReasoningConfig,
 ) {
   const effort = reasoning?.effort ?? reasoning_effort;
   const max_tokens = reasoning?.max_tokens;
@@ -114,9 +114,9 @@ export function parseReasoningOptions(
 }
 
 export function parsePromptCachingOptions(
-  prompt_cache_key: string | undefined,
-  prompt_cache_retention: "in-memory" | "24h" | undefined,
-  cache_control: CacheControl | undefined,
+  prompt_cache_key?: string,
+  prompt_cache_retention?: "in-memory" | "24h",
+  cache_control?: CacheControl,
 ) {
   const out: Record<string, unknown> = {};
 
@@ -141,7 +141,7 @@ export function parsePromptCachingOptions(
 }
 
 export function resolveResponseServiceTier(
-  providerMetadata: SharedV3ProviderMetadata | undefined,
+  providerMetadata?: SharedV3ProviderMetadata,
 ): ServiceTier | undefined {
   if (!providerMetadata) return;
 
@@ -217,11 +217,13 @@ export function normalizeToolName(name: string): string {
 
 export function stripEmptyKeys(obj: unknown) {
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
-  delete (obj as JSONObject)[""];
+  if ("" in obj) {
+    (obj as Record<string, unknown>)[""] = undefined;
+  }
   return obj;
 }
 
-export function extractReasoningMetadata(providerMetadata: SharedV3ProviderMetadata | undefined): {
+export function extractReasoningMetadata(providerMetadata?: SharedV3ProviderMetadata): {
   redactedData?: string;
   signature?: string;
 } {

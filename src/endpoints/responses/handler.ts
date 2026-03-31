@@ -40,7 +40,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
   const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
-    ctx.operation = "responses";
+    ctx.operation = "chat";
     addSpanEvent("hebo.handler.started");
 
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -81,7 +81,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: "chat",
+        operation: ctx.operation,
       });
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
@@ -116,7 +116,9 @@ export const responses = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
-        onError: () => {},
+        onError: (error) => {
+          logger.debug({ requestId: ctx.requestId, error }, "[responses] Stream error");
+        },
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toResponses(
