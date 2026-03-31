@@ -92,7 +92,6 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
     reasoning_effort,
     reasoning,
     prompt_cache_key,
-    parallel_tool_calls,
     extra_body,
     cache_control,
     ...rest
@@ -100,10 +99,6 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
 
   Object.assign(rest, parseReasoningOptions(reasoning_effort, reasoning));
   Object.assign(rest, parsePromptCachingOptions(prompt_cache_key, undefined, cache_control));
-
-  if (parallel_tool_calls !== undefined) {
-    Object.assign(rest, { parallel_tool_calls });
-  }
 
   if (extra_body) {
     for (const v of Object.values(extra_body)) {

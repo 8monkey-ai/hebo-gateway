@@ -64,6 +64,9 @@ export function parseImageInput(url: string): { image: string | URL; mediaType?:
     if (!mimeType || dataStart <= dataPrefix.length || dataStart >= url.length) {
       throw new GatewayError("Invalid data URL", 400);
     }
+    if (!mimeType.startsWith("image/")) {
+      throw new GatewayError(`Unsupported image media type: ${mimeType}`, 400);
+    }
     return {
       image: url.slice(dataStart),
       mediaType: mimeType,

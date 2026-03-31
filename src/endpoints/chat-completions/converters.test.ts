@@ -378,6 +378,16 @@ describe("Chat Completions Converters", () => {
   });
 
   describe("convertToTextCallOptions", () => {
+    test("should pass parallel_tool_calls in providerOptions", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        parallel_tool_calls: true,
+      });
+      expect(result.providerOptions["unknown"]).toMatchObject({
+        parallel_tool_calls: true,
+      });
+    });
+
     test("should use max_completion_tokens when present", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
@@ -460,6 +470,26 @@ describe("Chat Completions Converters", () => {
       });
 
       expect(result.output).toBeUndefined();
+    });
+
+    test("should throw error when image_url has non-image media type", () => {
+      expect(() =>
+        convertToTextCallOptions({
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: "data:application/pdf;base64,aGVsbG8=",
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ).toThrow(/Unsupported image media type/);
     });
 
     test("should convert input_audio content parts to file user content", () => {

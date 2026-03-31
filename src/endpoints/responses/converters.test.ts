@@ -297,6 +297,16 @@ describe("Responses Converters", () => {
   });
 
   describe("convertToTextCallOptions", () => {
+    test("should pass parallel_tool_calls in providerOptions", () => {
+      const result = convertToTextCallOptions({
+        input: "hi",
+        parallel_tool_calls: false,
+      });
+      expect(result.providerOptions["unknown"]).toMatchObject({
+        parallel_tool_calls: false,
+      });
+    });
+
     test("should set temperature and top_p", () => {
       const result = convertToTextCallOptions({
         input: "hi",

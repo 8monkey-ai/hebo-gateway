@@ -78,7 +78,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     reasoning,
     prompt_cache_key,
     prompt_cache_retention,
-    parallel_tool_calls,
     extra_body,
     cache_control,
     frequency_penalty,
@@ -94,10 +93,6 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
     rest,
     parsePromptCachingOptions(prompt_cache_key, prompt_cache_retention, cache_control),
   );
-
-  if (parallel_tool_calls !== undefined) {
-    Object.assign(rest, { parallel_tool_calls });
-  }
 
   if (extra_body) {
     for (const v of Object.values(extra_body)) {
