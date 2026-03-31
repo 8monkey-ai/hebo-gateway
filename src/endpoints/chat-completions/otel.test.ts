@@ -24,6 +24,33 @@ describe("Chat Completions OTEL", () => {
     expect(attrs["gen_ai.request.metadata.Org ID"]).toBe("o-123");
   });
 
+  test("should map reasoning config into request attributes", () => {
+    const inputs: ChatCompletionsBody = {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "hi" }],
+      reasoning: { enabled: true, effort: "high", max_tokens: 2048 },
+    };
+
+    const attrs = getChatRequestAttributes(inputs, "recommended");
+
+    expect(attrs["gen_ai.request.reasoning.enabled"]).toBe(true);
+    expect(attrs["gen_ai.request.reasoning.effort"]).toBe("high");
+    expect(attrs["gen_ai.request.reasoning.max_tokens"]).toBe(2048);
+  });
+
+  test("should omit reasoning attributes when reasoning config is absent", () => {
+    const inputs: ChatCompletionsBody = {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "hi" }],
+    };
+
+    const attrs = getChatRequestAttributes(inputs, "recommended");
+
+    expect(attrs["gen_ai.request.reasoning.enabled"]).toBeUndefined();
+    expect(attrs["gen_ai.request.reasoning.effort"]).toBeUndefined();
+    expect(attrs["gen_ai.request.reasoning.max_tokens"]).toBeUndefined();
+  });
+
   test("should stringify each tool definition individually", () => {
     const tool1 = {
       type: "function" as const,

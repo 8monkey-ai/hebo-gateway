@@ -135,7 +135,9 @@ export const getChatRequestAttributes = (
 
   if (signalLevel !== "required") {
     Object.assign(attrs, {
-      // FUTURE: add reasoning info
+      "gen_ai.request.reasoning.enabled": body.reasoning?.enabled,
+      "gen_ai.request.reasoning.effort": body.reasoning?.effort,
+      "gen_ai.request.reasoning.max_tokens": body.reasoning?.max_tokens,
       "gen_ai.request.stream": body.stream,
       "gen_ai.request.service_tier": body.service_tier,
       "gen_ai.request.frequency_penalty": body.frequency_penalty,
