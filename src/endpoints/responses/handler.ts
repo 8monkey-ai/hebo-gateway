@@ -122,7 +122,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
           const streamResult = toResponses(
             res as unknown as GenerateTextResult<ToolSet, Output.Output>,
             ctx.resolvedModelId!,
-            ctx.body.metadata,
+            (ctx.body as ResponsesBody).metadata,
           );
           logger.trace({ requestId: ctx.requestId, result: streamResult }, "[responses] Responses");
           addSpanEvent("hebo.result.transformed");

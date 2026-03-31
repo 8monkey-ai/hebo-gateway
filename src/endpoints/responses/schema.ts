@@ -322,6 +322,10 @@ const ResponsesInputsSchema = z.object({
 
   // FUTURE: Open Responses API orchestration configurations
   // previous_response_id: z.string().optional(),
+  // conversation: z.union([z.string(), z.object({ id: z.string() })]).optional(),
+  // context_management: z.array(z.object({ type: z.literal("compaction"), compact_threshold: z.number().optional() })).optional(),
+  // prompt: z.object({ id: z.string(), variables: z.record(z.any()).optional(), version: z.string().optional() }).optional(),
+  // phase: z.enum(["commentary", "final_answer"]).optional(),
   // safety_identifier: z.string().optional(),
   // truncation: z.enum(["auto", "disabled"]).optional(),
   // store: z.boolean().optional(),

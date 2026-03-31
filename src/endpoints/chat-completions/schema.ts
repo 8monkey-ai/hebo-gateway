@@ -227,7 +227,14 @@ const ChatCompletionsInputsSchema = z.object({
   reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
   service_tier: ChatCompletionsServiceTierSchema.optional(),
   prompt_cache_key: z.string().optional(),
-  prompt_cache_retention: z.enum(["in_memory", "24h"]).optional(),
+  prompt_cache_retention: z.enum(["in-memory", "24h"]).optional(),
+  parallel_tool_calls: z.boolean().optional(),
+
+  // FUTURE: OpenAI configurations
+  // logprobs: z.boolean().optional(),
+  // top_logprobs: z.number().int().optional(),
+  // user: z.string().optional(),
+
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter
