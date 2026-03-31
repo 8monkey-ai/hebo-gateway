@@ -4,10 +4,7 @@ import type {
   SharedV3ProviderOptions,
 } from "@ai-sdk/provider";
 import {
-  tool,
-  jsonSchema,
   type JSONValue,
-  type LanguageModelUsage,
   type ToolSet,
   type ModelMessage,
   type ToolChoice,
@@ -78,29 +75,6 @@ export function parseImageInput(url: string): { image: string | URL; mediaType?:
   } catch (error) {
     throw new GatewayError("Invalid image URL", 400, undefined, error);
   }
-}
-
-export function parseUrl(url: string): URL {
-  try {
-    return new URL(url);
-  } catch (error) {
-    throw new GatewayError("Invalid URL", 400, undefined, error);
-  }
-}
-
-export function mapLanguageModelUsage(usage: LanguageModelUsage) {
-  const prompt = usage.inputTokens ?? 0;
-  const completion = usage.outputTokens ?? 0;
-  const total = usage.totalTokens ?? prompt + completion;
-
-  return {
-    prompt_tokens: prompt,
-    completion_tokens: completion,
-    total_tokens: total,
-    cached_tokens: usage.inputTokenDetails?.cacheReadTokens,
-    cache_write_tokens: usage.inputTokenDetails?.cacheWriteTokens,
-    reasoning_tokens: usage.outputTokenDetails?.reasoningTokens,
-  };
 }
 
 export function parseReasoningOptions(
@@ -177,7 +151,7 @@ export function resolveResponseServiceTier(
   }
 }
 
-export function parseReturnedServiceTier(value: unknown): ServiceTier | undefined {
+function parseReturnedServiceTier(value: unknown): ServiceTier | undefined {
   if (typeof value !== "string") return undefined;
 
   const n = value.toLowerCase();
@@ -272,22 +246,4 @@ export function extractReasoningMetadata(providerMetadata: SharedV3ProviderMetad
   }
 
   return {};
-}
-
-export function toToolSet<T>(
-  tools: T[] | undefined,
-  map: (t: T) => { name: string; description?: string; parameters: unknown; strict?: boolean },
-): ToolSet | undefined {
-  if (!tools) return;
-
-  const toolSet: ToolSet = {};
-  for (const t of tools) {
-    const { name, description, parameters, strict } = map(t);
-    toolSet[name] = tool({
-      description,
-      inputSchema: jsonSchema(parameters),
-      strict,
-    });
-  }
-  return toolSet;
 }

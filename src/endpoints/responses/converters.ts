@@ -48,6 +48,7 @@ import type {
 
 import type { SseErrorFrame } from "../../utils/stream";
 
+import { GatewayError } from "../../errors/gateway";
 import { toResponse } from "../../utils/response";
 import {
   parseJsonOrText,
@@ -58,11 +59,20 @@ import {
   stripEmptyKeys,
   parseBase64,
   parseImageInput,
-  parseUrl,
   extractReasoningMetadata,
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
+
+// --- Helpers ---
+
+function parseUrl(url: string): URL {
+  try {
+    return new URL(url);
+  } catch (error) {
+    throw new GatewayError("Invalid URL", 400, undefined, error);
+  }
+}
 
 // --- Request Flow ---
 
