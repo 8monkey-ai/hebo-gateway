@@ -1,3 +1,4 @@
+import type { SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import * as z from "zod";
 
 /**
@@ -15,8 +16,11 @@ export const CacheControlSchema = z.object({
 });
 export type CacheControl = z.infer<typeof CacheControlSchema>;
 
-export const ProviderMetadataSchema = z.record(z.string(), z.record(z.string(), z.unknown()));
-export type ProviderMetadata = z.infer<typeof ProviderMetadataSchema>;
+export const ProviderMetadataSchema = z.record(
+  z.string(),
+  z.record(z.string(), z.any()),
+) as z.ZodType<SharedV3ProviderMetadata>;
+export type ProviderMetadata = SharedV3ProviderMetadata;
 
 export const ReasoningEffortSchema = z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]);
 export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>;

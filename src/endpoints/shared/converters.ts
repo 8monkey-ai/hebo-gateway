@@ -138,14 +138,14 @@ export function parseReasoningOptions(
 
 export function parsePromptCachingOptions(
   prompt_cache_key: string | undefined,
-  prompt_cache_retention: "in_memory" | "24h" | undefined,
+  prompt_cache_retention: "in-memory" | "24h" | undefined,
   cache_control: CacheControl | undefined,
 ) {
   const out: Record<string, unknown> = {};
 
   let retention = prompt_cache_retention;
   if (!retention && cache_control?.ttl) {
-    retention = cache_control.ttl === "24h" ? "24h" : "in_memory";
+    retention = cache_control.ttl === "24h" ? "24h" : "in-memory";
   }
 
   let control = cache_control;

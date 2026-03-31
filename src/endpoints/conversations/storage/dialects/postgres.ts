@@ -101,7 +101,11 @@ function createPgExecutor(
           const res = await client.query(getQuery(sql, p?.length > 0 ? p : undefined));
           return { changes: Number(res.rowCount ?? 0) };
         },
-        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
+        transaction<ResultT>(
+          txCallback: (executor: QueryExecutor) => Promise<ResultT>,
+        ): Promise<ResultT> {
+          return txCallback(txExecutor);
+        },
       } satisfies QueryExecutor;
 
       try {

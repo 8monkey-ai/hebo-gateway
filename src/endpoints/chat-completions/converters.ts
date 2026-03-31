@@ -1,4 +1,4 @@
-import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
+import type { SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -261,7 +261,7 @@ export function fromChatCompletionsAssistantMessage(
         input: parseJsonOrText(fn.arguments).value,
       };
       if (extra_content) {
-        out.providerOptions = extra_content as SharedV3ProviderOptions;
+        out.providerOptions = extra_content;
       }
       parts.push(out);
     }
@@ -273,7 +273,7 @@ export function fromChatCompletionsAssistantMessage(
   };
 
   if (extra_content) {
-    out.providerOptions = extra_content as SharedV3ProviderOptions;
+    out.providerOptions = extra_content;
   }
 
   if (cache_control) {

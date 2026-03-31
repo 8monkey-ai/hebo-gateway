@@ -51,13 +51,32 @@ const mockGenerateTextResult = (
   ({
     text: "",
     toolCalls: [],
+    staticToolCalls: [],
+    dynamicToolCalls: [],
     toolResults: [],
+    staticToolResults: [],
+    dynamicToolResults: [],
     finishReason: "stop",
     usage: mockUsage(),
     totalUsage: mockUsage(),
     warnings: [],
     content: [],
-    response: { id: "res-1", modelId: "mock", timestamp: new Date() },
+    reasoning: [],
+    reasoningText: undefined,
+    files: [],
+    sources: [],
+    rawFinishReason: undefined,
+    request: {},
+    response: {
+      id: "res-1",
+      modelId: "mock",
+      timestamp: new Date(),
+      messages: [],
+    },
+    providerMetadata: undefined,
+    steps: [],
+    experimental_output: undefined,
+    output: undefined,
     ...overrides,
   }) satisfies GenerateTextResult<ToolSet, Output.Output>;
 
@@ -337,18 +356,18 @@ describe("Responses Converters", () => {
 
       expect(result.output!.name).toBe("object");
 
-      const parsed = (await result.output!.parseCompleteOutput(
+      const parsed: unknown = await result.output!.parseCompleteOutput(
         { text: '{"city":"SF"}' },
         {
           response: {
             id: "res-1",
             modelId: "mock",
             timestamp: new Date(),
-          } satisfies GenerateTextResult<ToolSet, never>["response"],
+          },
           usage: mockUsage(),
           finishReason: "stop",
         },
-      )) as unknown;
+      );
       expect(parsed).toEqual({ city: "SF" });
     });
 

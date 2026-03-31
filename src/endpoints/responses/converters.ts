@@ -19,7 +19,7 @@ import type {
   FilePart,
 } from "ai";
 
-import { Output, jsonSchema, stepCountIs, tool, type JSONValue } from "ai";
+import { Output, jsonSchema, stepCountIs, tool } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
 import type {
@@ -191,7 +191,7 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
 
   let providerOptions: SharedV3ProviderOptions | undefined;
   if (item.extra_content || item.encrypted_content) {
-    providerOptions = (item.extra_content as SharedV3ProviderOptions) ?? { unknown: {} };
+    providerOptions = item.extra_content ?? { unknown: {} };
     if (item.encrypted_content) {
       ((providerOptions ??= { unknown: {} })["unknown"] ??= {})["redactedData"] =
         item.encrypted_content;
@@ -236,12 +236,12 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
       };
 
       if (item.extra_content) {
-        out.providerOptions = item.extra_content as SharedV3ProviderOptions;
+        out.providerOptions = item.extra_content;
       }
 
       if (item.cache_control) {
         ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-          item.cache_control as JSONValue;
+          item.cache_control;
       }
       return out;
     }
@@ -259,12 +259,12 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
   };
 
   if (item.extra_content) {
-    out.providerOptions = item.extra_content as SharedV3ProviderOptions;
+    out.providerOptions = item.extra_content;
   }
 
   if (item.cache_control) {
     ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-      item.cache_control as JSONValue;
+      item.cache_control;
   }
 
   return out;
@@ -369,12 +369,12 @@ function fromAssistantMessageItem(
   const out: AssistantModelMessage = { role: "assistant", content };
 
   if (item.extra_content) {
-    out.providerOptions = item.extra_content as SharedV3ProviderOptions;
+    out.providerOptions = item.extra_content;
   }
 
   if (item.cache_control) {
     ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-      item.cache_control as JSONValue;
+      item.cache_control;
   }
 
   return out;
@@ -389,12 +389,12 @@ function fromFunctionCallItem(item: ResponsesFunctionCall): AssistantModelMessag
   };
 
   if (item.extra_content) {
-    toolCall.providerOptions = item.extra_content as SharedV3ProviderOptions;
+    toolCall.providerOptions = item.extra_content;
   }
 
   if (item.cache_control) {
     ((toolCall.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-      item.cache_control as JSONValue;
+      item.cache_control;
   }
 
   return { role: "assistant", content: [toolCall] };
@@ -408,7 +408,7 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
     return parseJsonOrText(output);
   }
 
-  const value: any[] = [];
+  const value: (ToolResultPart["output"] & { type: "content" })["value"] = [];
   for (const part of output) {
     if (part.type === "input_text") {
       value.push({ type: "text", text: part.text });
@@ -461,7 +461,7 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
 
   return {
     type: "content",
-    value: value as (ToolResultPart["output"] & { type: "content" })["value"],
+    value,
   };
 }
 

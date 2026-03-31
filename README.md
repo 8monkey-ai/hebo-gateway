@@ -660,12 +660,12 @@ Hebo Gateway provides a dedicated `/conversations` endpoint for managing persist
 
 Official documentation: [OpenAI Conversations API](https://developers.openai.com/api/reference/resources/conversations/methods/create)
 
-#### List & Filter Conversations
+#### List & Filter Conversations (Hebo Extension)
 
-You can list conversations with standard cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
+Since standard OpenAI APIs (like Threads) do not support global listing of conversations, Hebo Gateway provides this capability as an extension. You can list all conversations using cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
 
 ```bash
-# List conversations for a specific user
+# List conversations for a specific user using metadata filtering
 curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
 ```
 

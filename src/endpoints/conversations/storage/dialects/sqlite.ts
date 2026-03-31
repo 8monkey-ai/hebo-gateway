@@ -127,7 +127,11 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
           const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
           return { changes: Number(rs.rowsAffected) };
         },
-        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
+        transaction<ResultT>(
+          txCallback: (executor: QueryExecutor) => Promise<ResultT>,
+        ): Promise<ResultT> {
+          return txCallback(txExecutor);
+        },
       } satisfies QueryExecutor;
 
       try {
