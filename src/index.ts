@@ -8,13 +8,6 @@ export * from "./logger";
 export * from "./middleware/common";
 export * from "./middleware/matcher";
 
-export * as ChatCompletions from "./endpoints/chat-completions";
-export * from "./endpoints/embeddings";
-export * from "./endpoints/models";
-
-export * as Responses from "./endpoints/responses";
-export * from "./endpoints/conversations";
-
 export * from "./models/catalog";
 export * from "./models/types";
 
