@@ -198,7 +198,7 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
   if (item.extra_content || item.encrypted_content) {
     providerOptions = item.extra_content ?? { unknown: {} };
     if (item.encrypted_content) {
-      (providerOptions ??= {})['unknown'] = { redactedData: item.encrypted_content };
+      (providerOptions ??= {})["unknown"] = { redactedData: item.encrypted_content };
     }
   }
 
@@ -244,7 +244,7 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
       }
 
       if (item.cache_control) {
-        (out.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
+        (out.providerOptions ??= {})["unknown"] = { cache_control: item.cache_control };
       }
       return out;
     }
@@ -266,7 +266,7 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
   }
 
   if (item.cache_control) {
-    (out.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
+    (out.providerOptions ??= {})["unknown"] = { cache_control: item.cache_control };
   }
 
   return out;
@@ -375,7 +375,7 @@ function fromAssistantMessageItem(
   }
 
   if (item.cache_control) {
-    (out.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
+    (out.providerOptions ??= {})["unknown"] = { cache_control: item.cache_control };
   }
 
   return out;
@@ -394,7 +394,7 @@ function fromFunctionCallItem(item: ResponsesFunctionCall): AssistantModelMessag
   }
 
   if (item.cache_control) {
-    (toolCall.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
+    (toolCall.providerOptions ??= {})["unknown"] = { cache_control: item.cache_control };
   }
 
   return { role: "assistant", content: [toolCall] };

@@ -81,8 +81,7 @@ export const winterCgHandler = (
 
       if (
         ctx.operation === "chat" ||
-        ctx.operation === "embeddings" ||
-        ctx.operation === "responses"
+        ctx.operation === "embeddings"
       ) {
         recordRequestDuration(
           performance.now() - start,

@@ -272,7 +272,7 @@ export function fromChatCompletionsAssistantMessage(
   }
 
   if (cache_control) {
-    (out.providerOptions ??= {})['unknown'] = { cache_control };
+    (out.providerOptions ??= {})["unknown"] = { cache_control };
   }
 
   return out;
