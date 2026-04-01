@@ -1,4 +1,4 @@
-import type { JSONObject, SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
 import type { EmbedManyResult } from "ai";
 
 import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
@@ -16,7 +16,7 @@ export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOp
   return {
     values: Array.isArray(input) ? input : [input],
     providerOptions: {
-      unknown: rest as JSONObject,
+      unknown: rest,
     },
   };
 }

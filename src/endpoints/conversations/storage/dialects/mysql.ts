@@ -66,8 +66,12 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
           const header = res as unknown as ResultSetHeader;
           return { changes: Number(header.affectedRows ?? 0) };
         },
-        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
-      } as QueryExecutor;
+        transaction<ResultT>(
+          txCallback: (executor: QueryExecutor) => Promise<ResultT>,
+        ): Promise<ResultT> {
+          return txCallback(txExecutor);
+        },
+      } satisfies QueryExecutor;
 
       try {
         const result = await fn(txExecutor);

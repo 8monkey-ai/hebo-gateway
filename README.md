@@ -13,6 +13,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 ## 🍌 Features
 
 - 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
+- 🔄 /responses endpoint implementing the Open Responses API (stateless).
 - 💬 /conversations endpoint built on top of the Responses API.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
@@ -38,6 +39,8 @@ bun install @hebo-ai/gateway
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
+- Endpoints
+  - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/conversations](#conversations)
 - OpenAI Extensions
   - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching)
 - Advanced Usage
@@ -568,6 +571,123 @@ export const handler = awsLambdaEventHandler({
 });
 ```
 
+## 🚀 Endpoints
+
+Hebo Gateway provides several OpenAI-compatible and standard-based endpoints.
+
+### `/chat/completions`
+
+The primary endpoint for generating chat completions.
+
+Official documentation: [OpenAI API Reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
+
+It supports:
+
+- Streaming responses (Server-Sent Events).
+- Tool calling / Function calling.
+- Advanced extensions like [Reasoning](#reasoning), [Service Tier](#service-tier), and [Prompt Caching](#prompt-caching).
+- Usage tracking and metadata.
+
+> [!IMPORTANT]
+> **Compatibility & Roadmap:**
+> We are actively working to expand support for the full OpenAI spec:
+
+- **`logprobs` / `top_logprobs`**: Token-level logprobs.
+- **`logit_bias`**: Logit bias in the request body.
+- **`n` > 1**: Multi-choice completions.
+
+### `/embeddings`
+
+Generates vector representations for text inputs, compatible with OpenAI's embeddings API.
+
+Official documentation: [OpenAI API Reference](https://developers.openai.com/api/reference/resources/embeddings/methods/create)
+
+It supports:
+
+- Text and token array inputs.
+- Custom dimensions (for `v3` models).
+- Standard `float` and `base64` encoding formats.
+
+> [!IMPORTANT]
+> **Compatibility & Roadmap:**
+
+- **`encoding_format`**: `base64` results.
+
+### `/models`
+
+Lists all available models in your [Model Catalog](#models), including their capabilities and metadata.
+
+Official documentation: [OpenAI API Reference](https://developers.openai.com/api/reference/resources/models/methods/list)
+
+It supports:
+
+- Comprehensive model metadata (capabilities, context limits, knowledge cutoffs).
+- Canonical model ID resolution.
+- Provider-specific availability filtering.
+
+### `/responses`
+
+Hebo Gateway provides a `/responses` endpoint implementing the [Open Responses API](https://www.openresponses.org/reference).
+
+Official documentation: [Open Responses API Reference](https://www.openresponses.org/reference)
+
+It supports:
+
+- The same models, providers, hooks, and extensions as `/chat/completions`.
+- Responses API request/response format.
+- Tool calling and multimodal inputs.
+- Normalized reasoning and thought signatures.
+
+> [!IMPORTANT]
+> **Compatibility & Roadmap:**
+> We are working towards full Open Responses parity:
+
+- **Persistence**: Server-side response storage (`store`), background orchestration (`background`), and chaining via `previous_response_id`.
+- **`conversation`**: Directly passing conversation IDs for automatic context management.
+- **`context_management`**: Support for automatic compaction strategies.
+- **`prompt`**: Reusable prompt templates with variables.
+- **`phase`**: Support for `commentary` vs `final_answer` reasoning phases.
+- **`safety_identifier`**: Custom safety and moderation policies.
+- **`truncation`**: Context window management strategies.
+- **`text.verbosity`**: Control over response detail (low/medium/high).
+- **`logprobs` / `top_logprobs`**: Token-level logprobs.
+- **`include`**: Selective response fields (e.g., `logprobs`, `reasoning.encrypted_content`, and tool-specific outputs).
+- **`stream_options.include_obfuscation`**: Normalizing payload sizes to mitigate side-channel attacks.
+
+### `/conversations`
+
+Hebo Gateway provides a dedicated `/conversations` endpoint for managing persistent conversation state. It is designed as an extension of the [OpenAI Conversations API](https://developers.openai.com/api/reference/resources/conversations/methods/create) and supports standard CRUD operations alongside advanced listing with metadata filtering.
+
+Official documentation: [OpenAI Conversations API](https://developers.openai.com/api/reference/resources/conversations/methods/create)
+
+#### List & Filter Conversations (Hebo Extension)
+
+Since standard OpenAI APIs (like Threads) do not support global listing of conversations, Hebo Gateway provides this capability as an extension. You can list all conversations using cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
+
+```bash
+# List conversations for a specific user using metadata filtering
+curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
+```
+
+The response follows the standard OpenAI list object:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "conv_abc123",
+      "object": "conversation",
+      "created_at": 1678531200,
+      "metadata": { "user_id": "123" }
+    }
+  ],
+  "first_id": "conv_abc123",
+  "last_id": "conv_abc123",
+  "has_more": false
+}
+```
+
 ## 🧠 OpenAI Extensions
 
 ### Reasoning
@@ -629,38 +749,6 @@ Provider-specific mapping:
 - **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
 
 When available, the resolved value is echoed back on response as `service_tier`.
-
-### Conversations
-
-Hebo Gateway provides a dedicated `/conversations` endpoint for managing persistent conversation state. It is designed as an extension of the [OpenAI Conversations API](https://developers.openai.com/api/reference/typescript/resources/conversations) and supports standard CRUD operations alongside advanced listing with metadata filtering.
-
-#### List & Filter Conversations
-
-You can list conversations with standard cursor-based pagination and filter by any metadata key using the `metadata.KEY=VALUE` pattern.
-
-```bash
-# List conversations for a specific user
-curl "https://api.gateway.com/conversations?limit=10&metadata.user_id=123"
-```
-
-The response follows the standard OpenAI list object:
-
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "conv_abc123",
-      "object": "conversation",
-      "created_at": 1678531200,
-      "metadata": { "user_id": "123" }
-    }
-  ],
-  "first_id": "conv_abc123",
-  "last_id": "conv_abc123",
-  "has_more": false
-}
-```
 
 ### Prompt Caching
 

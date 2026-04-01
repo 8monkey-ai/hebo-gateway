@@ -4,23 +4,27 @@ import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
-import { chatCompletions } from "./handler";
-import { type ChatCompletions } from "./schema";
+import { responses } from "./handler";
+import {
+  type ResponseCompletedEvent,
+  type ResponseCreatedEvent,
+  type ResponseInProgressEvent,
+  type Responses,
+} from "./schema";
 
-const baseUrl = "http://localhost/chat/completions";
+const baseUrl = "http://localhost/responses";
 
-describe("Chat Completions Handler", () => {
+describe("Responses Handler", () => {
   const mockLanguageModel = new MockLanguageModelV3({
     doGenerate: (options) => {
-      const isStructuredOutput = options.responseFormat?.type === "json";
       const isToolCall = options.tools && options.tools.length > 0;
 
       if (isToolCall) {
         return Promise.resolve({
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: {
-            inputTokens: { total: 15, noCache: 15, cacheRead: 20, cacheWrite: 0 },
-            outputTokens: { total: 25, text: 0, reasoning: 10 },
+            inputTokens: { total: 15, noCache: 15, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: 25, text: 0, reasoning: 0 },
           },
           content: [
             {
@@ -28,24 +32,6 @@ describe("Chat Completions Handler", () => {
               toolCallId: "call_123",
               toolName: "get_current_weather",
               input: '{"location":"San Francisco, CA"}',
-            },
-          ],
-          providerMetadata: { provider: { key: "value" } },
-          warnings: [],
-        });
-      }
-
-      if (isStructuredOutput) {
-        return Promise.resolve({
-          finishReason: { unified: "stop", raw: "stop" },
-          usage: {
-            inputTokens: { total: 10, noCache: 10, cacheRead: 20, cacheWrite: 0 },
-            outputTokens: { total: 20, text: 20, reasoning: 10 },
-          },
-          content: [
-            {
-              type: "text",
-              text: '{"city":"San Francisco","temp_c":18}',
             },
           ],
           providerMetadata: { provider: { key: "value" } },
@@ -81,8 +67,8 @@ describe("Chat Completions Handler", () => {
               type: "finish",
               finishReason: { unified: "stop", raw: "stop" },
               usage: {
-                inputTokens: { total: 5, noCache: 5, cacheRead: 20, cacheWrite: 0 },
-                outputTokens: { total: 5, text: 5, reasoning: 10 },
+                inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 5, text: 5, reasoning: 0 },
               },
             },
           ],
@@ -90,7 +76,7 @@ describe("Chat Completions Handler", () => {
       }),
   });
 
-  const endpoint = chatCompletions({
+  const endpoint = responses({
     providers: {
       groq: new MockProviderV3({
         languageModels: {
@@ -110,7 +96,8 @@ describe("Chat Completions Handler", () => {
   test("should return 405 for non-POST requests", async () => {
     const request = new Request(baseUrl, { method: "GET" });
     const res = await endpoint.handler(request);
-    const data = await parseResponse<ChatCompletions>(res);
+    expect(res.status).toBe(405);
+    const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
         code: "method_not_allowed",
@@ -126,7 +113,8 @@ describe("Chat Completions Handler", () => {
       body: "invalid-json",
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse<ChatCompletions>(res);
+    expect(res.status).toBe(400);
+    const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
         code: "bad_request",
@@ -136,16 +124,15 @@ describe("Chat Completions Handler", () => {
     });
   });
 
-  test("should return 400 for validation errors (missing messages)", async () => {
+  test("should return 400 for validation errors (missing input)", async () => {
     const request = postJson(baseUrl, { model: "openai/gpt-oss-20b" });
     const res = await endpoint.handler(request);
-    const data = await parseResponse<ChatCompletions>(res);
+    expect(res.status).toBe(400);
+    const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
         code: "bad_request",
-        message: "✖ Invalid input: expected array, received undefined\n  → at messages",
         type: "invalid_request_error",
-        param: "",
       },
     });
   });
@@ -153,10 +140,11 @@ describe("Chat Completions Handler", () => {
   test("should return 422 for non-existent model", async () => {
     const request = postJson(baseUrl, {
       model: "non-existent",
-      messages: [{ role: "user", content: "hi" }],
+      input: "hi",
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse<ChatCompletions>(res);
+    expect(res.status).toBe(422);
+    const data = await parseResponse(res);
     expect(data).toMatchObject({
       error: {
         code: "model_not_found",
@@ -166,49 +154,66 @@ describe("Chat Completions Handler", () => {
     });
   });
 
-  test("should generate non-streaming completion successfully", async () => {
+  test("should generate non-streaming response with string input", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "hi" }],
+      input: "hi",
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse<ChatCompletions>(res);
-    expect(data).toEqual({
-      id: expect.stringMatching(/^chatcmpl-/) as unknown as string,
-      object: "chat.completion",
-      created: expect.any(Number) as unknown as number,
+    const data = await parseResponse<Responses>(res);
+    expect(data).toMatchObject({
+      id: expect.any(String) as unknown as string,
+      object: "response",
+      status: "completed",
       model: "openai/gpt-oss-20b",
-      choices: [
+      created_at: expect.any(Number) as unknown as number,
+      completed_at: expect.any(Number) as unknown as number,
+      provider_metadata: { provider: { key: "value" } },
+    } satisfies Partial<Responses>);
+    expect(data!.output).toHaveLength(1);
+    expect(data!.output[0]!.type).toBe("message");
+    expect(data!.usage).toMatchObject({
+      input_tokens: 10,
+      output_tokens: 20,
+      total_tokens: 30,
+    });
+  });
+
+  test("should generate non-streaming response with array input", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: [
         {
-          index: 0,
-          message: {
-            role: "assistant",
-            content: "Hello from AI",
-          },
-          finish_reason: "stop",
+          type: "message",
+          role: "user",
+          content: "Tell me a joke",
         },
       ],
-      usage: {
-        prompt_tokens: 10,
-        completion_tokens: 20,
-        total_tokens: 30,
-        completion_tokens_details: {
-          reasoning_tokens: 10,
-        },
-        prompt_tokens_details: {
-          cached_tokens: 20,
-          cache_write_tokens: 0,
-        },
-      },
-      provider_metadata: { provider: { key: "value" } },
-    } satisfies Partial<ChatCompletions>);
+    });
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<Responses>(res);
+    expect(data!.status).toBe("completed");
+  });
+
+  test("should generate non-streaming response with instructions", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "hi",
+      instructions: "You are a pirate.",
+    });
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<Responses>(res);
+    expect(data!.status).toBe("completed");
   });
 
   test("should accept input_audio content parts", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [
+      input: [
         {
+          type: "message",
           role: "user",
           content: [
             {
@@ -225,77 +230,40 @@ describe("Chat Completions Handler", () => {
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = (await parseResponse<ChatCompletions>(res))!;
+    const data = (await parseResponse<Responses>(res))!;
     expect(data.model).toBe("openai/gpt-oss-20b");
   });
 
-  test("should generate completion with tool calls successfully", async () => {
+  test("should generate response with tool calls", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "What is the weather in SF?" }],
+      input: "What is the weather in SF?",
       tools: [
         {
           type: "function",
-          function: {
-            name: "get_current_weather",
-            description: "Get the current weather",
-            parameters: {
-              type: "object",
-              properties: {
-                location: { type: "string" },
-              },
+          name: "get_current_weather",
+          description: "Get the current weather",
+          parameters: {
+            type: "object",
+            properties: {
+              location: { type: "string" },
             },
           },
         },
       ],
     });
     const res = await endpoint.handler(request);
-    const data = await parseResponse<ChatCompletions>(res);
-    expect(data).toEqual({
-      id: expect.stringMatching(/^chatcmpl-/) as unknown as string,
-      object: "chat.completion",
-      created: expect.any(Number) as unknown as number,
-      model: "openai/gpt-oss-20b",
-      choices: [
-        {
-          index: 0,
-          message: {
-            role: "assistant",
-            content: null,
-            tool_calls: [
-              {
-                id: "call_123",
-                type: "function",
-                function: {
-                  name: "get_current_weather",
-                  arguments: '{"location":"San Francisco, CA"}',
-                },
-              },
-            ],
-          },
-          finish_reason: "tool_calls",
-        },
-      ],
-      usage: {
-        prompt_tokens: 15,
-        completion_tokens: 25,
-        total_tokens: 40,
-        completion_tokens_details: {
-          reasoning_tokens: 10,
-        },
-        prompt_tokens_details: {
-          cached_tokens: 20,
-          cache_write_tokens: 0,
-        },
-      },
-      provider_metadata: { provider: { key: "value" } },
-    } satisfies Partial<ChatCompletions>);
+    const data = await parseResponse<Responses>(res);
+    expect(data!.status).toBe("completed");
+
+    const fnCall = data!.output.find((o) => o.type === "function_call");
+    expect(fnCall).toBeDefined();
   });
 
-  test("should generate streaming completion successfully", async () => {
+  test("should generate streaming response successfully", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "hi" }],
+      input: "hi",
       stream: true,
     });
 
@@ -309,88 +277,108 @@ describe("Chat Completions Handler", () => {
       result += decoder.decode(chunk);
     }
 
-    expect(result).toContain('data: {"id":"chatcmpl-');
-    expect(result).toContain('"content":"Hello');
-    expect(result).toContain('"content":" world');
-    expect(result).toContain('"finish_reason":"stop');
+    expect(result).toContain("event: response.created");
+    expect(result).toContain("event: response.in_progress");
+    expect(result).toContain("event: response.output_text.delta");
+    expect(result).toContain('"delta":"Hello"');
+    expect(result).toContain('"delta":" world"');
+    expect(result).toContain("event: response.completed");
     expect(result).toContain("data: [DONE]");
   });
 
-  test("should accept reasoning and reasoning_effort parameters", async () => {
+  test("should have in_progress status for initial streaming events", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "hi" }],
+      input: "Say Hello world",
+      stream: true,
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+
+    const decoder = new TextDecoder();
+    let result = "";
+    for await (const chunk of res.body!) {
+      result += decoder.decode(chunk);
+    }
+
+    // Check response.created
+    const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);
+    expect(createdMatch).toBeTruthy();
+    const createdData = (JSON.parse(createdMatch![1]!) as ResponseCreatedEvent["data"]).response;
+    expect(createdData.status).toBe("in_progress");
+
+    // Check response.in_progress
+    const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/);
+    expect(inProgressMatch).toBeTruthy();
+    const inProgressData = (JSON.parse(inProgressMatch![1]!) as ResponseInProgressEvent["data"])
+      .response;
+    expect(inProgressData.status).toBe("in_progress");
+
+    // Check response.completed
+    const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/);
+    expect(completedMatch).toBeTruthy();
+    const completedData = (JSON.parse(completedMatch![1]!) as ResponseCompletedEvent["data"])
+      .response;
+    expect(completedData.status).toBe("completed");
+  });
+
+  test("should accept reasoning parameters", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "hi",
       reasoning: {
         effort: "high",
         max_tokens: 1000,
       },
-      reasoning_effort: "medium",
     });
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = (await parseResponse<ChatCompletions>(res))!;
-    expect(data.model).toBe("openai/gpt-oss-20b");
   });
 
-  test("should accept max_completion_tokens parameter", async () => {
+  test('should accept text format "text"', async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "hi" }],
-      max_completion_tokens: 100,
-    });
-
-    const res = await endpoint.handler(request);
-    expect(res.status).toBe(200);
-    const data = (await parseResponse<ChatCompletions>(res))!;
-    expect(data.model).toBe("openai/gpt-oss-20b");
-  });
-
-  test("should generate non-streaming structured output", async () => {
-    const request = postJson(baseUrl, {
-      model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "Return weather as JSON" }],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "weather",
-          schema: {
-            type: "object",
-            properties: {
-              city: { type: "string" },
-              temp_c: { type: "number" },
-            },
-            required: ["city", "temp_c"],
-            additionalProperties: false,
-          },
-          strict: true,
+      input: "Say hi",
+      text: {
+        format: {
+          type: "text",
         },
       },
     });
 
     const res = await endpoint.handler(request);
     expect(res.status).toBe(200);
-    const data = (await parseResponse<ChatCompletions>(res))!;
-    expect(data.choices[0]!.message.content).toBe('{"city":"San Francisco","temp_c":18}');
+    const data = await parseResponse<Responses>(res);
+    expect(data!.status).toBe("completed");
   });
 
-  test('should accept response_format type "text"', async () => {
+  test("should pass metadata through to response", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
-      messages: [{ role: "user", content: "Say hi" }],
-      response_format: {
-        type: "text",
-      },
+      input: "hi",
+      metadata: { user_id: "u-123" },
     });
 
     const res = await endpoint.handler(request);
-    expect(res.status).toBe(200);
-    const data = (await parseResponse<ChatCompletions>(res))!;
-    expect(data.choices[0]!.message.content).toBe("Hello from AI");
+    const data = await parseResponse<Responses>(res);
+    expect(data!.metadata).toEqual({ user_id: "u-123" });
+  });
+
+  test("should reject empty metadata keys", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "hi",
+      metadata: { "": "value" },
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(400);
   });
 
   test("should return resolved model ID if routed to a different model", async () => {
-    const endpointWithHook = chatCompletions({
+    const endpointWithHook = responses({
       providers: {
         groq: new MockProviderV3({
           languageModels: {
@@ -412,12 +400,12 @@ describe("Chat Completions Handler", () => {
 
     const request = postJson(baseUrl, {
       model: "alias-model",
-      messages: [{ role: "user", content: "hi" }],
+      input: "hi",
     });
 
     const res = await endpointWithHook.handler(request);
     expect(res.status).toBe(200);
-    const data = (await parseResponse<ChatCompletions>(res))!;
+    const data = (await parseResponse<Responses>(res))!;
     expect(data.model).toBe("openai/gpt-oss-20b");
   });
 });

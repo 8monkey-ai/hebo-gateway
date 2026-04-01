@@ -101,8 +101,12 @@ function createPgExecutor(
           const res = await client.query(getQuery(sql, p?.length > 0 ? p : undefined));
           return { changes: Number(res.rowCount ?? 0) };
         },
-        transaction: (f: (executor: QueryExecutor) => Promise<unknown>) => f(txExecutor),
-      } as QueryExecutor;
+        transaction<ResultT>(
+          txCallback: (executor: QueryExecutor) => Promise<ResultT>,
+        ): Promise<ResultT> {
+          return txCallback(txExecutor);
+        },
+      } satisfies QueryExecutor;
 
       try {
         const result = await fn(txExecutor);
@@ -189,8 +193,9 @@ function createBunPostgresExecutor(
 
       let changes = result.affectedRows ?? result.count ?? 0;
 
-      // When Bun.SQL is used with GreptimeDB, mutation responses over the Postgres wire protocol
-      // don't populate `count` or `affectedRows`, but they do provide a command string like "OK 1"
+      // When Bun.SQL is used with GreptimeDB, mutation responses over the Postgres wire
+      // protocol don't populate `count` or `affectedRows`, but they do provide a command
+      // string like "OK 1"
       if (changes === 0 && result.command?.startsWith("OK ")) {
         const parsed = parseInt(result.command.slice(3), 10);
         if (!isNaN(parsed)) changes = parsed;
