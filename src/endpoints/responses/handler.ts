@@ -40,7 +40,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
   const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
-    ctx.operation = "chat";
+    ctx.operation = "responses";
     addSpanEvent("hebo.handler.started");
 
     if (!ctx.request || ctx.request.method !== "POST") {
@@ -81,7 +81,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: ctx.operation,
+        operation: "responses",
       });
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);

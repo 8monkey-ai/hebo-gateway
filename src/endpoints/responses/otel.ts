@@ -107,11 +107,27 @@ const toItemParts = (item: ResponsesInputItem): TelemetryPart[] => {
           response:
             typeof item.output === "string"
               ? item.output
-              : item.output.map((p) => (p.type === "input_text" ? p.text : "")).join(""),
+              : // FUTURE: Use toInputParts() to preserve multimodal content once telemetry
+                // backends (like Langfuse) have a standard representation for multimodal
+                // tool responses. Currently collapsed to text-only for compatibility.
+                item.output.map((p) => (p.type === "input_text" ? p.text : "")).join(""),
         },
       ];
-    case "reasoning":
-      return item.summary.map((s) => ({ type: "reasoning", content: s.text }));
+    case "reasoning": {
+      const parts: TelemetryPart[] = [];
+      for (const s of item.summary) {
+        parts.push({ type: "reasoning", content: s.text });
+      }
+      if (item.content) {
+        for (const c of item.content) {
+          parts.push({ type: "reasoning", content: c.text });
+        }
+      }
+      if (item.encrypted_content) {
+        parts.push({ type: "reasoning", content: "[ENCRYPTED_REASONING]" });
+      }
+      return parts;
+    }
   }
 };
 
@@ -246,6 +262,10 @@ export const getResponsesResponseAttributes = (
         } else if (item.type === "function_call") {
           base.name = item.name;
           base.arguments = item.arguments;
+        } else if (item.type === "reasoning") {
+          // Casting needed because ResponsesOutputItem and ResponsesInputItem share
+          // the ResponsesReasoningItem definition.
+          base.parts = toItemParts(item as unknown as ResponsesInputItem);
         }
 
         return JSON.stringify(base);

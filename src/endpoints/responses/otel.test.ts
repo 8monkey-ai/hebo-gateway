@@ -255,4 +255,39 @@ describe("Responses OTEL", () => {
       }),
     ]);
   });
+
+  test("should map reasoning items in output in full mode", () => {
+    const response: Responses = {
+      id: "018e69ba-a82d-7fb4-9c5d-010b9a89c836",
+      object: "response",
+      status: "completed",
+      model: "openai/gpt-5",
+      output: [
+        {
+          type: "reasoning",
+          status: "completed",
+          summary: [{ type: "summary_text", text: "Thinking about cats." }],
+          content: [{ type: "reasoning_text", text: "Cats are feline." }],
+          encrypted_content: "encrypted-blob",
+        },
+      ],
+      usage: null,
+      created_at: 1700000000,
+      completed_at: 1700000001,
+    };
+
+    const attrs = getResponsesResponseAttributes(response, "full");
+
+    expect(attrs["gen_ai.output.messages"]).toEqual([
+      JSON.stringify({
+        type: "reasoning",
+        status: "completed",
+        parts: [
+          { type: "reasoning", content: "Thinking about cats." },
+          { type: "reasoning", content: "Cats are feline." },
+          { type: "reasoning", content: "[ENCRYPTED_REASONING]" },
+        ],
+      }),
+    ]);
+  });
 });

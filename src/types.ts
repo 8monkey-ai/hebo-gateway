@@ -14,6 +14,8 @@ import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
 
+export type GatewayOperation = "chat" | "embeddings" | "responses" | "models" | "conversations";
+
 /**
  * Per-request context shared across handlers and hooks.
  */
@@ -53,7 +55,7 @@ export type GatewayContext = {
   /**
    * Operation type.
    */
-  operation?: "chat" | "embeddings" | "models" | "conversations";
+  operation?: GatewayOperation;
   /**
    * Resolved provider instance.
    */

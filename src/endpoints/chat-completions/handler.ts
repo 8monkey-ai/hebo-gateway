@@ -90,7 +90,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: ctx.operation,
+        operation: "chat",
       });
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
