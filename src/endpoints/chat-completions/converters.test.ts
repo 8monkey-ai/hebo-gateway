@@ -5,6 +5,7 @@ import type {
   TextPart,
   FilePart,
   LanguageModelUsage,
+  AssistantModelMessage,
 } from "ai";
 
 import { describe, expect, test } from "bun:test";
@@ -655,6 +656,33 @@ describe("Chat Completions Converters", () => {
         (result.messages[1]!.content[0] as TextPart).providerOptions!["unknown"]!["cache_control"],
       ).toEqual({
         type: "ephemeral",
+      });
+    });
+
+    test("should preserve extra_content and cache_control on assistant message", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "assistant",
+            content: "Response",
+            cache_control: { type: "ephemeral", ttl: "1h" },
+            extra_content: {
+              google: {
+                thought: "thinking...",
+              },
+            },
+          },
+        ],
+      });
+
+      const msg = result.messages[0] as AssistantModelMessage;
+      expect(msg.providerOptions).toEqual({
+        google: {
+          thought: "thinking...",
+        },
+        unknown: {
+          cache_control: { type: "ephemeral", ttl: "1h" },
+        },
       });
     });
 

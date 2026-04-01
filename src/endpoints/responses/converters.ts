@@ -198,8 +198,7 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
   if (item.extra_content || item.encrypted_content) {
     providerOptions = item.extra_content ?? { unknown: {} };
     if (item.encrypted_content) {
-      ((providerOptions ??= { unknown: {} })["unknown"] ??= {})["redactedData"] =
-        item.encrypted_content;
+      (providerOptions ??= {})['unknown'] = { redactedData: item.encrypted_content };
     }
   }
 
@@ -245,8 +244,7 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
       }
 
       if (item.cache_control) {
-        ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-          item.cache_control;
+        (out.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
       }
       return out;
     }
@@ -268,8 +266,7 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
   }
 
   if (item.cache_control) {
-    ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-      item.cache_control;
+    (out.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
   }
 
   return out;
@@ -378,8 +375,7 @@ function fromAssistantMessageItem(
   }
 
   if (item.cache_control) {
-    ((out.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-      item.cache_control;
+    (out.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
   }
 
   return out;
@@ -398,8 +394,7 @@ function fromFunctionCallItem(item: ResponsesFunctionCall): AssistantModelMessag
   }
 
   if (item.cache_control) {
-    ((toolCall.providerOptions ??= { unknown: {} })["unknown"] ??= {})["cache_control"] =
-      item.cache_control;
+    (toolCall.providerOptions ??= {})['unknown'] = { cache_control: item.cache_control };
   }
 
   return { role: "assistant", content: [toolCall] };
@@ -776,7 +771,47 @@ export class ResponsesTransformStream extends TransformStream<
       object: "response",
       status,
       model,
-      output: outputItems.slice(),
+      output: outputItems.map((item) => {
+        if (item.type === "message") {
+          return {
+            type: "message",
+            id: item.id,
+            role: item.role,
+            status: item.status,
+            content: item.content.map((p) => ({
+              type: "output_text",
+              text: p.text,
+              annotations: p.annotations ? p.annotations.slice() : [],
+            })),
+            extra_content: item.extra_content,
+          };
+        }
+        if (item.type === "reasoning") {
+          return {
+            type: "reasoning",
+            id: item.id,
+            status: item.status,
+            summary: item.summary.map((s) => ({
+              type: "summary_text",
+              text: s.text,
+            })),
+            extra_content: item.extra_content,
+            encrypted_content: item.encrypted_content,
+          };
+        }
+        if (item.type === "function_call") {
+          return {
+            type: "function_call",
+            id: item.id,
+            call_id: item.call_id,
+            name: item.name,
+            arguments: item.arguments,
+            status: item.status,
+            extra_content: item.extra_content,
+          };
+        }
+        return item;
+      }),
       usage,
       created_at: creationTime,
       completed_at: completedAt,
@@ -812,7 +847,14 @@ export class ResponsesTransformStream extends TransformStream<
         data: {
           type: "response.output_item.added",
           output_index: messageOutputIndex,
-          item: messageItem,
+          item: {
+            type: "message",
+            id: messageItem.id,
+            role: "assistant",
+            status: "in_progress",
+            content: [],
+            extra_content: messageItem.extra_content,
+          },
         },
       });
     };
@@ -939,7 +981,15 @@ export class ResponsesTransformStream extends TransformStream<
               data: {
                 type: "response.output_item.added",
                 output_index: fnOutputIndex,
-                item,
+                item: {
+                  type: "function_call",
+                  id: item.id,
+                  call_id: item.call_id,
+                  name: item.name,
+                  arguments: "",
+                  status: "in_progress",
+                  extra_content: item.extra_content,
+                },
               },
             });
             break;
@@ -1009,7 +1059,14 @@ export class ResponsesTransformStream extends TransformStream<
               data: {
                 type: "response.output_item.added",
                 output_index: reasoningOutputIndex,
-                item: reasoningItem,
+                item: {
+                  type: "reasoning",
+                  id: reasoningItem.id,
+                  status: "in_progress",
+                  summary: [],
+                  extra_content: reasoningItem.extra_content,
+                  encrypted_content: reasoningItem.encrypted_content,
+                },
               },
             });
             break;
@@ -1030,7 +1087,10 @@ export class ResponsesTransformStream extends TransformStream<
                   item_id: reasoningItem!.id!,
                   output_index: reasoningOutputIndex,
                   summary_index: summaryIndex,
-                  part: summaryPart,
+                  part: {
+                    type: "summary_text",
+                    text: "",
+                  },
                 },
               });
             }
@@ -1076,7 +1136,11 @@ export class ResponsesTransformStream extends TransformStream<
                   item_id: messageItem!.id,
                   output_index: messageOutputIndex,
                   content_index: contentIndex,
-                  part: textPart,
+                  part: {
+                    type: "output_text",
+                    text: "",
+                    annotations: [],
+                  },
                 },
               });
             }
@@ -1132,7 +1196,15 @@ export class ResponsesTransformStream extends TransformStream<
                 data: {
                   type: "response.output_item.added",
                   output_index: fnOutputIndex,
-                  item: fnItem,
+                  item: {
+                    type: "function_call",
+                    id: fnItem.id,
+                    call_id: fnItem.call_id,
+                    name: fnItem.name,
+                    arguments: fnItem.arguments,
+                    status: "completed",
+                    extra_content: fnItem.extra_content,
+                  },
                 },
               });
             }
@@ -1170,7 +1242,11 @@ export class ResponsesTransformStream extends TransformStream<
                   item_id: messageItem!.id,
                   output_index: messageOutputIndex,
                   content_index: contentIndex,
-                  part: textPart,
+                  part: {
+                    type: "output_text",
+                    text: "",
+                    annotations: [],
+                  },
                 },
               });
             }

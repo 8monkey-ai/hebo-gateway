@@ -116,8 +116,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
-        onError: (error) => {
-          logger.debug({ requestId: ctx.requestId, error }, "[responses] Stream error");
+        onError: () => {
         },
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");

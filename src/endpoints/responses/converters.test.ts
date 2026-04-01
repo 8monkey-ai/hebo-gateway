@@ -115,6 +115,26 @@ describe("Responses Converters", () => {
       ]);
     });
 
+    test("should preserve extra_content and cache_control on message items", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "message",
+          role: "assistant",
+          content: [{ type: "output_text", text: "Hello!" }],
+          cache_control: { type: "ephemeral" },
+          extra_content: { google: { thought: "thinking..." } },
+        },
+      ] satisfies ResponsesInputItem[]);
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: [{ type: "text", text: "Hello!" }],
+        providerOptions: {
+          google: { thought: "thinking..." },
+          unknown: { cache_control: { type: "ephemeral" } },
+        },
+      });
+    });
+
     test("should convert message items to model messages", () => {
       const messages = convertToModelMessages([
         {
