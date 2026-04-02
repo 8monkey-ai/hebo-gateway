@@ -136,7 +136,9 @@ export const winterCgHandler = (
             if (onError) {
               ctx.response = onError;
             }
-          } catch {}
+          } catch {
+            logger.debug("[lifecycle] onError hook threw");
+          }
         }
         ctx.response ??= toOpenAIErrorResponse(
           ctx.request.signal.aborted
