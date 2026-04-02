@@ -91,6 +91,7 @@ export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
   Required<Pick<HookContext, K>>;
 export type OnRequestHookContext = RequiredHookContext<"request">;
+export type OnErrorHookContext = HookContext & { error: unknown };
 export type BeforeHookContext = RequiredHookContext<"request" | "operation" | "body">;
 export type ResolveModelHookContext = RequiredHookContext<
   "request" | "operation" | "body" | "modelId"
@@ -119,6 +120,11 @@ export type GatewayHooks = {
    * @returns Optional Response to short-circuit the request.
    */
   onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
+  /**
+   * Runs when the lifecycle catches an error.
+   * @returns Optional Response to replace the default error response.
+   */
+  onError?: (ctx: OnErrorHookContext) => void | Response | Promise<void | Response>;
   /**
    * Runs after request JSON is parsed and validated for chat completions / embeddings / responses.
    * @returns Replacement parsed body, or undefined to keep original.

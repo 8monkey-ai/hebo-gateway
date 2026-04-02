@@ -2,6 +2,7 @@ import type {
   GatewayConfig,
   GatewayConfigParsed,
   GatewayContext,
+  OnErrorHookContext,
   OnRequestHookContext,
   OnResponseHookContext,
 } from "./types";
@@ -95,8 +96,8 @@ export const winterCgHandler = (
       span.finish();
     };
 
-    try {
-      await span.runWithContext(async () => {
+    await span.runWithContext(async () => {
+      try {
         if (parsedConfig.hooks?.onRequest) {
           const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
           addSpanEvent("hebo.hooks.on_request.completed");
@@ -126,16 +127,28 @@ export const winterCgHandler = (
         if (!(ctx.result instanceof ReadableStream)) {
           finalize(ctx.response.status);
         }
-      });
-    } catch (error) {
-      ctx.response = toOpenAIErrorResponse(
-        ctx.request.signal.aborted
-          ? new GatewayError(error ?? ctx.request.signal.reason, 499)
-          : error,
-        prepareResponseInit(ctx.requestId),
-      );
-      finalize(ctx.response.status, error);
-    }
+      } catch (error) {
+        if (parsedConfig.hooks?.onError) {
+          try {
+            const onError = await parsedConfig.hooks.onError({
+              ...ctx,
+              error,
+            } as OnErrorHookContext);
+            addSpanEvent("hebo.hooks.on_error.completed");
+            if (onError) {
+              ctx.response = onError;
+            }
+          } catch {}
+        }
+        ctx.response ??= toOpenAIErrorResponse(
+          ctx.request.signal.aborted
+            ? new GatewayError(error ?? ctx.request.signal.reason, 499)
+            : error,
+          prepareResponseInit(ctx.requestId),
+        );
+        finalize(ctx.response.status, error);
+      }
+    });
 
     return ctx.response ?? new Response("Internal Server Error", { status: 500 });
   };

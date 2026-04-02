@@ -55,4 +55,49 @@ describe("winterCgHandler", () => {
     expect(onResponseTraceId).toBeDefined();
     expect(onResponseTraceId).toBe(onRequestTraceId);
   });
+
+  test("runs onError with the active span context without running onResponse", async () => {
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+
+    const tracer = new BasicTracerProvider().getTracer("test");
+    let onErrorTraceId: string | undefined;
+    let onResponseCalled = false;
+
+    const endpoint = models({
+      providers: {
+        openai: new MockProviderV3(),
+      },
+      models: {
+        "openai/gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text"], output: ["text"] },
+          providers: ["openai"],
+        },
+      },
+      telemetry: {
+        enabled: true,
+        tracer,
+      },
+      hooks: {
+        onError: async (ctx) => {
+          await Promise.resolve();
+          onErrorTraceId = trace.getActiveSpan()?.spanContext().traceId;
+          expect((ctx.error as Error).message).toBe("Method Not Allowed");
+          return new Response("teapot", { status: 418 });
+        },
+        onResponse: () => {
+          onResponseCalled = true;
+        },
+      },
+    });
+
+    const response = await endpoint.handler(
+      new Request("http://localhost/models", { method: "POST" }),
+    );
+
+    expect(response.status).toBe(418);
+    expect(await response.text()).toBe("teapot");
+    expect(onErrorTraceId).toBeDefined();
+    expect(onResponseCalled).toBe(false);
+  });
 });
