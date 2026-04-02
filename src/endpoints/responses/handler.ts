@@ -81,7 +81,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: "responses",
+        operation: ctx.operation,
       });
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);

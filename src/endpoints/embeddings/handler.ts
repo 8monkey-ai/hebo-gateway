@@ -78,7 +78,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: "embeddings",
+        operation: ctx.operation,
       });
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
