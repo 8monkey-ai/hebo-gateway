@@ -79,6 +79,10 @@ export type GatewayContext = {
    * Response object returned by the handler.
    */
   response?: Response;
+  /**
+   * Error thrown during execution.
+   */
+  error?: unknown;
 };
 
 /**
@@ -91,7 +95,6 @@ export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
   Required<Pick<HookContext, K>>;
 export type OnRequestHookContext = RequiredHookContext<"request">;
-export type OnErrorHookContext = HookContext & { error: unknown };
 export type BeforeHookContext = RequiredHookContext<"request" | "operation" | "body">;
 export type ResolveModelHookContext = RequiredHookContext<
   "request" | "operation" | "body" | "modelId"
@@ -110,6 +113,7 @@ export type AfterHookContext = RequiredHookContext<
   | "result"
 >;
 export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
+export type OnErrorHookContext = RequiredHookContext<"error">;
 
 /**
  * Hooks to plugin to the gateway lifecycle.

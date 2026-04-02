@@ -130,10 +130,8 @@ export const winterCgHandler = (
       } catch (error) {
         if (parsedConfig.hooks?.onError) {
           try {
-            const onError = await parsedConfig.hooks.onError({
-              ...ctx,
-              error,
-            } as OnErrorHookContext);
+            ctx.error = error;
+            const onError = await parsedConfig.hooks.onError(ctx as OnErrorHookContext);
             addSpanEvent("hebo.hooks.on_error.completed");
             if (onError) {
               ctx.response = onError;
