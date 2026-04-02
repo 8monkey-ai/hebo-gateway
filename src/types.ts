@@ -79,6 +79,10 @@ export type GatewayContext = {
    * Response object returned by the handler.
    */
   response?: Response;
+  /**
+   * Error thrown during execution.
+   */
+  error?: unknown;
 };
 
 /**
@@ -109,6 +113,7 @@ export type AfterHookContext = RequiredHookContext<
   | "result"
 >;
 export type OnResponseHookContext = RequiredHookContext<"request" | "response">;
+export type OnErrorHookContext = RequiredHookContext<"error">;
 
 /**
  * Hooks to plugin to the gateway lifecycle.
@@ -173,6 +178,11 @@ export type GatewayHooks = {
    * @returns Replacement Response, or undefined to keep original.
    */
   onResponse?: (ctx: OnResponseHookContext) => void | Response | Promise<void | Response>;
+  /**
+   * Runs when the lifecycle catches an error.
+   * @returns Optional Response to replace the default error response.
+   */
+  onError?: (ctx: OnErrorHookContext) => void | Response | Promise<void | Response>;
 };
 
 export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";

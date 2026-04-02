@@ -45,6 +45,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
     ctx.operation = "chat";
+    setSpanAttributes({ "gen_ai.operation.name": ctx.operation });
     addSpanEvent("hebo.handler.started");
 
     // Guard: enforce HTTP method early.
@@ -90,7 +91,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: "chat",
+        operation: ctx.operation,
       });
 
     const languageModel = ctx.provider.languageModel(ctx.resolvedModelId);
