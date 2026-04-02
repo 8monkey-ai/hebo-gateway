@@ -369,6 +369,17 @@ const gw = gateway({
       // - Replace or redact response payload
       return undefined;
     },
+    /**
+     * Runs when the lifecycle catches an error.
+     * @param ctx.error The thrown error.
+     * @returns Replacement error response, or undefined to use the default OpenAI-compatible error response.
+     */
+    onError: async (ctx: { error: unknown }): Promise<Response | void> => {
+      // Example Use Cases:
+      // - Map internal errors to custom API responses
+      // - Add app-specific logging or alerting
+      return undefined;
+    },
   },
 });
 ```

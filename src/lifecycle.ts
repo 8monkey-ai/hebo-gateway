@@ -2,6 +2,7 @@ import type {
   GatewayConfig,
   GatewayConfigParsed,
   GatewayContext,
+  OnErrorHookContext,
   OnRequestHookContext,
   OnResponseHookContext,
 } from "./types";
@@ -95,45 +96,59 @@ export const winterCgHandler = (
       span.finish();
     };
 
-    try {
-      if (parsedConfig.hooks?.onRequest) {
-        const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
-        addSpanEvent("hebo.hooks.on_request.completed");
+    await span.runWithContext(async () => {
+      try {
+        if (parsedConfig.hooks?.onRequest) {
+          const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
+          addSpanEvent("hebo.hooks.on_request.completed");
 
-        if (onRequest instanceof Response) {
-          ctx.response = onRequest;
+          if (onRequest instanceof Response) {
+            ctx.response = onRequest;
+          }
         }
-      }
 
-      if (!ctx.response) {
-        ctx.result = (await span.runWithContext(() => run(ctx, parsedConfig))) as typeof ctx.result;
+        if (!ctx.response) {
+          ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
-          onDone: finalize,
-        });
-      }
-
-      if (parsedConfig.hooks?.onResponse) {
-        const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
-        addSpanEvent("hebo.hooks.on_response.completed");
-        if (onResponse) {
-          ctx.response = onResponse;
+          ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
+            onDone: finalize,
+          });
         }
-      }
 
-      // FUTURE: this can leak if onResponse removed wrapper from response.body
-      if (!(ctx.result instanceof ReadableStream)) {
-        finalize(ctx.response.status);
+        if (parsedConfig.hooks?.onResponse) {
+          const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
+          addSpanEvent("hebo.hooks.on_response.completed");
+          if (onResponse) {
+            ctx.response = onResponse;
+          }
+        }
+
+        // FUTURE: this can leak if onResponse removed wrapper from response.body
+        if (!(ctx.result instanceof ReadableStream)) {
+          finalize(ctx.response.status);
+        }
+      } catch (error) {
+        if (parsedConfig.hooks?.onError) {
+          try {
+            ctx.error = error;
+            const onError = await parsedConfig.hooks.onError(ctx as OnErrorHookContext);
+            addSpanEvent("hebo.hooks.on_error.completed");
+            if (onError) {
+              ctx.response = onError;
+            }
+          } catch {
+            logger.debug("[lifecycle] onError hook threw");
+          }
+        }
+        ctx.response ??= toOpenAIErrorResponse(
+          ctx.request.signal.aborted
+            ? new GatewayError(error ?? ctx.request.signal.reason, 499)
+            : error,
+          prepareResponseInit(ctx.requestId),
+        );
+        finalize(ctx.response.status, error);
       }
-    } catch (error) {
-      ctx.response = toOpenAIErrorResponse(
-        ctx.request.signal.aborted
-          ? new GatewayError(error ?? ctx.request.signal.reason, 499)
-          : error,
-        prepareResponseInit(ctx.requestId),
-      );
-      finalize(ctx.response.status, error);
-    }
+    });
 
     return ctx.response ?? new Response("Internal Server Error", { status: 500 });
   };

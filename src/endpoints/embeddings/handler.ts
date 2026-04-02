@@ -34,6 +34,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
   const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     const start = performance.now();
     ctx.operation = "embeddings";
+    setSpanAttributes({ "gen_ai.operation.name": ctx.operation });
     addSpanEvent("hebo.handler.started");
 
     // Guard: enforce HTTP method early.
@@ -78,7 +79,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
         providers: ctx.providers,
         models: ctx.models,
         modelId: ctx.resolvedModelId,
-        operation: "embeddings",
+        operation: ctx.operation,
       });
 
     const embeddingModel = ctx.provider.embeddingModel(ctx.resolvedModelId);
