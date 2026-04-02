@@ -125,11 +125,6 @@ export type GatewayHooks = {
    */
   onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
   /**
-   * Runs when the lifecycle catches an error.
-   * @returns Optional Response to replace the default error response.
-   */
-  onError?: (ctx: OnErrorHookContext) => void | Response | Promise<void | Response>;
-  /**
    * Runs after request JSON is parsed and validated for chat completions / embeddings / responses.
    * @returns Replacement parsed body, or undefined to keep original.
    */
@@ -183,6 +178,11 @@ export type GatewayHooks = {
    * @returns Replacement Response, or undefined to keep original.
    */
   onResponse?: (ctx: OnResponseHookContext) => void | Response | Promise<void | Response>;
+  /**
+   * Runs when the lifecycle catches an error.
+   * @returns Optional Response to replace the default error response.
+   */
+  onError?: (ctx: OnErrorHookContext) => void | Response | Promise<void | Response>;
 };
 
 export type TelemetrySignalLevel = "off" | "required" | "recommended" | "full";
