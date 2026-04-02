@@ -96,35 +96,37 @@ export const winterCgHandler = (
     };
 
     try {
-      if (parsedConfig.hooks?.onRequest) {
-        const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
-        addSpanEvent("hebo.hooks.on_request.completed");
+      await span.runWithContext(async () => {
+        if (parsedConfig.hooks?.onRequest) {
+          const onRequest = await parsedConfig.hooks.onRequest(ctx as OnRequestHookContext);
+          addSpanEvent("hebo.hooks.on_request.completed");
 
-        if (onRequest instanceof Response) {
-          ctx.response = onRequest;
+          if (onRequest instanceof Response) {
+            ctx.response = onRequest;
+          }
         }
-      }
 
-      if (!ctx.response) {
-        ctx.result = (await span.runWithContext(() => run(ctx, parsedConfig))) as typeof ctx.result;
+        if (!ctx.response) {
+          ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-        ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
-          onDone: finalize,
-        });
-      }
-
-      if (parsedConfig.hooks?.onResponse) {
-        const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
-        addSpanEvent("hebo.hooks.on_response.completed");
-        if (onResponse) {
-          ctx.response = onResponse;
+          ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
+            onDone: finalize,
+          });
         }
-      }
 
-      // FUTURE: this can leak if onResponse removed wrapper from response.body
-      if (!(ctx.result instanceof ReadableStream)) {
-        finalize(ctx.response.status);
-      }
+        if (parsedConfig.hooks?.onResponse) {
+          const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
+          addSpanEvent("hebo.hooks.on_response.completed");
+          if (onResponse) {
+            ctx.response = onResponse;
+          }
+        }
+
+        // FUTURE: this can leak if onResponse removed wrapper from response.body
+        if (!(ctx.result instanceof ReadableStream)) {
+          finalize(ctx.response.status);
+        }
+      });
     } catch (error) {
       ctx.response = toOpenAIErrorResponse(
         ctx.request.signal.aborted
