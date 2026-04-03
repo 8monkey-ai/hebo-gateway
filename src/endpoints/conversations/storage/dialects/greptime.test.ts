@@ -49,6 +49,35 @@ describe("Greptime Dialect (Mocked)", () => {
     // Verify Greptime specific: TIME INDEX and PARTITION clause
     expect(createConversations!.sql).toContain('TIME INDEX ("created_at")');
     expect(createConversations!.sql).toContain('PARTITION ON COLUMNS ("id")');
+    // Verify 16 partitions are defined
+    const expectedBoundaries = [
+      "\"id\" < '1'",
+      "\"id\" >= 'f'",
+      "\"id\" >= '1' AND \"id\" < '2'",
+      "\"id\" >= '2' AND \"id\" < '3'",
+      "\"id\" >= '3' AND \"id\" < '4'",
+      "\"id\" >= '4' AND \"id\" < '5'",
+      "\"id\" >= '5' AND \"id\" < '6'",
+      "\"id\" >= '6' AND \"id\" < '7'",
+      "\"id\" >= '7' AND \"id\" < '8'",
+      "\"id\" >= '8' AND \"id\" < '9'",
+      "\"id\" >= '9' AND \"id\" < 'a'",
+      "\"id\" >= 'a' AND \"id\" < 'b'",
+      "\"id\" >= 'b' AND \"id\" < 'c'",
+      "\"id\" >= 'c' AND \"id\" < 'd'",
+      "\"id\" >= 'd' AND \"id\" < 'e'",
+      "\"id\" >= 'e' AND \"id\" < 'f'",
+    ];
+
+    for (const boundary of expectedBoundaries) {
+      expect(createConversations!.sql).toContain(boundary);
+    }
+
+    // Also verify the total count of commas in the partition clause to ensure no extra/missing ones
+    const partitionMatch = createConversations!.sql.match(/PARTITION ON COLUMNS \("id"\) \((.*)\)/);
+    expect(partitionMatch).toBeDefined();
+    const partitions = partitionMatch![1]!.split(",");
+    expect(partitions.length).toBe(16);
 
     const createItems = queries.find((q) =>
       q.sql.includes('CREATE TABLE IF NOT EXISTS "conversation_items"'),

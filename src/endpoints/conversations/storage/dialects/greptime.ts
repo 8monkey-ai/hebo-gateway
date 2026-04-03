@@ -44,10 +44,22 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
       const col = cols[0];
       return (
         `PARTITION ON COLUMNS (${col}) (` +
-        `${col} < '4', ` +
-        `${col} >= '4' AND ${col} < '8', ` +
-        `${col} >= '8' AND ${col} < 'c', ` +
-        `${col} >= 'c')`
+        `${col} < '1', ` +
+        `${col} >= 'f', ` +
+        `${col} >= '1' AND ${col} < '2', ` +
+        `${col} >= '2' AND ${col} < '3', ` +
+        `${col} >= '3' AND ${col} < '4', ` +
+        `${col} >= '4' AND ${col} < '5', ` +
+        `${col} >= '5' AND ${col} < '6', ` +
+        `${col} >= '6' AND ${col} < '7', ` +
+        `${col} >= '7' AND ${col} < '8', ` +
+        `${col} >= '8' AND ${col} < '9', ` +
+        `${col} >= '9' AND ${col} < 'a', ` +
+        `${col} >= 'a' AND ${col} < 'b', ` +
+        `${col} >= 'b' AND ${col} < 'c', ` +
+        `${col} >= 'c' AND ${col} < 'd', ` +
+        `${col} >= 'd' AND ${col} < 'e', ` +
+        `${col} >= 'e' AND ${col} < 'f')`
       );
     },
     types: GrepTimeBase.types,

@@ -10,7 +10,12 @@ const LLAMA_3_BASE = {
   },
   capabilities: ["attachments", "tool_call", "temperature"] as const,
   context: 128000,
-  providers: ["groq", "bedrock", "vertex", "azure"] as const satisfies readonly CanonicalProviderId[],
+  providers: [
+    "groq",
+    "bedrock",
+    "vertex",
+    "azure",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const llama31_8b = presetFor<CanonicalModelId, CatalogModel>()(
@@ -100,7 +105,12 @@ const LLAMA_4_BASE = {
   },
   capabilities: ["attachments", "tool_call", "temperature"] as const,
   context: 1000000,
-  providers: ["groq", "bedrock", "vertex", "azure"] as const satisfies readonly CanonicalProviderId[],
+  providers: [
+    "groq",
+    "bedrock",
+    "vertex",
+    "azure",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const llama4Scout = presetFor<CanonicalModelId, CatalogModel>()(
