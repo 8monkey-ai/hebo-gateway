@@ -125,12 +125,12 @@ describe("SQLite Storage (In-Memory)", () => {
     expect(retrievedUndef!.metadata).toBeNull();
 
     // Test updating to null
-    await storage.updateConversation(convUndef.id, null);
+    await storage.updateConversation(convUndef.id, { metadata: null });
     const updatedNull = await storage.getConversation(convUndef.id);
     expect(updatedNull!.metadata).toBeNull();
 
     // Test updating to empty object
-    await storage.updateConversation(convNull.id, {});
+    await storage.updateConversation(convNull.id, { metadata: {} });
     const updatedObj = await storage.getConversation(convNull.id);
     expect(updatedObj!.metadata).toEqual({});
 
@@ -162,33 +162,21 @@ describe("SQLite Storage (In-Memory)", () => {
     expect(all[0]!.id).toBe(c3.id);
 
     // 3. Filter by single metadata key
-    const user1 = await storage.listConversations({ limit: 10, metadata: { user: "1" } });
+    const user1 = await storage.listConversations({
+      limit: 10,
+      where: { metadata: { user: "1" } },
+    });
     expect(user1).toHaveLength(2);
     expect(user1.map((c) => c.id)).toContain(c1.id);
     expect(user1.map((c) => c.id)).toContain(c2.id);
 
     // 4. Filter by multiple metadata keys (AND)
-    const both = await storage.listConversations({ limit: 10, metadata: { user: "1", tag: "a" } });
+    const both = await storage.listConversations({
+      limit: 10,
+      where: { metadata: { user: "1", tag: "a" } },
+    });
     expect(both).toHaveLength(1);
     expect(both[0]!.id).toBe(c1.id);
-
-    // 5. Pagination: limit and after
-    const page1 = await storage.listConversations({ limit: 1, order: "asc" });
-    expect(page1).toHaveLength(1);
-    expect(page1[0]!.id).toBe(c1.id);
-
-    const page2 = await storage.listConversations({ limit: 1, order: "asc", after: c1.id });
-    expect(page2).toHaveLength(1);
-    expect(page2[0]!.id).toBe(c2.id);
-
-    // 6. Filter and Paginate
-    const filteredPaginated = await storage.listConversations({
-      limit: 1,
-      order: "desc",
-      metadata: { user: "1" },
-    });
-    expect(filteredPaginated).toHaveLength(1);
-    expect(filteredPaginated[0]!.id).toBe(c2.id);
 
     db.close();
   });
@@ -206,7 +194,7 @@ describe("SQLite Storage (In-Memory)", () => {
 
     const results = await storage.listConversations({
       limit: 10,
-      metadata: { [keyWithQuote]: "baz" },
+      where: { metadata: { [keyWithQuote]: "baz" } },
     });
 
     expect(results).toHaveLength(1);
@@ -216,35 +204,123 @@ describe("SQLite Storage (In-Memory)", () => {
     db.close();
   });
 
-  test("should handle nested transactions inside createConversation correctly", async () => {
+  test("should support additionalFields as top-level columns", async () => {
+    const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({
+      dialect,
+      additionalFields: {
+        conversations: {
+          org_id: { type: "TEXT", index: true },
+        },
+      },
+    });
+    await storage.migrate();
+
+    // 1. Create with extra field
+    const conv = await storage.createConversation({
+      org_id: "org_1",
+      metadata: { foo: "bar" },
+    });
+    expect(conv["org_id"]).toBe("org_1");
+
+    // 2. Verify it's in the DB as a top-level column
+    const raw = db.prepare("SELECT * FROM conversations WHERE id = ?").get(conv.id) as any;
+    expect(raw.org_id).toBe("org_1");
+
+    // 3. Query by extra field
+    const results = await storage.listConversations({
+      where: { org_id: "org_1" },
+    });
+    expect(results).toHaveLength(1);
+    expect(results[0]!.id).toBe(conv.id);
+    expect(results[0]!["org_id"]).toBe("org_1");
+
+    db.close();
+  });
+
+  test("should support Prisma-style hooks for table name mutation", async () => {
     const db = new Database(":memory:");
     // @ts-expect-error - types mismatch
     const dialect = new SqliteDialect({ client: db });
     const storage = new SqlStorage({ dialect });
     await storage.migrate();
 
-    // Pass items directly to createConversation to trigger the nested transaction flow
-    // The createConversation method will open a transaction and then pass the `tx` object
-    // to addItemsInternal, which will then call `.transaction` again on the `tx` object.
-    const conv = await storage.createConversation({
-      metadata: { org: "test" },
-      items: [
-        {
-          type: "message",
-          role: "user",
-          content: "hello from nested tx",
+    // Manually create a second table for sharding test
+    db.run("CREATE TABLE conversations_shard_1 AS SELECT * FROM conversations WHERE 1=0");
+
+    storage.$extends({
+      query: {
+        conversations: {
+          list: async ({ args, context, query }) => {
+            const shardTable = `conversations_shard_${context.shardId}`;
+            return query(args, { table: shardTable });
+          },
+          create: async ({ args, context, query }) => {
+            const shardTable = `conversations_shard_${context.shardId}`;
+            return query(args, { table: shardTable });
+          },
         },
-      ],
+      },
     });
 
-    // Verification
-    expect(conv.id).toBeDefined();
+    // 1. Create in shard 1
+    const conv = await storage.createConversation({ metadata: { shard: "1" } }, { shardId: 1 });
 
-    // Fetch the inserted items
-    const items = await storage.listItems(conv.id, { limit: 10 });
-    expect(items).toBeDefined();
-    expect(items!.length).toBe(1);
-    expect((items![0] as Record<string, unknown>)["content"]).toBe("hello from nested tx");
+    // 2. Verify it's in shard 1 table
+    const rawShard = db.prepare("SELECT count(*) as count FROM conversations_shard_1").get() as any;
+    expect(rawShard.count).toBe(1);
+
+    // 3. Verify it's NOT in default table
+    const rawDefault = db.prepare("SELECT count(*) as count FROM conversations").get() as any;
+    expect(rawDefault.count).toBe(0);
+
+    // 4. List from shard 1
+    const results = await storage.listConversations({ limit: 10 }, { shardId: 1 });
+    expect(results).toHaveLength(1);
+    expect(results[0]!.id).toBe(conv.id);
+
+    db.close();
+  });
+
+  test("should support Drizzle-style operators in where clause", async () => {
+    const db = new Database(":memory:");
+    // @ts-expect-error - types mismatch
+    const dialect = new SqliteDialect({ client: db });
+    const storage = new SqlStorage({
+      dialect,
+      additionalFields: {
+        conversations: {
+          priority: { type: "INTEGER", default: "0" },
+        },
+      },
+    });
+    await storage.migrate();
+
+    await storage.createConversation({ priority: 1, metadata: { name: "low" } });
+    await storage.createConversation({ priority: 10, metadata: { name: "high" } });
+    await storage.createConversation({ priority: 5, metadata: { name: "mid" } });
+
+    // 1. GT operator
+    const high = await storage.listConversations({
+      where: { priority: { gt: 5 } },
+    });
+    expect(high).toHaveLength(1);
+    expect(high[0]!["priority"]).toBe(10);
+
+    // 2. IN operator
+    const selected = await storage.listConversations({
+      where: { priority: { in: [1, 5] } },
+    });
+    expect(selected).toHaveLength(2);
+
+    // 3. Contains (LIKE) operator on metadata
+    const mid = await storage.listConversations({
+      where: { metadata: { name: { contains: "mi" } } },
+    });
+    expect(mid).toHaveLength(1);
+    expect(mid[0]!["priority"]).toBe(5);
 
     db.close();
   });

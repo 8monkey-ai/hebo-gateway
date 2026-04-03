@@ -435,6 +435,93 @@ const gw = gateway({ storage });
 > [!TIP]
 > The `PostgresDialect` includes optimized `JSONB` storage and high-performance `BRIN` indexing for time-ordered data by default.
 
+#### Extending Storage (Advanced)
+
+Hebo Gateway's storage layer is designed to be fully extensible via **Schema-aware Columns** and **Resource Hooks**. This allows you to implement multi-tenancy, sharding, and custom indexing without losing OpenAI compatibility.
+
+##### Schema Extensions (`additionalFields`)
+
+You can define top-level database columns that live alongside the standard `metadata` JSON blob. This is essential for high-performance filtering and indexing.
+
+```ts
+const storage = new SqlStorage({
+  dialect: new PostgresDialect({ client }),
+  additionalFields: {
+    conversations: {
+      organization_id: { type: "VARCHAR(255)", index: true, nullable: false },
+      shard_key: { type: "VARCHAR(64)", partition: true }, // for GreptimeDB sharding
+    },
+  },
+});
+```
+
+- **Data Separation**: User-provided `metadata` stays in the JSON blob. System fields (like `organization_id`) live in real SQL columns.
+- **Automatic Evolution**: `storage.migrate()` will automatically `ALTER TABLE` to add missing columns.
+
+##### Resource Hooks (`$extends`)
+
+Inspired by Prisma, hooks allow you to intercept and modify storage operations. This is the primary way to implement multi-tenancy or audit logging.
+
+```ts
+storage.$extends({
+  query: {
+    conversations: {
+      create: async ({ args, context, query }) => {
+        // Inject organization_id from request context into the top-level columns
+        return query({
+          ...args,
+          organization_id: context.state.orgId,
+        });
+      },
+      list: async ({ args, context, query }) => {
+        // Enforce tenant isolation by injecting a 'where' clause
+        return query({
+          ...args,
+          where: { ...args.where, organization_id: context.state.orgId },
+        });
+      },
+    },
+  },
+});
+```
+
+##### Sharding & Table Mutation
+
+For extreme scale, you can mutate the `table` name within a hook to implement physical sharding (e.g., separate tables per tenant).
+
+```ts
+storage.$extends({
+  query: {
+    conversations: {
+      create: async ({ args, context, table, query }) => {
+        const tenantTable = `conversations_${context.state.tenantId}`;
+        return query(args, { table: tenantTable });
+      },
+    },
+  },
+});
+```
+
+##### Drizzle-inspired Query API
+
+The `listConversations` and `listItems` methods support a type-safe `where` API with advanced operators:
+
+```ts
+const conversations = await storage.listConversations({
+  where: {
+    // Top-level column filtering
+    organization_id: "org_123",
+    // Nested JSON filtering (automatic json_extract)
+    metadata: {
+      user_id: { eq: "u_456" },
+      tags: { contains: "priority" },
+    },
+    // Advanced operators: eq, ne, gt, gte, lt, lte, in, contains, isNull
+    created_at: { gt: Date.now() - 86400000 },
+  },
+});
+```
+
 ## 🧩 Framework Support
 
 Hebo Gateway exposes **WinterCG-compatible** handlers that integrate with almost any existing framework.

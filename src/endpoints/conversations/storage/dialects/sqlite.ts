@@ -9,7 +9,7 @@ const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
-  quote: (i) => `"${i}"`,
+  quote: (i) => `"${i.replaceAll('"', '""')}"`,
   selectJson: (c) => c,
   jsonExtract: (c, k) => `json_extract(${c}, '$.${escapeSqlString(k)}')`,
   upsertSuffix: (q, pk, cols) =>
@@ -165,8 +165,7 @@ function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
         const txExecutor = createBunSqliteExecutor(tx as unknown as BunSql);
-        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) =>
-          f(txExecutor);
+        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) => f(txExecutor);
         return fn(txExecutor);
       });
     },

@@ -68,7 +68,10 @@ export const parseJson =
   (row: Record<string, unknown>): Record<string, unknown> => {
     const val = row[key];
     if (typeof val === "string") {
-      row[key] = val === "" || val === "{}" ? {} : JSON.parse(normalizeJsonUnicodeEscapes(val));
+      row[key] =
+        val === "" || val === "{}" || val === "[]"
+          ? {}
+          : JSON.parse(normalizeJsonUnicodeEscapes(val));
     }
     return row;
   };
@@ -90,8 +93,13 @@ export const mergeData =
   (row: Record<string, unknown>): Record<string, unknown> => {
     const data = row[key];
     if (data !== null && typeof data === "object") {
-      Object.assign(row, data);
-      delete row[key];
+      // Merge properties from the JSON blob into the top-level row,
+      // but don't overwrite existing top-level columns (like custom columns)
+      for (const [k, v] of Object.entries(data)) {
+        if (!(k in row)) {
+          row[k] = v;
+        }
+      }
     }
     return row;
   };

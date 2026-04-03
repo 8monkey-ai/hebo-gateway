@@ -9,7 +9,7 @@ const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 
 export const MySQLDialectConfig: DialectConfig = {
   placeholder: (_i) => "?",
-  quote: (i) => `\`${i}\``,
+  quote: (i) => `\`${i.replaceAll("`", "``")}\``,
   selectJson: (c) => c,
   jsonExtract: (c, k) => `JSON_EXTRACT(${c}, '$.${escapeSqlString(k)}')`,
   upsertSuffix: (q, _pk, cols) =>
@@ -106,8 +106,7 @@ function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
         const txExecutor = createBunMysqlExecutor(tx as unknown as BunSql);
-        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) =>
-          f(txExecutor);
+        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) => f(txExecutor);
         return fn(txExecutor);
       });
     },

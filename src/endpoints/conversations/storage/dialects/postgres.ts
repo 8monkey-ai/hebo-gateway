@@ -12,7 +12,7 @@ const defaultMapParams = createParamsMapper([dateToNumber]);
 
 export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
-  quote: (i) => `"${i}"`,
+  quote: (i) => `"${i.replaceAll('"', '""')}"`,
   selectJson: (c) => c,
   jsonExtract: (c, k) => `${c}->>'${escapeSqlString(k)}'`,
   upsertSuffix: (q, pk, cols) =>
@@ -159,8 +159,7 @@ function createPostgresJsExecutor(
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
       return (await (sql as PostgresJsSql).begin((tx) => {
         const txExecutor = createPostgresJsExecutor(tx, mapParams);
-        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) =>
-          f(txExecutor);
+        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) => f(txExecutor);
         return fn(txExecutor);
       })) as T;
     },
@@ -206,8 +205,7 @@ function createBunPostgresExecutor(
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
         const txExecutor = createBunPostgresExecutor(tx as unknown as BunSql, mapParams);
-        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) =>
-          f(txExecutor);
+        txExecutor.transaction = <R>(f: (executor: QueryExecutor) => Promise<R>) => f(txExecutor);
         return fn(txExecutor);
       });
     },

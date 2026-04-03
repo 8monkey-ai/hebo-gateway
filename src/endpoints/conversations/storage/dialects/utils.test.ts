@@ -80,7 +80,7 @@ describe("SQL Dialect Utilities", () => {
       expect(result["id"]).toBe(1);
       expect(result["name"]).toBe("test");
       expect(result["val"]).toBe(100);
-      expect(result["data"]).toBeUndefined();
+      expect(result["data"]).toEqual({ name: "test", val: 100 });
     });
 
     test("createRowMapper piping", () => {
@@ -98,7 +98,7 @@ describe("SQL Dialect Utilities", () => {
       const result = mapper(row);
       expect(result["created_at"]).toBe(1000);
       expect(result["foo"]).toBe("bar");
-      expect(result["data"]).toBeUndefined();
+      expect(result["data"]).toEqual({ foo: "bar" });
     });
   });
 });
