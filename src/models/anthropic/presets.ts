@@ -10,7 +10,12 @@ const CLAUDE_BASE = {
   },
   capabilities: ["attachments", "tool_call", "structured_output", "temperature"],
   context: 200000,
-  providers: ["anthropic", "bedrock", "vertex", "azure"] as const satisfies readonly CanonicalProviderId[],
+  providers: [
+    "anthropic",
+    "bedrock",
+    "vertex",
+    "azure",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const CLAUDE_PDF_MODALITIES = {

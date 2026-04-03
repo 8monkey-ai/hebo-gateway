@@ -49,6 +49,11 @@ describe("Greptime Dialect (Mocked)", () => {
     // Verify Greptime specific: TIME INDEX and PARTITION clause
     expect(createConversations!.sql).toContain('TIME INDEX ("created_at")');
     expect(createConversations!.sql).toContain('PARTITION ON COLUMNS ("id")');
+    // Verify 16 partitions are defined
+    expect(createConversations!.sql).toContain("\"id\" < '1'");
+    expect(createConversations!.sql).toContain("\"id\" >= 'f'");
+    expect(createConversations!.sql).toContain("\"id\" >= '1' AND \"id\" < '2'");
+    expect(createConversations!.sql).toContain("\"id\" >= 'e' AND \"id\" < 'f'");
 
     const createItems = queries.find((q) =>
       q.sql.includes('CREATE TABLE IF NOT EXISTS "conversation_items"'),
