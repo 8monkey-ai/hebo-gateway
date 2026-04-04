@@ -2,6 +2,10 @@ import { describe, expect, test, mock } from "bun:test";
 import { GrepTimeDialect, GrepTimeDialectConfig } from "./greptime";
 import { type PgPool } from "./postgres";
 import { SqlStorage } from "../sql";
+import {
+  ConversationRepository,
+  CONVERSATION_SCHEMA,
+} from "../../endpoints/conversations/repository";
 
 describe("Greptime Dialect (Mocked)", () => {
   const createMockPool = () => {
@@ -39,8 +43,9 @@ describe("Greptime Dialect (Mocked)", () => {
     const { pool, queries } = createMockPool();
     const dialect = new GrepTimeDialect({ client: pool as unknown as PgPool });
     const storage = new SqlStorage({ dialect });
+    const repo = new ConversationRepository(storage);
 
-    await storage.migrate();
+    await storage.migrate(CONVERSATION_SCHEMA);
 
     const createConversations = queries.find((q) =>
       q.sql.includes('CREATE TABLE IF NOT EXISTS "conversations"'),
@@ -62,9 +67,10 @@ describe("Greptime Dialect (Mocked)", () => {
     const { pool, queries } = createMockPool();
     const dialect = new GrepTimeDialect({ client: pool as unknown as PgPool });
     const storage = new SqlStorage({ dialect });
+    const repo = new ConversationRepository(storage);
 
     const metadata = { user: "greptime" };
-    await storage.createConversation({ metadata });
+    await repo.createConversation({ metadata });
 
     const insertConv = queries.find((q) => q.sql.includes('INSERT INTO "conversations"'));
     expect(insertConv).toBeDefined();

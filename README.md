@@ -437,34 +437,44 @@ const gw = gateway({ storage });
 
 #### Extending Storage (Advanced)
 
-Hebo Gateway's storage layer is designed to be fully extensible via **Schema-aware Columns** and **Resource Hooks**. This allows you to implement multi-tenancy, sharding, and custom indexing without losing OpenAI compatibility.
+Hebo Gateway's storage layer is designed to be fully extensible via **Schema-aware Columns**, **Generic Metadata**, and **Resource Hooks**. This allows you to implement multi-tenancy, sharding, and custom indexing without losing OpenAI compatibility.
 
 ##### Schema Extensions (`additionalFields`)
 
-You can define top-level database columns that live alongside the standard `metadata` JSON blob. This is essential for high-performance filtering and indexing.
+You can define top-level database columns and generic optimization flags that live alongside the standard `metadata` JSON blob. This is essential for high-performance filtering and indexing.
 
 ```ts
+import { SqlStorage, PostgresDialect } from "@hebo-ai/gateway/storage/sql";
+import { CONVERSATION_SCHEMA } from "@hebo-ai/gateway/endpoints/conversations";
+
 const storage = new SqlStorage({
   dialect: new PostgresDialect({ client }),
-  additionalFields: {
-    conversations: {
-      organization_id: { type: "VARCHAR(255)", index: true, nullable: false },
-      shard_key: { type: "VARCHAR(64)", partition: true }, // for GreptimeDB sharding
-    },
+});
+
+// Use the built-in schema or extend it
+await storage.migrate(CONVERSATION_SCHEMA, {
+  conversations: {
+    organization_id: { type: "VARCHAR(255)", index: true, nullable: false },
+    // GreptimeDB sharding via generic partition flag
+    $partitionBy: ["organization_id"], 
   },
+  conversation_items: {
+    // In-Memory LRU limit via generic limit flag
+    $memoryLimit: 50000,
+  }
 });
 ```
 
 - **Data Separation**: User-provided `metadata` stays in the JSON blob. System fields (like `organization_id`) live in real SQL columns.
-- **Automatic Evolution**: `storage.migrate()` will automatically `ALTER TABLE` to add missing columns.
+- **Generic Optimizations**: Use `$primaryKey`, `$partitionBy`, and `$memoryLimit` to tune performance without hardcoding table names.
 
-##### Resource Hooks (`$extends`)
+##### Resource Hooks (`hooks`)
 
 Inspired by Prisma, hooks allow you to intercept and modify storage operations. This is the primary way to implement multi-tenancy or audit logging.
 
 ```ts
 storage.$extends({
-  query: {
+  hooks: {
     conversations: {
       create: async ({ args, context, query }) => {
         // Inject organization_id from request context into the top-level columns
@@ -485,40 +495,38 @@ storage.$extends({
 });
 ```
 
-##### Sharding & Table Mutation
+##### Drizzle-inspired Query Language
 
-For extreme scale, you can mutate the `table` name within a hook to implement physical sharding (e.g., separate tables per tenant).
+The storage layer uses a standardized intermediary language (`StorageQueryOptions`) that works across all database dialects. This allows you to perform complex filtering on both top-level columns and nested JSON data without writing raw SQL.
 
-```ts
-storage.$extends({
-  query: {
-    conversations: {
-      create: async ({ args, context, table, query }) => {
-        const tenantTable = `conversations_${context.state.tenantId}`;
-        return query(args, { table: tenantTable });
-      },
-    },
+```typescript
+const conversations = await repo.listConversations({
+  where: {
+    // Top-level column filtering
+    organization_id: "org_123",
+    // Nested JSON filtering (automatic json_extract / ->>)
+    "metadata.user_id": "u_456",
+    // Advanced operators: eq, ne, gt, gte, lt, lte, in, contains, isNull
+    "created_at >": Date.now() - 86400000,
   },
 });
 ```
 
-##### Drizzle-inspired Query API
+##### Generic Operation API
 
-The `listConversations` and `listItems` methods support a type-safe `where` API with advanced operators:
+Beyond high-level conversation methods, `SqlStorage` and `InMemoryStorage` expose universal, table-agnostic operations. This allows you to use the gateway's storage engine for any custom tables.
 
-```ts
-const conversations = await storage.listConversations({
-  where: {
-    // Top-level column filtering
-    organization_id: "org_123",
-    // Nested JSON filtering (automatic json_extract)
-    metadata: {
-      user_id: { eq: "u_456" },
-      tags: { contains: "priority" },
-    },
-    // Advanced operators: eq, ne, gt, gte, lt, lte, in, contains, isNull
-    created_at: { gt: Date.now() - 86400000 },
-  },
+```typescript
+// Query any resource using generic operations
+const results = await storage.find("custom_resource", "custom_table", {
+  where: { status: "active" }
+});
+
+// Insert into custom tables with automatic schema validation
+await storage.insert("custom_table", "custom_resource", {
+  id: "123",
+  status: "active",
+  data: { foo: "bar" }
 });
 ```
 

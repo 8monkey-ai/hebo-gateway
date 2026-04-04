@@ -49,7 +49,10 @@ export const jsonStringify = (v: unknown, asBinary = false) =>
 /**
  * Escapes single quotes in a string for use in SQL literals.
  */
-export const escapeSqlString = (str: string) => str.replaceAll("'", "''");
+export const escapeSqlString = (str: unknown) => {
+  if (typeof str !== "string") return String(str);
+  return str.replaceAll("'", "''");
+};
 
 /**
  * WORKAROUND: GreptimeDB can return Rust-style Unicode escapes (\u{xxxx})

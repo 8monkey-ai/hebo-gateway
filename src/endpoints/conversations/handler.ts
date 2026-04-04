@@ -20,11 +20,14 @@ import {
   type ConversationList,
 } from "./schema";
 import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
-import type { ConversationMetadata } from "./storage/types";
+import type { ConversationMetadata } from "../../storage/types";
+import { ConversationRepository } from "./repository";
 
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
   const storage = parsedConfig.storage;
+  const isGreptime = (storage as any).dialect?.config?.types?.index === "TIME";
+  const repo = new ConversationRepository(storage, isGreptime);
 
   async function list(
     ctx: GatewayContext,
@@ -39,13 +42,18 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const { limit, after, order, metadata } = parsed.data;
 
+    const where: any = {};
+    if (metadata !== undefined) {
+      where.metadata = metadata;
+    }
+
     // Treat limit 0 as unlimited (up to 100,000 items)
-    const entities = await storage.listConversations(
+    const entities = await repo.listConversations(
       {
         limit: limit ? limit + 1 : 100000,
         after,
         order,
-        where: { metadata: metadata as ConversationMetadata },
+        where,
       },
       ctx,
     );
@@ -89,7 +97,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const entity = await storage.createConversation(
+    const entity = await repo.createConversation(
       {
         metadata: parsed.data.metadata as ConversationMetadata,
         items: parsed.data.items,
@@ -104,7 +112,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function retrieve(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
-    const entity = await storage.getConversation(conversationId, ctx);
+    const entity = await repo.getConversation(conversationId, ctx);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] getConversation result");
 
     if (!entity) {
@@ -128,7 +136,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const entity = await storage.updateConversation(
+    const entity = await repo.updateConversation(
       conversationId,
       { ...parsed.data, metadata: parsed.data.metadata as ConversationMetadata },
       ctx,
@@ -143,7 +151,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
-    const result = await storage.deleteConversation(conversationId, ctx);
+    const result = await repo.deleteConversation(conversationId, ctx);
     logger.debug(`[conversations] deleted conversation: ${conversationId}`);
     logger.trace({ requestId: ctx.requestId, result }, "[storage] deleteConversation result");
 
@@ -155,7 +163,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     conversationId: string,
     itemId: string,
   ): Promise<ConversationItem> {
-    const entity = await storage.getItem(conversationId, itemId, ctx);
+    const entity = await repo.getItem(conversationId, itemId, ctx);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] getItem result");
 
     if (!entity) {
@@ -169,7 +177,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     conversationId: string,
     itemId: string,
   ): Promise<Conversation> {
-    const entity = await storage.deleteItem(conversationId, itemId, ctx);
+    const entity = await repo.deleteItem(conversationId, itemId, ctx);
     logger.debug(`[conversations] deleted item ${itemId} from conversation: ${conversationId}`);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] deleteItem result");
     if (!entity) {
@@ -193,7 +201,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     const { limit, after, order } = parsed.data;
 
     // Treat limit 0 as unlimited (up to 100,000 items)
-    const entities = await storage.listItems(
+    const entities = await repo.listItems(
       conversationId,
       {
         limit: limit ? limit + 1 : 100000,
@@ -246,7 +254,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const entities = await storage.addItems(conversationId, parsed.data.items, ctx);
+    const entities = await repo.addItems(conversationId, parsed.data.items, ctx);
 
     if (!entities) {
       throw new GatewayError("Conversation not found", 404);
