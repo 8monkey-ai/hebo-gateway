@@ -62,6 +62,7 @@ import {
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
+import { GatewayError } from "../../errors/gateway";
 
 // --- Request Flow ---
 
@@ -333,7 +334,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         return out;
       }
       default:
-        throw new Error(`Unhandled content part type: ${(part as { type: string }).type}`);
+        throw new GatewayError(`Unsupported content part type: ${(part as { type: string }).type}`, 400);
     }
   });
 }
