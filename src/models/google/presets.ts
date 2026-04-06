@@ -107,6 +107,141 @@ export const gemini25Pro = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
+// ---------------------------------------------------------------------------
+// Gemma
+// ---------------------------------------------------------------------------
+
+const GEMMA3_BASE = {
+  modalities: {
+    input: ["text", "image"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: ["tool_call", "structured_output", "temperature"] as const,
+  context: 131072,
+  knowledge: "2025-01",
+  providers: ["vertex", "bedrock"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
+const GEMMA4_BASE = {
+  modalities: {
+    input: ["text", "image"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: ["tool_call", "structured_output", "temperature"] as const,
+  context: 131072,
+  knowledge: "2025-01",
+  providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
+export const gemma31b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-3-1b" as const,
+  {
+    ...GEMMA3_BASE,
+    name: "Gemma 3 1B",
+    created: "2025-03-12",
+    modalities: {
+      input: ["text"] as const,
+      output: ["text"] as const,
+    },
+    context: 32768,
+    providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
+  } satisfies CatalogModel,
+);
+
+export const gemma34b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-3-4b" as const,
+  {
+    ...GEMMA3_BASE,
+    name: "Gemma 3 4B",
+    created: "2025-03-12",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemma312b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-3-12b" as const,
+  {
+    ...GEMMA3_BASE,
+    name: "Gemma 3 12B",
+    created: "2025-03-12",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemma327b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-3-27b" as const,
+  {
+    ...GEMMA3_BASE,
+    name: "Gemma 3 27B",
+    created: "2025-03-12",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemma4E2b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-4-e2b" as const,
+  {
+    ...GEMMA4_BASE,
+    name: "Gemma 4 E2B",
+    created: "2025-06-25",
+    modalities: {
+      input: ["text", "image", "audio"] as const,
+      output: ["text"] as const,
+    },
+  } satisfies CatalogModel,
+);
+
+export const gemma4E4b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-4-e4b" as const,
+  {
+    ...GEMMA4_BASE,
+    name: "Gemma 4 E4B",
+    created: "2025-06-25",
+    modalities: {
+      input: ["text", "image", "audio"] as const,
+      output: ["text"] as const,
+    },
+  } satisfies CatalogModel,
+);
+
+export const gemma426bA4b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-4-26b-a4b" as const,
+  {
+    ...GEMMA4_BASE,
+    name: "Gemma 4 26B-A4B",
+    created: "2025-06-25",
+    context: 262144,
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemma431b = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemma-4-31b" as const,
+  {
+    ...GEMMA4_BASE,
+    name: "Gemma 4 31B",
+    created: "2025-06-25",
+    context: 262144,
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+const gemmaAtomic = {
+  v3: [gemma31b, gemma34b, gemma312b, gemma327b],
+  v4: [gemma4E2b, gemma4E4b, gemma426bA4b, gemma431b],
+} as const;
+
+const gemmaGroups = {
+  "v3.x": [...gemmaAtomic["v3"]],
+  "v4.x": [...gemmaAtomic["v4"]],
+} as const;
+
+export const gemma = {
+  ...gemmaAtomic,
+  ...gemmaGroups,
+  latest: [...gemmaAtomic["v4"]],
+  all: Object.values(gemmaAtomic).flat(),
+} as const;
+
+// ---------------------------------------------------------------------------
+// Gemini groups
+// ---------------------------------------------------------------------------
+
 const geminiAtomic = {
   "v2.5": [gemini25FlashLite, gemini25Flash, gemini25Pro],
   "v3-preview": [gemini3FlashPreview, gemini31FlashLitePreview, gemini31ProPreview],
