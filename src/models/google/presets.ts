@@ -128,6 +128,7 @@ const GEMMA4_BASE = {
     output: ["text"] as const,
   },
   capabilities: ["tool_call", "structured_output", "temperature"] as const,
+  context: 131072,
   knowledge: "2025-01",
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
@@ -184,7 +185,6 @@ export const gemma4E2b = presetFor<CanonicalModelId, CatalogModel>()(
       input: ["text", "image", "audio"] as const,
       output: ["text"] as const,
     },
-    context: 131072,
   } satisfies CatalogModel,
 );
 
@@ -198,7 +198,6 @@ export const gemma4E4b = presetFor<CanonicalModelId, CatalogModel>()(
       input: ["text", "image", "audio"] as const,
       output: ["text"] as const,
     },
-    context: 131072,
   } satisfies CatalogModel,
 );
 
