@@ -19,8 +19,8 @@ import {
   type ConversationItemList,
   type ConversationList,
 } from "./schema";
-import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
-import type { ConversationMetadata } from "../../storage/types";
+import { type ResponsesMetadata } from "../responses/schema";
+import { toConversationDeleted } from "./converters";
 import { ConversationRepository } from "./repository";
 
 export const conversations = (config: GatewayConfig): Endpoint => {
@@ -69,7 +69,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     for (let i = 0; i < targetLength; i++) {
       const entity = entities[i];
       if (entity) {
-        data.push(toConversation(entity));
+        data.push(entity);
       }
     }
 
@@ -108,7 +108,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     logger.debug(`[conversations] created conversation: ${entity.id}`);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] createConversation result");
 
-    return toConversation(entity);
+    return entity;
   }
 
   async function retrieve(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
@@ -118,7 +118,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entity) {
       throw new GatewayError("Conversation not found", 404);
     }
-    return toConversation(entity);
+    return entity;
   }
 
   async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
@@ -147,7 +147,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     logger.debug(`[conversations] updated conversation: ${conversationId}`);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] updateConversation result");
-    return toConversation(entity);
+    return entity;
   }
 
   async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
@@ -169,7 +169,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entity) {
       throw new GatewayError("Item not found", 404);
     }
-    return toConversationItem(entity);
+    return entity;
   }
 
   async function deleteItem(
@@ -183,7 +183,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entity) {
       throw new GatewayError("Conversation not found", 404);
     }
-    return toConversation(entity);
+    return entity;
   }
 
   async function listItems(
@@ -223,7 +223,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     for (let i = 0; i < targetLength; i++) {
       const entity = entities[i];
       if (entity) {
-        data.push(toConversationItem(entity));
+        data.push(entity);
       }
     }
 
@@ -273,7 +273,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     for (let i = 0; i < dataLength; i++) {
       const entity = entities[i];
       if (entity) {
-        data.push(toConversationItem(entity));
+        data.push(entity);
       }
     }
 

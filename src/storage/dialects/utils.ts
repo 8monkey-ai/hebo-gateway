@@ -91,6 +91,18 @@ export const toMilliseconds =
     return row;
   };
 
+export const toSeconds =
+  (key: string) =>
+  (row: Record<string, unknown>): Record<string, unknown> => {
+    const v = row[key];
+    if (v instanceof Date) {
+      row[key] = Math.floor(v.getTime() / 1000);
+    } else if (typeof v === "number" || typeof v === "bigint" || typeof v === "string") {
+      row[key] = Math.floor(Number(v) / 1000);
+    }
+    return row;
+  };
+
 export const mergeData =
   (key: string) =>
   (row: Record<string, unknown>): Record<string, unknown> => {

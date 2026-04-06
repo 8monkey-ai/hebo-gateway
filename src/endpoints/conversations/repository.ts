@@ -1,9 +1,5 @@
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 import type {
-  ConversationMetadata,
-  ConversationItemInput,
-  ConversationEntityWithExtra,
-  ConversationItemEntityWithExtra,
   DatabaseSchema,
   StorageQueryOptions,
   Storage,
@@ -12,8 +8,10 @@ import {
   createRowMapper,
   mergeData,
   parseJson,
-  toMilliseconds,
+  toSeconds,
 } from "../../storage/dialects/utils";
+import type { ResponsesMetadata, ResponsesInputItem } from "../responses/schema";
+import type { Conversation, ConversationItem } from "./schema";
 
 export const CONVERSATION_SCHEMA: DatabaseSchema = {
   conversations: {
@@ -36,15 +34,23 @@ export const CONVERSATION_SCHEMA: DatabaseSchema = {
   },
 };
 
-const conversationRowMapper = createRowMapper<ConversationEntityWithExtra<any>>([
+const conversationRowMapper = createRowMapper<Conversation>([
   parseJson("metadata"),
-  toMilliseconds("created_at"),
+  toSeconds("created_at"),
+  (row) => {
+    row.object = "conversation";
+    return row;
+  },
 ]);
 
-const itemRowMapper = createRowMapper<ConversationItemEntityWithExtra<any>>([
+const itemRowMapper = createRowMapper<ConversationItem>([
   parseJson("data"),
-  toMilliseconds("created_at"),
+  toSeconds("created_at"),
   mergeData("data"),
+  (row) => {
+    row.object = "conversation.item";
+    return row;
+  },
 ]);
 
 /**
@@ -64,11 +70,11 @@ export class ConversationRepository<TExtra = Record<string, any>> {
 
   async createConversation(
     params: {
-      metadata?: ConversationMetadata;
-      items?: ConversationItemInput[];
+      metadata?: ResponsesMetadata;
+      items?: ResponsesInputItem[];
     } & Partial<TExtra>,
     context: any = {},
-  ): Promise<ConversationEntityWithExtra<TExtra>> {
+  ): Promise<Conversation> {
     const id = this.isGreptime ? uuidv4() : uuidv7();
     const metadata = params.metadata ?? null;
     const now = new Date();
@@ -77,14 +83,14 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     delete (data as any).items;
 
     return this.storage.transaction(async (tx) => {
-      await this.storage.conversations.insert(data, context, tx);
+      await this.storage.conversations.create(data, context, tx);
 
       const conversation = {
         id,
-        created_at: now.getTime(),
+        created_at: Math.floor(now.getTime() / 1000),
         metadata,
-        ...params,
-      } as ConversationEntityWithExtra<TExtra>;
+        object: "conversation",
+      } as Conversation;
 
       if (params.items?.length) {
         await this.addItemsInternal(id, params.items, context, tx);
@@ -97,8 +103,8 @@ export class ConversationRepository<TExtra = Record<string, any>> {
   async getConversation(
     id: string,
     context: any = {},
-  ): Promise<ConversationEntityWithExtra<TExtra> | undefined> {
-    return this.storage.conversations.findOne({ id }, context, conversationRowMapper, {
+  ): Promise<Conversation | undefined> {
+    return this.storage.conversations.findFirst({ id }, context, conversationRowMapper, {
       orderBy: { created_at: "desc" },
     });
   }
@@ -109,7 +115,7 @@ export class ConversationRepository<TExtra = Record<string, any>> {
       metadata?: Record<string, string>;
     },
     context: any = {},
-  ): Promise<ConversationEntityWithExtra<TExtra>[]> {
+  ): Promise<Conversation[]> {
     let where = params.where ?? ({} as any);
 
     if (params.metadata) {
@@ -127,14 +133,14 @@ export class ConversationRepository<TExtra = Record<string, any>> {
       orderBy: params.orderBy ?? { created_at: params.order ?? "desc" },
       where,
     };
-    return this.storage.conversations.find(options, context, conversationRowMapper);
+    return this.storage.conversations.findMany(options, context, conversationRowMapper);
   }
 
   async updateConversation(
     id: string,
-    params: { metadata?: ConversationMetadata } & Partial<TExtra>,
+    params: { metadata?: ResponsesMetadata } & Partial<TExtra>,
     context: any = {},
-  ): Promise<ConversationEntityWithExtra<TExtra> | undefined> {
+  ): Promise<Conversation | undefined> {
     const conversation = await this.getConversation(id, context);
     if (!conversation) return;
 
@@ -142,7 +148,7 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     const data = {
       ...params,
       metadata: meta,
-      created_at: new Date(Number(conversation.created_at)),
+      created_at: new Date(Number(conversation.created_at) * 1000),
     };
 
     await this.storage.conversations.update(id, data, context);
@@ -151,22 +157,22 @@ export class ConversationRepository<TExtra = Record<string, any>> {
       ...conversation,
       ...params,
       metadata: meta,
-    } as ConversationEntityWithExtra<TExtra>;
+    } as Conversation;
   }
 
   async deleteConversation(
     id: string,
     context: any = {},
   ): Promise<{ id: string; deleted: boolean }> {
-    const { changes } = await this.storage.conversations.remove({ id }, context);
+    const { changes } = await this.storage.conversations.delete({ id }, context);
     return { id, deleted: changes > 0 };
   }
 
   async addItems(
     conversationId: string,
-    items: ConversationItemInput[],
+    items: ResponsesInputItem[],
     context: any = {},
-  ): Promise<ConversationItemEntityWithExtra<TExtra>[] | undefined> {
+  ): Promise<ConversationItem[] | undefined> {
     const conversation = await this.getConversation(conversationId, context);
     if (!conversation) return;
 
@@ -177,12 +183,12 @@ export class ConversationRepository<TExtra = Record<string, any>> {
 
   private async addItemsInternal(
     conversationId: string,
-    items: ConversationItemInput[],
+    items: ResponsesInputItem[],
     context: any,
     tx: any,
-  ): Promise<ConversationItemEntityWithExtra<TExtra>[] | undefined> {
+  ): Promise<ConversationItem[] | undefined> {
     const now = Date.now();
-    const results: ConversationItemEntityWithExtra<TExtra>[] = [];
+    const results: ConversationItem[] = [];
 
     let offset = 0;
     for (const input of items) {
@@ -198,14 +204,14 @@ export class ConversationRepository<TExtra = Record<string, any>> {
         ...input,
       };
 
-      await this.storage.conversation_items.insert(data, context, tx);
+      await this.storage.conversation_items.create(data, context, tx);
 
       results.push({
         ...input,
         id,
-        conversation_id: conversationId,
-        created_at: createdAt.getTime(),
-      } as ConversationItemEntityWithExtra<TExtra>);
+        object: "conversation.item",
+        created_at: Math.floor(createdAt.getTime() / 1000),
+      } as unknown as ConversationItem);
     }
 
     return results;
@@ -215,8 +221,8 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     conversationId: string,
     itemId: string,
     context: any = {},
-  ): Promise<ConversationItemEntityWithExtra<TExtra> | undefined> {
-    return this.storage.conversation_items.findOne(
+  ): Promise<ConversationItem | undefined> {
+    return this.storage.conversation_items.findFirst(
       { id: itemId, conversation_id: conversationId },
       context,
       itemRowMapper,
@@ -227,9 +233,9 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     conversationId: string,
     itemId: string,
     context: any = {},
-  ): Promise<ConversationEntityWithExtra<TExtra> | undefined> {
+  ): Promise<Conversation | undefined> {
     return this.storage.transaction(async (tx) => {
-      await this.storage.conversation_items.remove(
+      await this.storage.conversation_items.delete(
         { id: itemId, conversation_id: conversationId },
         context,
         tx,
@@ -242,7 +248,7 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     conversationId: string,
     params: StorageQueryOptions<TExtra> & { order?: "asc" | "desc" },
     context: any = {},
-  ): Promise<ConversationItemEntityWithExtra<TExtra>[] | undefined> {
+  ): Promise<ConversationItem[] | undefined> {
     const conversation = await this.getConversation(conversationId, context);
     if (!conversation) return;
 
@@ -253,6 +259,6 @@ export class ConversationRepository<TExtra = Record<string, any>> {
       where: { ...params.where, conversation_id: conversationId } as any,
     };
 
-    return this.storage.conversation_items.find(options, context, itemRowMapper);
+    return this.storage.conversation_items.findMany(options, context, itemRowMapper);
   }
 }
