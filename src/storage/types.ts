@@ -52,7 +52,6 @@ export interface TableSchema {
     $partitionBy?: string[];
     $memoryLimit?: number;
     $indexes?: string[][];
-    $dispose?: (key: string, value: any) => void;
   };
 }
 
@@ -117,7 +116,6 @@ export interface Storage<TExtra = Record<string, any>> {
     resource: string,
     id: string,
     data: Record<string, unknown>,
-    options: { upsert?: boolean; createdAt?: number | Date },
     context?: any,
     table?: string,
     tx?: any,

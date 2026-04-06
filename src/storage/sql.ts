@@ -96,9 +96,9 @@ export class SqlStorage<TExtra = Record<string, any>> implements Storage<TExtra>
     });
   }
 
-  async update(resource: string, id: string, data: Record<string, unknown>, options: { upsert?: boolean; createdAt?: number | Date }, context: any = {}, table: string = resource, tx: QueryExecutor = this.executor): Promise<{ changes: number }> {
-    return this.executeOperation(resource, "update", { id, data, options }, context, tx, async (args, op) => {
-      const { sql, args: queryArgs } = this.buildUpdateQuery(resource, op?.table ?? table, args.id, args.data, args.options);
+  async update(resource: string, id: string, data: Record<string, unknown>, context: any = {}, table: string = resource, tx: QueryExecutor = this.executor): Promise<{ changes: number }> {
+    return this.executeOperation(resource, "update", { id, data }, context, tx, async (args, op) => {
+      const { sql, args: queryArgs } = this.buildUpdateQuery(resource, op?.table ?? table, args.id, args.data);
       const { changes } = await (op?.tx ?? tx).run(sql, queryArgs);
       return { changes };
     });
@@ -234,12 +234,6 @@ export class SqlStorage<TExtra = Record<string, any>> implements Storage<TExtra>
     }
 
     if (options.after) {
-      const orderSpec = options.orderBy ?? "created_at desc";
-      const parts = orderSpec.toLowerCase().split(" ");
-      const isAsc = parts.includes("asc");
-      const op = isAsc ? ">" : "<";
-      const sortCol = parts[0] ?? "created_at";
-      
       const subqueryArgs: any[] = [];
       let subIdx = nextIdx;
 
@@ -258,9 +252,37 @@ export class SqlStorage<TExtra = Record<string, any>> implements Storage<TExtra>
         }
       }
 
-      conditions.push(
-        `EXISTS (SELECT 1 FROM ${q(table)} _cursor WHERE ${subWhere} AND (${q(table)}.${q(sortCol)} ${op} _cursor.${q(sortCol)} OR (${q(table)}.${q(sortCol)} = _cursor.${q(sortCol)} AND ${q(table)}.${q("id")} ${op} _cursor.${q("id")})))`
-      );
+      // RATIONALE: Why is `after` a dedicated parameter instead of a generic `where` condition?
+      // Cursor pagination requires complex tie-breaker logic. If multiple rows share the exact
+      // same sort value (e.g., identical timestamps), a simple `where: { created_at < cursor }`
+      // will skip the tied rows.
+      //
+      // By keeping `after` as a dedicated feature, the storage engine handles two major complexities:
+      // 1. N+1 Performance: It automatically generates an `EXISTS` subquery to fetch the cursor's
+      //    timestamp/value dynamically inside the database, saving a full database round-trip.
+      // 2. Query AST Complexity: It automatically builds the deterministic tie-breaker offset 
+      //    (Condition A OR Condition B) without pushing complex `$or` AST generation into the domain layer.
+      //
+      // NOTE: This generic implementation currently only supports cursor pagination based on
+      // a single primary sort column (extracted from `orderBy`). If multiple sorting fields
+      // are provided (e.g. "score desc, name asc"), only the first field is used for the cursor
+      // offset. The `id` column is always appended as the final deterministic tie-breaker.
+      if (options.orderBy) {
+        const orderSpec = options.orderBy;
+        const parts = orderSpec.toLowerCase().split(" ");
+        const isAsc = parts.includes("asc");
+        const op = isAsc ? ">" : "<";
+        const sortCol = parts[0];
+        
+        conditions.push(
+          `EXISTS (SELECT 1 FROM ${q(table)} _cursor WHERE ${subWhere} AND (${q(table)}.${q(sortCol)} ${op} _cursor.${q(sortCol)} OR (${q(table)}.${q(sortCol)} = _cursor.${q(sortCol)} AND ${q(table)}.${q("id")} ${op} _cursor.${q("id")})))`
+        );
+      } else {
+        conditions.push(
+          `EXISTS (SELECT 1 FROM ${q(table)} _cursor WHERE ${subWhere} AND ${q(table)}.${q("id")} > _cursor.${q("id")})`
+        );
+      }
+      
       args.push(...subqueryArgs);
       nextIdx = subIdx;
     }
@@ -271,7 +293,7 @@ export class SqlStorage<TExtra = Record<string, any>> implements Storage<TExtra>
       const orderSpec = options.orderBy;
       const parts = orderSpec.toLowerCase().split(" ");
       const dir = parts.includes("asc") ? "ASC" : "DESC";
-      const sortCol = parts[0] ?? "created_at";
+      const sortCol = parts[0];
       // Append ID as a deterministic tie-breaker
       sql += ` ORDER BY ${q(sortCol)} ${dir}, ${q("id")} ${dir}`;
     }
@@ -321,32 +343,20 @@ export class SqlStorage<TExtra = Record<string, any>> implements Storage<TExtra>
     return { sql, args };
   }
 
-  private buildUpdateQuery(resource: string, table: string, id: string, data: Record<string, unknown>, options: { upsert?: boolean; createdAt?: number | Date }) {
+  private buildUpdateQuery(resource: string, table: string, id: string, data: Record<string, unknown>) {
     const { quote: q, placeholder, upsertSuffix } = this.config;
-
-    const keys = Object.keys(data);
     const primaryKeyCols = (this.schema[resource] as any)?.$primaryKey ?? ["id"];
 
-    if (options.upsert) {
-      const createdAt = options.createdAt instanceof Date ? options.createdAt : new Date(options.createdAt ?? Date.now());
-      const allData = { ...data, id, created_at: createdAt };
-      const allKeys = Object.keys(allData);
-      const cols = allKeys.map((k) => q(k)).join(", ");
-      const vals = allKeys.map((_, i) => placeholder(i + 1)).join(", ");
-      
-      const updateCols = keys.filter(k => !primaryKeyCols.includes(k));
-      const suffix = upsertSuffix?.(q, primaryKeyCols, updateCols) ?? "";
-      
-      const sql = `INSERT INTO ${q(table)} (${cols}) VALUES (${vals}) ${suffix}`;
-      const args = allKeys.map((k) => allData[k]);
-      return { sql, args };
-    }
-
-    const sets = keys.map((k, i) => `${q(k)} = ${placeholder(i + 1)}`).join(", ");
-    const sql = `UPDATE ${q(table)} SET ${sets} WHERE ${q("id")} = ${placeholder(keys.length + 1)}`;
-    const args = keys.map((k) => data[k]);
-    args.push(id);
-
+    const allData = { ...data, id };
+    const allKeys = Object.keys(allData);
+    const cols = allKeys.map((k) => q(k)).join(", ");
+    const vals = allKeys.map((_, i) => placeholder(i + 1)).join(", ");
+    
+    const updateCols = Object.keys(data).filter(k => !primaryKeyCols.includes(k));
+    const suffix = upsertSuffix?.(q, primaryKeyCols, updateCols) ?? "";
+    
+    const sql = `INSERT INTO ${q(table)} (${cols}) VALUES (${vals}) ${suffix}`;
+    const args = allKeys.map((k) => allData[k]);
     return { sql, args };
   }
 

@@ -138,16 +138,16 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     if (!conversation) return;
 
     const meta = params.metadata ?? null;
-    const data = { ...params, metadata: meta };
+    const data = { 
+      ...params, 
+      metadata: meta,
+      created_at: new Date(Number(conversation.created_at)),
+    };
 
     await this.storage.update(
       "conversations",
       id,
       data,
-      {
-        upsert: true,
-        createdAt: Number(conversation.created_at),
-      },
       context,
     );
 
