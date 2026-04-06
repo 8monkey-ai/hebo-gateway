@@ -111,10 +111,15 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
   // Body size limit
   const rawMax = config.maxBodySize;
-  const maxBodySize =
-    typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 0
-      ? rawMax
-      : DEFAULT_MAX_BODY_SIZE;
+  let maxBodySize: number;
+  if (typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 0) {
+    maxBodySize = rawMax;
+  } else {
+    maxBodySize = DEFAULT_MAX_BODY_SIZE;
+    if (rawMax !== undefined) {
+      logger.warn(`[config] invalid maxBodySize (${rawMax}), using default ${DEFAULT_MAX_BODY_SIZE}`);
+    }
+  }
 
   // Return parsed config.
   return {
