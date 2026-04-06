@@ -1,4 +1,4 @@
-import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
+import { v7 as uuidv7 } from "uuid";
 import { LRUCache } from "lru-cache";
 import type {
   Storage,
@@ -65,9 +65,10 @@ function estimateSize(root: unknown): number {
   return total;
 }
 
-export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Record<string, any>>
-  implements Storage<TSchema, TExtra>
-{
+export class InMemoryStorage<
+  TSchema extends DatabaseSchema = any,
+  TExtra = Record<string, any>,
+> implements Storage<TSchema, TExtra> {
   [tableName: string]: any;
 
   // Use a union type to correctly represent both possible table types.
@@ -86,18 +87,30 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
   constructor(options: InMemoryStorageOptions = {}) {
     this.options = options;
 
+    // eslint-disable-next-line no-constructor-return, @typescript-eslint/no-unsafe-return
     return new Proxy(this, {
       get(target, prop, receiver) {
-        if (typeof prop === "string" && !(prop in target) && !prop.startsWith("$") && !prop.startsWith("_")) {
+        if (typeof prop !== "string") return Reflect.get(target, prop, receiver);
+
+        // 1. Check for table access (fluent API)
+        if (!(prop in target) && !prop.startsWith("$") && !prop.startsWith("_")) {
           return target.createTableClient(prop);
         }
+
+        // 2. Check for client-level extensions
+        for (const ext of target.extensions) {
+          if (ext.client && prop in ext.client) {
+            return ext.client[prop].bind(target);
+          }
+        }
+
         return Reflect.get(target, prop, receiver);
       },
-    });
+    }) as any;
   }
 
   private createTableClient(tableName: string): TableClient<any, TExtra> {
-    return {
+    const client: TableClient<any, TExtra> = {
       findMany: (options, context, mapper) =>
         this.executeWithExtensions(tableName, "findMany", options, context, (args) =>
           this._findMany(tableName, args, context, mapper, tableName),
@@ -119,14 +132,31 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
           this._delete(tableName, args, context, tableName),
         ),
     };
+
+    // Apply model-level extensions
+    for (const ext of this.extensions) {
+      const modelMethods = ext.model?.[tableName] ?? ext.model?.["$allModels"];
+      if (modelMethods) {
+        for (const [name, fn] of Object.entries(modelMethods)) {
+          // Ensure we don't accidentally overwrite built-ins like "create" unless intended.
+          // In Prisma, `model` extensions are merged with the base client.
+          if (!(name in client)) {
+            (client as any)[name] = fn.bind(client);
+          }
+        }
+      }
+    }
+
+    return client;
   }
 
-  $extends(extension: StorageExtension<TSchema>): this {
-    this.extensions.push(extension);
+  $extends(extension: StorageExtension<TSchema> | StorageExtensionFactory<TSchema>): this {
+    const ext = typeof extension === "function" ? extension(this) : extension;
+    this.extensions.push(ext);
     return this;
   }
 
-  private async executeWithExtensions<TArgs, TResult>(
+  private executeWithExtensions<TArgs, TResult>(
     model: string,
     operation: StorageOperation,
     args: TArgs,
@@ -142,20 +172,20 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
       // 1. Specific model, specific operation
       const modelExt = ext.query[model as keyof TSchema];
       if (modelExt) {
-        const opExt = (modelExt as any)[operation] || (modelExt as any)["$allOperations"];
+        const opExt = (modelExt as any)[operation] ?? (modelExt as any)["$allOperations"];
         if (opExt) relevantExtensions.push(opExt);
       }
 
       // 2. $allModels
       const allModelsExt = ext.query["$allModels"];
       if (allModelsExt) {
-        const opExt = (allModelsExt as any)[operation] || (allModelsExt as any)["$allOperations"];
+        const opExt = (allModelsExt as any)[operation] ?? (allModelsExt as any)["$allOperations"];
         if (opExt) relevantExtensions.push(opExt);
       }
     }
 
     // Execute the chain from right to left (last extension is the outermost wrapper)
-    const executeChain = async (index: number, currentArgs: TArgs): Promise<TResult> => {
+    const executeChain = (index: number, currentArgs: TArgs): Promise<TResult> => {
       if (index < 0) {
         return baseOperation(currentArgs);
       }
@@ -181,7 +211,9 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
         t = new LRUCache<string, any, any>({
           maxSize: this.options.maxSize,
           sizeCalculation: (value, key) => Math.max(1, estimateSize(value) + estimateSize(key)),
-          dispose: (value, key) => this.unindexRow(table, key, value),
+          dispose: (value, key) => {
+            this.unindexRow(table, key, value);
+          },
         });
       } else {
         t = new Map();
@@ -274,12 +306,9 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
           // If we queried by an indexed column and found nothing, we know the exact result is empty
           if (!idSet) return [];
 
-          const rows = [];
-          for (const id of idSet) {
-            const r = tableMap.get(id);
-            if (r) rows.push(r);
-          }
-          return rows;
+          return Array.from(idSet)
+            .map((id) => tableMap.get(id))
+            .filter(Boolean);
         }
       }
     }
@@ -287,9 +316,20 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     // 3. Fallback: Full Table Scan O(N)
     return Array.from(tableMap.values());
   }
+  migrate() {
+    const combinedSchema: DatabaseSchema = {};
 
-  async migrate(schema: TSchema) {
-    for (const [table, columns] of Object.entries(schema)) {
+    // 1. Collect schemas from all extensions
+    for (const ext of this.extensions) {
+      if (ext.schema) {
+        for (const [table, tableSchema] of Object.entries(ext.schema)) {
+          combinedSchema[table] = { ...combinedSchema[table], ...tableSchema };
+        }
+      }
+    }
+
+    this.schema = combinedSchema;
+    for (const [table, columns] of Object.entries(combinedSchema)) {
       const limit = columns.$memoryLimit ?? this.options.maxSize;
 
       // 1. Automatic Index Extraction
@@ -329,7 +369,9 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
             sizeCalculation: (value, key) => Math.max(1, estimateSize(value) + estimateSize(key)),
             noDisposeOnSet: true,
             // CRITICAL: Ensure we remove evicted items from the hash indexes to prevent memory leaks
-            dispose: (value, key) => this.unindexRow(table, key, value),
+            dispose: (value, key) => {
+              this.unindexRow(table, key, value);
+            },
           }),
         );
       } else if (!needsLRU && !existing) {
@@ -369,7 +411,7 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     });
   }
 
-  async _findMany<T>(
+  _findMany<T>(
     resource: string,
     options: StorageQueryOptions,
     context: any = {},
@@ -377,7 +419,7 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     table: string = resource,
   ): Promise<T[]> {
     const { limit, after, where } = options;
-    if (limit !== undefined && limit <= 0) return [];
+    if (limit !== undefined && limit <= 0) return Promise.resolve([]);
 
     let rows = this.getCandidates(table, where);
 
@@ -415,14 +457,15 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
         if (item.id === after) seen = true;
         continue;
       }
-      out.push(mapper(item));
+      // Clone the item to avoid mutation bugs with mappers
+      out.push(mapper({ ...item }));
       if (limit && out.length === limit) break;
     }
 
-    return out;
+    return Promise.resolve(out);
   }
 
-  async _findFirst<T>(
+  _findFirst<T>(
     resource: string,
     where: WhereCondition<TExtra>,
     context: any = {},
@@ -430,11 +473,17 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     options: { orderBy?: Record<string, SortOrder> } = {},
     table: string = resource,
   ): Promise<T | undefined> {
-    const results = await this._findMany(resource, { ...options, where, limit: 1 }, context, mapper, table);
-    return results[0];
+    const resultsPromise = this._findMany(
+      resource,
+      { ...options, where, limit: 1 },
+      context,
+      mapper,
+      table,
+    );
+    return resultsPromise.then((results) => results[0]);
   }
 
-  async _create(
+  _create(
     resource: string,
     data: Record<string, unknown>,
     context: any = {},
@@ -446,10 +495,10 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     const row = { ...data, id };
     tableMap.set(id, row);
     this.indexRow(table, id, row);
-    return { changes: 1 };
+    return Promise.resolve({ changes: 1 });
   }
 
-  async _update(
+  _update(
     resource: string,
     id: string,
     data: Record<string, unknown>,
@@ -458,39 +507,41 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
   ): Promise<{ changes: number }> {
     const tableMap = this.getTable(table);
     const existing = tableMap.get(id);
-    let newRow;
     if (existing) {
       // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
       this.unindexRow(table, id, existing);
-      newRow = { ...existing, ...data, id };
-    } else {
-      newRow = { ...data, id };
+      const newRow = { ...existing, ...data, id };
+      tableMap.set(id, newRow);
+      this.indexRow(table, id, newRow);
+      return Promise.resolve({ changes: 1 });
     }
+    const newRow = { ...data, id };
     tableMap.set(id, newRow);
     this.indexRow(table, id, newRow);
-    return { changes: 1 };
+    return Promise.resolve({ changes: 1 });
   }
 
-  async _delete(
+  _delete(
     resource: string,
     where: WhereCondition<TExtra>,
     context: any = {},
     table: string = resource,
   ): Promise<{ changes: number }> {
-    const results = await this._findMany(resource, { where }, context, (r) => r, table);
-    const tableMap = this.getTable(table);
-    const toDelete = results as Record<string, unknown>[];
+    return this._findMany(resource, { where }, context, (r) => r, table).then((results) => {
+      const tableMap = this.getTable(table);
+      const toDelete = results as Record<string, unknown>[];
 
-    for (const row of toDelete) {
-      const id = row.id as string;
-      this.unindexRow(table, id, row);
-      tableMap.delete(id);
-    }
+      for (const row of toDelete) {
+        const id = row.id as string;
+        this.unindexRow(table, id, row);
+        tableMap.delete(id);
+      }
 
-    return { changes: toDelete.length };
+      return { changes: toDelete.length };
+    });
   }
 
-  async transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+  transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
     return fn(this);
   }
 

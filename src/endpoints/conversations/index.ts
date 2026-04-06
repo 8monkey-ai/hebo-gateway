@@ -1,4 +1,4 @@
 export * from "./handler";
 export * from "./schema";
-export * from "./repository";
+export * from "./migration";
 export * from "../../storage/types";

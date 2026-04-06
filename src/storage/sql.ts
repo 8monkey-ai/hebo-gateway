@@ -10,34 +10,49 @@ import type {
   TableClient,
   StorageExtensionCallback,
 } from "./types";
-import { type QueryExecutor, type SqlConfig } from "./dialects/types";
+import { type QueryExecutor, type DialectConfig, type SqlDialect } from "./dialects/types";
 
-export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<string, any>>
-  implements Storage<TSchema, TExtra>
-{
+export class SqlStorage<
+  TSchema extends DatabaseSchema = any,
+  TExtra = Record<string, any>,
+> implements Storage<TSchema, TExtra> {
   [tableName: string]: any;
 
+  readonly dialect: SqlDialect;
   private readonly executor: QueryExecutor;
-  private readonly config: SqlConfig;
+  private readonly config: DialectConfig;
   private readonly extensions: StorageExtension<TSchema>[] = [];
   private schema: DatabaseSchema = {};
 
-  constructor(params: { dialect: { executor: QueryExecutor; config: SqlConfig } }) {
+  constructor(params: { dialect: SqlDialect }) {
+    this.dialect = params.dialect;
     this.executor = params.dialect.executor;
     this.config = params.dialect.config;
 
+    // eslint-disable-next-line no-constructor-return, @typescript-eslint/no-unsafe-return
     return new Proxy(this, {
       get(target, prop, receiver) {
-        if (typeof prop === "string" && !(prop in target) && !prop.startsWith("$") && !prop.startsWith("_")) {
+        if (typeof prop !== "string") return Reflect.get(target, prop, receiver);
+
+        // 1. Check for table access (fluent API)
+        if (!(prop in target) && !prop.startsWith("$") && !prop.startsWith("_")) {
           return target.createTableClient(prop);
         }
+
+        // 2. Check for client-level extensions
+        for (const ext of target.extensions) {
+          if (ext.client && prop in ext.client) {
+            return ext.client[prop].bind(target);
+          }
+        }
+
         return Reflect.get(target, prop, receiver);
       },
-    });
+    }) as any;
   }
 
   private createTableClient(tableName: string): TableClient<any, TExtra> {
-    return {
+    const client: TableClient<any, TExtra> = {
       findMany: (options, context, mapper, tx) =>
         this.executeWithExtensions(tableName, "findMany", options, context, (args: any) => {
           const { table, ...queryOptions } = args;
@@ -46,7 +61,15 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
       findFirst: (where, context, mapper, options, tx) =>
         this.executeWithExtensions(tableName, "findFirst", where, context, (args: any) => {
           const { table, ...whereArgs } = args;
-          return this._findFirst(tableName, whereArgs, context, mapper, options, table ?? tableName, tx);
+          return this._findFirst(
+            tableName,
+            whereArgs,
+            context,
+            mapper,
+            options,
+            table ?? tableName,
+            tx,
+          );
         }),
       create: (data, context, tx) =>
         this.executeWithExtensions(tableName, "create", data, context, (args: any) => {
@@ -56,7 +79,14 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
       update: (id, data, context, tx) =>
         this.executeWithExtensions(tableName, "update", { id, data }, context, (args: any) => {
           const { table, ...updateArgs } = args;
-          return this._update(tableName, updateArgs.id, updateArgs.data, context, table ?? tableName, tx);
+          return this._update(
+            tableName,
+            updateArgs.id,
+            updateArgs.data,
+            context,
+            table ?? tableName,
+            tx,
+          );
         }),
       delete: (where, context, tx) =>
         this.executeWithExtensions(tableName, "delete", where, context, (args: any) => {
@@ -64,14 +94,29 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
           return this._delete(tableName, whereArgs, context, table ?? tableName, tx);
         }),
     };
+
+    // Apply model-level extensions
+    for (const ext of this.extensions) {
+      const modelMethods = ext.model?.[tableName] ?? ext.model?.["$allModels"];
+      if (modelMethods) {
+        for (const [name, fn] of Object.entries(modelMethods)) {
+          if (!(name in client)) {
+            (client as any)[name] = fn.bind(client);
+          }
+        }
+      }
+    }
+
+    return client;
   }
 
-  $extends(extension: StorageExtension<TSchema>): this {
-    this.extensions.push(extension);
+  $extends(extension: StorageExtension<TSchema> | StorageExtensionFactory<TSchema>): this {
+    const ext = typeof extension === "function" ? extension(this) : extension;
+    this.extensions.push(ext);
     return this;
   }
 
-  private async executeWithExtensions<TArgs, TResult>(
+  private executeWithExtensions<TArgs, TResult>(
     model: string,
     operation: StorageOperation,
     args: TArgs,
@@ -87,20 +132,20 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
       // 1. Specific model, specific operation
       const modelExt = ext.query[model as keyof TSchema];
       if (modelExt) {
-        const opExt = (modelExt as any)[operation] || (modelExt as any)["$allOperations"];
+        const opExt = (modelExt as any)[operation] ?? (modelExt as any)["$allOperations"];
         if (opExt) relevantExtensions.push(opExt);
       }
 
       // 2. $allModels
       const allModelsExt = ext.query["$allModels"];
       if (allModelsExt) {
-        const opExt = (allModelsExt as any)[operation] || (allModelsExt as any)["$allOperations"];
+        const opExt = (allModelsExt as any)[operation] ?? (allModelsExt as any)["$allOperations"];
         if (opExt) relevantExtensions.push(opExt);
       }
     }
 
     // Execute the chain from right to left (last extension is the outermost wrapper)
-    const executeChain = async (index: number, currentArgs: TArgs): Promise<TResult> => {
+    const executeChain = (index: number, currentArgs: TArgs): Promise<TResult> => {
       if (index < 0) {
         return baseOperation(currentArgs);
       }
@@ -132,7 +177,7 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
   ): Promise<T[]> {
     const { sql, args: queryArgs } = this.buildListQuery(resource, table, options);
     const rows = await tx.all<Record<string, unknown>>(sql, queryArgs);
-    return rows.map(mapper);
+    return rows.map((r) => mapper(r));
   }
 
   async _findFirst<T>(
@@ -144,7 +189,19 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
     table: string = resource,
     tx: QueryExecutor = this.executor,
   ): Promise<T | undefined> {
-    const { sql, args: queryArgs } = this.buildGetQuery(table, resource, where, options);
+    // If the input `where` object contains `where` or `orderBy` as keys (e.g. from handler/extension intercepts),
+    // extract them. Otherwise, assume the entire object is the `where` condition.
+    const actualWhere = (where as any).where ? (where as any).where : where;
+    const actualOptions = (where as any).orderBy
+      ? { ...options, orderBy: (where as any).orderBy }
+      : options;
+
+    const { sql, args: queryArgs } = this.buildGetQuery(
+      table,
+      resource,
+      actualWhere,
+      actualOptions,
+    );
     const row = await tx.get<Record<string, unknown>>(sql, queryArgs);
     return row ? mapper(row) : undefined;
   }
@@ -186,7 +243,7 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
     return { changes };
   }
 
-  async transaction<T>(fn: (tx: QueryExecutor) => Promise<T>): Promise<T> {
+  transaction<T>(fn: (tx: QueryExecutor) => Promise<T>): Promise<T> {
     return this.executor.transaction(fn);
   }
 
@@ -194,15 +251,22 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
   // --- Migration ---
   // ==========================================================================
 
-  async migrate(
-    schema: TSchema,
-    additionalFields: Record<string, Record<string, { type: string }>> = {},
-  ) {
-    this.schema = { ...this.schema, ...schema };
+  async migrate() {
+    const combinedSchema: DatabaseSchema = {};
+
+    // 1. Collect schemas from all extensions
+    for (const ext of this.extensions) {
+      if (ext.schema) {
+        for (const [table, tableSchema] of Object.entries(ext.schema)) {
+          combinedSchema[table] = { ...combinedSchema[table], ...tableSchema };
+        }
+      }
+    }
+
+    this.schema = combinedSchema;
     const { types, quote: q, supportCreateIndexIfNotExists } = this.config;
     const isTimeIndex = types.index === "TIME";
 
-    const varchar = (len: number) => (types.varchar === "TEXT" ? "TEXT" : `${types.varchar}(${len})`);
     const timeIndex = (hasCreatedAt: boolean) =>
       isTimeIndex && hasCreatedAt ? `, TIME INDEX (${q("created_at")})` : "";
     const withClause = isTimeIndex ? ` WITH ('merge_mode'='last_non_null')` : "";
@@ -243,18 +307,13 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
       }
     };
 
-    for (const [tableName, columns] of Object.entries(schema)) {
-      const allColumns = { ...columns, ...additionalFields[tableName] };
-
-      const columnDefs = Object.entries(allColumns)
+    const tablePromises = Object.entries(this.schema).map(async ([tableName, columns]) => {
+      const columnDefs = Object.entries(columns as TableSchema)
         .map(([name, col]) => {
           if (name.startsWith("$")) return null;
-          const column = col as ColumnSchema;
-          let type = column.type;
-          if (type === "VARCHAR(255)") type = varchar(255);
-          if (type === "VARCHAR(64)") type = varchar(64);
-          if (type === "TIMESTAMP") type = types.timestamp;
-          if (type === "JSON") type = types.json;
+          const column = typeof col === "string" ? { type: col } : (col as ColumnSchema);
+          const logicalType = column.type.toLowerCase();
+          const type = (this.config.types as any)[logicalType] ?? column.type;
 
           let extra = "";
           if (isTimeIndex && column.skippingIndex) {
@@ -265,7 +324,7 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
         })
         .filter(Boolean);
 
-      const hasCreatedAt = allColumns.created_at !== undefined;
+      const hasCreatedAt = (columns as TableSchema).created_at !== undefined;
       const primaryKeyCols = (columns as any).$primaryKey ?? ["id"];
       const pk = `PRIMARY KEY (${primaryKeyCols.map((c: string) => q(c)).join(", ")})`;
 
@@ -275,25 +334,50 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
         part = partition(partitionCols);
       }
 
-      await this.executor.run(
+      const createTableP = this.executor.run(
         `CREATE TABLE IF NOT EXISTS ${q(tableName)} (${columnDefs.join(", ")}, ${pk}${timeIndex(hasCreatedAt)})${part}${withClause}`,
       );
 
-      if (!isTimeIndex) {
+      if (isTimeIndex) {
+        await createTableP;
+      } else {
+        await createTableP;
         const indexes = (columns as any).$indexes as string[][] | undefined;
+        let indexPromises: Promise<any>[] = [];
+
+        for (const [name, col] of Object.entries(columns as TableSchema)) {
+          if (name.startsWith("$")) continue;
+          const column = typeof col === "string" ? { type: col } : (col as ColumnSchema);
+
+          if (column.index) {
+            indexPromises.push(createIndex(tableName, `${tableName}_${name}_idx`, [name], false));
+          }
+
+          if (column.primaryKey && name !== "id") {
+            // "id" is handled in PK natively
+            indexPromises.push(createIndex(tableName, `${tableName}_${name}_pkey`, [name], false));
+          }
+        }
+
+        await Promise.all(indexPromises);
+
         if (indexes?.length) {
           let idxCount = 1;
-          for (const idxCols of indexes) {
-            const idxName = `${tableName}_idx_${idxCount++}`;
-            await createIndex(tableName, idxName, idxCols, true);
-          }
+          await Promise.all(
+            indexes.map((idxCols) => {
+              const idxName = `${tableName}_idx_${idxCount++}`;
+              return createIndex(tableName, idxName, idxCols, true);
+            }),
+          );
         } else if (hasCreatedAt) {
           // Fallback legacy behavior
           const idxName = `${tableName}_created_at_idx`;
           await createIndex(tableName, idxName, ["created_at"]);
         }
       }
-    }
+    });
+
+    await Promise.all(tablePromises);
   }
 
   // ==========================================================================
@@ -523,7 +607,11 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
               args.push(op.lte);
             } else if (k === "in") {
               const inVals = op.in as any[];
-              const inPlaceholders = inVals.map(() => placeholder(currentIdx++)).join(", ");
+              const arr = Array.from({ length: inVals.length });
+              for (let i = 0; i < inVals.length; i++) {
+                arr[i] = placeholder(currentIdx++);
+              }
+              const inPlaceholders = arr.join(", ");
               conditions.push(`${target} IN (${inPlaceholders})`);
               args.push(...inVals);
             } else if (k === "contains") {

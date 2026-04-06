@@ -17,7 +17,6 @@ const GrepTimeBase: Pick<DialectConfig, "types"> = {
     index: "TIME",
   },
 };
-
 export const GrepTimeDialectConfig: DialectConfig = Object.assign(
   {},
   PostgresDialectConfig,
@@ -50,7 +49,17 @@ export const GrepTimeDialectConfig: DialectConfig = Object.assign(
         `${col} >= 'c')`
       );
     },
-    types: GrepTimeBase.types,
+    types: {
+      id: "VARCHAR(255)",
+      string: "VARCHAR(255)",
+      shorttext: "VARCHAR(64)",
+      longtext: "TEXT",
+      int: "INTEGER",
+      timestamp: "TIMESTAMP",
+      json: "JSON",
+      boolean: "BOOLEAN",
+      index: "TIME",
+    },
   },
 );
 

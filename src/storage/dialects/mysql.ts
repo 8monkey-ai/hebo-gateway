@@ -17,9 +17,14 @@ export const MySQLDialectConfig: DialectConfig = {
   limitAsLiteral: true,
   supportCreateIndexIfNotExists: false,
   types: {
-    varchar: "VARCHAR",
-    json: "JSON",
+    id: "VARCHAR(255)",
+    string: "VARCHAR(255)",
+    shorttext: "VARCHAR(64)",
+    longtext: "LONGTEXT",
+    int: "INT",
     timestamp: "BIGINT",
+    json: "JSON",
+    boolean: "BOOLEAN",
     index: "B-TREE",
   },
 };

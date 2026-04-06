@@ -416,20 +416,24 @@ Hebo Gateway provides high-performance SQL adapters for **PostgreSQL**, **SQLite
 ```ts
 import { gateway } from "@hebo-ai/gateway";
 import { SqlStorage, PostgresDialect } from "@hebo-ai/gateway/storage/sql";
+import { conversationExtension } from "@hebo-ai/gateway/endpoints/conversations";
 import { Pool } from "pg";
 
 // 1. Setup dialect-specific client (e.g. pg, mysql2, sqlite, bun)
 const client = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// 2. Setup storage with matching dialect (PostgresDialect, SqliteDialect, MysqlDialect, ...)
+// 2. Setup storage with matching dialect
 const storage = new SqlStorage({
   dialect: new PostgresDialect({ client }),
 });
 
-// 3. Run migrations
-await storage.migrate();
+// 3. Apply domain expertise via extensions (Prisma-style)
+const extendedStorage = storage.$extends(conversationExtension);
 
-const gw = gateway({ storage });
+// 4. Run migrations (schema is automatically collected from extensions)
+await extendedStorage.migrate();
+
+const gw = gateway({ storage: extendedStorage });
 ```
 
 > [!TIP]
@@ -437,58 +441,52 @@ const gw = gateway({ storage });
 
 #### Extending Storage (Advanced)
 
-Hebo Gateway's storage layer is designed to be fully extensible via **Schema-aware Columns**, **Generic Metadata**, and **Resource Hooks**. This allows you to implement multi-tenancy, sharding, and custom indexing without losing OpenAI compatibility.
+Hebo Gateway's storage layer follows the **Prisma Client Extension** model. You can extend it with custom fields (structure) and custom behaviors (logic) using unified middleware.
 
-##### Schema Extensions (`additionalFields`)
+##### Schema Extensions (Structure)
 
-You can define top-level database columns and generic optimization flags that live alongside the standard `metadata` JSON blob. This is essential for high-performance filtering and indexing.
+You can define top-level database columns and generic optimization flags by layering extensions. The engine automatically merges these definitions during migration.
 
 ```ts
 import { SqlStorage, PostgresDialect } from "@hebo-ai/gateway/storage/sql";
-import { CONVERSATION_SCHEMA } from "@hebo-ai/gateway/endpoints/conversations";
+import { conversationExtension } from "@hebo-ai/gateway/endpoints/conversations";
 
 const storage = new SqlStorage({
   dialect: new PostgresDialect({ client }),
-});
+})
+  .$extends(conversationExtension) // Built-in expertise
+  .$extends({
+    schema: {
+      conversations: {
+        // Add custom fields using logical types (id, string, json, timestamp)
+        organization_id: { type: "id", index: true, nullable: false },
+        // Custom sharding via generic partition flag
+        $partitionBy: ["organization_id"],
+      },
+    },
+  });
 
-// Use the built-in schema or extend it
-await storage.migrate(CONVERSATION_SCHEMA, {
-  conversations: {
-    organization_id: { type: "VARCHAR(255)", index: true, nullable: false },
-    // GreptimeDB sharding via generic partition flag
-    $partitionBy: ["organization_id"], 
-  },
-  conversation_items: {
-    // In-Memory LRU limit via generic limit flag
-    $memoryLimit: 50000,
-  }
-});
+// migrate() creates 'conversations' with built-in fields AND organization_id
+await storage.migrate();
 ```
 
-- **Data Separation**: User-provided `metadata` stays in the JSON blob. System fields (like `organization_id`) live in real SQL columns.
-- **Generic Optimizations**: Use `$primaryKey`, `$partitionBy`, and `$memoryLimit` to tune performance without hardcoding table names.
+##### Query Extensions (Behavior)
 
-##### Resource Extensions (`query`)
-
-Inspired by Prisma, extensions allow you to intercept and modify storage operations. This is the primary way to implement multi-tenancy or audit logging.
+You can intercept and modify storage operations to implement multi-tenancy or audit logging.
 
 ```ts
 storage.$extends({
   query: {
-    conversations: {
-      create: async ({ model, operation, args, context, query }) => {
-        // Inject organization_id from request context into the top-level columns
-        return query({
-          ...args,
-          organization_id: context.state.orgId,
-        });
+    $allModels: {
+      async create({ args, query, context }) {
+        // Automatically inject organization_id from request context
+        args.data.organization_id = context.state.orgId;
+        return query(args);
       },
-      findMany: async ({ model, operation, args, context, query }) => {
-        // Enforce tenant isolation by injecting a 'where' clause
-        return query({
-          ...args,
-          where: { ...args.where, organization_id: context.state.orgId },
-        });
+      async findMany({ args, query, context }) {
+        // Enforce tenant isolation
+        args.where = { ...args.where, organization_id: context.state.orgId };
+        return query(args);
       },
     },
   },
@@ -497,10 +495,10 @@ storage.$extends({
 
 ##### Drizzle-inspired Query Language
 
-The storage layer uses a standardized intermediary language (`StorageQueryOptions`) that works across all database dialects. This allows you to perform complex filtering on both top-level columns and nested JSON data without writing raw SQL.
+The storage layer uses a standardized intermediary language that works across all database dialects. This allows you to perform complex filtering on both top-level columns and nested JSON data.
 
 ```typescript
-const conversations = await repo.listConversations({
+const conversations = await storage.conversations.findMany({
   where: {
     // Top-level column filtering
     organization_id: "org_123",
@@ -516,19 +514,15 @@ const conversations = await repo.listConversations({
 
 ##### Fluent Table API
 
-Beyond high-level conversation methods, `SqlStorage` and `InMemoryStorage` provide a fluent, Prisma-style API for any custom tables. This allows you to use the gateway's storage engine for any custom resources.
+`SqlStorage` and `InMemoryStorage` provide a fluent, Prisma-style API. Domain expertise (like UUID generation or row mapping) is applied transparently via extensions.
 
 ```typescript
-// Query any resource using the fluent API
-const results = await storage.custom_resource.findMany({
-  where: { status: "active" }
-});
-
-// Insert into custom tables with automatic resource inference
-await storage.custom_resource.create({
-  id: "123",
-  status: "active",
-  data: { foo: "bar" }
+// Standard storage methods are enhanced with domain knowledge
+const conv = await storage.conversations.create({
+  data: {
+    metadata: { user_id: "123" },
+    items: [{ type: "message", role: "user", content: "Hello" }], // Nested create!
+  },
 });
 ```
 

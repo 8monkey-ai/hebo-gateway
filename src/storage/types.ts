@@ -1,3 +1,5 @@
+import { type SqlDialect } from "./dialects/types";
+
 export type GenericData = Record<string, unknown>;
 
 export type WhereOperator<T> =
@@ -82,12 +84,21 @@ export type StorageExtensionCallback<TArgs = any, TResult = any> = (
 
 export interface StorageExtension<TSchema extends DatabaseSchema = any> {
   name?: string;
+  schema?: DatabaseSchema;
   query?: {
     [K in keyof TSchema | "$allModels"]?: {
       [Op in StorageOperation | "$allOperations"]?: StorageExtensionCallback;
     };
   };
+  model?: {
+    [K in keyof TSchema | "$allModels"]?: Record<string, (this: any, ...args: any[]) => any>;
+  };
+  client?: Record<string, (this: any, ...args: any[]) => any>;
 }
+
+export type StorageExtensionFactory<TSchema extends DatabaseSchema = any> = (
+  client: Storage<TSchema>,
+) => StorageExtension<TSchema>;
 
 export type RowMapper<T> = (row: any) => T;
 
@@ -95,6 +106,7 @@ export type RowMapper<T> = (row: any) => T;
  * Fluent client for a specific table. Methods are resource-agnostic.
  */
 export interface TableClient<T = any, TExtra = any> {
+  [methodName: string]: any;
   // FUTURE: Support .prepare(name: string) for explicit prepared statements.
   findMany(
     options: StorageQueryOptions<TExtra>,
@@ -123,16 +135,13 @@ export interface TableClient<T = any, TExtra = any> {
 /**
  * Main Storage interface, supporting fluent table access via mapped types.
  */
-export type Storage<
-  TSchema extends DatabaseSchema = any,
-  TExtra = Record<string, any>,
-> = {
+export type Storage<TSchema extends DatabaseSchema = any, TExtra = Record<string, any>> = {
   [K in keyof TSchema]: TableClient<any, TExtra>;
 } & {
-  migrate(
-    schema: TSchema,
-    additionalFields?: Record<string, Record<string, { type: string }>>,
-  ): Promise<void>;
+  [methodName: string]: any;
+  readonly dialect?: SqlDialect;
+
+  migrate(): Promise<void>;
 
   // Internal/Generic methods (remain for engine implementation and extension dispatcher)
   _findMany<T>(
@@ -181,5 +190,5 @@ export type Storage<
 
   transaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
 
-  $extends(extension: StorageExtension<TSchema>): this;
+  $extends(extension: StorageExtension<TSchema> | StorageExtensionFactory<TSchema>): this;
 };

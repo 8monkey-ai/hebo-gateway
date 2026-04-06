@@ -13,15 +13,14 @@ import {
 } from "./schema";
 import { type ResponsesInputItem } from "../responses/schema";
 import { InMemoryStorage } from "../../storage/memory";
-import { ConversationRepository } from "./repository";
+import { conversationExtension } from "./extension";
 
 describe("Conversations Handler", () => {
   let config: GatewayConfig;
-  let repo: ConversationRepository;
+  let storage: any;
 
   beforeEach(() => {
-    const storage = new InMemoryStorage();
-    repo = new ConversationRepository(storage);
+    storage = new InMemoryStorage().$extends(conversationExtension);
     config = {
       providers: {
         groq: new MockProviderV3(),
@@ -270,14 +269,19 @@ describe("Conversations Handler", () => {
 
   test("should manage individual items", async () => {
     const endpoint = conversations(config);
-    const storage = repo;
+    // No storage = repo needed
 
-    const conv = await repo.createConversation({});
+    const conv = await storage.conversations.create({});
     const itemInputs = [
       { type: "message", role: "user", content: "Message 1" },
       { type: "message", role: "user", content: "Message 2" },
     ] satisfies ResponsesInputItem[];
-    const items = (await repo.addItems(conv.id, itemInputs))!;
+    const items = await storage.transaction((tx: any) => {
+      const itemPromises = itemInputs.map((input) =>
+        storage.conversation_items.create({ ...input, conversation_id: conv.id }, {}, tx),
+      );
+      return Promise.all(itemPromises);
+    });
     const item1Id = items[0]!.id;
     const item2Id = items[1]!.id;
 
@@ -321,7 +325,7 @@ describe("Conversations Handler", () => {
 
   test("should handle pagination (has_more)", async () => {
     const endpoint = conversations(config);
-    const storage = repo;
+    // No storage = repo needed
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
@@ -329,7 +333,7 @@ describe("Conversations Handler", () => {
       content: `Msg ${i + 1}`,
     })) satisfies ResponsesInputItem[];
 
-    const conv = await repo.createConversation({ items: itemInputs });
+    const conv = await storage.conversations.create({ items: itemInputs });
 
     const res = await endpoint.handler(
       new Request(`http://localhost/conversations/${conv.id}/items?limit=3&order=asc`),
@@ -361,7 +365,7 @@ describe("Conversations Handler", () => {
 
   test("should handle pagination with after and order=desc", async () => {
     const endpoint = conversations(config);
-    const storage = repo;
+    // No storage = repo needed
 
     const itemInputs = Array.from({ length: 5 }, (_, i) => ({
       type: "message",
@@ -369,7 +373,7 @@ describe("Conversations Handler", () => {
       content: `Msg ${i + 1}`,
     })) satisfies ResponsesInputItem[];
 
-    const conv = await repo.createConversation({ items: itemInputs });
+    const conv = await storage.conversations.create({ items: itemInputs });
 
     // 1. Get first page (descending)
     const res1 = await endpoint.handler(
@@ -426,9 +430,9 @@ describe("Conversations Handler", () => {
 
   test("should enforce limit constraints", async () => {
     const endpoint = conversations(config);
-    const storage = repo;
+    // No storage = repo needed
 
-    const conv = await repo.createConversation({});
+    const conv = await storage.conversations.create({});
 
     // Limit too high
     const resHigh = await endpoint.handler(
@@ -475,8 +479,8 @@ describe("Conversations Handler", () => {
     const endpoint = conversations(config);
 
     // 1. Maintain item ID during addItems
-    const storage = repo;
-    const conv = await repo.createConversation({});
+    // No storage = repo needed
+    const conv = await storage.conversations.create({});
 
     const customItemId = "item_custom_123";
     const addItemsReq = postJson(`http://localhost/conversations/${conv.id}/items`, {
@@ -593,8 +597,8 @@ describe("Conversations Handler", () => {
     expect(resFile.status).toBe(400);
 
     // 3. Add item with empty input_image
-    const storage = repo;
-    const conv = await repo.createConversation({});
+    // No storage = repo needed
+    const conv = await storage.conversations.create({});
 
     const reqAdd = postJson(`http://localhost/conversations/${conv.id}/items`, {
       items: [

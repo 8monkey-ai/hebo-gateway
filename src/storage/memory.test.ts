@@ -4,20 +4,25 @@ import { InMemoryStorage } from "./memory";
 describe("InMemoryStorage (Size-Based LRU)", () => {
   test("should evict items based on estimated byte size", async () => {
     const storage = new InMemoryStorage();
-    await storage.migrate({
-      cache: {
-        id: { type: "string" },
-        $memoryLimit: 1000, // Very small limit (1KB)
+    storage.$extends({
+      schema: {
+        cache: {
+          id: { type: "string" },
+          $memoryLimit: 1000, // Very small limit (1KB)
+        },
       },
     });
+    await storage.migrate();
 
     // Each item is ~200 bytes (string "a" repeated 100 times)
     const largeValue = "a".repeat(100);
 
     // Insert 10 items (Total ~2000 bytes, should trigger eviction)
+    const promises = [];
     for (let i = 0; i < 10; i++) {
-      await storage.cache.create({ id: `item-${i}`, data: largeValue });
+      promises.push(storage.cache.create({ id: `item-${i}`, data: largeValue }));
     }
+    await Promise.all(promises);
 
     const items = await storage.cache.findMany({});
 
@@ -31,12 +36,15 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
 
   test("should handle nested object size estimation", async () => {
     const storage = new InMemoryStorage();
-    await storage.migrate({
-      cache: {
-        id: { type: "string" },
-        $memoryLimit: 500,
+    storage.$extends({
+      schema: {
+        cache: {
+          id: { type: "string" },
+          $memoryLimit: 500,
+        },
       },
     });
+    await storage.migrate();
 
     const hugeObject = {
       nested: {
@@ -54,7 +62,7 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
 describe("InMemoryStorage (Filtering and Operations)", () => {
   test("should support nested property filtering with structured operators", async () => {
     const storage = new InMemoryStorage();
-    await storage.migrate({ test_table: {} });
+    await storage.migrate();
 
     await storage.test_table.create({ id: "1", metadata: { count: 10 } });
     await storage.test_table.create({ id: "2", metadata: { count: 3 } });
@@ -69,7 +77,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
 
   test("should support deep dot notation exact match", async () => {
     const storage = new InMemoryStorage();
-    await storage.migrate({ test_table: {} });
+    await storage.migrate();
 
     await storage.test_table.create({ id: "1", user: { profile: { name: "alice" } } });
     await storage.test_table.create({ id: "2", user: { profile: { name: "bob" } } });
@@ -84,7 +92,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
 
   test("delete should not cascade to other tables", async () => {
     const storage = new InMemoryStorage();
-    await storage.migrate({ parent: {}, child: {} });
+    await storage.migrate();
 
     await storage.parent.create({ id: "p1" });
     await storage.child.create({ id: "c1", parent_id: "p1" });
@@ -101,17 +109,25 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
 
   test("should generate uuidv7 fallback IDs and maintain chronological sorting", async () => {
     const storage = new InMemoryStorage();
-    await storage.migrate({ items: {} });
+    await storage.migrate();
 
     // Create 5 items without explicit IDs, with small delays to ensure different uuidv7 timestamps
+    const createPromises = [];
     for (let i = 0; i < 5; i++) {
-      await storage.items.create({ data: `item-${i}` });
-      await new Promise((r) => setTimeout(r, 2));
+      createPromises.push(
+        new Promise<void>((r) => {
+          setTimeout(async () => {
+            await storage.items.create({ data: `item-${i}` });
+            r();
+          }, i * 2);
+        }),
+      );
     }
+    await Promise.all(createPromises);
 
     // List items - they should be sorted by ID (the fallback uuidv7) by default or as tie-breaker
     const results = await storage.items.findMany({
-      orderBy: { id: "asc" }
+      orderBy: { id: "asc" },
     });
 
     expect(results).toHaveLength(5);

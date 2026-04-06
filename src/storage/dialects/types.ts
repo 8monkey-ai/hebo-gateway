@@ -20,6 +20,16 @@ export interface QueryExecutor {
   transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T>;
 }
 
+export type LogicalType =
+  | "id"
+  | "string"
+  | "shorttext"
+  | "longtext"
+  | "int"
+  | "timestamp"
+  | "json"
+  | "boolean";
+
 export interface DialectConfig {
   placeholder: (index: number) => string;
   quote: (name: string) => string;
@@ -30,10 +40,7 @@ export interface DialectConfig {
   supportCreateIndexIfNotExists?: boolean;
   limitAsLiteral?: boolean;
   partitionClause?: (columns: string[]) => string;
-  types: {
-    varchar: string;
-    json: string;
-    timestamp: string;
+  types: Record<LogicalType, string> & {
     index: "BRIN" | "B-TREE" | "TIME";
   };
 }

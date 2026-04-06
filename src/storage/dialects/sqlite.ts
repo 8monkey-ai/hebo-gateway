@@ -10,7 +10,7 @@ const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `"${i.replaceAll('"', '""')}"`,
-  selectJson: (c) => c,
+  selectJson: undefined,
   jsonExtract: (c, k) => `json_extract(${c}, '$.${escapeSqlString(k)}')`,
   upsertSuffix: (q, pk, cols) =>
     `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols
@@ -18,9 +18,14 @@ export const SQLiteDialectConfig: DialectConfig = {
       .join(", ")}`,
   supportCreateIndexIfNotExists: true,
   types: {
-    varchar: "TEXT",
-    json: "TEXT",
+    id: "TEXT",
+    string: "TEXT",
+    shorttext: "TEXT",
+    longtext: "TEXT",
+    int: "BIGINT",
     timestamp: "BIGINT",
+    json: "TEXT",
+    boolean: "BOOLEAN",
     index: "B-TREE",
   },
 };
@@ -61,12 +66,24 @@ function createBetterSqlite3Executor(db: BetterSqlite3Database): QueryExecutor {
     },
     get<T>(sql: string, params?: unknown[]) {
       const stmt = getStmt(sql);
-      return Promise.resolve(stmt.get.apply(stmt, mapParams(params) ?? []) as T | undefined);
+      const mapped = mapParams(params) ?? [];
+      try {
+        return Promise.resolve(stmt.get.apply(stmt, mapped) as T | undefined);
+      } catch (err) {
+        console.error("[sqlite] get failed", { sql, mapped, err });
+        throw err;
+      }
     },
     run(sql: string, params?: unknown[]) {
       const stmt = getStmt(sql);
-      const info = stmt.run.apply(stmt, mapParams(params) ?? []);
-      return Promise.resolve({ changes: info.changes });
+      const mapped = mapParams(params) ?? [];
+      try {
+        const info = stmt.run.apply(stmt, mapped);
+        return Promise.resolve({ changes: info.changes });
+      } catch (err) {
+        console.error("[sqlite] run failed", { sql, mapped, err });
+        throw err;
+      }
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const inTransaction = db.inTransaction;

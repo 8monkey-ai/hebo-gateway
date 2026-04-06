@@ -2,10 +2,7 @@ import { describe, expect, test, mock } from "bun:test";
 import { GrepTimeDialect, GrepTimeDialectConfig } from "./greptime";
 import { type PgPool } from "./postgres";
 import { SqlStorage } from "../sql";
-import {
-  ConversationRepository,
-  CONVERSATION_SCHEMA,
-} from "../../endpoints/conversations/repository";
+import { conversationExtension } from "../../endpoints/conversations/extension";
 
 describe("Greptime Dialect (Mocked)", () => {
   const createMockPool = () => {
@@ -19,7 +16,10 @@ describe("Greptime Dialect (Mocked)", () => {
       // Return a mock result
       if (text.trim().toUpperCase().startsWith("SELECT")) {
         if (text.includes('FROM "conversations"')) {
-          return Promise.resolve({ rows: [{ id: "conv-1", created_at: Date.now() }], rowCount: 1 });
+          return Promise.resolve({
+            rows: [{ id: "conv-1", created_at: Date.now(), metadata: "{}" }],
+            rowCount: 1,
+          });
         }
         return Promise.resolve({ rows: [], rowCount: 0 });
       }
@@ -42,10 +42,9 @@ describe("Greptime Dialect (Mocked)", () => {
   test("should generate correct Greptime-specific table creation queries", async () => {
     const { pool, queries } = createMockPool();
     const dialect = new GrepTimeDialect({ client: pool as unknown as PgPool });
-    const storage = new SqlStorage({ dialect });
-    const repo = new ConversationRepository(storage);
+    const storage = new SqlStorage({ dialect }).$extends(conversationExtension);
 
-    await storage.migrate(CONVERSATION_SCHEMA);
+    await storage.migrate();
 
     const createConversations = queries.find((q) =>
       q.sql.includes('CREATE TABLE IF NOT EXISTS "conversations"'),
@@ -66,18 +65,22 @@ describe("Greptime Dialect (Mocked)", () => {
   test("should map parameters correctly for Greptime (PgPool driver)", async () => {
     const { pool, queries } = createMockPool();
     const dialect = new GrepTimeDialect({ client: pool as unknown as PgPool });
-    const storage = new SqlStorage({ dialect });
-    const repo = new ConversationRepository(storage);
+    const storage = new SqlStorage({ dialect }).$extends(conversationExtension);
+    await storage.migrate();
 
     const metadata = { user: "greptime" };
-    await repo.createConversation({ metadata });
+    await storage.conversations.create({ metadata });
 
     const insertConv = queries.find((q) => q.sql.includes('INSERT INTO "conversations"'));
     expect(insertConv).toBeDefined();
 
-    // JSON using pg driver should be wrapped in Uint8Array
-    expect(insertConv!.params[1] instanceof Uint8Array).toBe(true);
-    const decodedJson = new TextDecoder().decode(insertConv!.params[1] as Uint8Array);
+    // Find the parameter that is a JSON string (or Uint8Array in this case)
+    const metadataParam = insertConv!.params.find(
+      (p) => p instanceof Uint8Array || (typeof p === "string" && p.startsWith("{")),
+    );
+    expect(metadataParam).toBeDefined();
+    expect(metadataParam instanceof Uint8Array).toBe(true);
+    const decodedJson = new TextDecoder().decode(metadataParam as Uint8Array);
     expect(decodedJson).toBe(JSON.stringify(metadata));
 
     // Date using pg driver should be a specific string format

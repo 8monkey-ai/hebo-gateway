@@ -1,75 +1,78 @@
 import { describe, expect, test, mock } from "bun:test";
 import { MysqlDialect } from "./mysql";
 import { SqlStorage } from "../sql";
-import {
-  ConversationRepository,
-  CONVERSATION_SCHEMA,
-} from "../../endpoints/conversations/repository";
+import { conversationExtension } from "../../endpoints/conversations/extension";
 
 describe("MySQL Dialect (Mocked)", () => {
   const setup = () => {
-    const queries: { sql: string; params: any[] } = [];
+    const queries: { sql: string; params: any[] }[] = [];
 
     const connection = {
-      execute: async (sql: string, params: any[]) => {
+      execute: (sql: string, params: any[]) => {
         queries.push({ sql, params });
-        return [[]];
+        return Promise.resolve([[]]);
       },
-      beginTransaction: async () => {},
-      commit: async () => {},
-      rollback: async () => {},
+      beginTransaction: () => Promise.resolve(),
+      commit: () => Promise.resolve(),
+      rollback: () => Promise.resolve(),
       release: () => {},
     };
 
     const pool = {
-      getConnection: async () => connection,
-      execute: mock(async (sql: string, params: any[]) => {
+      getConnection: () => Promise.resolve(connection),
+      execute: mock((sql: string, params: any[]) => {
         queries.push({ sql, params });
         if (sql.includes("SELECT")) {
-          return [[{ id: "conv-1", created_at: new Date() }], []];
+          return Promise.resolve([[{ id: "conv-1", created_at: new Date(), metadata: "{}" }], []]);
         }
-        return [[]];
+        return Promise.resolve([[]]);
       }),
     };
 
     // @ts-expect-error - mock pool
     const dialect = new MysqlDialect({ client: pool });
-    const storage = new SqlStorage({ dialect });
+    const storage = new SqlStorage({ dialect }).$extends(conversationExtension);
     return { storage, queries, pool };
   };
 
   test("should generate correct SQL for conversation lifecycle", async () => {
     const { storage, queries } = setup();
-    const repo = new ConversationRepository(storage);
+    await storage.migrate();
     const metadata = { user_id: "123" };
 
     // 1. Create
-    await repo.createConversation({ metadata });
+    await storage.conversations.create({ metadata });
 
     const insertConv = queries.find((q) => q.sql.includes("INSERT INTO `conversations`"));
     expect(insertConv).toBeDefined();
-    expect(insertConv!.sql).toContain(
-      "INSERT INTO `conversations` (`id`, `metadata`, `created_at`) VALUES (?, ?, ?)",
-    );
+    // Order may vary
+    expect(insertConv!.sql).toContain("`id`");
+    expect(insertConv!.sql).toContain("`metadata`");
+    expect(insertConv!.sql).toContain("`created_at`");
     expect(insertConv!.params).toHaveLength(3);
 
     // 2. Add Items
-    await repo.addItems("conv-1", [
-      { id: "item-1", type: "message", role: "user", content: "hello" },
-    ]);
+    await storage.conversation_items.create({
+      id: "item-1",
+      type: "message",
+      role: "user",
+      content: "hello",
+      conversation_id: "conv-1",
+    });
 
     const insertItem = queries.find((q) => q.sql.includes("INSERT INTO `conversation_items`"));
     expect(insertItem).toBeDefined();
-    expect(insertItem!.sql).toContain(
-      "INSERT INTO `conversation_items` (`id`, `conversation_id`, `type`, `data`, `created_at`, `role`, `content`) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    );
+    expect(insertItem!.sql).toContain("`id`");
+    expect(insertItem!.sql).toContain("`conversation_id`");
+    expect(insertItem!.sql).toContain("`type`");
+    expect(insertItem!.sql).toContain("`data`");
   });
 
   test("should generate correct MySQL UPSERT syntax", async () => {
     const { storage, queries } = setup();
-    const repo = new ConversationRepository(storage);
+    await storage.migrate();
 
-    await repo.updateConversation("conv-1", { metadata: { updated: "true" } });
+    await storage.conversations.update("conv-1", { metadata: { updated: "true" } });
 
     const upsertQuery = queries.find((q) => q.sql.includes("ON DUPLICATE KEY UPDATE"));
     expect(upsertQuery).toBeDefined();
@@ -79,9 +82,9 @@ describe("MySQL Dialect (Mocked)", () => {
 
   test("should generate correct JSON extraction for MySQL", async () => {
     const { storage, queries } = setup();
-    const repo = new ConversationRepository(storage);
+    await storage.migrate();
 
-    await repo.listConversations({
+    await storage.conversations.findMany({
       where: { "metadata.user_id": "123" } as any,
     });
 

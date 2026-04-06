@@ -31,7 +31,10 @@ export function createRowMapper<T>(
   mappers: ((row: Record<string, unknown>) => Record<string, unknown>)[],
 ) {
   const p = pipe<Record<string, unknown>>(mappers);
-  return (row: Record<string, unknown>) => p(row) as unknown as T;
+  return (row: Record<string, unknown>) => {
+    if (!row) return row as unknown as T;
+    return p(row) as unknown as T;
+  };
 }
 
 /**
@@ -39,12 +42,13 @@ export function createRowMapper<T>(
  */
 export const dateToNumber = (v: unknown) => (v instanceof Date ? v.getTime() : v);
 export const dateToBigInt = (v: unknown) => (v instanceof Date ? BigInt(v.getTime()) : v);
-export const jsonStringify = (v: unknown, asBinary = false) =>
-  v !== null && typeof v === "object" && !(v instanceof Date)
-    ? asBinary
-      ? new TextEncoder().encode(JSON.stringify(v))
-      : JSON.stringify(v)
-    : v;
+export const jsonStringify = (v: unknown, asBinary = false) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "object" && !(v instanceof Date)) {
+    return asBinary ? new TextEncoder().encode(JSON.stringify(v)) : JSON.stringify(v);
+  }
+  return v;
+};
 
 /**
  * Escapes single quotes in a string for use in SQL literals.

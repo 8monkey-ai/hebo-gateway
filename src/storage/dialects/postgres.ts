@@ -21,9 +21,14 @@ export const PostgresDialectConfig: DialectConfig = {
       .join(", ")}`,
   supportCreateIndexIfNotExists: true,
   types: {
-    varchar: "VARCHAR",
-    json: "JSONB",
+    id: "VARCHAR(255)",
+    string: "VARCHAR(255)",
+    shorttext: "VARCHAR(64)",
+    longtext: "TEXT",
+    int: "INTEGER",
     timestamp: "BIGINT",
+    json: "JSONB",
+    boolean: "BOOLEAN",
     index: "BRIN",
   },
 };
