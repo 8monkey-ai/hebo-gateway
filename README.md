@@ -505,9 +505,9 @@ const conversations = await repo.listConversations({
     // Top-level column filtering
     organization_id: "org_123",
     // Nested JSON filtering (automatic json_extract / ->>)
-    "metadata.user_id": "u_456",
+    metadata: { user_id: "u_456" },
     // Advanced operators: eq, ne, gt, gte, lt, lte, in, contains, isNull
-    "created_at >": Date.now() - 86400000,
+    created_at: { gt: Date.now() - 86400000 },
   },
   // Type-safe object-based sorting
   orderBy: { created_at: "desc" },

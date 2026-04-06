@@ -16,16 +16,16 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
 
     // Insert 10 items (Total ~2000 bytes, should trigger eviction)
     for (let i = 0; i < 10; i++) {
-      await storage.insert("cache", { id: `item-${i}`, data: largeValue });
+      await storage.cache.create({ id: `item-${i}`, data: largeValue });
     }
 
-    const items = await storage.find("cache", {});
+    const items = await storage.cache.findMany({});
 
     // Should have evicted some items to stay under 1000 bytes
     expect(items.length).toBeLessThan(10);
     expect(items.length).toBeGreaterThan(0);
 
-    const lastItem = await storage.findOne("cache", { id: "item-9" });
+    const lastItem = await storage.cache.findFirst({ id: "item-9" });
     expect(lastItem).toBeDefined();
   });
 
@@ -44,23 +44,23 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
       },
     };
 
-    await storage.insert("cache", { id: "huge", ...hugeObject });
+    await storage.cache.create({ id: "huge", ...hugeObject });
 
-    const item = await storage.findOne("cache", { id: "huge" });
+    const item = await storage.cache.findFirst({ id: "huge" });
     expect(item).toBeUndefined();
   });
 });
 
 describe("InMemoryStorage (Filtering and Operations)", () => {
-  test("should support nested property filtering with space operators", async () => {
+  test("should support nested property filtering with structured operators", async () => {
     const storage = new InMemoryStorage();
     await storage.migrate({ test_table: {} });
 
-    await storage.insert("test_table", { id: "1", metadata: { count: 10 } });
-    await storage.insert("test_table", { id: "2", metadata: { count: 3 } });
+    await storage.test_table.create({ id: "1", metadata: { count: 10 } });
+    await storage.test_table.create({ id: "2", metadata: { count: 3 } });
 
-    const results = await storage.find("test_table", {
-      where: { "metadata.count >": 5 } as any,
+    const results = await storage.test_table.findMany({
+      where: { metadata: { count: { gt: 5 } } } as any,
     });
 
     expect(results).toHaveLength(1);
@@ -71,32 +71,53 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     const storage = new InMemoryStorage();
     await storage.migrate({ test_table: {} });
 
-    await storage.insert("test_table", { id: "1", user: { profile: { name: "alice" } } });
-    await storage.insert("test_table", { id: "2", user: { profile: { name: "bob" } } });
+    await storage.test_table.create({ id: "1", user: { profile: { name: "alice" } } });
+    await storage.test_table.create({ id: "2", user: { profile: { name: "bob" } } });
 
-    const results = await storage.find("test_table", {
-      where: { "user.profile.name": "alice" } as any,
+    const results = await storage.test_table.findMany({
+      where: { user: { profile: { name: "alice" } } } as any,
     });
 
     expect(results).toHaveLength(1);
     expect(results[0].id).toBe("1");
   });
 
-  test("remove should not cascade to other tables", async () => {
+  test("delete should not cascade to other tables", async () => {
     const storage = new InMemoryStorage();
     await storage.migrate({ parent: {}, child: {} });
 
-    await storage.insert("parent", { id: "p1" });
-    await storage.insert("child", { id: "c1", parent_id: "p1" });
+    await storage.parent.create({ id: "p1" });
+    await storage.child.create({ id: "c1", parent_id: "p1" });
 
     // Explicitly delete only from parent
-    await storage.remove("parent", { id: "p1" });
+    await storage.parent.delete({ id: "p1" });
 
-    const p = await storage.findOne("parent", { id: "p1" });
+    const p = await storage.parent.findFirst({ id: "p1" });
     expect(p).toBeUndefined();
 
-    const c = await storage.findOne("child", { id: "c1" });
+    const c = await storage.child.findFirst({ id: "c1" });
     expect(c).toBeDefined(); // Child should still exist
   });
-});
 
+  test("should generate uuidv7 fallback IDs and maintain chronological sorting", async () => {
+    const storage = new InMemoryStorage();
+    await storage.migrate({ items: {} });
+
+    // Create 5 items without explicit IDs, with small delays to ensure different uuidv7 timestamps
+    for (let i = 0; i < 5; i++) {
+      await storage.items.create({ data: `item-${i}` });
+      await new Promise((r) => setTimeout(r, 2));
+    }
+
+    // List items - they should be sorted by ID (the fallback uuidv7) by default or as tie-breaker
+    const results = await storage.items.findMany({
+      orderBy: { id: "asc" }
+    });
+
+    expect(results).toHaveLength(5);
+    // Even without explicit IDs, they should be in the order they were created
+    for (let i = 0; i < 5; i++) {
+      expect(results[i].data).toBe(`item-${i}`);
+    }
+  });
+});

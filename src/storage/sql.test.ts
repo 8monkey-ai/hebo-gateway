@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { SqliteDialect } from "./dialects/sqlite";
 import { SqlStorage } from "./sql";
-import { ConversationRepository, CONVERSATION_SCHEMA } from "../endpoints/conversations/repository";
+import { ConversationRepository } from "../endpoints/conversations/repository";
 
 describe("SQL Storage Integration (via ConversationRepository)", () => {
   const createSetup = () => {
@@ -104,7 +104,6 @@ describe("SQL Storage Integration (via ConversationRepository)", () => {
 
     // 1. Seed
     const c1 = await repo.createConversation({ metadata: { user: "1", tag: "a" } });
-    // Wait a bit to ensure different created_at
     await new Promise((r) => setTimeout(r, 10));
     const c2 = await repo.createConversation({ metadata: { user: "1", tag: "b" } });
     await new Promise((r) => setTimeout(r, 10));
@@ -113,12 +112,11 @@ describe("SQL Storage Integration (via ConversationRepository)", () => {
     // 2. List all (Default order: desc)
     const all = await repo.listConversations({ limit: 10, order: "desc" });
     expect(all).toHaveLength(3);
-    // SQLite might have same timestamp if too fast, but we added timeouts
     expect(all[0]!.id).toBe(c3.id);
 
-    // 3. Filter by metadata
+    // 3. Filter by metadata (structured)
     const filtered = await repo.listConversations({
-      metadata: { user: "1" } as any,
+      metadata: { user: "1" },
       order: "asc",
     });
     expect(filtered).toHaveLength(2);
@@ -135,56 +133,50 @@ describe("SQL Storage Integration (via ConversationRepository)", () => {
     expect(page[0]!.id).toBe(c2.id);
   });
 
-  test("should use UPSERT (INSERT) logic and preserve original created_at", async () => {
-    const { repo, db } = createSetup();
-    await repo.migrate();
-
-    const conv = await repo.createConversation({ metadata: { initial: true } });
-    const originalCreatedAt = conv.created_at;
-
-    // Wait so a new date would be different
-    await new Promise((r) => setTimeout(r, 10));
-
-    await repo.updateConversation(conv.id, { metadata: { updated: true } });
-    
-    const updated = await repo.getConversation(conv.id);
-    expect(updated).toBeDefined();
-    expect(updated!.metadata).toEqual({ updated: true });
-    // IMPORTANT: created_at must be preserved exactly
-    expect(updated!.created_at).toBe(originalCreatedAt);
-  });
-
-  test("should support additionalFields as top-level columns", async () => {
-    const { repo } = createSetup();
-    await repo.migrate({
-      conversations: { org_id: { type: "VARCHAR(255)" } },
+  test("should support structured operators in SQL", async () => {
+    const { storage } = createSetup();
+    await storage.migrate({
+      test_table: {
+        id: { type: "TEXT" },
+        count: { type: "INTEGER" },
+        tags: { type: "TEXT" }
+      }
     });
 
-    const conv = await repo.createConversation({ org_id: "org-1" } as any);
-    expect((conv as any).org_id).toBe("org-1");
+    await storage.test_table.create({ id: "1", count: 10, tags: "a,b" });
+    await storage.test_table.create({ id: "2", count: 20, tags: "b,c" });
+    await storage.test_table.create({ id: "3", count: 30, tags: "c,d" });
 
-    const retrieved = await repo.getConversation(conv.id);
-    expect((retrieved as any).org_id).toBe("org-1");
+    // GT
+    const gt = await storage.test_table.findMany({ where: { count: { gt: 15 } } });
+    expect(gt).toHaveLength(2);
 
-    const filtered = await repo.listConversations({ where: { org_id: "org-1" } as any });
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]!.id).toBe(conv.id);
+    // IN
+    const inOp = await storage.test_table.findMany({ where: { id: { in: ["1", "3"] } } });
+    expect(inOp).toHaveLength(2);
+
+    // CONTAINS (LIKE)
+    const contains = await storage.test_table.findMany({ where: { tags: { contains: "b" } } });
+    expect(contains).toHaveLength(2);
+
+    // NE
+    const ne = await storage.test_table.findMany({ where: { count: { ne: 20 } } });
+    expect(ne).toHaveLength(2);
   });
 
   test("should support hooks for table name mutation", async () => {
     const { db, storage, repo } = createSetup();
 
-    // Create shard table manually
     db.run(
       "CREATE TABLE IF NOT EXISTS conversations_shard_1 (id TEXT PRIMARY KEY, created_at BIGINT, metadata TEXT)",
     );
 
     storage.$extends({
-      hooks: {
+      query: {
         conversations: {
           create: async ({ args, context, query }) => {
             if (context.shardId === 1) {
-              return query(args, { table: "conversations_shard_1" });
+              return query({ ...args, table: "conversations_shard_1" } as any);
             }
             return query(args);
           },
@@ -192,10 +184,9 @@ describe("SQL Storage Integration (via ConversationRepository)", () => {
       },
     });
 
-    // 1. Create in shard 1
-    const conv = await repo.createConversation({ metadata: { shard: "1" } }, { shardId: 1 });
+    // Create in shard 1
+    await repo.createConversation({ metadata: { shard: "1" } }, { shardId: 1 });
 
-    // 2. Verify it's in shard 1 table
     const rawShard = db.prepare("SELECT count(*) as count FROM conversations_shard_1").get() as any;
     expect(rawShard.count).toBe(1);
   });

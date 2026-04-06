@@ -39,25 +39,30 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
   private createTableClient(tableName: string): TableClient<any, TExtra> {
     return {
       findMany: (options, context, mapper, tx) =>
-        this.executeWithExtensions(tableName, "findMany", options, context, (args) =>
-          this._findMany(tableName, args, context, mapper, tableName, tx),
-        ),
-      findFirst: (criteria, context, mapper, options, tx) =>
-        this.executeWithExtensions(tableName, "findFirst", criteria, context, (args) =>
-          this._findFirst(tableName, args, context, mapper, options, tableName, tx),
-        ),
+        this.executeWithExtensions(tableName, "findMany", options, context, (args: any) => {
+          const { table, ...queryOptions } = args;
+          return this._findMany(tableName, queryOptions, context, mapper, table ?? tableName, tx);
+        }),
+      findFirst: (where, context, mapper, options, tx) =>
+        this.executeWithExtensions(tableName, "findFirst", where, context, (args: any) => {
+          const { table, ...whereArgs } = args;
+          return this._findFirst(tableName, whereArgs, context, mapper, options, table ?? tableName, tx);
+        }),
       create: (data, context, tx) =>
-        this.executeWithExtensions(tableName, "create", data, context, (args) =>
-          this._create(tableName, args, context, tableName, tx),
-        ),
+        this.executeWithExtensions(tableName, "create", data, context, (args: any) => {
+          const { table, ...dataArgs } = args;
+          return this._create(tableName, dataArgs, context, table ?? tableName, tx);
+        }),
       update: (id, data, context, tx) =>
-        this.executeWithExtensions(tableName, "update", { id, data }, context, (args) =>
-          this._update(tableName, args.id, args.data, context, tableName, tx),
-        ),
-      delete: (criteria, context, tx) =>
-        this.executeWithExtensions(tableName, "delete", criteria, context, (args) =>
-          this._delete(tableName, args, context, tableName, tx),
-        ),
+        this.executeWithExtensions(tableName, "update", { id, data }, context, (args: any) => {
+          const { table, ...updateArgs } = args;
+          return this._update(tableName, updateArgs.id, updateArgs.data, context, table ?? tableName, tx);
+        }),
+      delete: (where, context, tx) =>
+        this.executeWithExtensions(tableName, "delete", where, context, (args: any) => {
+          const { table, ...whereArgs } = args;
+          return this._delete(tableName, whereArgs, context, table ?? tableName, tx);
+        }),
     };
   }
 
@@ -132,14 +137,14 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
 
   async _findFirst<T>(
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context: any = {},
     mapper: RowMapper<T> = (r) => r as T,
     options: { orderBy?: Record<string, SortOrder> } = {},
     table: string = resource,
     tx: QueryExecutor = this.executor,
   ): Promise<T | undefined> {
-    const { sql, args: queryArgs } = this.buildGetQuery(table, resource, criteria, options);
+    const { sql, args: queryArgs } = this.buildGetQuery(table, resource, where, options);
     const row = await tx.get<Record<string, unknown>>(sql, queryArgs);
     return row ? mapper(row) : undefined;
   }
@@ -171,12 +176,12 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
 
   async _delete(
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context: any = {},
     table: string = resource,
     tx: QueryExecutor = this.executor,
   ): Promise<{ changes: number }> {
-    const { sql, args: queryArgs } = this.buildDeleteQuery(table, criteria);
+    const { sql, args: queryArgs } = this.buildDeleteQuery(table, resource, where);
     const { changes } = await tx.run(sql, queryArgs);
     return { changes };
   }
@@ -398,14 +403,14 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
   private buildGetQuery(
     table: string,
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     options: { orderBy?: Record<string, SortOrder> } = {},
   ) {
     const { quote: q } = this.config;
     let sql = `SELECT * FROM ${q(table)}`;
     const args: any[] = [];
 
-    const { sql: whereSql, args: whereArgs } = this.buildWhereClause(resource, criteria, 1);
+    const { sql: whereSql, args: whereArgs } = this.buildWhereClause(resource, where, 1);
     sql += ` WHERE ${whereSql}`;
     args.push(...whereArgs);
 
@@ -455,50 +460,103 @@ export class SqlStorage<TSchema extends DatabaseSchema = any, TExtra = Record<st
     return { sql, args };
   }
 
-  private buildDeleteQuery(table: string, criteria: Record<string, unknown>) {
+  private buildDeleteQuery(table: string, resource: string, where: WhereCondition<TExtra>) {
     const { quote: q } = this.config;
     let sql = `DELETE FROM ${q(table)}`;
     const args: any[] = [];
 
-    const { sql: whereSql, args: whereArgs } = this.buildWhereClause(table, criteria, 1);
+    const { sql: whereSql, args: whereArgs } = this.buildWhereClause(table, where, 1);
     sql += ` WHERE ${whereSql}`;
     args.push(...whereArgs);
 
     return { sql, args };
   }
 
-  private buildWhereClause(resource: string, where: Record<string, any>, startIdx: number) {
+  private buildWhereClause(resource: string, where: WhereCondition<any>, startIdx: number) {
     const { quote: q, placeholder, jsonExtract } = this.config;
     const conditions: string[] = [];
     const args: any[] = [];
     let currentIdx = startIdx;
 
-    for (const [key, value] of Object.entries(where)) {
-      if (value === undefined) continue;
+    // FUTURE: Support explicit prepared statements via .prepare() and sql.placeholder() mapping.
+    const processEntry = (key: string, value: any, path: string[] = []) => {
+      if (value === undefined) return;
 
-      if (key.includes(".")) {
-        const parts = key.split(".");
-        const column = parts[0];
-        const path = parts.slice(1).join(".");
-        conditions.push(`${jsonExtract(q(column), path)} = ${placeholder(currentIdx++)}`);
-        args.push(String(value));
+      const isOperatorSyntax = key.includes(" ");
+      const field = isOperatorSyntax ? key.split(" ")[0] : key;
+      const opFromKey = isOperatorSyntax ? key.split(" ")[1] : null;
+
+      // Handle dot-notation or nested path
+      const parts = field.split(".");
+      const fullPath = path.length > 0 ? [...path, ...parts] : parts;
+      const column = fullPath[0];
+      const jsonPath = fullPath.length > 1 ? fullPath.slice(1).join(".") : "";
+
+      const target = jsonPath ? jsonExtract(q(column), jsonPath) : q(column);
+
+      if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        const op = value;
+        const opKeys = Object.keys(op);
+        const isOperator = ["eq", "ne", "gt", "gte", "lt", "lte", "in", "contains", "isNull"].some(
+          (k) => k in op,
+        );
+
+        if (isOperator) {
+          for (const k of opKeys) {
+            if (k === "eq") {
+              conditions.push(`${target} = ${placeholder(currentIdx++)}`);
+              args.push(op.eq);
+            } else if (k === "ne") {
+              conditions.push(`${target} != ${placeholder(currentIdx++)}`);
+              args.push(op.ne);
+            } else if (k === "gt") {
+              conditions.push(`${target} > ${placeholder(currentIdx++)}`);
+              args.push(op.gt);
+            } else if (k === "gte") {
+              conditions.push(`${target} >= ${placeholder(currentIdx++)}`);
+              args.push(op.gte);
+            } else if (k === "lt") {
+              conditions.push(`${target} < ${placeholder(currentIdx++)}`);
+              args.push(op.lt);
+            } else if (k === "lte") {
+              conditions.push(`${target} <= ${placeholder(currentIdx++)}`);
+              args.push(op.lte);
+            } else if (k === "in") {
+              const inVals = op.in as any[];
+              const inPlaceholders = inVals.map(() => placeholder(currentIdx++)).join(", ");
+              conditions.push(`${target} IN (${inPlaceholders})`);
+              args.push(...inVals);
+            } else if (k === "contains") {
+              conditions.push(`${target} LIKE ${placeholder(currentIdx++)}`);
+              args.push(`%${op.contains}%`);
+            } else if (k === "isNull") {
+              conditions.push(`${target} IS ${op.isNull ? "NULL" : "NOT NULL"}`);
+            }
+          }
+        } else {
+          // Recurse into nested object
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            processEntry(nestedKey, nestedValue, fullPath);
+          }
+        }
       } else if (key === "id" && Array.isArray(value)) {
+        // Legacy array support for ID
         const placeholders = value.map(() => placeholder(currentIdx++)).join(", ");
         conditions.push(`${q(key)} IN (${placeholders})`);
         args.push(...value);
       } else if (value === null) {
-        conditions.push(`${q(key)} IS NULL`);
+        conditions.push(`${target} IS NULL`);
+      } else if (opFromKey) {
+        conditions.push(`${target} ${opFromKey} ${placeholder(currentIdx++)}`);
+        args.push(value);
       } else {
-        if (key.includes(" ")) {
-          const parts = key.split(" ");
-          const field = parts[0];
-          const operator = parts[1];
-          conditions.push(`${q(field)} ${operator} ${placeholder(currentIdx++)}`);
-        } else {
-          conditions.push(`${q(key)} = ${placeholder(currentIdx++)}`);
-        }
+        conditions.push(`${target} = ${placeholder(currentIdx++)}`);
         args.push(value);
       }
+    };
+
+    for (const [key, value] of Object.entries(where)) {
+      processEntry(key, value);
     }
 
     return {

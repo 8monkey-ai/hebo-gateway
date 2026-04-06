@@ -22,7 +22,7 @@ type IsPlainObject<T> = T extends object
       : true
   : false;
 
-export type ResourceWhere<T> = {
+export type WhereCondition<T> = {
   [K in keyof T]?: IsPlainObject<NonNullable<T[K]>> extends true
     ?
         | WhereOperator<T[K]>
@@ -38,7 +38,7 @@ export interface StorageQueryOptions<T = Record<string, any>> {
   limit?: number;
   after?: string;
   orderBy?: Record<string, SortOrder>;
-  where?: ResourceWhere<T>;
+  where?: WhereCondition<T>;
 }
 
 export interface ColumnSchema {
@@ -95,14 +95,16 @@ export type RowMapper<T> = (row: any) => T;
  * Fluent client for a specific table. Methods are resource-agnostic.
  */
 export interface TableClient<T = any, TExtra = any> {
+  // FUTURE: Support .prepare(name: string) for explicit prepared statements.
   findMany(
     options: StorageQueryOptions<TExtra>,
     context?: any,
     mapper?: RowMapper<T>,
     tx?: any,
   ): Promise<T[]>;
+  // FUTURE: Support .prepare(name: string) for explicit prepared statements.
   findFirst(
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context?: any,
     mapper?: RowMapper<T>,
     options?: { orderBy?: Record<string, SortOrder> },
@@ -115,7 +117,7 @@ export interface TableClient<T = any, TExtra = any> {
     context?: any,
     tx?: any,
   ): Promise<{ changes: number }>;
-  delete(criteria: Record<string, unknown>, context?: any, tx?: any): Promise<{ changes: number }>;
+  delete(where: WhereCondition<TExtra>, context?: any, tx?: any): Promise<{ changes: number }>;
 }
 
 /**
@@ -144,7 +146,7 @@ export type Storage<
 
   _findFirst<T>(
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context?: any,
     mapper?: RowMapper<T>,
     options?: { orderBy?: Record<string, SortOrder> },
@@ -171,7 +173,7 @@ export type Storage<
 
   _delete(
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context?: any,
     table?: string,
     tx?: any,

@@ -1,10 +1,11 @@
+import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 import { LRUCache } from "lru-cache";
 import type {
   Storage,
   StorageOperation,
   StorageQueryOptions,
   DatabaseSchema,
-  ResourceWhere,
+  WhereCondition,
   StorageExtension,
   RowMapper,
   SortOrder,
@@ -101,8 +102,8 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
         this.executeWithExtensions(tableName, "findMany", options, context, (args) =>
           this._findMany(tableName, args, context, mapper, tableName),
         ),
-      findFirst: (criteria, context, mapper, options) =>
-        this.executeWithExtensions(tableName, "findFirst", criteria, context, (args) =>
+      findFirst: (where, context, mapper, options) =>
+        this.executeWithExtensions(tableName, "findFirst", where, context, (args) =>
           this._findFirst(tableName, args, context, mapper, options, tableName),
         ),
       create: (data, context) =>
@@ -113,8 +114,8 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
         this.executeWithExtensions(tableName, "update", { id, data }, context, (args) =>
           this._update(tableName, args.id, args.data, context, tableName),
         ),
-      delete: (criteria, context) =>
-        this.executeWithExtensions(tableName, "delete", criteria, context, (args) =>
+      delete: (where, context) =>
+        this.executeWithExtensions(tableName, "delete", where, context, (args) =>
           this._delete(tableName, args, context, tableName),
         ),
     };
@@ -249,13 +250,13 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
    * If an indexed column (e.g. `conversation_id`) is provided, it uses the hash index O(1).
    * If no indexed criteria are present, it falls back to returning all rows O(N).
    */
-  private getCandidates(table: string, criteria?: Record<string, unknown>): any[] {
+  private getCandidates(table: string, where?: WhereCondition<any>): any[] {
     const tableMap = this.getTable(table);
-    if (!criteria) return Array.from(tableMap.values());
+    if (!where) return Array.from(tableMap.values());
 
     // 1. Primary Key Index Check O(1)
-    if (typeof criteria.id === "string") {
-      const r = tableMap.get(criteria.id);
+    if (typeof where.id === "string") {
+      const r = tableMap.get(where.id);
       return r ? [r] : [];
     }
 
@@ -263,7 +264,7 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     const cols = this.indexedColumns.get(table);
     if (cols) {
       for (const col of cols) {
-        const val = criteria[col];
+        const val = (where as any)[col];
         // We only index primitives (string, number, boolean) to keep memory usage low
         if (
           val !== undefined &&
@@ -423,26 +424,14 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
 
   async _findFirst<T>(
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context: any = {},
     mapper: RowMapper<T> = (r) => r as T,
     options: { orderBy?: Record<string, SortOrder> } = {},
     table: string = resource,
   ): Promise<T | undefined> {
-    let rows = this.getCandidates(table, criteria);
-
-    rows = rows.filter((r) => {
-      for (const [key, val] of Object.entries(criteria)) {
-        if (r[key] !== val) return false;
-      }
-      return true;
-    });
-
-    if (options.orderBy) {
-      this.sortRows(rows, options.orderBy);
-    }
-
-    return rows.length > 0 ? mapper(rows[0]) : undefined;
+    const results = await this._findMany(resource, { ...options, where, limit: 1 }, context, mapper, table);
+    return results[0];
   }
 
   async _create(
@@ -453,9 +442,10 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
   ): Promise<{ changes: number }> {
     const tableMap = this.getTable(table);
     // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
-    const id = data.id as string;
-    tableMap.set(id, data);
-    this.indexRow(table, id, data);
+    const id = (data.id as string) || uuidv7();
+    const row = { ...data, id };
+    tableMap.set(id, row);
+    this.indexRow(table, id, row);
     return { changes: 1 };
   }
 
@@ -472,7 +462,7 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     if (existing) {
       // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
       this.unindexRow(table, id, existing);
-      newRow = { ...existing, ...data };
+      newRow = { ...existing, ...data, id };
     } else {
       newRow = { ...data, id };
     }
@@ -483,19 +473,13 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
 
   async _delete(
     resource: string,
-    criteria: Record<string, unknown>,
+    where: WhereCondition<TExtra>,
     context: any = {},
     table: string = resource,
   ): Promise<{ changes: number }> {
+    const results = await this._findMany(resource, { where }, context, (r) => r, table);
     const tableMap = this.getTable(table);
-    const rows = this.getCandidates(table, criteria);
-
-    const toDelete = rows.filter((r) => {
-      for (const [key, val] of Object.entries(criteria)) {
-        if (r[key] !== val) return false;
-      }
-      return true;
-    });
+    const toDelete = results as Record<string, unknown>[];
 
     for (const row of toDelete) {
       const id = row.id as string;
@@ -510,11 +494,13 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
     return fn(this);
   }
 
-  private matchesWhere(obj: Record<string, unknown>, where: ResourceWhere<any>): boolean {
+  private matchesWhere(obj: Record<string, unknown>, where: WhereCondition<any>): boolean {
     for (const [key, filter] of Object.entries(where)) {
       const isOperatorSyntax = key.includes(" ");
       const fieldPath = isOperatorSyntax ? key.split(" ")[0] : key;
-      const operator = isOperatorSyntax ? key.split(" ")[1] : null;
+      const operatorFromKey = isOperatorSyntax ? key.split(" ")[1] : null;
+
+      // FUTURE: Resolve sql.placeholder("name") values from options.params when explicit preparation is implemented.
 
       const value = fieldPath.includes(".")
         ? fieldPath.split(".").reduce((o, i) => (o as Record<string, unknown>)?.[i], obj as unknown)
@@ -541,11 +527,11 @@ export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Reco
         } else {
           return false;
         }
-      } else if (operator) {
-        if (operator === ">" && !((value as any) > filter)) return false;
-        if (operator === "<" && !((value as any) < filter)) return false;
-        if (operator === ">=" && !((value as any) >= filter)) return false;
-        if (operator === "<=" && !((value as any) <= filter)) return false;
+      } else if (operatorFromKey) {
+        if (operatorFromKey === ">" && !((value as any) > filter)) return false;
+        if (operatorFromKey === "<" && !((value as any) < filter)) return false;
+        if (operatorFromKey === ">=" && !((value as any) >= filter)) return false;
+        if (operatorFromKey === "<=" && !((value as any) <= filter)) return false;
       } else if (value !== filter) {
         return false;
       }

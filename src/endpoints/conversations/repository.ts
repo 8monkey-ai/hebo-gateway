@@ -116,15 +116,10 @@ export class ConversationRepository<TExtra = Record<string, any>> {
     },
     context: any = {},
   ): Promise<Conversation[]> {
-    let where = params.where ?? ({} as any);
+    let where: WhereCondition<TExtra> = params.where ?? {};
 
     if (params.metadata) {
-      // Convert { user: "1" } into { "metadata.user": "1" } for jsonExtract support
-      const metadataWhere: Record<string, string> = {};
-      for (const [key, value] of Object.entries(params.metadata)) {
-        metadataWhere[`metadata.${key}`] = value;
-      }
-      where = { ...where, ...metadataWhere };
+      where = { ...where, metadata: params.metadata } as WhereCondition<TExtra>;
     }
 
     const options: StorageQueryOptions<TExtra> = {
@@ -256,7 +251,7 @@ export class ConversationRepository<TExtra = Record<string, any>> {
       limit: params.limit,
       after: params.after,
       orderBy: params.orderBy ?? { created_at: params.order ?? "desc" },
-      where: { ...params.where, conversation_id: conversationId } as any,
+      where: { ...params.where, conversation_id: conversationId } as WhereCondition<TExtra>,
     };
 
     return this.storage.conversation_items.findMany(options, context, itemRowMapper);
