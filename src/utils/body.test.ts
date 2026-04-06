@@ -200,8 +200,8 @@ describe("parseRequestBody", () => {
     }
   });
 
-  test("default max body size is 1 MB", () => {
-    expect(DEFAULT_MAX_BODY_SIZE).toBe(1024 * 1024);
+  test("default max body size is 10 MB", () => {
+    expect(DEFAULT_MAX_BODY_SIZE).toBe(10 * 1024 * 1024);
   });
 
   // ── Edge cases ──────────────────────────────────────────

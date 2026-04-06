@@ -7,9 +7,9 @@ import { GatewayError } from "../errors/gateway";
 const SUPPORTED_ENCODINGS = new Set(["gzip", "deflate"]);
 
 /**
- * Default maximum request body size (1 MB).
+ * Default maximum request body size (10 MB).
  */
-export const DEFAULT_MAX_BODY_SIZE = 1024 * 1024;
+export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024;
 
 /**
  * Parse a request body as JSON, handling Content-Encoding decompression
