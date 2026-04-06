@@ -30,6 +30,7 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+import { parseRequestBody } from "../../utils/body";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
@@ -48,12 +49,8 @@ export const responses = (config: GatewayConfig): Endpoint => {
       throw new GatewayError("Method Not Allowed", 405);
     }
 
-    try {
-      // oxlint-disable-next-line no-unsafe-assignment
-      ctx.body = await ctx.request.json();
-    } catch {
-      throw new GatewayError("Invalid JSON", 400);
-    }
+    // Handles Content-Encoding decompression + body size limits.
+    ctx.body = (await parseRequestBody(ctx.request, cfg.maxBodySize)) as typeof ctx.body;
     logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[responses] ResponsesBody");
     addSpanEvent("hebo.request.deserialized");
 
