@@ -468,22 +468,22 @@ await storage.migrate(CONVERSATION_SCHEMA, {
 - **Data Separation**: User-provided `metadata` stays in the JSON blob. System fields (like `organization_id`) live in real SQL columns.
 - **Generic Optimizations**: Use `$primaryKey`, `$partitionBy`, and `$memoryLimit` to tune performance without hardcoding table names.
 
-##### Resource Hooks (`hooks`)
+##### Resource Extensions (`query`)
 
-Inspired by Prisma, hooks allow you to intercept and modify storage operations. This is the primary way to implement multi-tenancy or audit logging.
+Inspired by Prisma, extensions allow you to intercept and modify storage operations. This is the primary way to implement multi-tenancy or audit logging.
 
 ```ts
 storage.$extends({
-  hooks: {
+  query: {
     conversations: {
-      create: async ({ args, context, query }) => {
+      create: async ({ model, operation, args, context, query }) => {
         // Inject organization_id from request context into the top-level columns
         return query({
           ...args,
           organization_id: context.state.orgId,
         });
       },
-      list: async ({ args, context, query }) => {
+      findMany: async ({ model, operation, args, context, query }) => {
         // Enforce tenant isolation by injecting a 'where' clause
         return query({
           ...args,
@@ -509,21 +509,23 @@ const conversations = await repo.listConversations({
     // Advanced operators: eq, ne, gt, gte, lt, lte, in, contains, isNull
     "created_at >": Date.now() - 86400000,
   },
+  // Type-safe object-based sorting
+  orderBy: { created_at: "desc" },
 });
 ```
 
-##### Generic Operation API
+##### Fluent Table API
 
-Beyond high-level conversation methods, `SqlStorage` and `InMemoryStorage` expose universal, table-agnostic operations. This allows you to use the gateway's storage engine for any custom tables.
+Beyond high-level conversation methods, `SqlStorage` and `InMemoryStorage` provide a fluent, Prisma-style API for any custom tables. This allows you to use the gateway's storage engine for any custom resources.
 
 ```typescript
-// Query any resource using generic operations
-const results = await storage.find("custom_resource", "custom_table", {
+// Query any resource using the fluent API
+const results = await storage.custom_resource.findMany({
   where: { status: "active" }
 });
 
-// Insert into custom tables with automatic schema validation
-await storage.insert("custom_table", "custom_resource", {
+// Insert into custom tables with automatic resource inference
+await storage.custom_resource.create({
   id: "123",
   status: "active",
   data: { foo: "bar" }

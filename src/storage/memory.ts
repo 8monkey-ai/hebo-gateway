@@ -3,11 +3,13 @@ import type {
   Storage,
   StorageOperation,
   StorageQueryOptions,
-  TableSchema,
+  DatabaseSchema,
   ResourceWhere,
-  StorageExtensions,
-  StorageHook,
+  StorageExtension,
   RowMapper,
+  SortOrder,
+  TableClient,
+  StorageExtensionCallback,
 } from "./types";
 
 interface InMemoryStorageOptions {
@@ -62,22 +64,112 @@ function estimateSize(root: unknown): number {
   return total;
 }
 
-export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TExtra> {
+export class InMemoryStorage<TSchema extends DatabaseSchema = any, TExtra = Record<string, any>>
+  implements Storage<TSchema, TExtra>
+{
+  [tableName: string]: any;
+
   // Use a union type to correctly represent both possible table types.
   private readonly tables = new Map<string, Map<string, any> | LRUCache<string, any, any>>();
-  
+
   // Generic Hash Indexing:
   // To avoid O(N) full table scans during find/findOne operations, we maintain in-memory hash indexes.
   // indexedColumns tracks which columns to index per table (extracted from TableSchema).
   private readonly indexedColumns = new Map<string, Set<string>>();
   // indexes is a nested map storing pointers to row IDs: Map<TableName, Map<ColumnName, Map<ColumnValue, Set<RowID>>>>
   private readonly indexes = new Map<string, Map<string, Map<unknown, Set<string>>>>();
-  
-  private readonly _hooks: Record<string, unknown> = {};
+
+  private readonly extensions: StorageExtension<TSchema>[] = [];
   private readonly options: InMemoryStorageOptions;
 
   constructor(options: InMemoryStorageOptions = {}) {
     this.options = options;
+
+    return new Proxy(this, {
+      get(target, prop, receiver) {
+        if (typeof prop === "string" && !(prop in target) && !prop.startsWith("$") && !prop.startsWith("_")) {
+          return target.createTableClient(prop);
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+  }
+
+  private createTableClient(tableName: string): TableClient<any, TExtra> {
+    return {
+      findMany: (options, context, mapper) =>
+        this.executeWithExtensions(tableName, "findMany", options, context, (args) =>
+          this._findMany(tableName, args, context, mapper, tableName),
+        ),
+      findFirst: (criteria, context, mapper, options) =>
+        this.executeWithExtensions(tableName, "findFirst", criteria, context, (args) =>
+          this._findFirst(tableName, args, context, mapper, options, tableName),
+        ),
+      create: (data, context) =>
+        this.executeWithExtensions(tableName, "create", data, context, (args) =>
+          this._create(tableName, args, context, tableName),
+        ),
+      update: (id, data, context) =>
+        this.executeWithExtensions(tableName, "update", { id, data }, context, (args) =>
+          this._update(tableName, args.id, args.data, context, tableName),
+        ),
+      delete: (criteria, context) =>
+        this.executeWithExtensions(tableName, "delete", criteria, context, (args) =>
+          this._delete(tableName, args, context, tableName),
+        ),
+    };
+  }
+
+  $extends(extension: StorageExtension<TSchema>): this {
+    this.extensions.push(extension);
+    return this;
+  }
+
+  private async executeWithExtensions<TArgs, TResult>(
+    model: string,
+    operation: StorageOperation,
+    args: TArgs,
+    context: any,
+    baseOperation: (args: TArgs) => Promise<TResult>,
+  ): Promise<TResult> {
+    const relevantExtensions: StorageExtensionCallback[] = [];
+
+    // Build the chain of extensions
+    for (const ext of this.extensions) {
+      if (!ext.query) continue;
+
+      // 1. Specific model, specific operation
+      const modelExt = ext.query[model as keyof TSchema];
+      if (modelExt) {
+        const opExt = (modelExt as any)[operation] || (modelExt as any)["$allOperations"];
+        if (opExt) relevantExtensions.push(opExt);
+      }
+
+      // 2. $allModels
+      const allModelsExt = ext.query["$allModels"];
+      if (allModelsExt) {
+        const opExt = (allModelsExt as any)[operation] || (allModelsExt as any)["$allOperations"];
+        if (opExt) relevantExtensions.push(opExt);
+      }
+    }
+
+    // Execute the chain from right to left (last extension is the outermost wrapper)
+    const executeChain = async (index: number, currentArgs: TArgs): Promise<TResult> => {
+      if (index < 0) {
+        return baseOperation(currentArgs);
+      }
+
+      const callback = relevantExtensions[index];
+      return callback({
+        model,
+        operation,
+        args: currentArgs,
+        context,
+        query: (nextArgs: any) => executeChain(index - 1, nextArgs),
+      });
+    };
+
+    return executeChain(relevantExtensions.length - 1, args);
   }
 
   private getTable(table: string): Map<string, any> | LRUCache<string, any, any> {
@@ -109,7 +201,11 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
     for (const col of cols) {
       const val = row[col];
       // Only index primitive values
-      if (val !== null && val !== undefined && (typeof val === "string" || typeof val === "number" || typeof val === "boolean")) {
+      if (
+        val !== null &&
+        val !== undefined &&
+        (typeof val === "string" || typeof val === "number" || typeof val === "boolean")
+      ) {
         const valMap = tableIdx.get(col)!;
         let idSet = valMap.get(val);
         if (!idSet) {
@@ -131,7 +227,11 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
     const tableIdx = this.indexes.get(table)!;
     for (const col of cols) {
       const val = row[col];
-      if (val !== null && val !== undefined && (typeof val === "string" || typeof val === "number" || typeof val === "boolean")) {
+      if (
+        val !== null &&
+        val !== undefined &&
+        (typeof val === "string" || typeof val === "number" || typeof val === "boolean")
+      ) {
         const valMap = tableIdx.get(col)!;
         const idSet = valMap.get(val);
         if (idSet) {
@@ -165,11 +265,14 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
       for (const col of cols) {
         const val = criteria[col];
         // We only index primitives (string, number, boolean) to keep memory usage low
-        if (val !== undefined && (typeof val === "string" || typeof val === "number" || typeof val === "boolean")) {
+        if (
+          val !== undefined &&
+          (typeof val === "string" || typeof val === "number" || typeof val === "boolean")
+        ) {
           const idSet = this.indexes.get(table)?.get(col)?.get(val);
           // If we queried by an indexed column and found nothing, we know the exact result is empty
-          if (!idSet) return []; 
-          
+          if (!idSet) return [];
+
           const rows = [];
           for (const id of idSet) {
             const r = tableMap.get(id);
@@ -184,42 +287,7 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
     return Array.from(tableMap.values());
   }
 
-  // @ts-expect-error The dynamic hook typing of TExtra breaks strict class assignment to the base interface.
-  $extends(extension: StorageExtensions<TExtra>): this {
-    if (extension.hooks) {
-      for (const [resource, hooks] of Object.entries(extension.hooks)) {
-        const currentHooks = (this._hooks)[resource] ?? {};
-        (this._hooks)[resource] = {
-          ...(currentHooks as Record<string, unknown>),
-          ...(hooks as Record<string, unknown>),
-        };
-      }
-    }
-    return this;
-  }
-
-  private async executeOperation<TArgs, TResult>(
-    resource: string,
-    operation: StorageOperation,
-    args: TArgs,
-    context: any,
-    query: (args: TArgs, options?: any) => Promise<TResult>,
-  ): Promise<TResult> {
-    const hooksForResource = this._hooks?.[resource] as Record<string, unknown> | undefined;
-    const hook = hooksForResource?.[operation] as StorageHook<TArgs, TResult> | undefined;
-    if (hook) {
-      return hook({
-        operation,
-        args,
-        context,
-        table: resource,
-        query: (newArgs: TArgs, options?: any) => query(newArgs, options),
-      });
-    }
-    return query(args);
-  }
-
-  async migrate(schema: TableSchema) {
+  async migrate(schema: TSchema) {
     for (const [table, columns] of Object.entries(schema)) {
       const limit = columns.$memoryLimit ?? this.options.maxSize;
 
@@ -227,10 +295,10 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
       // Read the TableSchema to figure out which columns we should maintain Hash Indexes for.
       const idxCols = new Set<string>();
       if (columns.$partitionBy) {
-        columns.$partitionBy.forEach(c => idxCols.add(c));
+        columns.$partitionBy.forEach((c: any) => idxCols.add(c));
       }
       if (columns.$indexes) {
-        columns.$indexes.forEach(idx => {
+        columns.$indexes.forEach((idx: any) => {
           // Extract the column name (e.g. "conversation_id" from "conversation_id DESC")
           const firstCol = idx[0].split(" ")[0] as string;
           idxCols.add(firstCol);
@@ -242,7 +310,7 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
       this.indexedColumns.set(table, idxCols);
       if (!this.indexes.has(table)) {
         const colMaps = new Map<string, Map<unknown, Set<string>>>();
-        idxCols.forEach(c => colMaps.set(c, new Map()));
+        idxCols.forEach((c) => colMaps.set(c, new Map()));
         this.indexes.set(table, colMaps);
       }
 
@@ -269,191 +337,173 @@ export class InMemoryStorage<TExtra = Record<string, any>> implements Storage<TE
     }
   }
 
-  private sortRows(rows: any[], orderByStr: string) {
-    const [field, direction] = orderByStr.toLowerCase().split(" ");
-    const isAsc = direction === "asc";
+  private sortRows(rows: any[], orderBy: Record<string, SortOrder>) {
+    const specs = Object.entries(orderBy);
+    if (specs.length === 0) return;
 
     rows.sort((a, b) => {
-      let valA = a[field];
-      let valB = b[field];
+      for (const [field, direction] of specs) {
+        const isAsc = direction.toLowerCase() === "asc";
+        let valA = a[field];
+        let valB = b[field];
 
-      if (valA instanceof Date) valA = valA.getTime();
-      if (valB instanceof Date) valB = valB.getTime();
+        if (valA instanceof Date) valA = valA.getTime();
+        if (valB instanceof Date) valB = valB.getTime();
 
-      if (valA !== valB) {
-        if (valA === undefined) return isAsc ? 1 : -1;
-        if (valB === undefined) return isAsc ? -1 : 1;
-        if (valA < valB) return isAsc ? -1 : 1;
-        if (valA > valB) return isAsc ? 1 : -1;
+        if (valA !== valB) {
+          if (valA === undefined) return isAsc ? 1 : -1;
+          if (valB === undefined) return isAsc ? -1 : 1;
+          if (valA < valB) return isAsc ? -1 : 1;
+          if (valA > valB) return isAsc ? 1 : -1;
+        }
       }
 
       // ID Tiebreaker for stable cursors
+      // FUTURE: Use full $primaryKey columns as the deterministic tie-breaker for stable cursors.
+      const primaryDir = specs[0][1].toLowerCase();
+      const isAsc = primaryDir === "asc";
       const idA = String(a.id ?? "");
       const idB = String(b.id ?? "");
       return isAsc ? idA.localeCompare(idB) : idB.localeCompare(idA);
     });
   }
 
-  async find<T>(
+  async _findMany<T>(
     resource: string,
     options: StorageQueryOptions,
     context: any = {},
     mapper: RowMapper<T> = (r) => r as T,
     table: string = resource,
   ): Promise<T[]> {
-    return this.executeOperation(resource, "list", options, context, async (args, opOpts) => {
-      const t = opOpts?.table ?? table;
-      const { limit, after, where } = args;
-      if (limit !== undefined && limit <= 0) return [];
+    const { limit, after, where } = options;
+    if (limit !== undefined && limit <= 0) return [];
 
-      let rows = this.getCandidates(t, where);
+    let rows = this.getCandidates(table, where);
 
-      // 1. Filter remaining properties
-      if (where) {
-        rows = rows.filter((r) => this.matchesWhere(r, where));
+    // 1. Filter remaining properties
+    if (where) {
+      rows = rows.filter((r) => this.matchesWhere(r, where));
+    }
+
+    // 2. Sort explicitly if orderBy is provided
+    if (options.orderBy) {
+      this.sortRows(rows, options.orderBy);
+    }
+
+    // RATIONALE: Why is `after` a dedicated parameter instead of a generic `where` condition?
+    // Cursor pagination requires complex tie-breaker logic. If multiple rows share the exact
+    // same sort value (e.g., identical timestamps), a simple `where: { created_at < cursor }`
+    // will skip the tied rows.
+    //
+    // By keeping `after` as a dedicated feature, the storage engine handles two major complexities:
+    // 1. N+1 Performance: It automatically fetches the cursor's timestamp/value internally,
+    //    saving the domain layer from having to issue a separate `findOne` query.
+    // 2. Query AST Complexity: It iterates the fully sorted table to skip until the cursor
+    //    is found, avoiding pushing complex `$or` AST generation into the domain layer.
+    //
+    // NOTE: This generic implementation currently only supports cursor pagination based on
+    // a single primary sort column (extracted from `orderBy`). If multiple sorting fields
+    // are provided (e.g. "score desc, name asc"), only the first field is used for the cursor
+    // offset. The `id` column is always appended as the final deterministic tie-breaker.
+
+    // 3. Cursor Pagination: after
+    const out: T[] = [];
+    let seen = after === null || after === undefined;
+    for (const item of rows) {
+      if (!seen) {
+        if (item.id === after) seen = true;
+        continue;
       }
+      out.push(mapper(item));
+      if (limit && out.length === limit) break;
+    }
 
-      // 2. Sort explicitly if orderBy is provided
-      if (args.orderBy) {
-        this.sortRows(rows, args.orderBy);
-      }
-
-      // RATIONALE: Why is `after` a dedicated parameter instead of a generic `where` condition?
-      // Cursor pagination requires complex tie-breaker logic. If multiple rows share the exact
-      // same sort value (e.g., identical timestamps), a simple `where: { created_at < cursor }`
-      // will skip the tied rows.
-      //
-      // By keeping `after` as a dedicated feature, the storage engine handles two major complexities:
-      // 1. N+1 Performance: It automatically fetches the cursor's timestamp/value internally,
-      //    saving the domain layer from having to issue a separate `findOne` query.
-      // 2. Query AST Complexity: It iterates the fully sorted table to skip until the cursor
-      //    is found, avoiding pushing complex `$or` AST generation into the domain layer.
-      //
-      // NOTE: This generic implementation currently only supports cursor pagination based on
-      // a single primary sort column (extracted from `orderBy`). If multiple sorting fields
-      // are provided (e.g. "score desc, name asc"), only the first field is used for the cursor
-      // offset. The `id` column is always appended as the final deterministic tie-breaker.
-
-      // 3. Cursor Pagination: after
-      const out: T[] = [];
-      let seen = after === null || after === undefined;
-      for (const item of rows) {
-        if (!seen) {
-          if (item.id === after) seen = true;
-          continue;
-        }
-        out.push(mapper(item));
-        if (limit && out.length === limit) break;
-      }
-
-      return out;
-    });
+    return out;
   }
 
-  async findOne<T>(
+  async _findFirst<T>(
     resource: string,
     criteria: Record<string, unknown>,
     context: any = {},
     mapper: RowMapper<T> = (r) => r as T,
-    options: { orderBy?: string } = {},
+    options: { orderBy?: Record<string, SortOrder> } = {},
     table: string = resource,
   ): Promise<T | undefined> {
-    return this.executeOperation(
-      resource,
-      "get",
-      { ...criteria, ...options },
-      context,
-      async (args, opOpts) => {
-        const t = opOpts?.table ?? table;
-        
-        let rows = this.getCandidates(t, args);
+    let rows = this.getCandidates(table, criteria);
 
-        rows = rows.filter((r) => {
-          for (const [key, val] of Object.entries(args)) {
-            if (key === "orderBy") continue;
-            if (r[key] !== val) return false;
-          }
-          return true;
-        });
+    rows = rows.filter((r) => {
+      for (const [key, val] of Object.entries(criteria)) {
+        if (r[key] !== val) return false;
+      }
+      return true;
+    });
 
-        if (options.orderBy) {
-          this.sortRows(rows, options.orderBy);
-        }
+    if (options.orderBy) {
+      this.sortRows(rows, options.orderBy);
+    }
 
-        return rows.length > 0 ? mapper(rows[0]) : undefined;
-      },
-    );
+    return rows.length > 0 ? mapper(rows[0]) : undefined;
   }
 
-  async insert(
+  async _create(
     resource: string,
     data: Record<string, unknown>,
     context: any = {},
     table: string = resource,
   ): Promise<{ changes: number }> {
-    return this.executeOperation(resource, "create", data, context, async (args) => {
-      const tableMap = this.getTable(table);
-      const id = args.id as string;
-      tableMap.set(id, args);
-      this.indexRow(table, id, args);
-      return { changes: 1 };
-    });
+    const tableMap = this.getTable(table);
+    // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
+    const id = data.id as string;
+    tableMap.set(id, data);
+    this.indexRow(table, id, data);
+    return { changes: 1 };
   }
 
-  async update(
+  async _update(
     resource: string,
     id: string,
     data: Record<string, unknown>,
     context: any = {},
     table: string = resource,
   ): Promise<{ changes: number }> {
-    return this.executeOperation(
-      resource,
-      "update",
-      { id, data },
-      context,
-      async (args) => {
-        const tableMap = this.getTable(table);
-        const existing = tableMap.get(id);
-        let newRow;
-        if (existing) {
-          this.unindexRow(table, id, existing);
-          newRow = { ...existing, ...args.data };
-        } else {
-          newRow = { ...args.data, id };
-        }
-        tableMap.set(id, newRow);
-        this.indexRow(table, id, newRow);
-        return { changes: 1 };
-      },
-    );
+    const tableMap = this.getTable(table);
+    const existing = tableMap.get(id);
+    let newRow;
+    if (existing) {
+      // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
+      this.unindexRow(table, id, existing);
+      newRow = { ...existing, ...data };
+    } else {
+      newRow = { ...data, id };
+    }
+    tableMap.set(id, newRow);
+    this.indexRow(table, id, newRow);
+    return { changes: 1 };
   }
 
-  async remove(
+  async _delete(
     resource: string,
     criteria: Record<string, unknown>,
     context: any = {},
     table: string = resource,
   ): Promise<{ changes: number }> {
-    return this.executeOperation(resource, "delete", criteria, context, async (args) => {
-      const tableMap = this.getTable(table);
-      const rows = this.getCandidates(table, args);
+    const tableMap = this.getTable(table);
+    const rows = this.getCandidates(table, criteria);
 
-      const toDelete = rows.filter((r) => {
-        for (const [key, val] of Object.entries(args)) {
-          if (r[key] !== val) return false;
-        }
-        return true;
-      });
-
-      for (const row of toDelete) {
-        const id = row.id as string;
-        this.unindexRow(table, id, row);
-        tableMap.delete(id);
+    const toDelete = rows.filter((r) => {
+      for (const [key, val] of Object.entries(criteria)) {
+        if (r[key] !== val) return false;
       }
-
-      return { changes: toDelete.length };
+      return true;
     });
+
+    for (const row of toDelete) {
+      const id = row.id as string;
+      this.unindexRow(table, id, row);
+      tableMap.delete(id);
+    }
+
+    return { changes: toDelete.length };
   }
 
   async transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
