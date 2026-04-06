@@ -49,18 +49,70 @@ async function parsePlainBody(request: Request, maxBodySize: number): Promise<un
           413,
         );
       }
+      // Content-Length present and within limit — use fast arrayBuffer() path.
+      const buf = await request.arrayBuffer();
+      // Verify actual size in case header lied.
+      if (buf.byteLength > maxBodySize) {
+        throw new GatewayError(
+          `Request body too large (${buf.byteLength} bytes, limit ${maxBodySize})`,
+          413,
+        );
+      }
+      return decodeJson(buf);
     }
+
+    // No Content-Length — stream with size enforcement to avoid OOM.
+    return parseStreamedPlainBody(request, maxBodySize);
   }
 
-  // Read body as ArrayBuffer to enforce size limit when Content-Length is missing.
   const buf = await request.arrayBuffer();
-  if (maxBodySize > 0 && buf.byteLength > maxBodySize) {
-    throw new GatewayError(
-      `Request body too large (${buf.byteLength} bytes, limit ${maxBodySize})`,
-      413,
-    );
+  return decodeJson(buf);
+}
+
+/**
+ * Stream-read a plain request body with incremental size enforcement.
+ * Used when Content-Length is absent and a size limit is active.
+ */
+async function parseStreamedPlainBody(request: Request, maxBodySize: number): Promise<unknown> {
+  if (!request.body) {
+    throw new GatewayError("Empty request body", 400);
   }
 
+  const chunks: Uint8Array[] = [];
+  let totalSize = 0;
+  const reader = request.body.getReader();
+
+  // oxlint-disable-next-line no-await-in-loop -- sequential stream reads
+  for (let r = await reader.read(); !r.done; r = await reader.read()) {
+    totalSize += r.value.byteLength;
+    if (totalSize > maxBodySize) {
+      void reader.cancel();
+      throw new GatewayError(
+        `Request body too large (exceeds ${maxBodySize} byte limit)`,
+        413,
+      );
+    }
+    chunks.push(r.value);
+  }
+
+  if (totalSize === 0) {
+    throw new GatewayError("Empty request body", 400);
+  }
+
+  // Concatenate and decode.
+  if (chunks.length === 1) {
+    return decodeJson(chunks[0]);
+  }
+  const combined = new Uint8Array(totalSize);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return decodeJson(combined);
+}
+
+function decodeJson(buf: ArrayBuffer | Uint8Array): unknown {
   try {
     const text = new TextDecoder().decode(buf);
     return JSON.parse(text);

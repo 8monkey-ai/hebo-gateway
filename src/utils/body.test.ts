@@ -189,6 +189,43 @@ describe("parseRequestBody", () => {
     expect(result).toEqual(payload);
   });
 
+  test("rejects streamed plain body exceeding limit when Content-Length is absent", async () => {
+    const largeBody = JSON.stringify({ data: "x".repeat(200) });
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(largeBody));
+          controller.close();
+        },
+      }),
+    });
+    try {
+      await parseRequestBody(request, 100);
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toMatchObject({ status: 413 });
+    }
+  });
+
+  test("parses streamed plain body within limit when Content-Length is absent", async () => {
+    const payload = { ok: true };
+    const body = JSON.stringify(payload);
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(body));
+          controller.close();
+        },
+      }),
+    });
+    const result = await parseRequestBody(request, 10000);
+    expect(result).toEqual(payload);
+  });
+
   test("rejects decompressed body exceeding size limit", async () => {
     const large = { data: "x".repeat(5000) };
     const compressed = await compress(large, "gzip");
