@@ -1,21 +1,17 @@
 {
   "compilerOptions": {
     /* Language and Environment */
-    "target": "ES2021",
+    "target": "ES2022",
 
     /* Modules */
-    "module": "ES2022",
-    "moduleResolution": "node",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
     "types": ["bun-types"],
 
     "paths": {
       "@hebo-ai/gateway": ["../../src/"],
       "@hebo-ai/gateway/*": ["../../src/*"]
     },
-
-    /* Interop Constraints */
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
 
     /* Type Checking */
     "strict": true,
