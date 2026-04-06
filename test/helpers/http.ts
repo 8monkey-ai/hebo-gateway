@@ -18,8 +18,8 @@ export const postGzipJson = async (url: string, body: unknown) => {
   const raw = new TextEncoder().encode(JSON.stringify(body));
   const cs = new CompressionStream("gzip");
   const writer = cs.writable.getWriter();
-  void writer.write(raw);
-  void writer.close();
+  await writer.write(raw);
+  await writer.close();
   const compressed = await new Response(cs.readable).arrayBuffer();
   return new Request(url, {
     method: "POST",

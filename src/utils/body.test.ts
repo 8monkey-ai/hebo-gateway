@@ -33,12 +33,12 @@ function deflateRequest(data: ArrayBuffer): Request {
   });
 }
 
-function compress(json: unknown, format: CompressionFormat): Promise<ArrayBuffer> {
+async function compress(json: unknown, format: CompressionFormat): Promise<ArrayBuffer> {
   const raw = new TextEncoder().encode(JSON.stringify(json));
   const cs = new CompressionStream(format);
   const writer = cs.writable.getWriter();
-  void writer.write(raw);
-  void writer.close();
+  await writer.write(raw);
+  await writer.close();
   return new Response(cs.readable).arrayBuffer();
 }
 

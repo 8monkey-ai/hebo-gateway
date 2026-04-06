@@ -110,8 +110,12 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const parsedTimeouts = { normal, flex };
 
   // Body limits
+  const rawMax = config.bodyLimits?.maxBodySize;
   const parsedBodyLimits = {
-    maxBodySize: config.bodyLimits?.maxBodySize ?? DEFAULT_MAX_BODY_SIZE,
+    maxBodySize:
+      typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 0
+        ? rawMax
+        : DEFAULT_MAX_BODY_SIZE,
   };
 
   // Return parsed config.
