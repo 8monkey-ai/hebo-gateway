@@ -56,6 +56,13 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-3.1-pro-preview",
   "google/gemini-embedding-2-preview",
   "google/embedding-001",
+  "google/gemma-3-1b",
+  "google/gemma-3-4b",
+  "google/gemma-3-12b",
+  "google/gemma-3-27b",
+  "google/gemma-2-2b",
+  "google/gemma-2-9b",
+  "google/gemma-2-27b",
   // Meta
   "meta/llama-3.1-8b",
   "meta/llama-3.1-70b",
