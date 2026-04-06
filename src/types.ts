@@ -263,14 +263,28 @@ export type GatewayConfig = {
    * Supports a number in milliseconds, or tiered config.
    */
   timeouts?: GatewayTimeout;
+  /**
+   * Optional request body size limits.
+   */
+  bodyLimits?: {
+    /**
+     * Maximum request body size in bytes (after decompression for compressed requests).
+     * Set to `0` to disable the limit.
+     * Defaults to 1 MB (1,048,576 bytes).
+     */
+    maxBodySize?: number;
+  };
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts"> & {
+export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts" | "bodyLimits"> & {
   storage: ConversationStorage;
   timeouts: {
     normal?: number;
     flex?: number;
+  };
+  bodyLimits: {
+    maxBodySize: number;
   };
   [kParsed]: true;
 };
