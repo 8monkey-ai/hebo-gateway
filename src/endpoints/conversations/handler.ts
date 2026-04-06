@@ -72,7 +72,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     };
   }
 
-  const maxBodySize = parsedConfig.bodyLimits.maxBodySize;
+  const maxBodySize = parsedConfig.maxBodySize;
 
   async function create(ctx: GatewayContext): Promise<Conversation> {
     const body = await parseRequestBody(ctx.request, maxBodySize);

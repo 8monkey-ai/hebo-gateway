@@ -50,7 +50,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     }
 
     // Handles Content-Encoding decompression + body size limits.
-    ctx.body = (await parseRequestBody(ctx.request, cfg.bodyLimits.maxBodySize)) as typeof ctx.body;
+    ctx.body = (await parseRequestBody(ctx.request, cfg.maxBodySize)) as typeof ctx.body;
     logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[responses] ResponsesBody");
     addSpanEvent("hebo.request.deserialized");
 

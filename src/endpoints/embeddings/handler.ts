@@ -44,7 +44,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     // Parse + validate input (handles Content-Encoding decompression + body size limits).
-    ctx.body = (await parseRequestBody(ctx.request, cfg.bodyLimits.maxBodySize)) as typeof ctx.body;
+    ctx.body = (await parseRequestBody(ctx.request, cfg.maxBodySize)) as typeof ctx.body;
     logger.trace({ requestId: ctx.requestId, result: ctx.body }, "[chat] EmbeddingsBody");
     addSpanEvent("hebo.request.deserialized");
 
