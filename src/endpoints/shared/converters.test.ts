@@ -71,14 +71,14 @@ describe("Shared Converters", () => {
   describe("parseReasoningOptions", () => {
     test("should return disabled when enabled is false", () => {
       expect(parseReasoningOptions(undefined, { enabled: false })).toEqual({
-        reasoning: { enabled: false },
+        reasoning: { enabled: false, effort: "none" },
         reasoning_effort: "none",
       });
     });
 
     test("should return disabled when effort is none", () => {
       expect(parseReasoningOptions("none")).toEqual({
-        reasoning: { enabled: false },
+        reasoning: { enabled: false, effort: "none" },
         reasoning_effort: "none",
       });
     });
