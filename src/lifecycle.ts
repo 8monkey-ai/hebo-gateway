@@ -42,6 +42,7 @@ export const winterCgHandler = (
     const ctx: GatewayContext = {
       request,
       state: state ?? {},
+      otel: {},
       providers: parsedConfig.providers,
       models: parsedConfig.models,
       requestId: resolveOrCreateRequestId(request),

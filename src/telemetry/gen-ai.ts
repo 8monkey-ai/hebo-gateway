@@ -8,6 +8,7 @@ const getMeter = () => metrics.getMeter("@hebo/gateway");
 
 let requestDurationHistogram: Histogram | undefined;
 let timePerOutputTokenHistogram: Histogram | undefined;
+let timeToFirstTokenHistogram: Histogram | undefined;
 let tokenUsageHistogram: Histogram | undefined;
 
 const getRequestDurationHistogram = () =>
@@ -35,6 +36,21 @@ const getTimePerOutputTokenHistogram = () =>
     },
   ));
 
+const getTimeToFirstTokenHistogram = () =>
+  (timeToFirstTokenHistogram ??= getMeter().createHistogram(
+    "gen_ai.server.time_to_first_token",
+    {
+      description: "Duration from request start to first streamed token",
+      unit: "s",
+      advice: {
+        explicitBucketBoundaries: [
+          0.001, 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5,
+          10.0,
+        ],
+      },
+    },
+  ));
+
 const getTokenUsageHistogram = () =>
   (tokenUsageHistogram ??= getMeter().createHistogram("gen_ai.client.token.usage", {
     description: "Token usage reported by upstream model responses",
@@ -55,12 +71,18 @@ export const getGenAiGeneralAttributes = (
 
   const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
 
-  return {
+  const attrs: Attributes = {
     "gen_ai.operation.name": ctx.operation,
     "gen_ai.request.model": requestModel,
     "gen_ai.response.model": ctx.resolvedModelId,
     "gen_ai.provider.name": ctx.resolvedProviderId,
   };
+
+  for (const key in ctx.otel) {
+    attrs[key] = ctx.otel[key];
+  }
+
+  return attrs;
 };
 
 export const recordRequestDuration = (
@@ -78,6 +100,15 @@ export const recordRequestDuration = (
   }
 
   getRequestDurationHistogram().record(duration / 1000, attrs);
+};
+
+export const recordTimeToFirstToken = (
+  duration: number,
+  metricAttrs: Attributes,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  getTimeToFirstTokenHistogram().record(duration / 1000, metricAttrs);
 };
 
 // FUTURE: record unsuccessful calls
@@ -116,8 +147,6 @@ export const recordTokenUsage = (
 
   record(tokenAttrs["gen_ai.usage.input_tokens"], "input");
   record(tokenAttrs["gen_ai.usage.output_tokens"], "output");
-
-  // FUTURE: Monitor otel for emerging cached / reasoning tokens standard:
-  // https://github.com/open-telemetry/semantic-conventions/issues/1959
-  // https://github.com/open-telemetry/semantic-conventions/issues/3341
+  record(tokenAttrs["gen_ai.usage.cache_read.input_tokens"], "cached");
+  record(tokenAttrs["gen_ai.usage.reasoning.output_tokens"], "reasoning");
 };
