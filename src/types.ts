@@ -91,7 +91,7 @@ export type GatewayContext = {
 };
 
 /**
- * Hook context: all fields readonly except `state`.
+ * Hook context: all fields readonly except `state` and `otel`.
  */
 export type HookContext = Omit<Readonly<GatewayContext>, "state" | "otel"> & {
   state: GatewayContext["state"];

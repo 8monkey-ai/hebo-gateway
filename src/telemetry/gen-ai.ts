@@ -77,8 +77,8 @@ export const getGenAiGeneralAttributes = (
     "gen_ai.provider.name": ctx.resolvedProviderId,
   };
 
-  for (const key in ctx.otel) {
-    attrs[key] = ctx.otel[key];
+  for (const [key, value] of Object.entries(ctx.otel)) {
+    if (value !== undefined) attrs[key] = value;
   }
 
   return attrs;
