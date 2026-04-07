@@ -41,7 +41,7 @@ test("gemma4E4b > should expose audio+image input with vertex provider", () => {
   expect(gemma4E4b()).toEqual({
     "google/gemma-4-e4b": {
       name: "Gemma 4 E4B",
-      created: "2026-06-25",
+      created: "2026-04-02",
       knowledge: "2025-01",
       modalities: { input: ["text", "image", "audio"], output: ["text"] },
       capabilities: ["tool_call", "structured_output", "temperature"],
