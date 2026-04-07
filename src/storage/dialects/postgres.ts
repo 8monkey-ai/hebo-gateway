@@ -14,7 +14,10 @@ export const PostgresDialectConfig: DialectConfig = {
   placeholder: (i) => `$${i + 1}`,
   quote: (i) => `"${i.replaceAll('"', '""')}"`,
   selectJson: (c) => c,
-  jsonExtract: (c, k) => `${c}->>'${escapeSqlString(k)}'`,
+  jsonExtract: (c, k) => {
+    const path = k.split(".").map((p) => `"${escapeSqlString(p)}"`).join(",");
+    return `${c}#>>'{${path}}'`;
+  },
   upsertSuffix: (q, pk, cols) =>
     `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols
       .map((c) => `${q(c)} = EXCLUDED.${q(c)}`)
