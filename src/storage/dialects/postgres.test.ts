@@ -95,6 +95,6 @@ describe("Postgres Dialect (Mocked)", () => {
     const listQuery = queries.find((q) => q.sql?.includes("SELECT * FROM"));
     expect(listQuery).toBeDefined();
     // Accept either $1 or $2 depending on internal query builder state
-    expect(listQuery!.sql).toMatch(/"metadata"->>'user_id' = \$[12]/);
+    expect(listQuery!.sql).toMatch(/"metadata"#>>'\{"user_id"\}' = \$[12]/);
   });
 });

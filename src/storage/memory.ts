@@ -7,6 +7,8 @@ import type {
   DatabaseSchema,
   WhereCondition,
   StorageExtension,
+  StorageExtensionFactory,
+  StorageBase,
   RowMapper,
   SortOrder,
   TableClient,
@@ -68,7 +70,7 @@ function estimateSize(root: unknown): number {
 export class InMemoryStorage<
   TSchema extends DatabaseSchema = any,
   TExtra = Record<string, any>,
-> implements Storage<TSchema, TExtra> {
+> implements StorageBase<TSchema, TExtra> {
   [tableName: string]: any;
 
   // Use a union type to correctly represent both possible table types.
@@ -83,6 +85,8 @@ export class InMemoryStorage<
 
   private readonly extensions: StorageExtension<TSchema>[] = [];
   private readonly options: InMemoryStorageOptions;
+  public schema?: DatabaseSchema;
+  public readonly dialect?: any;
 
   constructor(options: InMemoryStorageOptions = {}) {
     this.options = options;
@@ -100,7 +104,10 @@ export class InMemoryStorage<
         // 2. Check for client-level extensions
         for (const ext of target.extensions) {
           if (ext.client && prop in ext.client) {
-            return ext.client[prop].bind(target);
+            const method = ext.client[prop];
+            if (typeof method === "function") {
+              return method.bind(target);
+            }
           }
         }
 
@@ -111,25 +118,50 @@ export class InMemoryStorage<
 
   private createTableClient(tableName: string): TableClient<any, TExtra> {
     const client: TableClient<any, TExtra> = {
-      findMany: (options, context, mapper) =>
-        this.executeWithExtensions(tableName, "findMany", options, context, (args) =>
-          this._findMany(tableName, args, context, mapper, tableName),
+      findMany: (options, context, mapper, tx) =>
+        this.executeWithExtensions(
+          tableName,
+          "findMany",
+          options,
+          context,
+          (args, t) => this._findMany(tableName, args, context, mapper, tableName, t),
+          tx,
         ),
-      findFirst: (where, context, mapper, options) =>
-        this.executeWithExtensions(tableName, "findFirst", where, context, (args) =>
-          this._findFirst(tableName, args, context, mapper, options, tableName),
+      findFirst: (where, context, mapper, options, tx) =>
+        this.executeWithExtensions(
+          tableName,
+          "findFirst",
+          where,
+          context,
+          (args, t) => this._findFirst(tableName, args, context, mapper, options, tableName, t),
+          tx,
         ),
-      create: (data, context) =>
-        this.executeWithExtensions(tableName, "create", data, context, (args) =>
-          this._create(tableName, args, context, tableName),
+      create: (data, context, tx) =>
+        this.executeWithExtensions(
+          tableName,
+          "create",
+          data,
+          context,
+          (args, t) => this._create(tableName, args, context, tableName, t),
+          tx,
         ),
-      update: (id, data, context) =>
-        this.executeWithExtensions(tableName, "update", { id, data }, context, (args) =>
-          this._update(tableName, args.id, args.data, context, tableName),
+      update: (id, data, context, tx) =>
+        this.executeWithExtensions(
+          tableName,
+          "update",
+          { id, data },
+          context,
+          (args, t) => this._update(tableName, args.id, args.data, context, tableName, t),
+          tx,
         ),
-      delete: (where, context) =>
-        this.executeWithExtensions(tableName, "delete", where, context, (args) =>
-          this._delete(tableName, args, context, tableName),
+      delete: (where, context, tx) =>
+        this.executeWithExtensions(
+          tableName,
+          "delete",
+          where,
+          context,
+          (args, t) => this._delete(tableName, args, context, tableName, t),
+          tx,
         ),
     };
 
@@ -150,10 +182,28 @@ export class InMemoryStorage<
     return client;
   }
 
-  $extends(extension: StorageExtension<TSchema> | StorageExtensionFactory<TSchema>): this {
-    const ext = typeof extension === "function" ? extension(this) : extension;
+  $extends(extension: StorageExtension | StorageExtensionFactory): Storage<any, TExtra> {
+    const ext = typeof extension === "function" ? (extension as any)(this) : extension;
+
+    // Idempotency with Merging: If the extension has a name and it's already registered,
+    // we merge the schema but keep the existing logic to prevent double-processing.
+    const existing = ext.name ? this.extensions.find((e) => e.name === ext.name) : null;
+    if (existing) {
+      if (ext.schema) {
+        existing.schema = { ...existing.schema, ...ext.schema };
+        // Deep merge table columns if necessary
+        for (const [table, tableSchema] of Object.entries(ext.schema)) {
+          existing.schema[table] = {
+            ...(existing.schema[table] as object),
+            ...(tableSchema as object),
+          };
+        }
+      }
+      return this as any;
+    }
+
     this.extensions.push(ext);
-    return this;
+    return this as any;
   }
 
   private executeWithExtensions<TArgs, TResult>(
@@ -161,7 +211,8 @@ export class InMemoryStorage<
     operation: StorageOperation,
     args: TArgs,
     context: any,
-    baseOperation: (args: TArgs) => Promise<TResult>,
+    baseOperation: (args: TArgs, tx?: any) => Promise<TResult>,
+    tx?: any,
   ): Promise<TResult> {
     const relevantExtensions: StorageExtensionCallback[] = [];
 
@@ -185,22 +236,25 @@ export class InMemoryStorage<
     }
 
     // Execute the chain from right to left (last extension is the outermost wrapper)
-    const executeChain = (index: number, currentArgs: TArgs): Promise<TResult> => {
+    const executeChain = (index: number, currentArgs: TArgs, currentTx?: any): Promise<TResult> => {
       if (index < 0) {
-        return baseOperation(currentArgs);
+        return baseOperation(currentArgs, currentTx);
       }
 
       const callback = relevantExtensions[index];
+      if (!callback) return baseOperation(currentArgs, currentTx);
       return callback({
         model,
         operation,
         args: currentArgs,
         context,
-        query: (nextArgs: any) => executeChain(index - 1, nextArgs),
+        tx: currentTx,
+        query: (nextArgs: any, nextTx?: any) =>
+          executeChain(index - 1, nextArgs, nextTx ?? currentTx),
       });
     };
 
-    return executeChain(relevantExtensions.length - 1, args);
+    return executeChain(relevantExtensions.length - 1, args, tx);
   }
 
   private getTable(table: string): Map<string, any> | LRUCache<string, any, any> {
@@ -287,8 +341,8 @@ export class InMemoryStorage<
     if (!where) return Array.from(tableMap.values());
 
     // 1. Primary Key Index Check O(1)
-    if (typeof where.id === "string") {
-      const r = tableMap.get(where.id);
+    if (typeof where["id"] === "string") {
+      const r = tableMap.get(where["id"]);
       return r ? [r] : [];
     }
 
@@ -316,7 +370,7 @@ export class InMemoryStorage<
     // 3. Fallback: Full Table Scan O(N)
     return Array.from(tableMap.values());
   }
-  migrate() {
+  migrate(): Promise<void> {
     const combinedSchema: DatabaseSchema = {};
 
     // 1. Collect schemas from all extensions
@@ -378,6 +432,7 @@ export class InMemoryStorage<
         this.tables.set(table, new Map());
       }
     }
+    return Promise.resolve();
   }
 
   private sortRows(rows: any[], orderBy: Record<string, SortOrder>) {
@@ -403,7 +458,8 @@ export class InMemoryStorage<
 
       // ID Tiebreaker for stable cursors
       // FUTURE: Use full $primaryKey columns as the deterministic tie-breaker for stable cursors.
-      const primaryDir = specs[0][1].toLowerCase();
+      const firstSpec = specs[0];
+      const primaryDir = firstSpec ? firstSpec[1].toLowerCase() : "asc";
       const isAsc = primaryDir === "asc";
       const idA = String(a.id ?? "");
       const idB = String(b.id ?? "");
@@ -413,10 +469,11 @@ export class InMemoryStorage<
 
   _findMany<T>(
     resource: string,
-    options: StorageQueryOptions,
-    context: any = {},
+    options: StorageQueryOptions<TExtra>,
+    _context: any = {},
     mapper: RowMapper<T> = (r) => r as T,
     table: string = resource,
+    _tx?: any,
   ): Promise<T[]> {
     const { limit, after, where } = options;
     if (limit !== undefined && limit <= 0) return Promise.resolve([]);
@@ -468,17 +525,19 @@ export class InMemoryStorage<
   _findFirst<T>(
     resource: string,
     where: WhereCondition<TExtra>,
-    context: any = {},
+    _context: any = {},
     mapper: RowMapper<T> = (r) => r as T,
     options: { orderBy?: Record<string, SortOrder> } = {},
     table: string = resource,
+    tx?: any,
   ): Promise<T | undefined> {
     const resultsPromise = this._findMany(
       resource,
       { ...options, where, limit: 1 },
-      context,
+      _context,
       mapper,
       table,
+      tx,
     );
     return resultsPromise.then((results) => results[0]);
   }
@@ -486,12 +545,13 @@ export class InMemoryStorage<
   _create(
     resource: string,
     data: Record<string, unknown>,
-    context: any = {},
+    _context: any = {},
     table: string = resource,
-  ): Promise<{ changes: number }> {
+    _tx?: any,
+  ): Promise<any> {
     const tableMap = this.getTable(table);
     // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
-    const id = (data.id as string) || uuidv7();
+    const id = (data["id"] as string) || uuidv7();
     const row = { ...data, id };
     tableMap.set(id, row);
     this.indexRow(table, id, row);
@@ -502,9 +562,10 @@ export class InMemoryStorage<
     resource: string,
     id: string,
     data: Record<string, unknown>,
-    context: any = {},
+    _context: any = {},
     table: string = resource,
-  ): Promise<{ changes: number }> {
+    _tx?: any,
+  ): Promise<any> {
     const tableMap = this.getTable(table);
     const existing = tableMap.get(id);
     if (existing) {
@@ -524,15 +585,16 @@ export class InMemoryStorage<
   _delete(
     resource: string,
     where: WhereCondition<TExtra>,
-    context: any = {},
+    _context: any = {},
     table: string = resource,
-  ): Promise<{ changes: number }> {
-    return this._findMany(resource, { where }, context, (r) => r, table).then((results) => {
+    tx?: any,
+  ): Promise<any> {
+    return this._findMany(resource, { where }, _context, (r) => r, table, tx).then((results) => {
       const tableMap = this.getTable(table);
       const toDelete = results as Record<string, unknown>[];
 
       for (const row of toDelete) {
-        const id = row.id as string;
+        const id = row["id"] as string;
         this.unindexRow(table, id, row);
         tableMap.delete(id);
       }
@@ -553,9 +615,14 @@ export class InMemoryStorage<
 
       // FUTURE: Resolve sql.placeholder("name") values from options.params when explicit preparation is implemented.
 
-      const value = fieldPath.includes(".")
-        ? fieldPath.split(".").reduce((o, i) => (o as Record<string, unknown>)?.[i], obj as unknown)
-        : obj[fieldPath];
+      const value =
+        fieldPath && fieldPath.includes(".")
+          ? fieldPath
+              .split(".")
+              .reduce((o, i) => (o as Record<string, unknown>)?.[i], obj as unknown)
+          : fieldPath
+            ? obj[fieldPath]
+            : undefined;
 
       if (typeof filter === "object" && filter !== null && !Array.isArray(filter)) {
         const op = filter;

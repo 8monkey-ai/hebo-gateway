@@ -427,13 +427,11 @@ const storage = new SqlStorage({
   dialect: new PostgresDialect({ client }),
 });
 
-// 3. Apply domain expertise via extensions (Prisma-style)
-const extendedStorage = storage.$extends(conversationExtension);
+// 3. Setup the gateway (Automatically registers /conversations schema)
+const gw = gateway({ storage });
 
-// 4. Run migrations (schema is automatically collected from extensions)
-await extendedStorage.migrate();
-
-const gw = gateway({ storage: extendedStorage });
+// 4. Run migrations (schema is automatically collected from all active endpoints)
+await storage.migrate();
 ```
 
 > [!TIP]
@@ -453,20 +451,19 @@ import { conversationExtension } from "@hebo-ai/gateway/endpoints/conversations"
 
 const storage = new SqlStorage({
   dialect: new PostgresDialect({ client }),
-})
-  .$extends(conversationExtension) // Built-in expertise
-  .$extends({
-    schema: {
-      conversations: {
-        // Add custom fields using logical types (id, string, json, timestamp)
-        organization_id: { type: "id", index: true, nullable: false },
-        // Custom sharding via generic partition flag
-        $partitionBy: ["organization_id"],
-      },
+}).$extends({
+  schema: {
+    conversations: {
+      // Add custom fields using logical types (id, string, json, timestamp)
+      organization_id: { type: "id", index: true, nullable: false },
+      // Custom sharding via generic partition flag
+      $partitionBy: ["organization_id"],
     },
-  });
+  },
+});
 
-// migrate() creates 'conversations' with built-in fields AND organization_id
+// The gateway will automatically add built-in fields like 'id' and 'metadata'
+// when you call gateway({ storage })
 await storage.migrate();
 ```
 

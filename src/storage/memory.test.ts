@@ -20,17 +20,17 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
     // Insert 10 items (Total ~2000 bytes, should trigger eviction)
     const promises = [];
     for (let i = 0; i < 10; i++) {
-      promises.push(storage.cache.create({ id: `item-${i}`, data: largeValue }));
+      promises.push(storage["cache"].create({ id: `item-${i}`, data: largeValue }));
     }
     await Promise.all(promises);
 
-    const items = await storage.cache.findMany({});
+    const items = await storage["cache"].findMany({});
 
     // Should have evicted some items to stay under 1000 bytes
     expect(items.length).toBeLessThan(10);
     expect(items.length).toBeGreaterThan(0);
 
-    const lastItem = await storage.cache.findFirst({ id: "item-9" });
+    const lastItem = await storage["cache"].findFirst({ id: "item-9" });
     expect(lastItem).toBeDefined();
   });
 
@@ -52,9 +52,9 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
       },
     };
 
-    await storage.cache.create({ id: "huge", ...hugeObject });
+    await storage["cache"].create({ id: "huge", ...hugeObject });
 
-    const item = await storage.cache.findFirst({ id: "huge" });
+    const item = await storage["cache"].findFirst({ id: "huge" });
     expect(item).toBeUndefined();
   });
 });
@@ -64,10 +64,10 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     const storage = new InMemoryStorage();
     await storage.migrate();
 
-    await storage.test_table.create({ id: "1", metadata: { count: 10 } });
-    await storage.test_table.create({ id: "2", metadata: { count: 3 } });
+    await storage["test_table"].create({ id: "1", metadata: { count: 10 } });
+    await storage["test_table"].create({ id: "2", metadata: { count: 3 } });
 
-    const results = await storage.test_table.findMany({
+    const results = await storage["test_table"].findMany({
       where: { metadata: { count: { gt: 5 } } } as any,
     });
 
@@ -79,10 +79,10 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     const storage = new InMemoryStorage();
     await storage.migrate();
 
-    await storage.test_table.create({ id: "1", user: { profile: { name: "alice" } } });
-    await storage.test_table.create({ id: "2", user: { profile: { name: "bob" } } });
+    await storage["test_table"].create({ id: "1", user: { profile: { name: "alice" } } });
+    await storage["test_table"].create({ id: "2", user: { profile: { name: "bob" } } });
 
-    const results = await storage.test_table.findMany({
+    const results = await storage["test_table"].findMany({
       where: { user: { profile: { name: "alice" } } } as any,
     });
 
@@ -94,16 +94,16 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     const storage = new InMemoryStorage();
     await storage.migrate();
 
-    await storage.parent.create({ id: "p1" });
-    await storage.child.create({ id: "c1", parent_id: "p1" });
+    await storage["parent"].create({ id: "p1" });
+    await storage["child"].create({ id: "c1", parent_id: "p1" });
 
     // Explicitly delete only from parent
-    await storage.parent.delete({ id: "p1" });
+    await storage["parent"].delete({ id: "p1" });
 
-    const p = await storage.parent.findFirst({ id: "p1" });
+    const p = await storage["parent"].findFirst({ id: "p1" });
     expect(p).toBeUndefined();
 
-    const c = await storage.child.findFirst({ id: "c1" });
+    const c = await storage["child"].findFirst({ id: "c1" });
     expect(c).toBeDefined(); // Child should still exist
   });
 
@@ -117,7 +117,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
       createPromises.push(
         new Promise<void>((r) => {
           setTimeout(async () => {
-            await storage.items.create({ data: `item-${i}` });
+            await storage["items"].create({ data: `item-${i}` });
             r();
           }, i * 2);
         }),
@@ -126,7 +126,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     await Promise.all(createPromises);
 
     // List items - they should be sorted by ID (the fallback uuidv7) by default or as tie-breaker
-    const results = await storage.items.findMany({
+    const results = await storage["items"].findMany({
       orderBy: { id: "asc" },
     });
 

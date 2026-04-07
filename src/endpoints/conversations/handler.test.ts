@@ -13,14 +13,17 @@ import {
 } from "./schema";
 import { type ResponsesInputItem } from "../responses/schema";
 import { InMemoryStorage } from "../../storage/memory";
-import { conversationExtension } from "./extension";
+import { conversationExtension, type ConversationSchema } from "./extension";
+import { type Storage } from "../../storage/types";
 
 describe("Conversations Handler", () => {
   let config: GatewayConfig;
-  let storage: any;
+  let storage: Storage<ConversationSchema>;
 
   beforeEach(() => {
-    storage = new InMemoryStorage().$extends(conversationExtension);
+    storage = new InMemoryStorage().$extends(
+      conversationExtension,
+    ) as unknown as Storage<ConversationSchema>;
     config = {
       providers: {
         groq: new MockProviderV3(),

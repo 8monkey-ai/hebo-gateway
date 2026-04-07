@@ -55,17 +55,10 @@ export interface TableMetadata {
   $indexes?: string[][];
 }
 
-/**
- * Schema for a single table.
- * Mixes ColumnSchema definitions with optional $ metadata.
- */
 export type TableSchema = {
-  [columnName: string]: ColumnSchema | any;
+  [columnName: string]: ColumnSchema | string | any;
 } & TableMetadata;
 
-/**
- * Collection of TableSchema objects (the whole database).
- */
 export type DatabaseSchema = Record<string, TableSchema>;
 
 export type StorageOperation = "create" | "update" | "delete" | "findMany" | "findFirst";
@@ -74,8 +67,9 @@ export interface StorageExtensionContext<TArgs = any, TResult = any> {
   model: string;
   operation: StorageOperation;
   args: TArgs;
-  context: any; // Internal gateway context
-  query: (args: TArgs) => Promise<TResult>;
+  context: any;
+  tx?: any;
+  query: (args: TArgs, tx?: any) => Promise<TResult>;
 }
 
 export type StorageExtensionCallback<TArgs = any, TResult = any> = (
@@ -97,24 +91,18 @@ export interface StorageExtension<TSchema extends DatabaseSchema = any> {
 }
 
 export type StorageExtensionFactory<TSchema extends DatabaseSchema = any> = (
-  client: Storage<TSchema>,
+  client: Storage,
 ) => StorageExtension<TSchema>;
 
 export type RowMapper<T> = (row: any) => T;
 
-/**
- * Fluent client for a specific table. Methods are resource-agnostic.
- */
 export interface TableClient<T = any, TExtra = any> {
-  [methodName: string]: any;
-  // FUTURE: Support .prepare(name: string) for explicit prepared statements.
   findMany(
     options: StorageQueryOptions<TExtra>,
     context?: any,
     mapper?: RowMapper<T>,
     tx?: any,
   ): Promise<T[]>;
-  // FUTURE: Support .prepare(name: string) for explicit prepared statements.
   findFirst(
     where: WhereCondition<TExtra>,
     context?: any,
@@ -122,31 +110,27 @@ export interface TableClient<T = any, TExtra = any> {
     options?: { orderBy?: Record<string, SortOrder> },
     tx?: any,
   ): Promise<T | undefined>;
-  create(data: Record<string, unknown>, context?: any, tx?: any): Promise<{ changes: number }>;
-  update(
-    id: string,
-    data: Record<string, unknown>,
-    context?: any,
-    tx?: any,
-  ): Promise<{ changes: number }>;
-  delete(where: WhereCondition<TExtra>, context?: any, tx?: any): Promise<{ changes: number }>;
+  create(data: Record<string, unknown>, context?: any, tx?: any): Promise<any>;
+  update(id: string, data: Record<string, unknown>, context?: any, tx?: any): Promise<any>;
+  delete(where: WhereCondition<TExtra>, context?: any, tx?: any): Promise<any>;
 }
 
 /**
- * Main Storage interface, supporting fluent table access via mapped types.
+ * Storage is the combination of the Base engine and the dynamically added Tables.
+ * This intersection is what allows 'storage.conversations.findMany()'.
  */
-export type Storage<TSchema extends DatabaseSchema = any, TExtra = Record<string, any>> = {
-  [K in keyof TSchema]: TableClient<any, TExtra>;
-} & {
-  [methodName: string]: any;
+export type Storage<TSchema extends Record<string, TableClient<any>> = any> =
+  StorageBase<TSchema> & TSchema;
+
+export interface StorageBase<TSchema extends Record<string, TableClient<any>> = any> {
   readonly dialect?: SqlDialect;
+  readonly schema?: DatabaseSchema;
 
   migrate(): Promise<void>;
 
-  // Internal/Generic methods (remain for engine implementation and extension dispatcher)
   _findMany<T>(
     resource: string,
-    options: StorageQueryOptions<TExtra>,
+    options: StorageQueryOptions<any>,
     context?: any,
     mapper?: RowMapper<T>,
     table?: string,
@@ -155,7 +139,7 @@ export type Storage<TSchema extends DatabaseSchema = any, TExtra = Record<string
 
   _findFirst<T>(
     resource: string,
-    where: WhereCondition<TExtra>,
+    where: WhereCondition<any>,
     context?: any,
     mapper?: RowMapper<T>,
     options?: { orderBy?: Record<string, SortOrder> },
@@ -169,7 +153,7 @@ export type Storage<TSchema extends DatabaseSchema = any, TExtra = Record<string
     context?: any,
     table?: string,
     tx?: any,
-  ): Promise<{ changes: number }>;
+  ): Promise<any>;
 
   _update(
     resource: string,
@@ -178,17 +162,23 @@ export type Storage<TSchema extends DatabaseSchema = any, TExtra = Record<string
     context?: any,
     table?: string,
     tx?: any,
-  ): Promise<{ changes: number }>;
+  ): Promise<any>;
 
   _delete(
     resource: string,
-    where: WhereCondition<TExtra>,
+    where: WhereCondition<any>,
     context?: any,
     table?: string,
     tx?: any,
-  ): Promise<{ changes: number }>;
+  ): Promise<any>;
 
   transaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
 
-  $extends(extension: StorageExtension<TSchema> | StorageExtensionFactory<TSchema>): this;
-};
+  /**
+   * Extends the storage with new tables and domain expertise.
+   * RETURNS: A new Storage type that includes the new tables automatically (Prisma style).
+   */
+  $extends<TNewSchema extends Record<string, TableClient<any>>>(
+    extension: StorageExtension | StorageExtensionFactory,
+  ): Storage<TSchema & TNewSchema>;
+}

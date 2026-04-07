@@ -9,59 +9,46 @@ import {
 import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
 import { createParamsMapper, dateToBigInt, escapeSqlString, jsonStringify } from "./utils";
 
-const GrepTimeBase: Pick<DialectConfig, "types"> = {
+export const GrepTimeDialectConfig: DialectConfig = Object.assign({}, PostgresDialectConfig, {
+  /**
+   * GreptimeDB has a bug where it can return invalid JSON strings
+   * containing Rust-style Unicode escapes like \u{xxxx} instead of standard JSON escapes \uxxxx.
+   * https://github.com/GreptimeTeam/greptimedb/issues/7808
+   *
+   * To prevent the Postgres drivers (postgresjs, pg, bun:sql) from crashing when they attempt
+   * to auto-parse this invalid JSON, we cast the JSON column to a raw STRING on the wire.
+   *
+   * Our storage layer then manually normalizes these Rust escapes before calling JSON.parse().
+   * See: src/endpoints/conversations/storage/dialects/utils.ts -> normalizeJsonUnicodeEscapes
+   */
+  selectJson: (c: string) => `${c}::STRING`,
+  jsonExtract: (c: string, k: string) => `json_get_string(${c}, '${escapeSqlString(k)}')`,
+  upsertSuffix: undefined,
+  supportCreateIndexIfNotExists: true,
+
+  limitAsLiteral: true,
+  partitionClause: (cols: string[]) => {
+    const col = cols[0];
+    return (
+      `PARTITION ON COLUMNS (${col}) (` +
+      `${col} < '4', ` +
+      `${col} >= '4' AND ${col} < '8', ` +
+      `${col} >= '8' AND ${col} < 'c', ` +
+      `${col} >= 'c')`
+    );
+  },
   types: {
-    varchar: "VARCHAR",
-    json: "JSON",
+    id: "VARCHAR(255)",
+    string: "VARCHAR(255)",
+    shorttext: "VARCHAR(64)",
+    longtext: "TEXT",
+    int: "INTEGER",
     timestamp: "TIMESTAMP",
+    json: "JSON",
+    boolean: "BOOLEAN",
     index: "TIME",
   },
-};
-export const GrepTimeDialectConfig: DialectConfig = Object.assign(
-  {},
-  PostgresDialectConfig,
-  GrepTimeBase,
-  {
-    /**
-     * GreptimeDB has a bug where it can return invalid JSON strings
-     * containing Rust-style Unicode escapes like \u{xxxx} instead of standard JSON escapes \uxxxx.
-     * https://github.com/GreptimeTeam/greptimedb/issues/7808
-     *
-     * To prevent the Postgres drivers (postgresjs, pg, bun:sql) from crashing when they attempt
-     * to auto-parse this invalid JSON, we cast the JSON column to a raw STRING on the wire.
-     *
-     * Our storage layer then manually normalizes these Rust escapes before calling JSON.parse().
-     * See: src/endpoints/conversations/storage/dialects/utils.ts -> normalizeJsonUnicodeEscapes
-     */
-    selectJson: (c: string) => `${c}::STRING`,
-    jsonExtract: (c: string, k: string) => `json_get_string(${c}, '${escapeSqlString(k)}')`,
-    upsertSuffix: undefined,
-    supportCreateIndexIfNotExists: true,
-
-    limitAsLiteral: true,
-    partitionClause: (cols: string[]) => {
-      const col = cols[0];
-      return (
-        `PARTITION ON COLUMNS (${col}) (` +
-        `${col} < '4', ` +
-        `${col} >= '4' AND ${col} < '8', ` +
-        `${col} >= '8' AND ${col} < 'c', ` +
-        `${col} >= 'c')`
-      );
-    },
-    types: {
-      id: "VARCHAR(255)",
-      string: "VARCHAR(255)",
-      shorttext: "VARCHAR(64)",
-      longtext: "TEXT",
-      int: "INTEGER",
-      timestamp: "TIMESTAMP",
-      json: "JSON",
-      boolean: "BOOLEAN",
-      index: "TIME",
-    },
-  },
-);
+});
 
 const pad = (n: number, l = 2) => n.toString().padStart(l, "0");
 

@@ -1,7 +1,23 @@
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
-import type { DatabaseSchema, Storage, StorageExtension } from "../../storage/types";
-import { createRowMapper, mergeData, parseJson, toSeconds } from "../../storage/dialects/utils";
+import type {
+  DatabaseSchema,
+  Storage,
+  StorageBase,
+  StorageExtension,
+  TableClient,
+} from "../../storage/types";
+import {
+  createRowMapper,
+  mergeData,
+  parseJson,
+  toMilliseconds,
+} from "../../storage/dialects/utils";
 import type { Conversation, ConversationItem } from "./schema";
+
+export type ConversationSchema = {
+  conversations: TableClient<Conversation>;
+  conversation_items: TableClient<ConversationItem>;
+};
 
 export const getConversationSchema = (isGreptime: boolean): DatabaseSchema => ({
   conversations: {
@@ -26,19 +42,19 @@ export const getConversationSchema = (isGreptime: boolean): DatabaseSchema => ({
 
 export const conversationRowMapper = createRowMapper<Conversation>([
   parseJson("metadata"),
-  toSeconds("created_at"),
+  toMilliseconds("created_at"),
   (row) => {
-    row.object = "conversation";
+    row["object"] = "conversation";
     return row;
   },
 ]);
 
 export const itemRowMapper = createRowMapper<ConversationItem>([
   parseJson("data"),
-  toSeconds("created_at"),
+  toMilliseconds("created_at"),
   mergeData("data"),
   (row) => {
-    row.object = "conversation.item";
+    row["object"] = "conversation.item";
     return row;
   },
 ]);
@@ -47,8 +63,11 @@ export const itemRowMapper = createRowMapper<ConversationItem>([
  * Extension that adds transparent domain expertise to the storage client.
  * Intercepts standard CRUD operations to handle IDs, timestamps, and row mapping.
  */
-export const conversationExtension = (storage: Storage): StorageExtension => {
+export const conversationExtension = (
+  storage: StorageBase,
+): StorageExtension<ConversationSchema> => {
   const isGreptime = storage.dialect?.config?.types?.index === "TIME";
+  const s = storage as unknown as Storage<ConversationSchema>;
 
   return {
     name: "conversations",
@@ -62,7 +81,7 @@ export const conversationExtension = (storage: Storage): StorageExtension => {
           const now = params.created_at ?? new Date();
           const metadata = params.metadata ?? null;
 
-          return storage.transaction(async (tx) => {
+          return s.transaction(async (tx) => {
             await query({ ...params, id, created_at: now, metadata }, tx);
 
             if (items?.length) {
@@ -70,7 +89,7 @@ export const conversationExtension = (storage: Storage): StorageExtension => {
               let offset = 0;
               await Promise.all(
                 items.map((input: any) =>
-                  storage.conversation_items.create(
+                  s.conversation_items.create(
                     {
                       ...input,
                       conversation_id: id,
@@ -85,29 +104,23 @@ export const conversationExtension = (storage: Storage): StorageExtension => {
 
             // Standard create returns changes, but we return the mapped entity
             // to provide a better developer experience for the domain.
-            const result = await storage.conversations.findFirst(
-              { id },
-              context,
-              undefined,
-              {},
-              tx,
-            );
+            const result = await s.conversations.findFirst({ id }, context, undefined, {}, tx);
             return conversationRowMapper(result);
           });
         },
 
         async update({ args, query, context }) {
           const { id, data } = args;
-          const conversation = await storage.conversations.findFirst({ id }, context);
+          const conversation = await s.conversations.findFirst({ id }, context);
           if (!conversation) return null;
 
           // Expertise: Preserve original created_at
-          const createdAt = new Date(Number(conversation.created_at) * 1000);
+          const createdAt = new Date(conversation.created_at);
           const updateData = { ...data, created_at: createdAt };
 
           await query({ id, data: updateData });
 
-          const result = await storage.conversations.findFirst({ id }, context);
+          const result = await s.conversations.findFirst({ id }, context);
           return conversationRowMapper(result);
         },
 

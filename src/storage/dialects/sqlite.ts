@@ -10,7 +10,7 @@ const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 export const SQLiteDialectConfig: DialectConfig = {
   placeholder: () => "?",
   quote: (i) => `"${i.replaceAll('"', '""')}"`,
-  selectJson: undefined,
+  selectJson: (c) => c,
   jsonExtract: (c, k) => `json_extract(${c}, '$.${escapeSqlString(k)}')`,
   upsertSuffix: (q, pk, cols) =>
     `ON CONFLICT (${pk.map((c) => q(c)).join(", ")}) DO UPDATE SET ${cols

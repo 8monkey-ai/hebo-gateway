@@ -15,7 +15,10 @@ export const PostgresDialectConfig: DialectConfig = {
   quote: (i) => `"${i.replaceAll('"', '""')}"`,
   selectJson: (c) => c,
   jsonExtract: (c, k) => {
-    const path = k.split(".").map((p) => `"${escapeSqlString(p)}"`).join(",");
+    const path = k
+      .split(".")
+      .map((p) => `"${escapeSqlString(p)}"`)
+      .join(",");
     return `${c}#>>'{${path}}'`;
   },
   upsertSuffix: (q, pk, cols) =>

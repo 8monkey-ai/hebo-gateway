@@ -1,6 +1,8 @@
 import * as z from "zod";
 
-import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
+import type { Endpoint, GatewayConfig, GatewayContext, GatewayConfigParsed } from "../../types";
+import { type Storage } from "../../storage/types";
+import type { SseFrame } from "../../utils/stream";
 
 import { parseConfig } from "../../config";
 import { GatewayError } from "../../errors/gateway";
@@ -19,12 +21,17 @@ import {
   type ConversationItemList,
   type ConversationList,
 } from "./schema";
+import { type ResponsesMetadata } from "../responses/schema";
 import { toConversationDeleted } from "./converters";
-import { conversationExtension } from "./extension";
+import { conversationExtension, type ConversationSchema } from "./extension";
+
+export type ConversationMetadata = ResponsesMetadata;
 
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
-  const storage = parsedConfig.storage.$extends(conversationExtension);
+
+  // We use the new smart $extends that automatically returns the merged type.
+  const storage = parsedConfig.storage.$extends<ConversationSchema>(conversationExtension);
 
   async function list(
     ctx: GatewayContext,
@@ -41,7 +48,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const where: any = {};
     if (metadata !== undefined) {
-      where.metadata = metadata;
+      where["metadata"] = metadata;
     }
 
     // Treat limit 0 as unlimited (up to 100,000 items)
@@ -60,14 +67,13 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       "[storage] listConversations result",
     );
 
-    const has_more = limit !== 0 && (entities as any[]).length > limit;
-    const targetLength =
-      limit > 0 && (entities as any[]).length > limit ? limit : (entities as any[]).length;
+    const has_more = limit !== 0 && entities.length > limit;
+    const targetLength = limit > 0 && entities.length > limit ? limit : entities.length;
     const data: Conversation[] = [];
     for (let i = 0; i < targetLength; i++) {
-      const entity = (entities as any[])[i];
+      const entity = entities[i];
       if (entity) {
-        data.push(entity as unknown as Conversation);
+        data.push(entity);
       }
     }
 
@@ -103,10 +109,10 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       ctx,
     );
 
-    logger.debug(`[conversations] created conversation: ${(entity as any).id}`);
+    logger.debug(`[conversations] created conversation: ${entity.id}`);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] createConversation result");
 
-    return entity as unknown as Conversation;
+    return entity;
   }
 
   async function retrieve(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
@@ -116,7 +122,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entity) {
       throw new GatewayError("Conversation not found", 404);
     }
-    return entity as unknown as Conversation;
+    return entity;
   }
 
   async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
@@ -150,7 +156,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     logger.debug(`[conversations] updated conversation: ${conversationId}`);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] updateConversation result");
-    return entity as unknown as Conversation;
+    return entity;
   }
 
   async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
@@ -158,7 +164,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     logger.debug(`[conversations] deleted conversation: ${conversationId}`);
     logger.trace({ requestId: ctx.requestId, result }, "[storage] deleteConversation result");
 
-    return toConversationDeleted({ id: conversationId, deleted: (result as any).changes > 0 });
+    return toConversationDeleted({ id: conversationId, deleted: result.changes > 0 });
   }
 
   async function retrieveItem(
@@ -175,7 +181,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entity) {
       throw new GatewayError("Item not found", 404);
     }
-    return entity as unknown as ConversationItem;
+    return entity;
   }
 
   async function deleteItem(
@@ -197,7 +203,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     if (!entity) {
       throw new GatewayError("Conversation not found", 404);
     }
-    return entity as unknown as Conversation;
+    return entity;
   }
 
   async function listItems(
@@ -233,14 +239,13 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       "[storage] listItems result",
     );
 
-    const has_more = limit !== 0 && (entities as any[]).length > limit;
-    const targetLength =
-      limit > 0 && (entities as any[]).length > limit ? limit : (entities as any[]).length;
+    const has_more = limit !== 0 && entities.length > limit;
+    const targetLength = limit > 0 && entities.length > limit ? limit : entities.length;
     const data: ConversationItem[] = [];
     for (let i = 0; i < targetLength; i++) {
-      const entity = (entities as any[])[i];
+      const entity = entities[i];
       if (entity) {
-        data.push(entity as unknown as ConversationItem);
+        data.push(entity);
       }
     }
 
@@ -294,7 +299,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
       const resultsList = await Promise.all(itemPromises);
       for (const item of resultsList) {
-        items.push(item as any);
+        items.push(item);
       }
       return items;
     });
@@ -302,6 +307,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     logger.debug(
       `[conversations] added ${results.length} items to conversation: ${conversationId}`,
     );
+    logger.trace({ requestId: ctx.requestId, results }, "[storage] addItems result");
 
     return {
       object: "list",
@@ -312,7 +318,10 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     } as any;
   }
 
-  const handler = async (ctx: GatewayContext) => {
+  const handler = async (
+    ctx: GatewayContext,
+    _cfg: GatewayConfigParsed,
+  ): Promise<object | ReadableStream<SseFrame>> => {
     ctx.operation = "conversations";
     addSpanEvent("hebo.handler.started");
 
@@ -339,10 +348,9 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
 
     const len = segments.length - rootIndex;
+    let result: object | ReadableStream<SseFrame>;
 
-    let result;
-
-    // GET/POST /conversations (List/Create)
+    // GET/POST /conversations
     if (len === 1) {
       if (ctx.request.method === "GET") {
         result = await list(ctx, url.searchParams);
@@ -353,14 +361,12 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       }
     }
 
-    // GET/POST/DELETE /conversations/{id} (Conversation Instance)
+    // GET/PATCH/DELETE /conversations/{id}
     else if (len === 2) {
       const conversationId = segments[rootIndex + 1] as string;
-      logger.debug(`[conversations] resolved conversation ID: ${conversationId}`);
-
       if (ctx.request.method === "GET") {
         result = await retrieve(ctx, conversationId);
-      } else if (ctx.request.method === "POST") {
+      } else if (ctx.request.method === "PATCH") {
         result = await update(ctx, conversationId);
       } else if (ctx.request.method === "DELETE") {
         result = await remove(ctx, conversationId);

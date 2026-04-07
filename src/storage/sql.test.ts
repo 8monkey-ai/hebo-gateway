@@ -51,8 +51,8 @@ describe("SQL Storage Integration (via Extension)", () => {
       conversation_id: conv.id,
     });
 
-    expect((item1).id).toBe("item-1");
-    expect((item1).content).toBe("Msg 1");
+    expect(item1.id).toBe("item-1");
+    expect(item1.content).toBe("Msg 1");
 
     // 3. Get Item
     const item = await storage.conversation_items.findFirst({
@@ -60,7 +60,7 @@ describe("SQL Storage Integration (via Extension)", () => {
     });
     expect(item).toBeDefined();
     expect(item!.id).toBe("item-1");
-    expect((item).content).toBe("Msg 1");
+    expect(item.content).toBe("Msg 1");
 
     // 4. List Items (Basic)
     const allItems = await storage.conversation_items.findMany({
@@ -69,7 +69,7 @@ describe("SQL Storage Integration (via Extension)", () => {
       orderBy: { created_at: "asc" },
     });
     expect(allItems.length).toBe(3);
-    expect((allItems)[0]!.id).toBe("item-1");
+    expect(allItems[0]!.id).toBe("item-1");
 
     // 5. List Items (Pagination: after)
     const page2 = await storage.conversation_items.findMany({
@@ -138,11 +138,15 @@ describe("SQL Storage Integration (via Extension)", () => {
     // 1. Seed
     const c1 = await storage.conversations.create({ metadata: { user: "1", tag: "a" } });
     await new Promise<void>((r) => {
-      setTimeout(() =>{  r(); }, 10);
+      setTimeout(() => {
+        r();
+      }, 10);
     });
     const c2 = await storage.conversations.create({ metadata: { user: "1", tag: "b" } });
     await new Promise<void>((r) => {
-      setTimeout(() =>{  r(); }, 10);
+      setTimeout(() => {
+        r();
+      }, 10);
     });
     const c3 = await storage.conversations.create({ metadata: { user: "2", tag: "a" } });
 
@@ -186,24 +190,24 @@ describe("SQL Storage Integration (via Extension)", () => {
     });
     await storage.migrate();
 
-    await storage.test_table.create({ id: "1", count: 10, tags: "a,b" });
-    await storage.test_table.create({ id: "2", count: 20, tags: "b,c" });
-    await storage.test_table.create({ id: "3", count: 30, tags: "c,d" });
+    await storage["test_table"].create({ id: "1", count: 10, tags: "a,b" });
+    await storage["test_table"].create({ id: "2", count: 20, tags: "b,c" });
+    await storage["test_table"].create({ id: "3", count: 30, tags: "c,d" });
 
     // GT
-    const gt = await storage.test_table.findMany({ where: { count: { gt: 15 } } });
+    const gt = await storage["test_table"].findMany({ where: { count: { gt: 15 } } });
     expect(gt).toHaveLength(2);
 
     // IN
-    const inOp = await storage.test_table.findMany({ where: { id: { in: ["1", "3"] } } });
+    const inOp = await storage["test_table"].findMany({ where: { id: { in: ["1", "3"] } } });
     expect(inOp).toHaveLength(2);
 
     // CONTAINS (LIKE)
-    const contains = await storage.test_table.findMany({ where: { tags: { contains: "b" } } });
+    const contains = await storage["test_table"].findMany({ where: { tags: { contains: "b" } } });
     expect(contains).toHaveLength(2);
 
     // NE
-    const ne = await storage.test_table.findMany({ where: { count: { ne: 20 } } });
+    const ne = await storage["test_table"].findMany({ where: { count: { ne: 20 } } });
     expect(ne).toHaveLength(2);
   });
 
