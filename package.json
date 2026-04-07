@@ -203,7 +203,7 @@
     "pg": "^8.19.0",
     "pino": "^10.3.1",
     "postgres": "^3.4.8",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vite": "^7.3.1",
     "vite-tsconfig-paths": "^6.1.1",
     "voyage-ai-provider": "^3.0.0"
@@ -222,7 +222,7 @@
     "mysql2": "^3.11.0",
     "pg": "^8.13.0",
     "postgres": "^3.4.0",
-    "typescript": "^5.9.3",
+    "typescript": ">=5.9.3",
     "voyage-ai-provider": "^3.0.0"
   },
   "peerDependenciesMeta": {
