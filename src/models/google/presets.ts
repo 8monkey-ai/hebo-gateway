@@ -180,7 +180,7 @@ export const gemma4E2b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...GEMMA4_BASE,
     name: "Gemma 4 E2B",
-    created: "2025-06-25",
+    created: "2026-06-25",
     modalities: {
       input: ["text", "image", "audio"] as const,
       output: ["text"] as const,
@@ -193,7 +193,7 @@ export const gemma4E4b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...GEMMA4_BASE,
     name: "Gemma 4 E4B",
-    created: "2025-06-25",
+    created: "2026-06-25",
     modalities: {
       input: ["text", "image", "audio"] as const,
       output: ["text"] as const,
@@ -206,7 +206,7 @@ export const gemma426bA4b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...GEMMA4_BASE,
     name: "Gemma 4 26B-A4B",
-    created: "2025-06-25",
+    created: "2026-06-25",
     context: 262144,
   } satisfies DeepPartial<CatalogModel>,
 );
@@ -216,7 +216,7 @@ export const gemma431b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...GEMMA4_BASE,
     name: "Gemma 4 31B",
-    created: "2025-06-25",
+    created: "2026-06-25",
     context: 262144,
   } satisfies DeepPartial<CatalogModel>,
 );
