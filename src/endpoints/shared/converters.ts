@@ -88,7 +88,7 @@ export function parseReasoningOptions(
   const max_tokens = reasoning?.max_tokens;
 
   if (reasoning?.enabled === false || effort === "none") {
-    return { reasoning: { enabled: false }, reasoning_effort: "none" };
+    return { reasoning: { enabled: false, effort: "none" }, reasoning_effort: "none" };
   }
   if (!reasoning && effort === undefined) return {};
 

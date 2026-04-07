@@ -94,9 +94,14 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
           ),
       };
     } else if (modelId.includes("gemini-3") && reasoning.effort) {
-      target.thinkingConfig = {
-        thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, modelId),
-      };
+      if (reasoning.effort === "none") {
+        // thinkingBudget: 0 fully disables thinking (thinkingLevel: "minimal" still allows some)
+        target.thinkingConfig = { thinkingBudget: 0 };
+      } else {
+        target.thinkingConfig = {
+          thinkingLevel: mapGeminiReasoningEffort(reasoning.effort, modelId),
+        };
+      }
       // FUTURE: warn if model is gemini-3 and max_tokens (unsupported) was ignored
     }
 

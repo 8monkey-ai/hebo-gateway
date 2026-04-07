@@ -161,7 +161,7 @@ test("geminiReasoningMiddleware > should normalize none effort for Gemini 3.1 Fl
       google: {
         thinkingConfig: {
           includeThoughts: false,
-          thinkingLevel: "minimal",
+          thinkingBudget: 0,
         },
       },
       unknown: {},
@@ -221,7 +221,7 @@ test("geminiReasoningMiddleware > should handle disabled reasoning", async () =>
       google: {
         thinkingConfig: {
           includeThoughts: false,
-          thinkingLevel: "minimal",
+          thinkingBudget: 0,
         },
       },
       unknown: {},
