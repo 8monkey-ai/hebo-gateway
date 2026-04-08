@@ -347,6 +347,8 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         result.push(out);
         break;
       }
+      default:
+        throw new GatewayError(`Unsupported content part type: ${(part as { type: string }).type}`, 400);
     }
   }
   return result;
