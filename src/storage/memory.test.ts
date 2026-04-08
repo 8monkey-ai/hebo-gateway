@@ -1,9 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { InMemoryStorage } from "./memory";
+import type { DatabaseClient, TableClient } from "./types";
+
+interface TestSchema extends DatabaseClient {
+  cache: TableClient<{ id: string; data?: string; nested?: unknown; a?: string }, unknown>;
+  test_table: TableClient<{ id: string; metadata?: unknown; user?: unknown }, unknown>;
+  parent: TableClient<{ id: string }, unknown>;
+  child: TableClient<{ id: string; parent_id: string }, unknown>;
+  items: TableClient<{ id: string; data: string }, unknown>;
+}
 
 describe("InMemoryStorage (Size-Based LRU)", () => {
   test("should evict items based on estimated byte size", async () => {
-    const storage = new InMemoryStorage();
+    const storage = new InMemoryStorage<TestSchema>();
     storage.$extends({
       schema: {
         cache: {
@@ -35,7 +44,7 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
   });
 
   test("should handle nested object size estimation", async () => {
-    const storage = new InMemoryStorage();
+    const storage = new InMemoryStorage<TestSchema>();
     storage.$extends({
       schema: {
         cache: {
@@ -61,7 +70,7 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
 
 describe("InMemoryStorage (Filtering and Operations)", () => {
   test("should support nested property filtering with structured operators", async () => {
-    const storage = new InMemoryStorage();
+    const storage = new InMemoryStorage<TestSchema>();
     await storage.migrate();
 
     await storage["test_table"].create({ id: "1", metadata: { count: 10 } });
@@ -76,7 +85,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
   });
 
   test("should support deep dot notation exact match", async () => {
-    const storage = new InMemoryStorage();
+    const storage = new InMemoryStorage<TestSchema>();
     await storage.migrate();
 
     await storage["test_table"].create({ id: "1", user: { profile: { name: "alice" } } });
@@ -91,7 +100,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
   });
 
   test("delete should not cascade to other tables", async () => {
-    const storage = new InMemoryStorage();
+    const storage = new InMemoryStorage<TestSchema>();
     await storage.migrate();
 
     await storage["parent"].create({ id: "p1" });
@@ -108,7 +117,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
   });
 
   test("should generate uuidv7 fallback IDs and maintain chronological sorting", async () => {
-    const storage = new InMemoryStorage();
+    const storage = new InMemoryStorage<TestSchema>();
     await storage.migrate();
 
     // Create 5 items without explicit IDs, with small delays to ensure different uuidv7 timestamps

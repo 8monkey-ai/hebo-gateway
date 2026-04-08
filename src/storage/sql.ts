@@ -5,7 +5,6 @@ import type {
   StorageQueryOptions,
   DatabaseSchema,
   WhereCondition,
-  TableSchema,
   StorageBase,
   RowMapper,
   ColumnSchema,
@@ -17,9 +16,9 @@ import type {
 import { type QueryExecutor, type DialectConfig, type SqlDialect } from "./dialects/types";
 
 export class SqlStorage<
-  TSchema extends DatabaseSchema = any,
+  TSchema extends Record<string, any> = Record<string, any>,
   TExtra = Record<string, any>,
-> implements StorageBase<TSchema, TExtra> {
+> implements StorageBase<TSchema> {
   [tableName: string]: any;
 
   public readonly dialect: SqlDialect;
@@ -171,7 +170,9 @@ export class SqlStorage<
     return client;
   }
 
-  $extends(extension: StorageExtension | StorageExtensionFactory): Storage<any, TExtra> {
+  $extends<TNewSchema extends Record<string, any>>(
+    extension: StorageExtension<TNewSchema> | StorageExtensionFactory<TNewSchema>,
+  ): Storage<TSchema & TNewSchema> {
     const ext = typeof extension === "function" ? (extension as any)(this) : extension;
 
     // Idempotency with Merging: If the extension has a name and it's already registered,
@@ -682,11 +683,7 @@ export class SqlStorage<
               args.push((op).lte);
             } else if (k === "in") {
               const inVals = (op).in as any[];
-              const arr = Array.from({ length: inVals.length });
-              for (let i = 0; i < inVals.length; i++) {
-                arr[i] = placeholder(currentIdx++);
-              }
-              const inPlaceholders = arr.join(", ");
+              const inPlaceholders = inVals.map(() => placeholder(currentIdx++)).join(", ");
               conditions.push(`${target} IN (${inPlaceholders})`);
               args.push(...inVals);
             } else if (k === "contains") {

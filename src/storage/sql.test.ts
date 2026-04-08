@@ -221,13 +221,13 @@ describe("SQL Storage Integration (via Extension)", () => {
     storage.$extends({
       query: {
         conversations: {
-          create: ({ args, context, query }) => {
+          create: ({ args, context, query }: any) => {
             if (context.shardId === 1) {
               return query({ ...args, table: "conversations_shard_1" });
             }
             return query(args);
           },
-          findFirst: ({ args, context, query }) => {
+          findFirst: ({ args, context, query }: any) => {
             if (context.shardId === 1) {
               return query({ ...args, table: "conversations_shard_1" });
             }

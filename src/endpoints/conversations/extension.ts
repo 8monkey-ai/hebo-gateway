@@ -64,7 +64,7 @@ export const itemRowMapper = createRowMapper<ConversationItem>([
  * Intercepts standard CRUD operations to handle IDs, timestamps, and row mapping.
  */
 export const conversationExtension = (
-  storage: StorageBase,
+  storage: Storage<any>,
 ): StorageExtension<ConversationSchema> => {
   const isGreptime = storage.dialect?.config?.types?.index === "TIME";
   const s = storage as unknown as Storage<ConversationSchema>;

@@ -56,7 +56,7 @@ export interface TableMetadata {
 }
 
 export type TableSchema = {
-  [columnName: string]: ColumnSchema | string | any;
+  [columnName: string]: unknown;
 } & TableMetadata;
 
 export type DatabaseSchema = Record<string, TableSchema>;
@@ -76,7 +76,7 @@ export type StorageExtensionCallback<TArgs = any, TResult = any> = (
   params: StorageExtensionContext<TArgs, TResult>,
 ) => Promise<TResult>;
 
-export interface StorageExtension<TSchema extends DatabaseSchema = any> {
+export interface StorageExtension<TSchema extends Record<string, any> = any> {
   name?: string;
   schema?: DatabaseSchema;
   query?: {
@@ -90,8 +90,8 @@ export interface StorageExtension<TSchema extends DatabaseSchema = any> {
   client?: Record<string, (this: any, ...args: any[]) => any>;
 }
 
-export type StorageExtensionFactory<TSchema extends DatabaseSchema = any> = (
-  client: Storage,
+export type StorageExtensionFactory<TSchema extends Record<string, any> = any> = (
+  client: Storage<any>,
 ) => StorageExtension<TSchema>;
 
 export type RowMapper<T> = (row: any) => T;
@@ -115,14 +115,16 @@ export interface TableClient<T = any, TExtra = any> {
   delete(where: WhereCondition<TExtra>, context?: any, tx?: any): Promise<any>;
 }
 
+export type DatabaseClient = Record<string, TableClient<unknown, unknown>>;
+
 /**
  * Storage is the combination of the Base engine and the dynamically added Tables.
  * This intersection is what allows 'storage.conversations.findMany()'.
  */
-export type Storage<TSchema extends Record<string, TableClient<any>> = any> =
-  StorageBase<TSchema> & TSchema;
+export type Storage<TSchema extends DatabaseClient = DatabaseClient> = StorageBase<TSchema> &
+  TSchema;
 
-export interface StorageBase<TSchema extends Record<string, TableClient<any>> = any> {
+export interface StorageBase<TSchema extends DatabaseClient = DatabaseClient> {
   readonly dialect?: SqlDialect;
   readonly schema?: DatabaseSchema;
 
@@ -178,7 +180,7 @@ export interface StorageBase<TSchema extends Record<string, TableClient<any>> = 
    * Extends the storage with new tables and domain expertise.
    * RETURNS: A new Storage type that includes the new tables automatically (Prisma style).
    */
-  $extends<TNewSchema extends Record<string, TableClient<any>>>(
-    extension: StorageExtension | StorageExtensionFactory,
+  $extends<TNewSchema extends DatabaseClient>(
+    extension: StorageExtension<TNewSchema> | StorageExtensionFactory<TNewSchema>,
   ): Storage<TSchema & TNewSchema>;
 }

@@ -42,7 +42,7 @@ function estimateSize(root: unknown): number {
     if (t !== "object") continue;
 
     if (ArrayBuffer.isView(obj)) {
-      total += (obj as any).byteLength;
+      total += obj.byteLength;
       continue;
     }
 
@@ -68,9 +68,9 @@ function estimateSize(root: unknown): number {
 }
 
 export class InMemoryStorage<
-  TSchema extends DatabaseSchema = any,
+  TSchema extends Record<string, any> = Record<string, any>,
   TExtra = Record<string, any>,
-> implements StorageBase<TSchema, TExtra> {
+> implements StorageBase<TSchema> {
   [tableName: string]: any;
 
   // Use a union type to correctly represent both possible table types.
@@ -91,10 +91,10 @@ export class InMemoryStorage<
   constructor(options: InMemoryStorageOptions = {}) {
     this.options = options;
 
-    // eslint-disable-next-line no-constructor-return, @typescript-eslint/no-unsafe-return
+    // eslint-disable-next-line no-constructor-return
     return new Proxy(this, {
       get(target, prop, receiver) {
-        if (typeof prop !== "string") return Reflect.get(target, prop, receiver);
+        if (typeof prop !== "string") return Reflect.get(target, prop, receiver) as unknown;
 
         // 1. Check for table access (fluent API)
         if (!(prop in target) && !prop.startsWith("$") && !prop.startsWith("_")) {
@@ -111,9 +111,9 @@ export class InMemoryStorage<
           }
         }
 
-        return Reflect.get(target, prop, receiver);
+        return Reflect.get(target, prop, receiver) as unknown;
       },
-    }) as any;
+    }) as unknown as StorageBase<TSchema>;
   }
 
   private createTableClient(tableName: string): TableClient<any, TExtra> {
@@ -182,7 +182,9 @@ export class InMemoryStorage<
     return client;
   }
 
-  $extends(extension: StorageExtension | StorageExtensionFactory): Storage<any, TExtra> {
+  $extends<TNewSchema extends Record<string, any>>(
+    extension: StorageExtension<TNewSchema> | StorageExtensionFactory<TNewSchema>,
+  ): Storage<TSchema & TNewSchema> {
     const ext = typeof extension === "function" ? (extension as any)(this) : extension;
 
     // Idempotency with Merging: If the extension has a name and it's already registered,

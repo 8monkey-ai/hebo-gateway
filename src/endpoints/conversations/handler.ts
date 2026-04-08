@@ -1,7 +1,6 @@
 import * as z from "zod";
 
 import type { Endpoint, GatewayConfig, GatewayContext, GatewayConfigParsed } from "../../types";
-import { type Storage } from "../../storage/types";
 import type { SseFrame } from "../../utils/stream";
 
 import { parseConfig } from "../../config";
@@ -103,7 +102,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const entity = await storage.conversations.create(
       {
-        metadata: (parsed.data.metadata as ConversationMetadata) ?? null,
+        metadata: (parsed.data.metadata) ?? null,
         items: parsed.data.items,
       },
       ctx,
@@ -142,7 +141,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const data = {
       ...parsed.data,
-      metadata: (parsed.data.metadata as ConversationMetadata) ?? null,
+      metadata: (parsed.data.metadata) ?? null,
     };
     // Filter out undefined to avoid overwriting with NULL
     const filteredData = Object.fromEntries(
@@ -189,7 +188,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     conversationId: string,
     itemId: string,
   ): Promise<Conversation> {
-    const entity = await storage.transaction(async (tx) => {
+    const entity = await storage.transaction(async (tx: any) => {
       await storage.conversation_items.delete(
         { id: itemId, conversation_id: conversationId },
         ctx,
@@ -280,7 +279,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     const conv = await storage.conversations.findFirst({ id: conversationId }, ctx);
     if (!conv) throw new GatewayError("Conversation not found", 404);
 
-    const results = await storage.transaction(async (tx) => {
+    const results = await storage.transaction(async (tx: any) => {
       const items: ConversationItem[] = [];
       const nowMs = Date.now();
       let offset = 0;

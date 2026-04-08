@@ -273,9 +273,14 @@ describe("Responses Handler", () => {
 
     const decoder = new TextDecoder();
     let result = "";
-    for await (const chunk of res.body!) {
-      result += decoder.decode(chunk);
-    }
+    const reader = res.body!.getReader();
+    const readAll = async (): Promise<void> => {
+      const { done, value } = await reader.read();
+      if (done) return;
+      result += decoder.decode(value);
+      return readAll();
+    };
+    await readAll();
 
     expect(result).toContain("event: response.created");
     expect(result).toContain("event: response.in_progress");
@@ -298,9 +303,14 @@ describe("Responses Handler", () => {
 
     const decoder = new TextDecoder();
     let result = "";
-    for await (const chunk of res.body!) {
-      result += decoder.decode(chunk);
-    }
+    const reader = res.body!.getReader();
+    const readAll = async (): Promise<void> => {
+      const { done, value } = await reader.read();
+      if (done) return;
+      result += decoder.decode(value);
+      return readAll();
+    };
+    await readAll();
 
     // Check response.created
     const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);

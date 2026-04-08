@@ -305,9 +305,14 @@ describe("Chat Completions Handler", () => {
 
     const decoder = new TextDecoder();
     let result = "";
-    for await (const chunk of res.body!) {
-      result += decoder.decode(chunk);
-    }
+    const reader = res.body!.getReader();
+    const readAll = async (): Promise<void> => {
+      const { done, value } = await reader.read();
+      if (done) return;
+      result += decoder.decode(value);
+      return readAll();
+    };
+    await readAll();
 
     expect(result).toContain('data: {"id":"chatcmpl-');
     expect(result).toContain('"content":"Hello');
