@@ -68,7 +68,7 @@ function createPgExecutor(
   const cache = new LRUCache<string, string>({ max: MAX_CACHE_SIZE });
   let count = 0;
 
-  const getQuery = (sql: string, values?: unknown[]) => {
+  const getQuery = (sql: string, values?: (string | number | bigint | boolean | null)[]) => {
     let name = cache.get(sql);
     if (!name) {
       name = `q_${count++}`;
@@ -194,7 +194,7 @@ function createBunPostgresExecutor(
     },
     async run(query: string, params?: unknown[]) {
       const p = mapParams(params);
-      const res = (await sql.unsafe(query, p?.length > 0 ? p : undefined)) as unknown;
+      const res = await sql.unsafe(query, p?.length > 0 ? p : undefined);
       const result = res as {
         affectedRows?: number;
         count?: number;

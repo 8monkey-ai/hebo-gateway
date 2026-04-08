@@ -231,7 +231,7 @@ export type GatewayConfig = {
    * Optional conversation storage backend.
    * Defaults to an in-memory storage if not provided.
    */
-  storage?: StorageBase<any>;
+  storage?: StorageBase;
   /**
    * Optional AI SDK telemetry configuration.
    */
@@ -267,7 +267,7 @@ export type GatewayConfig = {
 
 export const kParsed = Symbol("hebo.gateway.parsed");
 export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts"> & {
-  storage: StorageBase<any>;
+  storage: StorageBase;
   timeouts: {
     normal?: number;
     flex?: number;

@@ -104,7 +104,7 @@ function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
       return rows?.[0] as T | undefined;
     },
     async run(query: string, params?: unknown[]) {
-      const res = (await sql.unsafe(query, mapParams(params))) as unknown;
+      const res = await sql.unsafe(query, mapParams(params));
       const result = res as { affectedRows?: number; count?: number };
       return { changes: Number(result.affectedRows ?? result.count ?? 0) };
     },

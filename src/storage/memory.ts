@@ -1,7 +1,7 @@
 import { v7 as uuidv7 } from "uuid";
 import { LRUCache } from "lru-cache";
 import type {
-  Storage,
+  StorageClient,
   StorageOperation,
   StorageQueryOptions,
   DatabaseSchema,
@@ -13,6 +13,7 @@ import type {
   SortOrder,
   TableClient,
   StorageExtensionCallback,
+  DatabaseClient,
 } from "./types";
 
 interface InMemoryStorageOptions {
@@ -68,13 +69,14 @@ function estimateSize(root: unknown): number {
 }
 
 export class InMemoryStorage<
-  TSchema extends Record<string, any> = Record<string, any>,
-  TExtra = Record<string, any>,
+  TSchema extends DatabaseClient = DatabaseClient,
+  TExtra = Record<string, unknown>,
 > implements StorageBase<TSchema> {
-  [tableName: string]: any;
-
   // Use a union type to correctly represent both possible table types.
-  private readonly tables = new Map<string, Map<string, any> | LRUCache<string, any, any>>();
+  private readonly tables = new Map<
+    string,
+    Map<string, Record<string, unknown>> | LRUCache<string, Record<string, unknown>>
+  >();
 
   // Generic Hash Indexing:
   // To avoid O(N) full table scans during find/findOne operations, we maintain in-memory hash indexes.
@@ -86,7 +88,7 @@ export class InMemoryStorage<
   private readonly extensions: StorageExtension<TSchema>[] = [];
   private readonly options: InMemoryStorageOptions;
   public schema?: DatabaseSchema;
-  public readonly dialect?: any;
+  public readonly dialect?: unknown;
 
   constructor(options: InMemoryStorageOptions = {}) {
     this.options = options;
@@ -106,18 +108,18 @@ export class InMemoryStorage<
           if (ext.client && prop in ext.client) {
             const method = ext.client[prop];
             if (typeof method === "function") {
-              return method.bind(target);
+              return (method as (this: unknown, ...args: unknown[]) => unknown).bind(target);
             }
           }
         }
 
         return Reflect.get(target, prop, receiver) as unknown;
       },
-    }) as unknown as StorageBase<TSchema>;
+    }) as unknown as InMemoryStorage<TSchema, TExtra> & TSchema;
   }
 
-  private createTableClient(tableName: string): TableClient<any, TExtra> {
-    const client: TableClient<any, TExtra> = {
+  private createTableClient(tableName: string): TableClient<unknown, TExtra> {
+    const client: TableClient<unknown, TExtra> = {
       findMany: (options, context, mapper, tx) =>
         this.executeWithExtensions(tableName, "findMany", options, context, tx, (args, table, t) =>
           this._findMany(tableName, args, context, table, t, mapper),
@@ -131,8 +133,13 @@ export class InMemoryStorage<
           this._create(tableName, args, context, table, t),
         ),
       update: (id, data, context, tx) =>
-        this.executeWithExtensions(tableName, "update", { id, data }, context, tx, (args, table, t) =>
-          this._update(tableName, args, context, table, t),
+        this.executeWithExtensions(
+          tableName,
+          "update",
+          { id, data },
+          context,
+          tx,
+          (args, table, t) => this._update(tableName, args, context, table, t),
         ),
       delete: (where, context, tx) =>
         this.executeWithExtensions(tableName, "delete", where, context, tx, (args, table, t) =>
@@ -142,13 +149,18 @@ export class InMemoryStorage<
 
     // Apply model-level extensions
     for (const ext of this.extensions) {
-      const modelMethods = ext.model?.[tableName] ?? ext.model?.["$allModels"];
+      const modelMethods =
+        ext.model?.[tableName as keyof TSchema] ??
+        (ext.model?.["$allModels"] as Record<
+          string,
+          (this: TableClient, ...args: unknown[]) => unknown
+        >);
       if (modelMethods) {
         for (const [name, fn] of Object.entries(modelMethods)) {
-          // Ensure we don't accidentally overwrite built-ins like "create" unless intended.
-          // In Prisma, `model` extensions are merged with the base client.
           if (!(name in client)) {
-            (client as any)[name] = fn.bind(client);
+            (client as unknown as Record<string, unknown>)[name] = (
+              fn as (this: TableClient, ...args: unknown[]) => unknown
+            ).bind(client);
           }
         }
       }
@@ -157,10 +169,11 @@ export class InMemoryStorage<
     return client;
   }
 
-  $extends<TNewSchema extends Record<string, any>>(
+  $extends<TNewSchema extends DatabaseClient>(
     extension: StorageExtension<TNewSchema> | StorageExtensionFactory<TNewSchema>,
-  ): Storage<TSchema & TNewSchema> {
-    const ext = typeof extension === "function" ? (extension as any)(this) : extension;
+  ): StorageClient<TSchema & TNewSchema> {
+    const ext =
+      typeof extension === "function" ? extension(this as unknown as StorageClient) : extension;
 
     // Idempotency with Merging: If the extension has a name and it's already registered,
     // we merge the schema but keep the existing logic to prevent double-processing.
@@ -170,26 +183,28 @@ export class InMemoryStorage<
         existing.schema = { ...existing.schema, ...ext.schema };
         // Deep merge table columns if necessary
         for (const [table, tableSchema] of Object.entries(ext.schema)) {
-          existing.schema[table] = {
-            ...(existing.schema[table] as object),
-            ...(tableSchema as object),
-          };
+          if (existing.schema) {
+            existing.schema[table] = {
+              ...(existing.schema[table] as object),
+              ...(tableSchema as object),
+            };
+          }
         }
       }
-      return this as any;
+      return this as unknown as StorageClient<TSchema & TNewSchema>;
     }
 
-    this.extensions.push(ext);
-    return this as any;
+    this.extensions.push(ext as unknown as StorageExtension<TSchema>);
+    return this as unknown as StorageClient<TSchema & TNewSchema>;
   }
 
   private executeWithExtensions<TArgs, TResult>(
     model: string,
     operation: StorageOperation,
     args: TArgs,
-    context: any,
-    tx: any,
-    finalOp: (payload: any, table: string, t: any) => Promise<TResult>,
+    context: unknown,
+    tx: unknown,
+    finalOp: (payload: TArgs, table: string, t: unknown) => Promise<TResult>,
   ): Promise<TResult> {
     const relevantExtensions: StorageExtensionCallback[] = [];
 
@@ -198,31 +213,38 @@ export class InMemoryStorage<
       if (!ext.query) continue;
 
       // 1. Specific model, specific operation
-      const modelExt = ext.query[model as keyof TSchema];
+      const modelExt =
+        ext.query[model as keyof TSchema] ??
+        (ext.query["$allModels" as keyof TSchema] as
+          | {
+              [Op in StorageOperation | "$allOperations"]?: StorageExtensionCallback;
+            }
+          | undefined);
       if (modelExt) {
-        const opExt = (modelExt as any)[operation] ?? (modelExt as any)["$allOperations"];
-        if (opExt) relevantExtensions.push(opExt);
-      }
-
-      // 2. $allModels
-      const allModelsExt = ext.query["$allModels"];
-      if (allModelsExt) {
-        const opExt = (allModelsExt as any)[operation] ?? (allModelsExt as any)["$allOperations"];
+        const opExt = modelExt[operation] ?? modelExt["$allOperations"];
         if (opExt) relevantExtensions.push(opExt);
       }
     }
 
     // Execute the chain from right to left (last extension is the outermost wrapper)
-    const executeChain = (index: number, currentArgs: TArgs, currentTx?: any): Promise<TResult> => {
+    const executeChain = (
+      index: number,
+      currentArgs: TArgs,
+      currentTx?: unknown,
+    ): Promise<TResult> => {
       if (index < 0) {
-        const { table, ...payload } = currentArgs as any;
-        return finalOp(payload, (table as string) ?? model, currentTx);
+        const { table, ...payload } = currentArgs as unknown as {
+          table?: string;
+        } & TArgs;
+        return finalOp(payload as unknown as TArgs, table ?? model, currentTx ?? this);
       }
 
       const callback = relevantExtensions[index];
       if (!callback) {
-        const { table, ...payload } = currentArgs as any;
-        return finalOp(payload, (table as string) ?? model, currentTx);
+        const { table, ...payload } = currentArgs as unknown as {
+          table?: string;
+        } & TArgs;
+        return finalOp(payload as unknown as TArgs, table ?? model, currentTx ?? this);
       }
 
       return callback({
@@ -231,20 +253,22 @@ export class InMemoryStorage<
         args: currentArgs,
         context,
         tx: currentTx,
-        query: (nextArgs: any, nextTx?: any) =>
-          executeChain(index - 1, nextArgs, nextTx ?? currentTx),
-      });
+        query: (nextArgs: unknown, nextTx?: unknown) =>
+          executeChain(index - 1, nextArgs as TArgs, nextTx ?? currentTx),
+      }) as Promise<TResult>;
     };
 
     return executeChain(relevantExtensions.length - 1, args, tx);
   }
 
-  private getTable(table: string): Map<string, any> | LRUCache<string, any, any> {
+  private getTable(
+    table: string,
+  ): Map<string, Record<string, unknown>> | LRUCache<string, Record<string, unknown>> {
     let t = this.tables.get(table);
     if (!t) {
       // If a global maxSize was provided in constructor, use it for new tables.
       if (this.options.maxSize) {
-        t = new LRUCache<string, any, any>({
+        t = new LRUCache<string, Record<string, unknown>>({
           maxSize: this.options.maxSize,
           sizeCalculation: (value, key) => Math.max(1, estimateSize(value) + estimateSize(key)),
           dispose: (value, key) => {
@@ -263,7 +287,7 @@ export class InMemoryStorage<
    * Helper to add a row's ID into the hash indexes for any matching indexed columns.
    * Runs internally on `insert` and `update` operations.
    */
-  private indexRow(table: string, id: string, row: any) {
+  private indexRow(table: string, id: string, row: Record<string, unknown>) {
     const cols = this.indexedColumns.get(table);
     if (!cols) return;
     const tableIdx = this.indexes.get(table)!;
@@ -290,7 +314,7 @@ export class InMemoryStorage<
    * Helper to remove a row's ID from the hash indexes.
    * Runs internally on `remove` and `update` operations, and automatically triggers when the LRUCache evicts an item.
    */
-  private unindexRow(table: string, id: string, row: any) {
+  private unindexRow(table: string, id: string, row: Record<string, unknown>) {
     const cols = this.indexedColumns.get(table);
     if (!cols) return;
     const tableIdx = this.indexes.get(table)!;
@@ -318,13 +342,17 @@ export class InMemoryStorage<
    * If an indexed column (e.g. `conversation_id`) is provided, it uses the hash index O(1).
    * If no indexed criteria are present, it falls back to returning all rows O(N).
    */
-  private findIndexedRows(table: string, where?: WhereCondition<any>): any[] {
+  private findIndexedRows(
+    table: string,
+    where?: WhereCondition<unknown>,
+  ): Record<string, unknown>[] {
     const tableMap = this.getTable(table);
     if (!where) return Array.from(tableMap.values());
 
     // 1. Primary Key Index Check O(1)
-    if (typeof where["id"] === "string") {
-      const r = tableMap.get(where["id"]);
+    const whereId = (where as Record<string, unknown>)["id"];
+    if (typeof whereId === "string") {
+      const r = tableMap.get(whereId);
       return r ? [r] : [];
     }
 
@@ -332,7 +360,7 @@ export class InMemoryStorage<
     const cols = this.indexedColumns.get(table);
     if (cols) {
       for (const col of cols) {
-        const val = (where as any)[col];
+        const val = (where as Record<string, unknown>)[col];
         // We only index primitives (string, number, boolean) to keep memory usage low
         if (
           val !== undefined &&
@@ -344,7 +372,7 @@ export class InMemoryStorage<
 
           return Array.from(idSet)
             .map((id) => tableMap.get(id))
-            .filter(Boolean);
+            .filter((r): r is Record<string, unknown> => !!r);
         }
       }
     }
@@ -372,13 +400,13 @@ export class InMemoryStorage<
       // Read the TableSchema to figure out which columns we should maintain Hash Indexes for.
       const idxCols = new Set<string>();
       if (columns.$partitionBy) {
-        columns.$partitionBy.forEach((c: any) => idxCols.add(c));
+        columns.$partitionBy.forEach((c: unknown) => idxCols.add(c as string));
       }
       if (columns.$indexes) {
-        columns.$indexes.forEach((idx: any) => {
+        columns.$indexes.forEach((idx: string[]) => {
           // Extract the column name (e.g. "conversation_id" from "conversation_id DESC")
-          const firstCol = idx[0].split(" ")[0] as string;
-          idxCols.add(firstCol);
+          const firstCol = idx[0]?.split(" ")[0] as string;
+          if (firstCol) idxCols.add(firstCol);
         });
       }
       idxCols.delete("id"); // ID is inherently indexed via the main Map
@@ -397,10 +425,10 @@ export class InMemoryStorage<
       const needsLRU = !!limit;
       const isLRU = existing instanceof LRUCache;
 
-      if (needsLRU && (!isLRU || (existing as any).maxSize !== limit)) {
+      if (needsLRU && (!isLRU || existing.maxSize !== limit)) {
         this.tables.set(
           table,
-          new LRUCache<string, any, any>({
+          new LRUCache<string, Record<string, unknown>>({
             maxSize: limit,
             sizeCalculation: (value, key) => Math.max(1, estimateSize(value) + estimateSize(key)),
             noDisposeOnSet: true,
@@ -417,7 +445,7 @@ export class InMemoryStorage<
     return Promise.resolve();
   }
 
-  private sortRows(rows: any[], orderBy: Record<string, SortOrder>) {
+  private sortRows(rows: Record<string, unknown>[], orderBy: Record<string, SortOrder>) {
     const specs = Object.entries(orderBy);
     if (specs.length === 0) return;
 
@@ -433,8 +461,10 @@ export class InMemoryStorage<
         if (valA !== valB) {
           if (valA === undefined) return isAsc ? 1 : -1;
           if (valB === undefined) return isAsc ? -1 : 1;
-          if (valA < valB) return isAsc ? -1 : 1;
-          if (valA > valB) return isAsc ? 1 : -1;
+          if ((valA as number | string | boolean) < (valB as number | string | boolean))
+            return isAsc ? -1 : 1;
+          if ((valA as number | string | boolean) > (valB as number | string | boolean))
+            return isAsc ? 1 : -1;
         }
       }
 
@@ -443,8 +473,8 @@ export class InMemoryStorage<
       const firstSpec = specs[0];
       const primaryDir = firstSpec ? firstSpec[1].toLowerCase() : "asc";
       const isAsc = primaryDir === "asc";
-      const idA = String(a.id ?? "");
-      const idB = String(b.id ?? "");
+      const idA = String((a["id"] as string | number | boolean) ?? "");
+      const idB = String((b["id"] as string | number | boolean) ?? "");
       return isAsc ? idA.localeCompare(idB) : idB.localeCompare(idA);
     });
   }
@@ -452,9 +482,9 @@ export class InMemoryStorage<
   _findMany<T>(
     model: string,
     options: StorageQueryOptions<TExtra>,
-    _context: any = {},
+    _context: unknown = {},
     table: string = model,
-    _tx?: any,
+    _tx?: unknown,
     mapper: RowMapper<T> = (r) => r as T,
   ): Promise<T[]> {
     const { limit, after, where } = options;
@@ -493,7 +523,7 @@ export class InMemoryStorage<
     let seen = after === null || after === undefined;
     for (const item of rows) {
       if (!seen) {
-        if (item.id === after) seen = true;
+        if (item["id"] === after) seen = true;
         continue;
       }
       // Clone the item to avoid mutation bugs with mappers
@@ -507,15 +537,17 @@ export class InMemoryStorage<
   _findFirst<T>(
     model: string,
     where: WhereCondition<TExtra>,
-    _context: any = {},
+    _context: unknown = {},
     table: string = model,
-    tx?: any,
+    tx?: unknown,
     mapper: RowMapper<T> = (r) => r as T,
     options: { orderBy?: Record<string, SortOrder> } = {},
   ): Promise<T | undefined> {
-    const actualWhere = (where as any).where ? (where as any).where : where;
-    const actualOptions = (where as any).orderBy
-      ? { ...options, orderBy: (where as any).orderBy }
+    const actualWhere = (where as { where?: WhereCondition<unknown> }).where
+      ? (where as { where: WhereCondition<unknown> }).where
+      : where;
+    const actualOptions = (where as { orderBy?: Record<string, SortOrder> }).orderBy
+      ? { ...options, orderBy: (where as { orderBy: Record<string, SortOrder> }).orderBy }
       : options;
 
     const resultsPromise = this._findMany(
@@ -532,26 +564,26 @@ export class InMemoryStorage<
   _create(
     model: string,
     data: Record<string, unknown>,
-    _context: any = {},
+    _context: unknown = {},
     table: string = model,
-    _tx?: any,
-  ): Promise<any> {
+    _tx?: unknown,
+  ): Promise<{ id: string } & Record<string, unknown>> {
     const tableMap = this.getTable(table);
     // FUTURE: Generate internal string keys from full $primaryKey columns instead of hardcoded 'id'.
     const id = (data["id"] as string) || uuidv7();
     const row = { ...data, id };
     tableMap.set(id, row);
     this.indexRow(table, id, row);
-    return Promise.resolve({ changes: 1 });
+    return Promise.resolve(row);
   }
 
   _update(
     model: string,
     args: { id: string; data: Record<string, unknown> },
-    _context: any = {},
+    _context: unknown = {},
     table: string = model,
-    _tx?: any,
-  ): Promise<any> {
+    _tx?: unknown,
+  ): Promise<{ changes: number }> {
     const { id, data } = args;
     const tableMap = this.getTable(table);
     const existing = tableMap.get(id);
@@ -572,13 +604,13 @@ export class InMemoryStorage<
   _delete(
     model: string,
     where: WhereCondition<TExtra>,
-    _context: any = {},
+    _context: unknown = {},
     table: string = model,
-    tx?: any,
-  ): Promise<any> {
+    tx?: unknown,
+  ): Promise<{ changes: number }> {
     return this._findMany(model, { where }, _context, table, tx, (r) => r).then((results) => {
       const tableMap = this.getTable(table);
-      const toDelete = results as Record<string, unknown>[];
+      const toDelete = results;
 
       for (const row of toDelete) {
         const id = row["id"] as string;
@@ -590,11 +622,11 @@ export class InMemoryStorage<
     });
   }
 
-  transaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+  transaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T> {
     return fn(this);
   }
 
-  private matchesWhere(obj: Record<string, unknown>, where: WhereCondition<any>): boolean {
+  private matchesWhere(obj: Record<string, unknown>, where: WhereCondition<unknown>): boolean {
     for (const [key, filter] of Object.entries(where)) {
       const isOperatorSyntax = key.includes(" ");
       const fieldPath = isOperatorSyntax ? key.split(" ")[0] : key;
@@ -612,31 +644,48 @@ export class InMemoryStorage<
             : undefined;
 
       if (typeof filter === "object" && filter !== null && !Array.isArray(filter)) {
-        const op = filter;
+        const op = filter as Record<string, unknown>;
         const isOperator = ["eq", "ne", "gt", "gte", "lt", "lte", "in", "contains", "isNull"].some(
           (k) => k in op,
         );
 
         if (isOperator) {
-          if ("eq" in op && value !== op.eq) return false;
-          if ("ne" in op && value === op.ne) return false;
-          if ("gt" in op && (value as any) <= op.gt) return false;
-          if ("gte" in op && (value as any) < op.gte) return false;
-          if ("lt" in op && (value as any) >= op.lt) return false;
-          if ("lte" in op && (value as any) > op.lte) return false;
-          if ("in" in op && !(op.in as any[]).includes(value)) return false;
-          if ("contains" in op && !String(value).includes(op.contains as string)) return false;
-          if ("isNull" in op && (op.isNull ? value !== null : value === null)) return false;
+          if ("eq" in op && value !== op["eq"]) return false;
+          if ("ne" in op && value === op["ne"]) return false;
+          if ("gt" in op && (value as number | string) <= (op["gt"] as number | string))
+            return false;
+          if ("gte" in op && (value as number | string) < (op["gte"] as number | string))
+            return false;
+          if ("lt" in op && (value as number | string) >= (op["lt"] as number | string))
+            return false;
+          if ("lte" in op && (value as number | string) > (op["lte"] as number | string))
+            return false;
+          if ("in" in op && !(op["in"] as unknown[]).includes(value)) return false;
+          if ("contains" in op && !String(value).includes(op["contains"] as string)) return false;
+          if ("isNull" in op && (op["isNull"] ? value !== null : value === null)) return false;
         } else if (typeof value === "object" && value !== null) {
-          if (!this.matchesWhere(value as Record<string, unknown>, filter)) return false;
+          if (
+            !this.matchesWhere(value as Record<string, unknown>, filter as WhereCondition<unknown>)
+          )
+            return false;
         } else {
           return false;
         }
       } else if (operatorFromKey) {
-        if (operatorFromKey === ">" && !((value as any) > filter)) return false;
-        if (operatorFromKey === "<" && !((value as any) < filter)) return false;
-        if (operatorFromKey === ">=" && !((value as any) >= filter)) return false;
-        if (operatorFromKey === "<=" && !((value as any) <= filter)) return false;
+        if (operatorFromKey === ">" && !((value as number | string) > (filter as number | string)))
+          return false;
+        if (operatorFromKey === "<" && !((value as number | string) < (filter as number | string)))
+          return false;
+        if (
+          operatorFromKey === ">=" &&
+          !((value as number | string) >= (filter as number | string))
+        )
+          return false;
+        if (
+          operatorFromKey === "<=" &&
+          !((value as number | string) <= (filter as number | string))
+        )
+          return false;
       } else if (value !== filter) {
         return false;
       }

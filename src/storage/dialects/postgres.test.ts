@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { PostgresDialect } from "./postgres";
+import { PostgresDialect, type PgPool } from "./postgres";
 import { SqlStorage } from "../sql";
 import { conversationExtension } from "../../endpoints/conversations/extension";
+import type { WhereCondition } from "../types";
 
 describe("Postgres Dialect (Mocked)", () => {
   const setup = () => {
-    const queries: { sql: string; params: any[] }[] = [];
+    const queries: { sql: string; params: unknown[] }[] = [];
     const pool = {
       connect: () =>
         Promise.resolve({
-          query: (arg: any) => {
+          query: (arg: string | { text: string; values?: unknown[] }) => {
             const sql = typeof arg === "string" ? arg : arg.text;
-            const params = typeof arg === "string" ? [] : arg.values;
+            const params = typeof arg === "string" ? [] : (arg.values ?? []);
             queries.push({ sql, params });
             if (sql.includes("SELECT")) {
               return Promise.resolve({
@@ -22,9 +23,9 @@ describe("Postgres Dialect (Mocked)", () => {
           },
           release: () => {},
         }),
-      query: (arg: any) => {
+      query: (arg: string | { text: string; values?: unknown[] }) => {
         const sql = typeof arg === "string" ? arg : arg.text;
-        const params = typeof arg === "string" ? [] : arg.values;
+        const params = typeof arg === "string" ? [] : (arg.values ?? []);
         queries.push({ sql, params });
         if (sql.includes("SELECT")) {
           return Promise.resolve({
@@ -35,8 +36,7 @@ describe("Postgres Dialect (Mocked)", () => {
       },
     };
 
-    // @ts-expect-error - mock pool
-    const dialect = new PostgresDialect({ client: pool });
+    const dialect = new PostgresDialect({ client: pool as unknown as PgPool });
     const storage = new SqlStorage({ dialect }).$extends(conversationExtension);
     return { storage, queries, pool };
   };
@@ -89,7 +89,7 @@ describe("Postgres Dialect (Mocked)", () => {
     await storage.migrate();
 
     await storage.conversations.findMany({
-      where: { "metadata.user_id": "123" } as any,
+      where: { "metadata.user_id": "123" } as WhereCondition<unknown>,
     });
 
     const listQuery = queries.find((q) => q.sql?.includes("SELECT * FROM"));

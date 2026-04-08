@@ -1,10 +1,10 @@
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 import type {
   DatabaseSchema,
-  Storage,
-  StorageBase,
+  StorageClient,
   StorageExtension,
   TableClient,
+  DatabaseClient,
 } from "../../storage/types";
 import {
   createRowMapper,
@@ -17,7 +17,7 @@ import type { Conversation, ConversationItem } from "./schema";
 export type ConversationSchema = {
   conversations: TableClient<Conversation>;
   conversation_items: TableClient<ConversationItem>;
-};
+} & DatabaseClient;
 
 export const getConversationSchema = (isGreptime: boolean): DatabaseSchema => ({
   conversations: {
@@ -64,10 +64,11 @@ export const itemRowMapper = createRowMapper<ConversationItem>([
  * Intercepts standard CRUD operations to handle IDs, timestamps, and row mapping.
  */
 export const conversationExtension = (
-  storage: Storage<any>,
+  storage: StorageClient,
 ): StorageExtension<ConversationSchema> => {
-  const isGreptime = storage.dialect?.config?.types?.index === "TIME";
-  const s = storage as unknown as Storage<ConversationSchema>;
+  const dialect = storage.dialect as { config?: { types?: { index?: string } } };
+  const isGreptime = dialect?.config?.types?.index === "TIME";
+  const s = storage as unknown as StorageClient<ConversationSchema>;
 
   return {
     name: "conversations",
@@ -76,10 +77,10 @@ export const conversationExtension = (
     query: {
       conversations: {
         create({ args, query, context }) {
-          const { items, ...params } = args;
-          const id = params.id ?? (isGreptime ? uuidv4() : uuidv7());
-          const now = params.created_at ?? new Date();
-          const metadata = params.metadata ?? null;
+          const { items, ...params } = args as { items?: unknown[] } & Record<string, unknown>;
+          const id = (params["id"] as string | undefined) ?? (isGreptime ? uuidv4() : uuidv7());
+          const now = (params["created_at"] as Date | undefined) ?? new Date();
+          const metadata = params["metadata"] ?? null;
 
           return s.transaction(async (tx) => {
             await query({ ...params, id, created_at: now, metadata }, tx);
@@ -88,10 +89,10 @@ export const conversationExtension = (
               const nowMs = Date.now();
               let offset = 0;
               await Promise.all(
-                items.map((input: any) =>
+                items.map((input: unknown) =>
                   s.conversation_items.create(
                     {
-                      ...input,
+                      ...(input as Record<string, unknown>),
                       conversation_id: id,
                       created_at: new Date(nowMs + offset++),
                     },
@@ -105,12 +106,13 @@ export const conversationExtension = (
             // Standard create returns changes, but we return the mapped entity
             // to provide a better developer experience for the domain.
             const result = await s.conversations.findFirst({ id }, context, undefined, {}, tx);
-            return conversationRowMapper(result);
+            if (!result) throw new Error("Failed to create conversation");
+            return conversationRowMapper(result as unknown as Record<string, unknown>);
           });
         },
 
         async update({ args, query, context }) {
-          const { id, data } = args;
+          const { id, data } = args as { id: string; data: Record<string, unknown> };
           const conversation = await s.conversations.findFirst({ id }, context);
           if (!conversation) return null;
 
@@ -121,37 +123,39 @@ export const conversationExtension = (
           await query({ id, data: updateData });
 
           const result = await s.conversations.findFirst({ id }, context);
-          return conversationRowMapper(result);
+          if (!result) return null;
+          return conversationRowMapper(result as unknown as Record<string, unknown>);
         },
 
         async findMany({ args, query }) {
-          const rows = await query(args);
-          return rows.map((r: any) => conversationRowMapper(r));
+          const rows = (await query(args)) as Record<string, unknown>[];
+          return rows.map((r) => conversationRowMapper(r));
         },
 
         async findFirst({ args, query }) {
-          const row = await query(args);
+          const row = (await query(args)) as Record<string, unknown> | undefined;
           return row ? conversationRowMapper(row) : undefined;
         },
       },
 
       conversation_items: {
         async create({ args, query }) {
-          const id = args.id ?? uuidv7();
-          const created_at = args.created_at ?? new Date();
+          const params = args as Record<string, unknown>;
+          const id = (params["id"] as string | undefined) ?? uuidv7();
+          const created_at = (params["created_at"] as Date | undefined) ?? new Date();
           // Auto-map input to 'data' column if it's not already there
-          const data = { ...args, id, created_at, data: args.data ?? args };
+          const data = { ...params, id, created_at, data: params["data"] ?? params };
           await query(data);
-          return itemRowMapper(data);
+          return itemRowMapper(data as Record<string, unknown>);
         },
 
         async findMany({ args, query }) {
-          const rows = await query(args);
-          return rows.map((r: any) => itemRowMapper(r));
+          const rows = (await query(args)) as Record<string, unknown>[];
+          return rows.map((r) => itemRowMapper(r));
         },
 
         async findFirst({ args, query }) {
-          const row = await query(args);
+          const row = (await query(args)) as Record<string, unknown> | undefined;
           return row ? itemRowMapper(row) : undefined;
         },
       },

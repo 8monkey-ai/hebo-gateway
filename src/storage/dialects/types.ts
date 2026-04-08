@@ -9,7 +9,7 @@
  * match this interface perfectly.
  */
 export interface BunSql {
-  unsafe<T = any>(query: string, params?: unknown[]): Promise<T>;
+  unsafe<T = unknown>(query: string, params?: unknown[]): Promise<T>;
   transaction<T>(fn: (tx: BunSql) => Promise<T>): Promise<T>;
 }
 

@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { InMemoryStorage } from "./memory";
-import type { DatabaseClient, TableClient } from "./types";
+import type { DatabaseClient, TableClient, WhereCondition, StorageClient } from "./types";
 
 interface TestSchema extends DatabaseClient {
-  cache: TableClient<{ id: string; data?: string; nested?: unknown; a?: string }, unknown>;
-  test_table: TableClient<{ id: string; metadata?: unknown; user?: unknown }, unknown>;
-  parent: TableClient<{ id: string }, unknown>;
-  child: TableClient<{ id: string; parent_id: string }, unknown>;
-  items: TableClient<{ id: string; data: string }, unknown>;
+  cache: TableClient<{ id: string; data?: string; nested?: unknown; a?: string }>;
+  test_table: TableClient<{ id: string; metadata?: unknown; user?: unknown }>;
+  parent: TableClient<{ id: string }>;
+  child: TableClient<{ id: string; parent_id: string }>;
+  items: TableClient<{ id: string; data: string }>;
 }
 
 describe("InMemoryStorage (Size-Based LRU)", () => {
   test("should evict items based on estimated byte size", async () => {
-    const storage = new InMemoryStorage<TestSchema>();
+    const storage = new InMemoryStorage<TestSchema>() as unknown as StorageClient<TestSchema>;
     storage.$extends({
       schema: {
         cache: {
@@ -44,7 +44,7 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
   });
 
   test("should handle nested object size estimation", async () => {
-    const storage = new InMemoryStorage<TestSchema>();
+    const storage = new InMemoryStorage<TestSchema>() as unknown as StorageClient<TestSchema>;
     storage.$extends({
       schema: {
         cache: {
@@ -70,37 +70,37 @@ describe("InMemoryStorage (Size-Based LRU)", () => {
 
 describe("InMemoryStorage (Filtering and Operations)", () => {
   test("should support nested property filtering with structured operators", async () => {
-    const storage = new InMemoryStorage<TestSchema>();
+    const storage = new InMemoryStorage<TestSchema>() as unknown as StorageClient<TestSchema>;
     await storage.migrate();
 
     await storage["test_table"].create({ id: "1", metadata: { count: 10 } });
     await storage["test_table"].create({ id: "2", metadata: { count: 3 } });
 
     const results = await storage["test_table"].findMany({
-      where: { metadata: { count: { gt: 5 } } } as any,
+      where: { metadata: { count: { gt: 5 } } } as WhereCondition<unknown>,
     });
 
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("1");
+    expect((results[0] as { id: string }).id).toBe("1");
   });
 
   test("should support deep dot notation exact match", async () => {
-    const storage = new InMemoryStorage<TestSchema>();
+    const storage = new InMemoryStorage<TestSchema>() as unknown as StorageClient<TestSchema>;
     await storage.migrate();
 
     await storage["test_table"].create({ id: "1", user: { profile: { name: "alice" } } });
     await storage["test_table"].create({ id: "2", user: { profile: { name: "bob" } } });
 
     const results = await storage["test_table"].findMany({
-      where: { user: { profile: { name: "alice" } } } as any,
+      where: { user: { profile: { name: "alice" } } } as WhereCondition<unknown>,
     });
 
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("1");
+    expect((results[0] as { id: string }).id).toBe("1");
   });
 
   test("delete should not cascade to other tables", async () => {
-    const storage = new InMemoryStorage<TestSchema>();
+    const storage = new InMemoryStorage<TestSchema>() as unknown as StorageClient<TestSchema>;
     await storage.migrate();
 
     await storage["parent"].create({ id: "p1" });
@@ -117,7 +117,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
   });
 
   test("should generate uuidv7 fallback IDs and maintain chronological sorting", async () => {
-    const storage = new InMemoryStorage<TestSchema>();
+    const storage = new InMemoryStorage<TestSchema>() as unknown as StorageClient<TestSchema>;
     await storage.migrate();
 
     // Create 5 items without explicit IDs, with small delays to ensure different uuidv7 timestamps
@@ -125,9 +125,11 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     for (let i = 0; i < 5; i++) {
       createPromises.push(
         new Promise<void>((r) => {
-          setTimeout(async () => {
-            await storage["items"].create({ data: `item-${i}` });
-            r();
+          setTimeout(() => {
+            void storage["items"].create({ data: `item-${i}` }).then(() => {
+              r();
+              return true;
+            });
           }, i * 2);
         }),
       );
@@ -142,7 +144,7 @@ describe("InMemoryStorage (Filtering and Operations)", () => {
     expect(results).toHaveLength(5);
     // Even without explicit IDs, they should be in the order they were created
     for (let i = 0; i < 5; i++) {
-      expect(results[i].data).toBe(`item-${i}`);
+      expect((results[i] as { data: string }).data).toBe(`item-${i}`);
     }
   });
 });

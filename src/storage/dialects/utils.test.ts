@@ -84,7 +84,7 @@ describe("SQL Dialect Utilities", () => {
     });
 
     test("createRowMapper piping", () => {
-      const mapper = createRowMapper<Record<string, any>>([
+      const mapper = createRowMapper<Record<string, unknown>>([
         parseJson("data"),
         mergeData("data"),
         toMilliseconds("created_at"),

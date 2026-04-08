@@ -23,6 +23,7 @@ import {
 import { type ResponsesMetadata } from "../responses/schema";
 import { toConversationDeleted } from "./converters";
 import { conversationExtension, type ConversationSchema } from "./extension";
+import type { WhereCondition } from "../../storage/types";
 
 export type ConversationMetadata = ResponsesMetadata;
 
@@ -45,9 +46,9 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const { limit, after, order, metadata } = parsed.data;
 
-    const where: any = {};
+    const where: WhereCondition<unknown> = {};
     if (metadata !== undefined) {
-      where["metadata"] = metadata;
+      (where as Record<string, unknown>)["metadata"] = metadata;
     }
 
     // Treat limit 0 as unlimited (up to 100,000 items)
@@ -82,7 +83,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       has_more,
       first_id: data[0]?.id,
       last_id: data.at(-1)?.id,
-    } as any;
+    } as ConversationList;
   }
 
   async function create(ctx: GatewayContext): Promise<Conversation> {
@@ -100,13 +101,13 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const entity = await storage.conversations.create(
+    const entity = (await storage.conversations.create(
       {
-        metadata: (parsed.data.metadata) ?? null,
+        metadata: parsed.data.metadata ?? null,
         items: parsed.data.items,
       },
       ctx,
-    );
+    )) as unknown as Conversation;
 
     logger.debug(`[conversations] created conversation: ${entity.id}`);
     logger.trace({ requestId: ctx.requestId, entity }, "[storage] createConversation result");
@@ -141,14 +142,18 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const data = {
       ...parsed.data,
-      metadata: (parsed.data.metadata) ?? null,
+      metadata: parsed.data.metadata ?? null,
     };
     // Filter out undefined to avoid overwriting with NULL
     const filteredData = Object.fromEntries(
       Object.entries(data).filter(([_, v]) => v !== undefined),
     );
 
-    const entity = await storage.conversations.update(conversationId, filteredData, ctx);
+    const entity = (await storage.conversations.update(
+      conversationId,
+      filteredData,
+      ctx,
+    )) as unknown as Conversation | undefined;
     if (!entity) {
       throw new GatewayError("Conversation not found", 404);
     }
@@ -159,7 +164,9 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function remove(ctx: GatewayContext, conversationId: string): Promise<ConversationDeleted> {
-    const result = await storage.conversations.delete({ id: conversationId }, ctx);
+    const result = (await storage.conversations.delete({ id: conversationId }, ctx)) as {
+      changes: number;
+    };
     logger.debug(`[conversations] deleted conversation: ${conversationId}`);
     logger.trace({ requestId: ctx.requestId, result }, "[storage] deleteConversation result");
 
@@ -188,7 +195,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     conversationId: string,
     itemId: string,
   ): Promise<Conversation> {
-    const entity = await storage.transaction(async (tx: any) => {
+    const entity = await storage.transaction(async (tx: unknown) => {
       await storage.conversation_items.delete(
         { id: itemId, conversation_id: conversationId },
         ctx,
@@ -254,7 +261,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       has_more,
       first_id: data[0]?.id,
       last_id: data.at(-1)?.id,
-    } as any;
+    } as ConversationItemList;
   }
 
   async function addItems(
@@ -279,7 +286,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     const conv = await storage.conversations.findFirst({ id: conversationId }, ctx);
     if (!conv) throw new GatewayError("Conversation not found", 404);
 
-    const results = await storage.transaction(async (tx: any) => {
+    const results = await storage.transaction(async (tx: unknown) => {
       const items: ConversationItem[] = [];
       const nowMs = Date.now();
       let offset = 0;
@@ -298,7 +305,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
       const resultsList = await Promise.all(itemPromises);
       for (const item of resultsList) {
-        items.push(item);
+        items.push(item as ConversationItem);
       }
       return items;
     });
@@ -314,7 +321,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       has_more: false,
       first_id: results[0]?.id,
       last_id: results.at(-1)?.id,
-    } as any;
+    } as ConversationItemList;
   }
 
   const handler = async (
@@ -360,12 +367,12 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       }
     }
 
-    // GET/PATCH/DELETE /conversations/{id}
+    // GET/POST/DELETE /conversations/{id}
     else if (len === 2) {
       const conversationId = segments[rootIndex + 1] as string;
       if (ctx.request.method === "GET") {
         result = await retrieve(ctx, conversationId);
-      } else if (ctx.request.method === "PATCH") {
+      } else if (ctx.request.method === "POST") {
         result = await update(ctx, conversationId);
       } else if (ctx.request.method === "DELETE") {
         result = await remove(ctx, conversationId);

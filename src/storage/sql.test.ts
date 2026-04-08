@@ -2,7 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { SqliteDialect } from "./dialects/sqlite";
 import { SqlStorage } from "./sql";
-import { conversationExtension } from "../endpoints/conversations/extension";
+import {
+  conversationExtension,
+  type ConversationSchema,
+} from "../endpoints/conversations/extension";
+import type {
+  DatabaseClient,
+  TableClient,
+  WhereCondition,
+  StorageExtensionContext,
+  StorageClient,
+} from "./types";
 
 describe("SQL Storage Integration (via Extension)", () => {
   const createSetup = () => {
@@ -52,7 +62,7 @@ describe("SQL Storage Integration (via Extension)", () => {
     });
 
     expect(item1.id).toBe("item-1");
-    expect(item1.content).toBe("Msg 1");
+    expect((item1 as Record<string, unknown>)["content"]).toBe("Msg 1");
 
     // 3. Get Item
     const item = await storage.conversation_items.findFirst({
@@ -60,7 +70,7 @@ describe("SQL Storage Integration (via Extension)", () => {
     });
     expect(item).toBeDefined();
     expect(item!.id).toBe("item-1");
-    expect(item.content).toBe("Msg 1");
+    expect((item as Record<string, unknown>)["content"]).toBe("Msg 1");
 
     // 4. List Items (Basic)
     const allItems = await storage.conversation_items.findMany({
@@ -91,7 +101,7 @@ describe("SQL Storage Integration (via Extension)", () => {
     // 7. Update Conversation
     await storage.conversations.update(conv.id, { metadata: { foo: "updated" } });
     const updated = await storage.conversations.findFirst({ where: { id: conv.id } });
-    expect(updated!.metadata!.foo).toBe("updated");
+    expect((updated!["metadata"] as Record<string, unknown>)["foo"]).toBe("updated");
 
     // 8. Delete Conversation (should not delete items)
     await storage.conversations.delete({ id: conv.id });
@@ -121,14 +131,14 @@ describe("SQL Storage Integration (via Extension)", () => {
     const { storage } = createSetup();
     await storage.migrate();
 
-    const c1 = await storage.conversations.create({ metadata: null as any });
-    expect(c1.metadata).toBeNull();
+    const c1 = await storage.conversations.create({ metadata: null as unknown });
+    expect(c1["metadata"]).toBeNull();
 
     const c2 = await storage.conversations.create({});
-    expect(c2.metadata).toBeNull();
+    expect(c2["metadata"]).toBeNull();
 
     const r1 = await storage.conversations.findFirst({ where: { id: c1.id } });
-    expect(r1!.metadata).toBeNull();
+    expect(r1!["metadata"]).toBeNull();
   });
 
   test("should list conversations with metadata filtering and pagination", async () => {
@@ -160,7 +170,7 @@ describe("SQL Storage Integration (via Extension)", () => {
 
     // 3. Filter by metadata (structured)
     const filtered = await storage.conversations.findMany({
-      where: { "metadata.user": "1" },
+      where: { "metadata.user": "1" } as WhereCondition<unknown>,
       orderBy: { created_at: "asc" },
     });
     expect(filtered).toHaveLength(2);
@@ -179,7 +189,15 @@ describe("SQL Storage Integration (via Extension)", () => {
 
   test("should support structured operators in SQL", async () => {
     const { storage } = createSetup();
-    storage.$extends({
+    interface TestTableSchema extends DatabaseClient {
+      test_table: TableClient<
+        { id: string; count: number; tags: string },
+        { id: string; count: number; tags: string }
+      >;
+    }
+    const s = storage as unknown as StorageClient<TestTableSchema & ConversationSchema>;
+
+    s.$extends({
       schema: {
         test_table: {
           id: { type: "id" },
@@ -188,26 +206,34 @@ describe("SQL Storage Integration (via Extension)", () => {
         },
       },
     });
-    await storage.migrate();
+    await s.migrate();
 
-    await storage["test_table"].create({ id: "1", count: 10, tags: "a,b" });
-    await storage["test_table"].create({ id: "2", count: 20, tags: "b,c" });
-    await storage["test_table"].create({ id: "3", count: 30, tags: "c,d" });
+    await s["test_table"].create({ id: "1", count: 10, tags: "a,b" });
+    await s["test_table"].create({ id: "2", count: 20, tags: "b,c" });
+    await s["test_table"].create({ id: "3", count: 30, tags: "c,d" });
 
     // GT
-    const gt = await storage["test_table"].findMany({ where: { count: { gt: 15 } } });
+    const gt = await s["test_table"].findMany({
+      where: { count: { gt: 15 } } as WhereCondition<unknown>,
+    });
     expect(gt).toHaveLength(2);
 
     // IN
-    const inOp = await storage["test_table"].findMany({ where: { id: { in: ["1", "3"] } } });
+    const inOp = await s["test_table"].findMany({
+      where: { id: { in: ["1", "3"] } } as WhereCondition<unknown>,
+    });
     expect(inOp).toHaveLength(2);
 
     // CONTAINS (LIKE)
-    const contains = await storage["test_table"].findMany({ where: { tags: { contains: "b" } } });
+    const contains = await s["test_table"].findMany({
+      where: { tags: { contains: "b" } } as WhereCondition<unknown>,
+    });
     expect(contains).toHaveLength(2);
 
     // NE
-    const ne = await storage["test_table"].findMany({ where: { count: { ne: 20 } } });
+    const ne = await s["test_table"].findMany({
+      where: { count: { ne: 20 } } as WhereCondition<unknown>,
+    });
     expect(ne).toHaveLength(2);
   });
 
@@ -221,15 +247,19 @@ describe("SQL Storage Integration (via Extension)", () => {
     storage.$extends({
       query: {
         conversations: {
-          create: ({ args, context, query }: any) => {
-            if (context.shardId === 1) {
-              return query({ ...args, table: "conversations_shard_1" });
+          create: ({ args, context, query }: StorageExtensionContext) => {
+            const params = args as Record<string, unknown>;
+            if ((context as { shardId?: number }).shardId === 1) {
+              return query({ ...params, table: "conversations_shard_1" });
             }
             return query(args);
           },
-          findFirst: ({ args, context, query }: any) => {
-            if (context.shardId === 1) {
-              return query({ ...args, table: "conversations_shard_1" });
+          findFirst: ({ args, context, query }: StorageExtensionContext) => {
+            if ((context as { shardId?: number }).shardId === 1) {
+              return query({
+                ...(args as Record<string, unknown>),
+                table: "conversations_shard_1",
+              });
             }
             return query(args);
           },
@@ -240,7 +270,9 @@ describe("SQL Storage Integration (via Extension)", () => {
     // Create in shard 1
     await storage.conversations.create({ metadata: { shard: "1" } }, { shardId: 1 });
 
-    const rawShard = db.prepare("SELECT count(*) as count FROM conversations_shard_1").get() as any;
+    const rawShard = db.prepare("SELECT count(*) as count FROM conversations_shard_1").get() as {
+      count: number;
+    };
     expect(rawShard.count).toBe(1);
   });
 });

@@ -14,16 +14,16 @@ import {
 import { type ResponsesInputItem } from "../responses/schema";
 import { InMemoryStorage } from "../../storage/memory";
 import { conversationExtension, type ConversationSchema } from "./extension";
-import { type Storage } from "../../storage/types";
+import { type StorageClient } from "../../storage/types";
 
 describe("Conversations Handler", () => {
   let config: GatewayConfig;
-  let storage: Storage<ConversationSchema>;
+  let storage: StorageClient<ConversationSchema>;
 
   beforeEach(() => {
     storage = new InMemoryStorage().$extends(
       conversationExtension,
-    ) as unknown as Storage<ConversationSchema>;
+    ) as unknown as StorageClient<ConversationSchema>;
     config = {
       providers: {
         groq: new MockProviderV3(),
@@ -279,7 +279,7 @@ describe("Conversations Handler", () => {
       { type: "message", role: "user", content: "Message 1" },
       { type: "message", role: "user", content: "Message 2" },
     ] satisfies ResponsesInputItem[];
-    const items = await storage.transaction((tx: any) => {
+    const items = await storage.transaction((tx: unknown) => {
       const itemPromises = itemInputs.map((input) =>
         storage.conversation_items.create({ ...input, conversation_id: conv.id }, {}, tx),
       );

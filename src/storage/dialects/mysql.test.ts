@@ -1,15 +1,19 @@
 import { describe, expect, test, mock } from "bun:test";
-import { MysqlDialect } from "./mysql";
+import { MysqlDialect, type Mysql2Pool } from "./mysql";
 import { SqlStorage } from "../sql";
 import { conversationExtension } from "../../endpoints/conversations/extension";
+import type { WhereCondition } from "../types";
 
 describe("MySQL Dialect (Mocked)", () => {
   const setup = () => {
-    const queries: { sql: string; params: any[] }[] = [];
+    const queries: { sql: string; params: unknown[] }[] = [];
 
     const connection = {
-      execute: (sql: string, params: any[]) => {
+      execute: (sql: string, params: unknown[]) => {
         queries.push({ sql, params });
+        if (sql.includes("SELECT")) {
+          return Promise.resolve([[{ id: "conv-1", created_at: new Date(), metadata: "{}" }], []]);
+        }
         return Promise.resolve([[]]);
       },
       beginTransaction: () => Promise.resolve(),
@@ -20,7 +24,7 @@ describe("MySQL Dialect (Mocked)", () => {
 
     const pool = {
       getConnection: () => Promise.resolve(connection),
-      execute: mock((sql: string, params: any[]) => {
+      execute: mock((sql: string, params: unknown[]) => {
         queries.push({ sql, params });
         if (sql.includes("SELECT")) {
           return Promise.resolve([[{ id: "conv-1", created_at: new Date(), metadata: "{}" }], []]);
@@ -29,8 +33,7 @@ describe("MySQL Dialect (Mocked)", () => {
       }),
     };
 
-    // @ts-expect-error - mock pool
-    const dialect = new MysqlDialect({ client: pool });
+    const dialect = new MysqlDialect({ client: pool as unknown as Mysql2Pool });
     const storage = new SqlStorage({ dialect }).$extends(conversationExtension);
     return { storage, queries, pool };
   };
@@ -85,7 +88,7 @@ describe("MySQL Dialect (Mocked)", () => {
     await storage.migrate();
 
     await storage.conversations.findMany({
-      where: { "metadata.user_id": "123" } as any,
+      where: { "metadata.user_id": "123" } as WhereCondition<unknown>,
     });
 
     const listQuery = queries.find((q) => q.sql.includes("SELECT * FROM"));

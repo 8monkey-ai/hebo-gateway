@@ -1,7 +1,7 @@
-import { type SqlDialect } from "./dialects/types";
-
-export type GenericData = Record<string, unknown>;
-
+/**
+ * Standard comparison operators for query filtering.
+ * @example { gt: 5, lt: 20 }, { in: ["active", "pending"] }, { contains: "search_term" }
+ */
 export type WhereOperator<T> =
   | T
   | {
@@ -16,14 +16,21 @@ export type WhereOperator<T> =
       isNull?: boolean;
     };
 
+/**
+ * Internal utility to check if a type is a plain object suitable for nested filtering.
+ */
 type IsPlainObject<T> = T extends object
-  ? T extends any[]
+  ? T extends unknown[]
     ? false
     : T extends Date
       ? false
       : true
   : false;
 
+/**
+ * Recursive type-safe query builder. Supports dot-notation for nested JSON.
+ * @example { "metadata.user_id": "user_1" }, { count: { gte: 10 } }
+ */
 export type WhereCondition<T> = {
   [K in keyof T]?: IsPlainObject<NonNullable<T[K]>> extends true
     ?
@@ -36,18 +43,32 @@ export type WhereCondition<T> = {
 
 export type SortOrder = "asc" | "desc";
 
-export interface StorageQueryOptions<T = Record<string, any>> {
+/**
+ * Tailored data retrieval parameters.
+ * @example { limit: 10, orderBy: { created_at: "desc" }, where: { "metadata.tag": "urgent" } }
+ */
+export interface StorageQueryOptions<T = Record<string, unknown>> {
   limit?: number;
   after?: string;
   orderBy?: Record<string, SortOrder>;
   where?: WhereCondition<T>;
 }
 
+/**
+ * Column-level metadata and physical properties.
+ * @example { type: "id" }, { type: "json", skippingIndex: true }
+ */
 export interface ColumnSchema {
   type: string;
   skippingIndex?: boolean;
+  index?: boolean;
+  primaryKey?: boolean;
 }
 
+/**
+ * Table-level configuration and high-level structural properties.
+ * @example { $primaryKey: ["conv_id", "id"], $memoryLimit: 5000 }
+ */
 export interface TableMetadata {
   $primaryKey?: string[];
   $partitionBy?: string[];
@@ -63,20 +84,69 @@ export type DatabaseSchema = Record<string, TableSchema>;
 
 export type StorageOperation = "create" | "update" | "delete" | "findMany" | "findFirst";
 
-export interface StorageExtensionContext<TArgs = any, TResult = any> {
+/**
+ * State passed to query interception hooks.
+ * @example const { model, args, query } = context;
+ */
+export interface StorageExtensionContext<TArgs = unknown, TResult = unknown> {
   model: string;
   operation: StorageOperation;
   args: TArgs;
-  context: any;
-  tx?: any;
-  query: (args: TArgs, tx?: any) => Promise<TResult>;
+  context: unknown;
+  tx?: unknown;
+  query: (args: TArgs, tx?: unknown) => Promise<TResult>;
 }
 
-export type StorageExtensionCallback<TArgs = any, TResult = any> = (
+/**
+ * Signature for storage interceptors.
+ */
+export type StorageExtensionCallback<TArgs = unknown, TResult = unknown> = (
   params: StorageExtensionContext<TArgs, TResult>,
 ) => Promise<TResult>;
 
-export interface StorageExtension<TSchema extends Record<string, any> = any> {
+/**
+ * Standard API for interacting with a specific table.
+ * @example await storage.users.findFirst({ where: { id: "123" } })
+ */
+export interface TableClient<T = unknown, TExtra = unknown> {
+  findMany(
+    options: StorageQueryOptions<TExtra>,
+    context?: unknown,
+    mapper?: RowMapper<T>,
+    tx?: unknown,
+  ): Promise<T[]>;
+  findFirst(
+    where: WhereCondition<TExtra>,
+    context?: unknown,
+    mapper?: RowMapper<T>,
+    options?: { orderBy?: Record<string, SortOrder> },
+    tx?: unknown,
+  ): Promise<T | undefined>;
+  create(
+    data: Record<string, unknown>,
+    context?: unknown,
+    tx?: unknown,
+  ): Promise<{ id: string } & Record<string, unknown>>;
+  update(
+    id: string,
+    data: Record<string, unknown>,
+    context?: unknown,
+    tx?: unknown,
+  ): Promise<{ changes: number }>;
+  delete(
+    where: WhereCondition<TExtra>,
+    context?: unknown,
+    tx?: unknown,
+  ): Promise<{ changes: number }>;
+}
+
+export type DatabaseClient = Record<string, TableClient>;
+
+/**
+ * Defines modular logic to augment the storage system.
+ * @example { query: { conversations: { create: ({ args }) => ... } } }
+ */
+export interface StorageExtension<TSchema extends DatabaseClient = DatabaseClient> {
   name?: string;
   schema?: DatabaseSchema;
   query?: {
@@ -85,66 +155,55 @@ export interface StorageExtension<TSchema extends Record<string, any> = any> {
     };
   };
   model?: {
-    [K in keyof TSchema | "$allModels"]?: Record<string, (this: any, ...args: any[]) => any>;
+    [K in keyof TSchema | "$allModels"]?: Record<
+      string,
+      (this: TableClient, ...args: unknown[]) => unknown
+    >;
   };
-  client?: Record<string, (this: any, ...args: any[]) => any>;
+  client?: Record<string, (this: StorageClient<TSchema>, ...args: unknown[]) => unknown>;
 }
-
-export type StorageExtensionFactory<TSchema extends Record<string, any> = any> = (
-  client: Storage<any>,
-) => StorageExtension<TSchema>;
-
-export type RowMapper<T> = (row: any) => T;
-
-export interface TableClient<T = any, TExtra = any> {
-  findMany(
-    options: StorageQueryOptions<TExtra>,
-    context?: any,
-    mapper?: RowMapper<T>,
-    tx?: any,
-  ): Promise<T[]>;
-  findFirst(
-    where: WhereCondition<TExtra>,
-    context?: any,
-    mapper?: RowMapper<T>,
-    options?: { orderBy?: Record<string, SortOrder> },
-    tx?: any,
-  ): Promise<T | undefined>;
-  create(data: Record<string, unknown>, context?: any, tx?: any): Promise<any>;
-  update(id: string, data: Record<string, unknown>, context?: any, tx?: any): Promise<any>;
-  delete(where: WhereCondition<TExtra>, context?: any, tx?: any): Promise<any>;
-}
-
-export type DatabaseClient = Record<string, TableClient<unknown, unknown>>;
 
 /**
- * Storage is the combination of the Base engine and the dynamically added Tables.
- * This intersection is what allows 'storage.conversations.findMany()'.
+ * Factory for initializing a storage extension.
+ * @example (client) => ({ name: "logger", query: { ... } })
  */
-export type Storage<TSchema extends DatabaseClient = DatabaseClient> = StorageBase<TSchema> &
+export type StorageExtensionFactory<TSchema extends DatabaseClient = DatabaseClient> = (
+  client: StorageClient,
+) => StorageExtension<TSchema>;
+
+export type RowMapper<T> = (row: Record<string, unknown>) => T;
+
+/**
+ * High-level, fluent interface for storage access.
+ * @example const storage = new SqlStorage(...).$extends(conversationExtension);
+ */
+export type StorageClient<TSchema extends DatabaseClient = DatabaseClient> = StorageBase<TSchema> &
   TSchema;
 
+/**
+ * Internal interface for provider-specific storage implementations.
+ */
 export interface StorageBase<TSchema extends DatabaseClient = DatabaseClient> {
-  readonly dialect?: SqlDialect;
+  readonly dialect?: unknown;
   readonly schema?: DatabaseSchema;
 
   migrate(): Promise<void>;
 
   _findMany<T>(
     model: string,
-    options: StorageQueryOptions<any>,
-    context?: any,
+    options: StorageQueryOptions<unknown>,
+    context?: unknown,
     table?: string,
-    tx?: any,
+    tx?: unknown,
     mapper?: RowMapper<T>,
   ): Promise<T[]>;
 
   _findFirst<T>(
     model: string,
-    where: WhereCondition<any>,
-    context?: any,
+    where: WhereCondition<unknown>,
+    context?: unknown,
     table?: string,
-    tx?: any,
+    tx?: unknown,
     mapper?: RowMapper<T>,
     options?: { orderBy?: Record<string, SortOrder> },
   ): Promise<T | undefined>;
@@ -152,34 +211,33 @@ export interface StorageBase<TSchema extends DatabaseClient = DatabaseClient> {
   _create(
     model: string,
     data: Record<string, unknown>,
-    context?: any,
+    context?: unknown,
     table?: string,
-    tx?: any,
-  ): Promise<any>;
+    tx?: unknown,
+  ): Promise<{ id: string } & Record<string, unknown>>;
 
   _update(
     model: string,
     args: { id: string; data: Record<string, unknown> },
-    context?: any,
+    context?: unknown,
     table?: string,
-    tx?: any,
-  ): Promise<any>;
+    tx?: unknown,
+  ): Promise<{ changes: number }>;
 
   _delete(
     model: string,
-    where: WhereCondition<any>,
-    context?: any,
+    where: WhereCondition<unknown>,
+    context?: unknown,
     table?: string,
-    tx?: any,
-  ): Promise<any>;
+    tx?: unknown,
+  ): Promise<{ changes: number }>;
 
-  transaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
+  transaction<T>(fn: (tx: unknown) => Promise<T>): Promise<T>;
 
   /**
-   * Extends the storage with new tables and domain expertise.
-   * RETURNS: A new Storage type that includes the new tables automatically (Prisma style).
+   * Extends the storage with domain logic and new tables.
    */
   $extends<TNewSchema extends DatabaseClient>(
     extension: StorageExtension<TNewSchema> | StorageExtensionFactory<TNewSchema>,
-  ): Storage<TSchema & TNewSchema>;
+  ): StorageClient<TSchema & TNewSchema>;
 }
