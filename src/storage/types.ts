@@ -131,26 +131,26 @@ export interface StorageBase<TSchema extends DatabaseClient = DatabaseClient> {
   migrate(): Promise<void>;
 
   _findMany<T>(
-    resource: string,
+    model: string,
     options: StorageQueryOptions<any>,
     context?: any,
-    mapper?: RowMapper<T>,
     table?: string,
     tx?: any,
+    mapper?: RowMapper<T>,
   ): Promise<T[]>;
 
   _findFirst<T>(
-    resource: string,
+    model: string,
     where: WhereCondition<any>,
     context?: any,
-    mapper?: RowMapper<T>,
-    options?: { orderBy?: Record<string, SortOrder> },
     table?: string,
     tx?: any,
+    mapper?: RowMapper<T>,
+    options?: { orderBy?: Record<string, SortOrder> },
   ): Promise<T | undefined>;
 
   _create(
-    resource: string,
+    model: string,
     data: Record<string, unknown>,
     context?: any,
     table?: string,
@@ -158,16 +158,15 @@ export interface StorageBase<TSchema extends DatabaseClient = DatabaseClient> {
   ): Promise<any>;
 
   _update(
-    resource: string,
-    id: string,
-    data: Record<string, unknown>,
+    model: string,
+    args: { id: string; data: Record<string, unknown> },
     context?: any,
     table?: string,
     tx?: any,
   ): Promise<any>;
 
   _delete(
-    resource: string,
+    model: string,
     where: WhereCondition<any>,
     context?: any,
     table?: string,

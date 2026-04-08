@@ -119,49 +119,24 @@ export class InMemoryStorage<
   private createTableClient(tableName: string): TableClient<any, TExtra> {
     const client: TableClient<any, TExtra> = {
       findMany: (options, context, mapper, tx) =>
-        this.executeWithExtensions(
-          tableName,
-          "findMany",
-          options,
-          context,
-          (args, t) => this._findMany(tableName, args, context, mapper, tableName, t),
-          tx,
+        this.executeWithExtensions(tableName, "findMany", options, context, tx, (args, table, t) =>
+          this._findMany(tableName, args, context, table, t, mapper),
         ),
       findFirst: (where, context, mapper, options, tx) =>
-        this.executeWithExtensions(
-          tableName,
-          "findFirst",
-          where,
-          context,
-          (args, t) => this._findFirst(tableName, args, context, mapper, options, tableName, t),
-          tx,
+        this.executeWithExtensions(tableName, "findFirst", where, context, tx, (args, table, t) =>
+          this._findFirst(tableName, args, context, table, t, mapper, options),
         ),
       create: (data, context, tx) =>
-        this.executeWithExtensions(
-          tableName,
-          "create",
-          data,
-          context,
-          (args, t) => this._create(tableName, args, context, tableName, t),
-          tx,
+        this.executeWithExtensions(tableName, "create", data, context, tx, (args, table, t) =>
+          this._create(tableName, args, context, table, t),
         ),
       update: (id, data, context, tx) =>
-        this.executeWithExtensions(
-          tableName,
-          "update",
-          { id, data },
-          context,
-          (args, t) => this._update(tableName, args.id, args.data, context, tableName, t),
-          tx,
+        this.executeWithExtensions(tableName, "update", { id, data }, context, tx, (args, table, t) =>
+          this._update(tableName, args, context, table, t),
         ),
       delete: (where, context, tx) =>
-        this.executeWithExtensions(
-          tableName,
-          "delete",
-          where,
-          context,
-          (args, t) => this._delete(tableName, args, context, tableName, t),
-          tx,
+        this.executeWithExtensions(tableName, "delete", where, context, tx, (args, table, t) =>
+          this._delete(tableName, args, context, table, t),
         ),
     };
 
@@ -213,8 +188,8 @@ export class InMemoryStorage<
     operation: StorageOperation,
     args: TArgs,
     context: any,
-    baseOperation: (args: TArgs, tx?: any) => Promise<TResult>,
-    tx?: any,
+    tx: any,
+    finalOp: (payload: any, table: string, t: any) => Promise<TResult>,
   ): Promise<TResult> {
     const relevantExtensions: StorageExtensionCallback[] = [];
 
@@ -240,11 +215,16 @@ export class InMemoryStorage<
     // Execute the chain from right to left (last extension is the outermost wrapper)
     const executeChain = (index: number, currentArgs: TArgs, currentTx?: any): Promise<TResult> => {
       if (index < 0) {
-        return baseOperation(currentArgs, currentTx);
+        const { table, ...payload } = currentArgs as any;
+        return finalOp(payload, (table as string) ?? model, currentTx);
       }
 
       const callback = relevantExtensions[index];
-      if (!callback) return baseOperation(currentArgs, currentTx);
+      if (!callback) {
+        const { table, ...payload } = currentArgs as any;
+        return finalOp(payload, (table as string) ?? model, currentTx);
+      }
+
       return callback({
         model,
         operation,
@@ -338,7 +318,7 @@ export class InMemoryStorage<
    * If an indexed column (e.g. `conversation_id`) is provided, it uses the hash index O(1).
    * If no indexed criteria are present, it falls back to returning all rows O(N).
    */
-  private getCandidates(table: string, where?: WhereCondition<any>): any[] {
+  private findIndexedRows(table: string, where?: WhereCondition<any>): any[] {
     const tableMap = this.getTable(table);
     if (!where) return Array.from(tableMap.values());
 
@@ -470,17 +450,17 @@ export class InMemoryStorage<
   }
 
   _findMany<T>(
-    resource: string,
+    model: string,
     options: StorageQueryOptions<TExtra>,
     _context: any = {},
-    mapper: RowMapper<T> = (r) => r as T,
-    table: string = resource,
+    table: string = model,
     _tx?: any,
+    mapper: RowMapper<T> = (r) => r as T,
   ): Promise<T[]> {
     const { limit, after, where } = options;
     if (limit !== undefined && limit <= 0) return Promise.resolve([]);
 
-    let rows = this.getCandidates(table, where);
+    let rows = this.findIndexedRows(table, where);
 
     // 1. Filter remaining properties
     if (where) {
@@ -525,30 +505,35 @@ export class InMemoryStorage<
   }
 
   _findFirst<T>(
-    resource: string,
+    model: string,
     where: WhereCondition<TExtra>,
     _context: any = {},
+    table: string = model,
+    tx?: any,
     mapper: RowMapper<T> = (r) => r as T,
     options: { orderBy?: Record<string, SortOrder> } = {},
-    table: string = resource,
-    tx?: any,
   ): Promise<T | undefined> {
+    const actualWhere = (where as any).where ? (where as any).where : where;
+    const actualOptions = (where as any).orderBy
+      ? { ...options, orderBy: (where as any).orderBy }
+      : options;
+
     const resultsPromise = this._findMany(
-      resource,
-      { ...options, where, limit: 1 },
+      model,
+      { ...actualOptions, where: actualWhere, limit: 1 },
       _context,
-      mapper,
       table,
       tx,
+      mapper,
     );
     return resultsPromise.then((results) => results[0]);
   }
 
   _create(
-    resource: string,
+    model: string,
     data: Record<string, unknown>,
     _context: any = {},
-    table: string = resource,
+    table: string = model,
     _tx?: any,
   ): Promise<any> {
     const tableMap = this.getTable(table);
@@ -561,13 +546,13 @@ export class InMemoryStorage<
   }
 
   _update(
-    resource: string,
-    id: string,
-    data: Record<string, unknown>,
+    model: string,
+    args: { id: string; data: Record<string, unknown> },
     _context: any = {},
-    table: string = resource,
+    table: string = model,
     _tx?: any,
   ): Promise<any> {
+    const { id, data } = args;
     const tableMap = this.getTable(table);
     const existing = tableMap.get(id);
     if (existing) {
@@ -585,13 +570,13 @@ export class InMemoryStorage<
   }
 
   _delete(
-    resource: string,
+    model: string,
     where: WhereCondition<TExtra>,
     _context: any = {},
-    table: string = resource,
+    table: string = model,
     tx?: any,
   ): Promise<any> {
-    return this._findMany(resource, { where }, _context, (r) => r, table, tx).then((results) => {
+    return this._findMany(model, { where }, _context, table, tx, (r) => r).then((results) => {
       const tableMap = this.getTable(table);
       const toDelete = results as Record<string, unknown>[];
 
