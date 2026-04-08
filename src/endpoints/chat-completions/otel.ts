@@ -99,7 +99,7 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         break;
       }
       default:
-        parts.push({ type: (part as { type: string }).type });
+        parts.push({ type: (part as { type: string }).type, content: "[UNHANDLED_CONTENT_PART]" });
         break;
     }
   }
@@ -120,7 +120,7 @@ const toMessageParts = (message: ChatCompletionsMessage) => {
     case "system":
       return toTextParts(message.content);
     default:
-      return [{ type: (message as { role: string }).role }];
+      return [{ type: (message as { role: string }).role, content: "[UNHANDLED_ROLE]" }];
   }
 };
 

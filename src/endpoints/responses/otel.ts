@@ -73,7 +73,7 @@ const toInputParts = (content: string | ResponsesInputContent[]): TelemetryPart[
         break;
       }
       default:
-        parts.push({ type: (part as { type: string }).type });
+        parts.push({ type: (part as { type: string }).type, content: "[UNHANDLED_CONTENT_PART]" });
         break;
     }
   }
@@ -132,7 +132,7 @@ const toItemParts = (item: ResponsesInputItem): TelemetryPart[] => {
       return parts;
     }
     default:
-      return [{ type: (item as { type: string }).type }];
+      return [{ type: (item as { type: string }).type, content: "[UNHANDLED_ITEM_TYPE]" }];
   }
 };
 
@@ -147,7 +147,7 @@ const toMessageParts = (item: ResponsesMessageItem): TelemetryPart[] => {
       // https://github.com/langfuse/langfuse/issues/11607
       return toInputParts(item.content);
     default:
-      return [{ type: (item as { role: string }).role }];
+      return [{ type: (item as { role: string }).role, content: "[UNHANDLED_ROLE]" }];
   }
 };
 
