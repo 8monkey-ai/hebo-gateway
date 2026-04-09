@@ -1,8 +1,7 @@
 import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
 
-import type { GatewayContext, TelemetrySignalLevel } from "../types";
-
 import { STATUS_CODE } from "../errors/utils";
+import type { GatewayContext, TelemetrySignalLevel } from "../types";
 
 const getMeter = () => metrics.getMeter("@hebo/gateway");
 

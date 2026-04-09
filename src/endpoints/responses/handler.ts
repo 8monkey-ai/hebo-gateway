@@ -8,17 +8,6 @@ import {
 } from "ai";
 import * as z from "zod";
 
-import type {
-  AfterHookContext,
-  BeforeHookContext,
-  GatewayConfig,
-  Endpoint,
-  GatewayContext,
-  ResolveProviderHookContext,
-  ResolveModelHookContext,
-  GatewayConfigParsed,
-} from "../../types";
-
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
@@ -30,6 +19,16 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+import type {
+  AfterHookContext,
+  BeforeHookContext,
+  GatewayConfig,
+  Endpoint,
+  GatewayContext,
+  ResolveProviderHookContext,
+  ResolveModelHookContext,
+  GatewayConfigParsed,
+} from "../../types";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";

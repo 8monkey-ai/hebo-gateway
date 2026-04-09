@@ -1,12 +1,10 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
-
 import { customProvider } from "ai";
-
-import type { ModelCatalog, ModelId } from "../models/types";
-import type { ProviderRegistry } from "./types";
 
 import { GatewayError } from "../errors/gateway";
 import { logger } from "../logger";
+import type { ModelCatalog, ModelId } from "../models/types";
+import type { ProviderRegistry } from "./types";
 
 export const resolveProvider = (args: {
   providers: ProviderRegistry;

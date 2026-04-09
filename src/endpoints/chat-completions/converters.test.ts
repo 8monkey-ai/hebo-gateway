@@ -1,3 +1,5 @@
+import { describe, expect, test } from "bun:test";
+
 import type {
   GenerateTextResult,
   ToolSet,
@@ -8,10 +10,6 @@ import type {
   AssistantModelMessage,
 } from "ai";
 
-import { describe, expect, test } from "bun:test";
-
-import type { ChatCompletionsToolMessage } from "./schema";
-
 import {
   convertToTextCallOptions,
   toChatCompletions,
@@ -21,6 +19,7 @@ import {
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
+import type { ChatCompletionsToolMessage } from "./schema";
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({

@@ -1,6 +1,8 @@
 import type { Attributes } from "@opentelemetry/api";
 import type { FinishReason } from "ai";
 
+import { type TelemetrySignalLevel } from "../../types";
+import { parseDataUrl } from "../../utils/url";
 import type {
   Responses,
   ResponsesBody,
@@ -8,9 +10,6 @@ import type {
   ResponsesInputItem,
   ResponsesMessageItem,
 } from "./schema";
-
-import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
 
 type TelemetryPart = {
   type: string;

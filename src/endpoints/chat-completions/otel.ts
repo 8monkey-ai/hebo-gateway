@@ -1,5 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
+import { type TelemetrySignalLevel } from "../../types";
+import { parseDataUrl } from "../../utils/url";
 import type {
   ChatCompletionsAssistantMessage,
   ChatCompletions,
@@ -8,9 +10,6 @@ import type {
   ChatCompletionsContentPartText,
   ChatCompletionsMessage,
 } from "./schema";
-
-import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
 
 const toTextParts = (content: string | ChatCompletionsContentPart[] | null | undefined) => {
   if (typeof content === "string") {

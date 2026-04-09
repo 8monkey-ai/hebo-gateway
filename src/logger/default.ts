@@ -1,6 +1,5 @@
-import type { LogArgs, LogFn, LogLevel, Logger } from "./index";
-
 import { isProduction, isTest } from "../utils/env";
+import type { LogArgs, LogFn, LogLevel, Logger } from "./index";
 
 const getDefaultLogLevel = (): LogLevel =>
   isTest() ? "silent" : isProduction() ? "info" : "debug";
@@ -42,7 +41,7 @@ function serializeError(err: unknown, _seen?: WeakSet<object>): Record<string, u
     if (typeof val === "bigint") val = `${val}n`;
 
     // FUTURE: check for circular references within val
-    out[String(k)] = val instanceof Error ? serializeError(val, seen) : val;
+    out[k] = val instanceof Error ? serializeError(val, seen) : val;
   }
 
   return out;
@@ -64,11 +63,11 @@ const buildLogObject = (level: LogLevel, args: LogArgs): Record<string, unknown>
     }
     obj = first;
   } else {
-    msg = String(first);
+    msg = first;
   }
 
   if (second !== undefined) {
-    msg = String(second);
+    msg = second;
   }
 
   if (err && msg === undefined) {

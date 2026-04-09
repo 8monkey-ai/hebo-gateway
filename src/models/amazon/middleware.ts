@@ -4,13 +4,11 @@ import type {
 } from "@ai-sdk/amazon-bedrock";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { EmbeddingsDimensions } from "../../endpoints/embeddings/schema";
-
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
-
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Convert `dimensions` (OpenAI) to `embeddingDimension` (Nova)
@@ -35,10 +33,12 @@ export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-function mapNovaEffort(effort: ChatCompletionsReasoningEffort) {
+function mapNovaEffort(
+  effort: ChatCompletionsReasoningEffort,
+): "low" | "medium" | "high" | undefined {
   switch (effort) {
     case "none":
-      return;
+      return undefined;
     case "minimal":
     case "low":
       return "low";
@@ -48,6 +48,8 @@ function mapNovaEffort(effort: ChatCompletionsReasoningEffort) {
     case "xhigh":
       return "high";
   }
+
+  return undefined;
 }
 
 export const novaReasoningMiddleware: LanguageModelMiddleware = {

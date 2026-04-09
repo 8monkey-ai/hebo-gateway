@@ -1,7 +1,6 @@
 import { type AmazonBedrockProvider } from "@ai-sdk/amazon-bedrock";
 
 import type { CanonicalModelId, ModelId } from "../../models/types";
-
 import { withCanonicalIds } from "../registry";
 
 // For a list of all models with their IDs and InferenceTypes check:

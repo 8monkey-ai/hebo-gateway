@@ -1,3 +1,5 @@
+import { describe, expect, test } from "bun:test";
+
 import type {
   GenerateTextResult,
   ToolSet,
@@ -7,8 +9,6 @@ import type {
   FilePart,
   ToolModelMessage,
 } from "ai";
-
-import { describe, expect, test } from "bun:test";
 
 import {
   convertToTextCallOptions,

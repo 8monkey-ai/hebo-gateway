@@ -1,9 +1,11 @@
-import { MockProviderV3 } from "ai/test";
 import { beforeEach, describe, expect, test } from "bun:test";
 
+import { MockProviderV3 } from "ai/test";
+
 import { parseResponse, postJson } from "../../../test/helpers/http";
-import { type GatewayConfig } from "../../types";
 import { defineModelCatalog } from "../../models/catalog";
+import { type GatewayConfig } from "../../types";
+import { type ResponsesInputItem } from "../responses/schema";
 import { conversations } from "./handler";
 import {
   type Conversation,
@@ -11,7 +13,6 @@ import {
   type ConversationItem,
   type ConversationItemList,
 } from "./schema";
-import { type ResponsesInputItem } from "../responses/schema";
 import { InMemoryStorage } from "./storage/memory";
 
 describe("Conversations Handler", () => {

@@ -1,5 +1,6 @@
-import { MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
+
+import { MockProviderV3 } from "ai/test";
 
 import { parseResponse } from "../../../test/helpers/http";
 import { models } from "./handler";

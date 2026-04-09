@@ -18,10 +18,25 @@ import type {
   ImagePart,
   FilePart,
 } from "ai";
-
 import { Output, jsonSchema, stepCountIs, tool } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
+import { GatewayError } from "../../errors/gateway";
+import { toResponse } from "../../utils/response";
+import type { SseErrorFrame } from "../../utils/stream";
+import {
+  parseJsonOrText,
+  parseReasoningOptions,
+  parsePromptCachingOptions,
+  resolveResponseServiceTier,
+  normalizeToolName,
+  stripEmptyKeys,
+  parseBase64,
+  parseImageInput,
+  extractReasoningMetadata,
+  type TextCallOptions,
+  type ToolChoiceOptions,
+} from "../shared/converters";
 import type {
   ResponsesInputItem,
   ResponsesMessageItem,
@@ -45,24 +60,6 @@ import type {
   ResponsesTextConfig,
   ResponsesSummaryText,
 } from "./schema";
-
-import type { SseErrorFrame } from "../../utils/stream";
-
-import { GatewayError } from "../../errors/gateway";
-import { toResponse } from "../../utils/response";
-import {
-  parseJsonOrText,
-  parseReasoningOptions,
-  parsePromptCachingOptions,
-  resolveResponseServiceTier,
-  normalizeToolName,
-  stripEmptyKeys,
-  parseBase64,
-  parseImageInput,
-  extractReasoningMetadata,
-  type TextCallOptions,
-  type ToolChoiceOptions,
-} from "../shared/converters";
 
 // --- Helpers ---
 
@@ -126,10 +123,10 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
   };
 }
 
-function convertToOutput(text: ResponsesTextConfig | undefined) {
+function convertToOutput(text: ResponsesTextConfig | undefined): Output.Output | undefined {
   if (!text?.format || text.format.type === "text") {
     // FUTURE: Support text.verbosity when AI SDK adds top-level support
-    return;
+    return undefined;
   }
 
   const { name, description, schema } = text.format;
@@ -253,6 +250,8 @@ function fromMessageItem(item: ResponsesMessageItem): ModelMessage {
     case "assistant":
       return fromAssistantMessageItem(item);
   }
+
+  throw new GatewayError("Unsupported message role", 400);
 }
 
 function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): UserModelMessage {
@@ -348,7 +347,10 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         break;
       }
       default:
-        throw new GatewayError(`Unsupported content part type: ${(part as { type: string }).type}`, 400);
+        throw new GatewayError(
+          `Unsupported content part type: ${(part as { type: string }).type}`,
+          400,
+        );
     }
   }
   return result;
@@ -489,7 +491,7 @@ function fromFunctionCallOutputItem(
 
 export const convertToToolSet = (tools: ResponsesTool[] | undefined): ToolSet | undefined => {
   if (!tools) {
-    return;
+    return undefined;
   }
 
   const toolSet: ToolSet = {};

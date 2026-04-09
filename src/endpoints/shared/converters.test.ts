@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+
+import { GatewayError } from "../../errors/gateway";
 import {
   parseJsonOrText,
   parseBase64,
@@ -10,7 +12,6 @@ import {
   stripEmptyKeys,
   extractReasoningMetadata,
 } from "./converters";
-import { GatewayError } from "../../errors/gateway";
 
 describe("Shared Converters", () => {
   describe("parseJsonOrText", () => {

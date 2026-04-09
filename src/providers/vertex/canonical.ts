@@ -1,7 +1,6 @@
 import type { GoogleVertexProvider } from "@ai-sdk/google-vertex";
 
 import type { ModelId } from "../../models/types";
-
 import { withCanonicalIds } from "../registry";
 
 export const withCanonicalIdsForVertex = (

@@ -1,7 +1,6 @@
+import { LRUCache } from "lru-cache";
 import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql, TransactionSql } from "postgres";
-
-import { LRUCache } from "lru-cache";
 
 import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
 import { createParamsMapper, dateToNumber, escapeSqlString } from "./utils";
@@ -80,7 +79,7 @@ function createPgExecutor(
     async run(sql: string, params?: unknown[]) {
       const p = mapParams(params);
       const res = await pool.query(getQuery(sql, p?.length > 0 ? p : undefined));
-      return { changes: Number(res.rowCount ?? 0) };
+      return { changes: res.rowCount ?? 0 };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const client = await pool.connect();
@@ -99,7 +98,7 @@ function createPgExecutor(
         async run(sql: string, params?: unknown[]) {
           const p = mapParams(params);
           const res = await client.query(getQuery(sql, p?.length > 0 ? p : undefined));
-          return { changes: Number(res.rowCount ?? 0) };
+          return { changes: res.rowCount ?? 0 };
         },
         transaction<ResultT>(
           txCallback: (executor: QueryExecutor) => Promise<ResultT>,
@@ -154,7 +153,7 @@ function createPostgresJsExecutor(
         { prepare: true },
       );
       const result = res as unknown as { count: number };
-      return { changes: Number(result.count ?? 0) };
+      return { changes: result.count ?? 0 };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>): Promise<T> {
       return (await (sql as PostgresJsSql).begin((tx) => {
@@ -200,7 +199,7 @@ function createBunPostgresExecutor(
         if (!isNaN(parsed)) changes = parsed;
       }
 
-      return { changes: Number(changes) };
+      return { changes };
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {

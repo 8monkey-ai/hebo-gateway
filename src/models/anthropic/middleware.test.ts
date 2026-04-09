@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+
 import { MockLanguageModelV3 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";

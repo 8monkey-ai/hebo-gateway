@@ -1,5 +1,6 @@
-import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
+
+import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { embeddings } from "./handler";

@@ -1,6 +1,7 @@
 import { describe, expect, test, mock } from "bun:test";
-import { PostgresDialect, PostgresDialectConfig, type PgPool } from "./postgres";
+
 import { SqlStorage } from "../sql";
+import { PostgresDialect, PostgresDialectConfig, type PgPool } from "./postgres";
 
 describe("Postgres Dialect (Mocked)", () => {
   const createMockPool = () => {

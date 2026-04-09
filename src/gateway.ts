@@ -1,5 +1,3 @@
-import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
-
 import { parseConfig } from "./config";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { conversations } from "./endpoints/conversations/handler";
@@ -9,6 +7,7 @@ import { responses } from "./endpoints/responses/handler";
 import { GatewayError } from "./errors/gateway";
 import { winterCgHandler } from "./lifecycle";
 import { logger } from "./logger";
+import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
 
 let inflight = 0;
 

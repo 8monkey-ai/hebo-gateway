@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
+import { describe, expect, test } from "bun:test";
+
 import { SqliteDialect } from "./dialects/sqlite";
 import { SqlStorage } from "./sql";
 

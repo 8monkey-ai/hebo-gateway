@@ -1,5 +1,6 @@
-import { MockLanguageModelV3 } from "ai/test";
 import { describe, expect, test } from "bun:test";
+
+import { MockLanguageModelV3 } from "ai/test";
 
 import { extractProviderNamespace, forwardParamsMiddleware } from "./common";
 

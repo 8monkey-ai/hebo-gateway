@@ -47,7 +47,7 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
     async run(sql: string, params?: unknown[]) {
       const [res] = await pool.execute(sql, mapParams(params));
       const header = res as unknown as ResultSetHeader;
-      return { changes: Number(header.affectedRows ?? 0) };
+      return { changes: header.affectedRows ?? 0 };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const conn = await pool.getConnection();
@@ -64,7 +64,7 @@ function createMysql2Executor(pool: Mysql2Pool): QueryExecutor {
         async run(sql: string, params?: unknown[]) {
           const [res] = await conn.execute(sql, mapParams(params));
           const header = res as unknown as ResultSetHeader;
-          return { changes: Number(header.affectedRows ?? 0) };
+          return { changes: header.affectedRows ?? 0 };
         },
         transaction<ResultT>(
           txCallback: (executor: QueryExecutor) => Promise<ResultT>,
@@ -101,7 +101,7 @@ function createBunMysqlExecutor(sql: BunSql): QueryExecutor {
     async run(query: string, params?: unknown[]) {
       const res = (await sql.unsafe(query, mapParams(params))) as unknown;
       const result = res as { affectedRows?: number; count?: number };
-      return { changes: Number(result.affectedRows ?? result.count ?? 0) };
+      return { changes: result.affectedRows ?? result.count ?? 0 };
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {
