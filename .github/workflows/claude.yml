@@ -53,7 +53,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Run Claude
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@v1.0.89 # pinned: v1.0.90 broke Bedrock OIDC auth (anthropics/claude-code-action#1196)
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           use_bedrock: "true"
