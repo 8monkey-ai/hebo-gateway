@@ -236,14 +236,8 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   // =========================================================================
   // 6. Extended thinking (enabled)
   // =========================================================================
-  // NOTE: The Vercel AI SDK's @ai-sdk/amazon-bedrock provider does NOT implement
-  // the standard `reasoning` parameter. It requires provider-specific options
-  // (`providerOptions.bedrock.reasoningConfig`) instead. The gateway sets the
-  // standard `reasoning` param via convertThinkingToReasoning(), which Bedrock
-  // silently ignores. This test validates the request is accepted and a text
-  // response is returned, but thinking blocks may not appear due to this SDK gap.
   test(
-    "extended thinking: request accepted with thinking config",
+    "extended thinking: returns thinking blocks with content",
     async () => {
       const message = await client.messages.create({
         model: THINKING_MODEL,
@@ -255,9 +249,12 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       expect(message.type).toBe("message");
       expect(message.stop_reason).toBe("end_turn");
 
-      // Due to Vercel AI SDK limitation with Bedrock, thinking blocks may not
-      // appear. The standard `reasoning` param is not supported by
-      // @ai-sdk/amazon-bedrock — it requires providerOptions.bedrock.reasoningConfig.
+      // Verify thinking blocks are present (validates Q3 reasoning parameter fix)
+      const thinkingBlocks = message.content.filter((b) => b.type === "thinking");
+      expect(thinkingBlocks.length).toBeGreaterThan(0);
+      const thinking = thinkingBlocks[0] as { type: "thinking"; thinking: string };
+      expect(thinking.thinking.length).toBeGreaterThan(0);
+
       const textBlock = message.content.find((b) => b.type === "text");
       expect(textBlock).toBeDefined();
       // Model may format as "12,231" or "12231"
@@ -346,10 +343,8 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   // =========================================================================
   // 9. Streaming extended thinking
   // =========================================================================
-  // NOTE: Same Vercel AI SDK limitation as test #6 — @ai-sdk/amazon-bedrock
-  // does not support the standard `reasoning` parameter.
   test(
-    "streaming extended thinking: request accepted with thinking config",
+    "streaming extended thinking: returns thinking blocks in stream",
     async () => {
       const stream = client.messages.stream({
         model: THINKING_MODEL,
@@ -363,7 +358,12 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       expect(message.type).toBe("message");
       expect(message.stop_reason).toBe("end_turn");
 
-      // Thinking blocks may not appear due to the Bedrock SDK limitation
+      // Verify thinking blocks are present (validates Q3 reasoning parameter fix in streaming)
+      const thinkingBlocks = message.content.filter((b) => b.type === "thinking");
+      expect(thinkingBlocks.length).toBeGreaterThan(0);
+      const thinking = thinkingBlocks[0] as { type: "thinking"; thinking: string };
+      expect(thinking.thinking.length).toBeGreaterThan(0);
+
       const textBlock = message.content.find((b) => b.type === "text");
       expect(textBlock).toBeDefined();
       expect((textBlock as Anthropic.Messages.TextBlock).text).toContain("555");
