@@ -42,7 +42,7 @@ bun install @hebo-ai/gateway
 - Endpoints
   - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/conversations](#conversations)
 - OpenAI Extensions
-  - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching) | [Request Compression](#request-compression)
+  - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching) | [Compressed Requests](#compressed-requests)
 - Advanced Usage
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
@@ -793,7 +793,7 @@ Provider behavior:
 - **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 
 
-### Request Compression
+### Compressed Requests
 
 The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum *decompressed* body size for these compressed requests, protecting against gzip bombs and oversized payloads.
 
