@@ -6,9 +6,11 @@ import type { LanguageModelMiddleware } from "ai";
 
 import type {
   ChatCompletionsCacheControl,
+  ChatCompletionsReasoningEffort,
   ChatCompletionsServiceTier,
 } from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
 const isClaude46 = (modelId: string) => modelId.includes("-4-6");
 
@@ -93,8 +95,16 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
         target.budgetTokens = thinking.budgetTokens;
       } else if (target.type === "enabled") {
         // Bedrock requires budgetTokens when type is "enabled". When mapping from
-        // "adaptive" (which doesn't require budgetTokens), compute a sensible default.
-        target.budgetTokens = Math.max(1024, Math.floor((params.maxOutputTokens ?? 16384) * 0.5));
+        // "adaptive" (which doesn't require budgetTokens), compute a fallback using
+        // the same effort-based logic as other model cases, defaulting to "medium".
+        // Note: Bedrock Converse API doesn't support "adaptive" natively — see vercel/ai#8513
+        const mappedEffort: ChatCompletionsReasoningEffort =
+          effort === "max" ? "xhigh" : (effort as ChatCompletionsReasoningEffort) ?? "medium";
+        target.budgetTokens = calculateReasoningBudgetFromEffort(
+          mappedEffort,
+          params.maxOutputTokens ?? 16384,
+          1024,
+        );
       }
     }
 
