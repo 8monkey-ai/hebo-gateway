@@ -9,6 +9,7 @@ import {
   type GatewayConfigParsed,
   type TelemetrySignalLevel,
 } from "./types";
+import { DEFAULT_MAX_BODY_SIZE } from "./utils/body";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // If it has been parsed before, just return.
@@ -108,10 +109,23 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
   const parsedTimeouts = { normal, flex };
 
+  // Body size limit
+  const rawMax = config.maxBodySize;
+  let maxBodySize: number;
+  if (typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 0) {
+    maxBodySize = rawMax;
+  } else {
+    maxBodySize = DEFAULT_MAX_BODY_SIZE;
+    if (rawMax !== undefined) {
+      logger.warn(`[config] invalid maxBodySize (${rawMax}), using default ${DEFAULT_MAX_BODY_SIZE}`);
+    }
+  }
+
   // Return parsed config.
   return {
     ...config,
     timeouts: parsedTimeouts,
+    maxBodySize,
     telemetry: {
       ...config.telemetry,
       enabled: telemetryEnabled,

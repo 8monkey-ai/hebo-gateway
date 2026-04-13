@@ -42,7 +42,7 @@ bun install @hebo-ai/gateway
 - Endpoints
   - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/conversations](#conversations)
 - OpenAI Extensions
-  - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching)
+  - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching) | [Compressed Requests](#compressed-requests)
 - Advanced Usage
   - [Passing Framework State to Hooks](#passing-framework-state-to-hooks) | [Selective Route Mounting](#selective-route-mounting) | [Low-level Schemas & Converters](#low-level-schemas--converters)
 
@@ -388,21 +388,6 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
-
-#### Custom Telemetry Attributes
-
-Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
-
-```ts
-hooks: {
-  onRequest: (ctx) => {
-    ctx.otel["app.tenant.id"] = tenantId;
-    ctx.otel["app.user.id"] = userId;
-  },
-}
-```
-
-These attributes appear on the active span and on all metric instruments (request duration, token usage, TPOT, TTFT).
 
 ### Storage
 
@@ -807,6 +792,36 @@ Provider behavior:
 - **Google Gemini**: maps `cached_content` to Gemini `cachedContent`.
 - **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 
+
+### Compressed Requests
+
+The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum *decompressed* body size for these compressed requests, protecting against gzip bombs and oversized payloads.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  // Maximum decompressed body size in bytes (default: 10 MB).
+  // Set to 0 to disable the decompressed size limit.
+  maxBodySize: 10 * 1024 * 1024,
+});
+```
+
+Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
+
+> [!IMPORTANT]
+> **Plain (uncompressed) request body size limits** are *not* enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
+>
+> Framework-level configuration examples:
+>
+> - **Bun** — [`Bun.serve({ maxRequestBodySize: 10_485_760 })`](https://bun.sh/docs/api/http#bun-serve)
+> - **Elysia** — inherits from Bun's `maxRequestBodySize`
+> - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
+> - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
+> - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
+> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)
+
 ## 🧪 Advanced Usage
 
 ### Logger Settings
@@ -878,11 +893,26 @@ Attribute names and span & metrics semantics follow OpenTelemetry GenAI semantic
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 
+For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
+
+#### Custom Telemetry Attributes
+
+Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
+
+```ts
+hooks: {
+  onRequest: (ctx) => {
+    ctx.otel["app.tenant.id"] = tenantId;
+    ctx.otel["app.user.id"] = userId;
+  },
+}
+```
+
+These attributes appear on the active span and on all metric instruments (request duration, token usage, TPOT, TTFT).
+
 > [!TIP]
 > To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.  
 > For `/chat/completions` and `/embeddings`, request `metadata` (`Record<string, string>`, key 1-64 chars, value up to 512 chars) is also forwarded to spans as `gen_ai.request.metadata.<key>`.
-
-For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
 #### Metrics
 
@@ -1091,3 +1121,33 @@ Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
+
+
+### Request Body Size
+
+The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum *decompressed* body size for these compressed requests, protecting against gzip bombs and oversized payloads.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  // Maximum decompressed body size in bytes (default: 10 MB).
+  // Set to 0 to disable the decompressed size limit.
+  maxBodySize: 10 * 1024 * 1024,
+});
+```
+
+Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
+
+> [!IMPORTANT]
+> **Plain (uncompressed) request body size limits** are *not* enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
+>
+> Framework-level configuration examples:
+>
+> - **Bun** — [`Bun.serve({ maxRequestBodySize: 10_485_760 })`](https://bun.sh/docs/api/http#bun-serve)
+> - **Elysia** — inherits from Bun's `maxRequestBodySize`
+> - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
+> - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
+> - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
+> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)
