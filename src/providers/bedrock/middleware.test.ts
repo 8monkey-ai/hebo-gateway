@@ -170,6 +170,103 @@ test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoni
   });
 });
 
+test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens when adaptive mapped to enabled", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 8192,
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "adaptive",
+        },
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 8192,
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "enabled",
+          budgetTokens: 4096, // 50% of maxOutputTokens
+        },
+      },
+    },
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should use default maxOutputTokens for fallback budgetTokens", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "adaptive",
+        },
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "enabled",
+          budgetTokens: 8192, // 50% of default 16384
+        },
+      },
+    },
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should enforce minimum budgetTokens of 1024", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 100,
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "adaptive",
+        },
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 100,
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "enabled",
+          budgetTokens: 1024, // minimum enforced
+        },
+      },
+    },
+  });
+});
+
 test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async () => {
   const params = {
     prompt: [],
