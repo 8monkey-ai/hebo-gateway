@@ -395,10 +395,9 @@ Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
 
 ```ts
 hooks: {
-  resolveModelId: (ctx) => {
+  onRequest: (ctx) => {
     ctx.otel["app.tenant.id"] = tenantId;
     ctx.otel["app.user.id"] = userId;
-    return resolvedModel;
   },
 }
 ```
