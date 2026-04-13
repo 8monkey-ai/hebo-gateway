@@ -1,4 +1,5 @@
 import { parseConfig } from "./config";
+import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
 import { GatewayError } from "./errors/gateway";
 import { toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
@@ -83,6 +84,7 @@ export const winterCgHandler = (
       if (
         ctx.operation === "chat" ||
         ctx.operation === "embeddings" ||
+        ctx.operation === "messages" ||
         ctx.operation === "responses"
       ) {
         recordRequestDuration(
@@ -112,6 +114,7 @@ export const winterCgHandler = (
 
           ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
             onDone: finalize,
+            formatError: ctx.operation === "messages" ? toAnthropicError : undefined,
           });
         }
 
@@ -140,12 +143,14 @@ export const winterCgHandler = (
             logger.debug("[lifecycle] onError hook threw");
           }
         }
-        ctx.response ??= toOpenAIErrorResponse(
-          ctx.request.signal.aborted
-            ? new GatewayError(error ?? ctx.request.signal.reason, 499)
-            : error,
-          prepareResponseInit(ctx.requestId),
-        );
+        const errorPayload = ctx.request.signal.aborted
+          ? new GatewayError(error ?? ctx.request.signal.reason, 499)
+          : error;
+        const errorResponseInit = prepareResponseInit(ctx.requestId);
+        ctx.response ??=
+          ctx.operation === "messages"
+            ? toAnthropicErrorResponse(errorPayload, errorResponseInit)
+            : toOpenAIErrorResponse(errorPayload, errorResponseInit);
         finalize(ctx.response.status, error);
       }
     });

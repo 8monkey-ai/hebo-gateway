@@ -62,6 +62,10 @@
       "types": "./dist/endpoints/embeddings/index.d.ts",
       "import": "./dist/endpoints/embeddings/index.js"
     },
+    "./endpoints/messages": {
+      "types": "./dist/endpoints/messages/index.d.ts",
+      "import": "./dist/endpoints/messages/index.js"
+    },
     "./endpoints/models": {
       "types": "./dist/endpoints/models/index.d.ts",
       "import": "./dist/endpoints/models/index.js"
@@ -79,6 +83,10 @@
       "types": "./dist/endpoints/conversations/storage/sql.d.ts",
       "import": "./dist/endpoints/conversations/storage/sql.js",
       "dev-source": "./src/endpoints/conversations/storage/sql.ts"
+    },
+    "./errors/anthropic": {
+      "types": "./dist/errors/anthropic.d.ts",
+      "import": "./dist/errors/anthropic.js"
     },
     "./errors/openai": {
       "types": "./dist/errors/openai.d.ts",
@@ -176,6 +184,7 @@
     "@ai-sdk/google-vertex": "^4.0.105",
     "@ai-sdk/groq": "^3.0.35",
     "@ai-sdk/openai": "^3.0.52",
+    "@anthropic-ai/sdk": "^0.88.0",
     "@aws-sdk/credential-providers": "^3.1027.0",
     "@langfuse/otel": "^5.0.2",
     "@libsql/client": "^0.17.2",
