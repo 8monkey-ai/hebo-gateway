@@ -156,10 +156,8 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       expect(message.content.length).toBeGreaterThanOrEqual(1);
       expect(message.content[0]!.type).toBe("text");
       expect((message.content[0] as { type: "text"; text: string }).text.length).toBeGreaterThan(0);
-      // NOTE: In streaming mode, the Vercel AI SDK may not report input_tokens
-      // in the accumulated message. This is a known SDK limitation where streaming
-      // usage is not always fully populated.
       expect(message.usage.output_tokens).toBeGreaterThan(0);
+      expect(message.usage.input_tokens).toBeGreaterThan(0);
     },
     { timeout: 60_000 },
   );
@@ -1061,5 +1059,78 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       expect(message.usage.output_tokens).toBeGreaterThan(0);
     },
     { timeout: 60_000 },
+  );
+
+  // =========================================================================
+  // 33. Streaming input_tokens populated (Q4 fix validation)
+  // =========================================================================
+  test(
+    "streaming usage: input_tokens is populated in final message",
+    async () => {
+      const stream = client.messages.stream({
+        model: MODEL,
+        max_tokens: 32,
+        messages: [{ role: "user", content: "Say hello" }],
+      });
+
+      const message = await stream.finalMessage();
+
+      expect(message.usage).toBeDefined();
+      expect(message.usage.output_tokens).toBeGreaterThan(0);
+      expect(message.usage.input_tokens).toBeGreaterThan(0);
+    },
+    { timeout: 60_000 },
+  );
+
+  // =========================================================================
+  // 34. Cache token usage verification (Q2)
+  // =========================================================================
+  test(
+    "cache tokens: sequential requests with cache_control show cache usage",
+    async () => {
+      // Use a long system prompt to ensure it gets cached
+      const longSystemText =
+        "You are a helpful assistant. ".repeat(100) +
+        "Always respond concisely. This is a long system prompt designed to trigger prompt caching.";
+
+      const createParams = {
+        model: MODEL,
+        max_tokens: 32,
+        system: [
+          {
+            type: "text" as const,
+            text: longSystemText,
+            cache_control: { type: "ephemeral" as const },
+          },
+        ],
+        messages: [{ role: "user" as const, content: "Say hello" }],
+      };
+
+      // First request — should create cache
+      const msg1 = await client.messages.create(createParams);
+      expect(msg1.type).toBe("message");
+
+      // Second request — should read from cache (within 5min TTL)
+      const msg2 = await client.messages.create(createParams);
+      expect(msg2.type).toBe("message");
+
+      // At least one of the two requests should show cache token activity.
+      // The first should have cache_creation_input_tokens > 0,
+      // the second should have cache_read_input_tokens > 0.
+      const usage1 = msg1.usage as Record<string, number>;
+      const usage2 = msg2.usage as Record<string, number>;
+
+      const cacheCreated =
+        (usage1["cache_creation_input_tokens"] ?? 0) > 0 ||
+        (usage2["cache_creation_input_tokens"] ?? 0) > 0;
+      const cacheRead =
+        (usage1["cache_read_input_tokens"] ?? 0) > 0 ||
+        (usage2["cache_read_input_tokens"] ?? 0) > 0;
+
+      // Bedrock may not surface cache tokens in all cases, so we check that
+      // at least caching was attempted (either creation or read is non-zero)
+      expect(cacheCreated || cacheRead).toBe(true);
+    },
+    { timeout: 120_000 },
   );
 });

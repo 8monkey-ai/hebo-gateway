@@ -265,7 +265,7 @@ export type MessagesStreamEvent =
       data: {
         type: "message_delta";
         delta: { stop_reason: MessagesStopReason; stop_sequence: string | null };
-        usage: { output_tokens: number };
+        usage: { output_tokens: number; input_tokens?: number };
       };
     }
   | { event: "message_stop"; data: { type: "message_stop" } }

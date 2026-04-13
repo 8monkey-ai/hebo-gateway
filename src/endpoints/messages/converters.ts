@@ -69,11 +69,17 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
   if (toolChoice) options.toolChoice = toolChoice;
 
-  // Thinking/reasoning
+  // Thinking/reasoning — put into providerOptions.unknown (matching chat-completions pattern)
   const reasoning = convertThinkingToReasoning(inputs.thinking);
   if (reasoning) {
     if (reasoning.reasoning) {
-      (options as Record<string, unknown>)["reasoning"] = reasoning.reasoning;
+      const providerOpts = options.providerOptions as Record<string, unknown>;
+      const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
+      unknown["reasoning"] = reasoning.reasoning;
+      if (reasoning.reasoningEffort) {
+        unknown["reasoning_effort"] = reasoning.reasoningEffort;
+      }
+      providerOpts["unknown"] = unknown;
     }
     if (reasoning.providerOptions) {
       Object.assign(options.providerOptions, reasoning.providerOptions);
@@ -124,6 +130,7 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
 function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   | {
       reasoning?: Record<string, unknown>;
+      reasoningEffort?: string;
       providerOptions?: SharedV3ProviderOptions;
     }
   | undefined {
@@ -131,11 +138,13 @@ function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
 
   const result: {
     reasoning?: Record<string, unknown>;
+    reasoningEffort?: string;
     providerOptions?: SharedV3ProviderOptions;
   } = {};
 
   if (thinking.type === "enabled") {
     result.reasoning = { enabled: true, max_tokens: thinking.budget_tokens };
+    result.reasoningEffort = "high";
     if (thinking.display) {
       result.providerOptions = {
         anthropic: { thinking: { display: thinking.display } },
@@ -146,6 +155,7 @@ function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
 
   // adaptive
   result.reasoning = { enabled: true, effort: "medium" };
+  result.reasoningEffort = "medium";
   if (thinking.display) {
     result.providerOptions = {
       anthropic: { thinking: { display: thinking.display } },
@@ -744,13 +754,14 @@ export class MessagesTransformStream extends TransformStream<
           case "finish": {
             const stopReason = mapStopReason(part.finishReason);
             totalOutputTokens = part.totalUsage?.outputTokens ?? 0;
+            const totalInputTokens = part.totalUsage?.inputTokens ?? 0;
 
             controller.enqueue({
               event: "message_delta",
               data: {
                 type: "message_delta",
                 delta: { stop_reason: stopReason, stop_sequence: null },
-                usage: { output_tokens: totalOutputTokens },
+                usage: { output_tokens: totalOutputTokens, input_tokens: totalInputTokens },
               },
             });
 

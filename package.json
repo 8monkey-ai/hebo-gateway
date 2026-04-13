@@ -166,7 +166,9 @@
     "lint": "oxlint",
     "lint:staged": "oxlint --fix",
     "typecheck": "oxlint --type-check",
-    "test": "bun test",
+    "test": "bun test src/",
+    "test:e2e": "bun test test/e2e/",
+    "test:all": "bun test",
     "check": "bun lint && bun typecheck",
     "fix": "bun lint:staged && bun format:staged"
   },

@@ -813,28 +813,36 @@ describe("Messages Converters", () => {
       ).toEqual({ type: "tool", toolName: "my_func" });
     });
 
-    test("should convert thinking enabled", () => {
+    test("should convert thinking enabled into providerOptions.unknown", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "Hi" }],
         max_tokens: 1000,
         thinking: { type: "enabled", budget_tokens: 4096 },
       });
-      expect((result as Record<string, unknown>)["reasoning"]).toEqual({
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({
         enabled: true,
         max_tokens: 4096,
       });
+      expect(unknown["reasoning_effort"]).toBe("high");
+      // Should NOT be a top-level key
+      expect((result as Record<string, unknown>)["reasoning"]).toBeUndefined();
     });
 
-    test("should convert thinking adaptive", () => {
+    test("should convert thinking adaptive into providerOptions.unknown", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "Hi" }],
         max_tokens: 1000,
         thinking: { type: "adaptive" },
       });
-      expect((result as Record<string, unknown>)["reasoning"]).toEqual({
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({
         enabled: true,
         effort: "medium",
       });
+      expect(unknown["reasoning_effort"]).toBe("medium");
+      // Should NOT be a top-level key
+      expect((result as Record<string, unknown>)["reasoning"]).toBeUndefined();
     });
 
     test("should not set reasoning for thinking disabled", () => {
@@ -843,6 +851,8 @@ describe("Messages Converters", () => {
         max_tokens: 1000,
         thinking: { type: "disabled" },
       });
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown> | undefined;
+      expect(unknown?.["reasoning"]).toBeUndefined();
       expect((result as Record<string, unknown>)["reasoning"]).toBeUndefined();
     });
 
@@ -946,12 +956,13 @@ describe("Messages Converters", () => {
       );
       expect(textDeltas).toHaveLength(2);
 
-      // message_delta with stop reason
+      // message_delta with stop reason and usage (including input_tokens)
       const messageDelta = events.find((e) => e.event === "message_delta");
       expect(messageDelta).toBeDefined();
       if (messageDelta?.event === "message_delta") {
         expect(messageDelta.data.delta.stop_reason).toBe("end_turn");
         expect(messageDelta.data.usage.output_tokens).toBe(3);
+        expect(messageDelta.data.usage.input_tokens).toBe(5);
       }
 
       // message_stop
