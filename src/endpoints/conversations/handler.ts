@@ -72,7 +72,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function create(ctx: GatewayContext): Promise<Conversation> {
-    const body = await parseRequestBody(ctx.request);
+    const body = await parseRequestBody(ctx.request, parsedConfig.maxBodySize);
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ConversationCreateParamsSchema.safeParse(body);
@@ -103,7 +103,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
-    const body = await parseRequestBody(ctx.request);
+    const body = await parseRequestBody(ctx.request, parsedConfig.maxBodySize);
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ConversationUpdateBodySchema.safeParse(body);
@@ -211,7 +211,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     ctx: GatewayContext,
     conversationId: string,
   ): Promise<ConversationItemList> {
-    const body = await parseRequestBody(ctx.request);
+    const body = await parseRequestBody(ctx.request, parsedConfig.maxBodySize);
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ConversationItemsAddBodySchema.safeParse(body);
