@@ -55,6 +55,14 @@ jobs:
       - name: Run Claude
         uses: anthropics/claude-code-action@v1.0.89 # pinned: v1.0.90 broke Bedrock OIDC auth (anthropics/claude-code-action#1196)
         with:
+          settings: |
+            {
+              "env": {
+                "AWS_ACCESS_KEY_ID": "${{ secrets.BEDROCK_ACCESS_KEY_ID }}",
+                "AWS_SECRET_ACCESS_KEY": "${{ secrets.BEDROCK_SECRET_ACCESS_KEY }}",
+                "AWS_REGION": "${{ secrets.AWS_REGION }}"
+              }
+            }
           github_token: ${{ steps.app-token.outputs.token }}
           use_bedrock: "true"
           branch_prefix: "claude-"
