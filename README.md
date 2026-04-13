@@ -389,21 +389,6 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
 
-#### Custom Telemetry Attributes
-
-Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
-
-```ts
-hooks: {
-  onRequest: (ctx) => {
-    ctx.otel["app.tenant.id"] = tenantId;
-    ctx.otel["app.user.id"] = userId;
-  },
-}
-```
-
-These attributes appear on the active span and on all metric instruments (request duration, token usage, TPOT, TTFT).
-
 ### Storage
 
 The `/conversations` endpoint stores conversation history and associated items. By default, the gateway uses an in-memory storage, which is suitable for development but not for production as data is lost when the server restarts.
@@ -908,11 +893,26 @@ Attribute names and span & metrics semantics follow OpenTelemetry GenAI semantic
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
 https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 
+For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
+
+#### Custom Telemetry Attributes
+
+Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
+
+```ts
+hooks: {
+  onRequest: (ctx) => {
+    ctx.otel["app.tenant.id"] = tenantId;
+    ctx.otel["app.user.id"] = userId;
+  },
+}
+```
+
+These attributes appear on the active span and on all metric instruments (request duration, token usage, TPOT, TTFT).
+
 > [!TIP]
 > To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.  
 > For `/chat/completions` and `/embeddings`, request `metadata` (`Record<string, string>`, key 1-64 chars, value up to 512 chars) is also forwarded to spans as `gen_ai.request.metadata.<key>`.
-
-For observability integration that is not otel compliant, you can disable built-in telemetry and manually instrument requests during `before` / `after` hooks.
 
 #### Metrics
 
