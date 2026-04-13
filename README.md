@@ -34,7 +34,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Storage](#storage) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Storage](#storage) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings) | [Request Body Size](#request-body-size)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -985,6 +985,35 @@ const gw = gateway({
 >
 > **Provider/service timeout limits**
 > Serverless platforms (e.g. Cloudflare Workers, Vercel Edge/Serverless, AWS Lambda) also enforce platform time limits (roughly ~25-100s on edge paths, ~300s for streaming, and up to ~900s configurable for some).
+
+### Request Body Size
+
+The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum *decompressed* body size for these compressed requests, protecting against gzip bombs and oversized payloads.
+
+```ts
+import { gateway } from "@hebo-ai/gateway";
+
+const gw = gateway({
+  // ...
+  // Maximum decompressed body size in bytes (default: 10 MB).
+  // Set to 0 to disable the decompressed size limit.
+  maxBodySize: 10 * 1024 * 1024,
+});
+```
+
+Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
+
+> [!IMPORTANT]
+> **Plain (uncompressed) request body size limits** are *not* enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
+>
+> Framework-level configuration examples:
+>
+> - **Bun** — [`Bun.serve({ maxRequestBodySize: 10_485_760 })`](https://bun.sh/docs/api/http#bun-serve)
+> - **Elysia** — inherits from Bun's `maxRequestBodySize`
+> - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
+> - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
+> - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
+> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)
 
 ### Passing Framework State to Hooks
 

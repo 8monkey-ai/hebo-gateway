@@ -6,6 +6,7 @@ import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { addSpanEvent } from "../../telemetry/span";
 import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
+import { parseRequestBody } from "../../utils/body";
 import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
 import {
   ConversationCreateParamsSchema,
@@ -71,12 +72,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function create(ctx: GatewayContext): Promise<Conversation> {
-    let body: unknown;
-    try {
-      body = await ctx.request.json();
-    } catch {
-      throw new GatewayError("Invalid JSON", 400);
-    }
+    const body = await parseRequestBody(ctx.request);
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ConversationCreateParamsSchema.safeParse(body);
@@ -107,12 +103,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
   }
 
   async function update(ctx: GatewayContext, conversationId: string): Promise<Conversation> {
-    let body: unknown;
-    try {
-      body = await ctx.request.json();
-    } catch {
-      throw new GatewayError("Invalid JSON", 400);
-    }
+    const body = await parseRequestBody(ctx.request);
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ConversationUpdateBodySchema.safeParse(body);
@@ -220,12 +211,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     ctx: GatewayContext,
     conversationId: string,
   ): Promise<ConversationItemList> {
-    let body: unknown;
-    try {
-      body = await ctx.request.json();
-    } catch {
-      throw new GatewayError("Invalid JSON", 400);
-    }
+    const body = await parseRequestBody(ctx.request);
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = ConversationItemsAddBodySchema.safeParse(body);

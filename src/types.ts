@@ -269,6 +269,14 @@ export type GatewayConfig = {
    * Supports a number in milliseconds, or tiered config.
    */
   timeouts?: GatewayTimeout;
+  /**
+   * Maximum *decompressed* request body size in bytes for gzip/deflate-encoded requests.
+   * Plain (uncompressed) request body size limits should be configured at the
+   * framework or server level (e.g. Hono `bodyLimit` middleware, Bun `maxRequestBodySize`).
+   * Set to `0` to disable the decompressed size limit.
+   * Defaults to 10 MB (10,485,760 bytes).
+   */
+  maxBodySize?: number;
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
@@ -278,6 +286,7 @@ export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts"> & 
     normal?: number;
     flex?: number;
   };
+  maxBodySize: number;
   [kParsed]: true;
 };
 
