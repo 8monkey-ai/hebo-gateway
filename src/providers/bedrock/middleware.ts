@@ -82,7 +82,11 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
     const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
 
     if (thinking && typeof thinking === "object") {
-      // Bedrock only supports "enabled" / "disabled"; map "adaptive" → "enabled".
+      // Bedrock's InvokeModel (Messages) API supports "adaptive" thinking natively,
+      // but the Converse API (used by @ai-sdk/amazon-bedrock) rejects "adaptive" in
+      // additionalModelRequestFields — it only accepts "enabled" / "disabled".
+      // Map "adaptive" → "enabled" until Converse API adds adaptive support.
+      // See: https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
       target.type = thinking.type === "adaptive" ? "enabled" : thinking.type;
       if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
         target.budgetTokens = thinking.budgetTokens;
