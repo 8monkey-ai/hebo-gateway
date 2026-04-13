@@ -1,4 +1,4 @@
-import type { SharedV3ProviderMetadata, SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type { SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -69,22 +69,22 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
   if (toolChoice) options.toolChoice = toolChoice;
 
-  // Thinking/reasoning — put into providerOptions.unknown so forwardLanguageParams
-  // merges them into providerOptions[provider] for the reasoning middleware.
+  // Thinking/reasoning — convert to the shared `reasoning` config format and put into
+  // providerOptions.unknown so the model middleware (claudeReasoningMiddleware) and
+  // provider middleware (bedrockClaudeReasoningMiddleware) handle the conversion to
+  // provider-specific options. No direct references to `anthropic` here.
   const reasoning = convertThinkingToReasoning(inputs.thinking);
   if (reasoning) {
-    if (reasoning.thinking) {
-      const providerOpts = options.providerOptions as Record<string, unknown>;
-      const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
-      unknown["thinking"] = reasoning.thinking;
-      if (reasoning.effort) {
-        unknown["effort"] = reasoning.effort;
-      }
-      providerOpts["unknown"] = unknown;
+    const providerOpts = options.providerOptions as Record<string, unknown>;
+    const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
+    unknown["reasoning"] = reasoning.reasoning;
+    if (reasoning.reasoning_effort) {
+      unknown["reasoning_effort"] = reasoning.reasoning_effort;
     }
-    if (reasoning.providerOptions) {
-      Object.assign(options.providerOptions, reasoning.providerOptions);
+    if (reasoning.display) {
+      unknown["thinking_display"] = reasoning.display;
     }
+    providerOpts["unknown"] = unknown;
   }
 
   // Per-block cache control is handled in convertToModelMessages.
@@ -130,41 +130,31 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
 
 function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   | {
-      thinking?: Record<string, unknown>;
-      effort?: string;
-      providerOptions?: SharedV3ProviderOptions;
+      reasoning: { enabled: boolean; effort?: string; max_tokens?: number };
+      reasoning_effort?: string;
+      display?: string;
     }
   | undefined {
-  if (!thinking || thinking.type === "disabled") return undefined;
+  if (!thinking) return undefined;
 
-  const result: {
-    thinking?: Record<string, unknown>;
-    effort?: string;
-    providerOptions?: SharedV3ProviderOptions;
-  } = {};
+  if (thinking.type === "disabled") {
+    return { reasoning: { enabled: false } };
+  }
 
   if (thinking.type === "enabled") {
-    // Use snake_case keys — forwardLanguageParams camelizes them before
-    // bedrockClaudeReasoningMiddleware reads bedrock.thinking / bedrock.effort.
-    result.thinking = { type: "enabled", budget_tokens: thinking.budget_tokens };
-    result.effort = "high";
-    if (thinking.display) {
-      result.providerOptions = {
-        anthropic: { thinking: { display: thinking.display } },
-      };
-    }
-    return result;
+    return {
+      reasoning: { enabled: true, max_tokens: thinking.budget_tokens },
+      reasoning_effort: "high",
+      display: thinking.display,
+    };
   }
 
   // adaptive
-  result.thinking = { type: "adaptive" };
-  result.effort = "medium";
-  if (thinking.display) {
-    result.providerOptions = {
-      anthropic: { thinking: { display: thinking.display } },
-    };
-  }
-  return result;
+  return {
+    reasoning: { enabled: true, effort: "medium" },
+    reasoning_effort: "medium",
+    display: thinking.display,
+  };
 }
 
 // --- Message Conversion ---

@@ -83,6 +83,10 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     const clampedMaxTokens =
       reasoning.max_tokens && Math.min(reasoning.max_tokens, getMaxOutputTokens(modelId));
 
+    // Forward thinking display preference (from Messages endpoint thinking config)
+    const thinkingDisplay = unknown["thinking_display"] as string | undefined;
+    delete unknown["thinking_display"];
+
     if (!reasoning.enabled) {
       target.thinking = { type: "disabled" };
     } else if (reasoning.effort) {
@@ -118,6 +122,11 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       };
     } else {
       target.thinking = { type: "enabled" };
+    }
+
+    // Apply display preference to the resolved thinking config
+    if (thinkingDisplay && target.thinking && target.thinking.type !== "disabled") {
+      (target.thinking as Record<string, unknown>)["display"] = thinkingDisplay;
     }
 
     delete unknown["reasoning"];

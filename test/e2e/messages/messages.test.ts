@@ -4,6 +4,7 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
 import { defineModelCatalog, gateway } from "../../../src";
+import { claudeHaiku45, claudeSonnet4 } from "../../../src/models/anthropic";
 import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
 
 // ---------------------------------------------------------------------------
@@ -73,20 +74,7 @@ const startServer = () => {
     providers: {
       bedrock: withCanonicalIdsForBedrock(bedrock),
     },
-    models: defineModelCatalog({
-      [MODEL]: {
-        name: "Claude 4.5 Haiku",
-        modalities: { input: ["text", "image"], output: ["text"] },
-        capabilities: ["reasoning", "tool_call"],
-        providers: ["bedrock"],
-      },
-      [THINKING_MODEL]: {
-        name: "Claude Sonnet 4",
-        modalities: { input: ["text", "image"], output: ["text"] },
-        capabilities: ["reasoning", "tool_call"],
-        providers: ["bedrock"],
-      },
-    }),
+    models: defineModelCatalog(claudeHaiku45(), claudeSonnet4()),
     // Extended timeout for Bedrock cold starts and thinking models
     timeouts: { normal: 120_000, flex: 360_000 },
   });
