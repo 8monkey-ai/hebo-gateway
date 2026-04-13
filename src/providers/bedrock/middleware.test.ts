@@ -161,7 +161,7 @@ test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoni
     providerOptions: {
       bedrock: {
         reasoningConfig: {
-          type: "adaptive",
+          type: "enabled", // "adaptive" is mapped to "enabled" for Bedrock compatibility
           budgetTokens: 4096,
           maxReasoningEffort: "max",
         },

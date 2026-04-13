@@ -69,15 +69,16 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
   if (toolChoice) options.toolChoice = toolChoice;
 
-  // Thinking/reasoning — put into providerOptions.unknown (matching chat-completions pattern)
+  // Thinking/reasoning — put into providerOptions.unknown so forwardLanguageParams
+  // merges them into providerOptions[provider] for the reasoning middleware.
   const reasoning = convertThinkingToReasoning(inputs.thinking);
   if (reasoning) {
-    if (reasoning.reasoning) {
+    if (reasoning.thinking) {
       const providerOpts = options.providerOptions as Record<string, unknown>;
       const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
-      unknown["reasoning"] = reasoning.reasoning;
-      if (reasoning.reasoningEffort) {
-        unknown["reasoning_effort"] = reasoning.reasoningEffort;
+      unknown["thinking"] = reasoning.thinking;
+      if (reasoning.effort) {
+        unknown["effort"] = reasoning.effort;
       }
       providerOpts["unknown"] = unknown;
     }
@@ -129,22 +130,24 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
 
 function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   | {
-      reasoning?: Record<string, unknown>;
-      reasoningEffort?: string;
+      thinking?: Record<string, unknown>;
+      effort?: string;
       providerOptions?: SharedV3ProviderOptions;
     }
   | undefined {
   if (!thinking || thinking.type === "disabled") return undefined;
 
   const result: {
-    reasoning?: Record<string, unknown>;
-    reasoningEffort?: string;
+    thinking?: Record<string, unknown>;
+    effort?: string;
     providerOptions?: SharedV3ProviderOptions;
   } = {};
 
   if (thinking.type === "enabled") {
-    result.reasoning = { enabled: true, max_tokens: thinking.budget_tokens };
-    result.reasoningEffort = "high";
+    // Use snake_case keys — forwardLanguageParams camelizes them before
+    // bedrockClaudeReasoningMiddleware reads bedrock.thinking / bedrock.effort.
+    result.thinking = { type: "enabled", budget_tokens: thinking.budget_tokens };
+    result.effort = "high";
     if (thinking.display) {
       result.providerOptions = {
         anthropic: { thinking: { display: thinking.display } },
@@ -154,8 +157,8 @@ function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   }
 
   // adaptive
-  result.reasoning = { enabled: true, effort: "medium" };
-  result.reasoningEffort = "medium";
+  result.thinking = { type: "adaptive" };
+  result.effort = "medium";
   if (thinking.display) {
     result.providerOptions = {
       anthropic: { thinking: { display: thinking.display } },

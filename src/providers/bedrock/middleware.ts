@@ -82,7 +82,8 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
     const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
 
     if (thinking && typeof thinking === "object") {
-      target.type = thinking.type;
+      // Bedrock only supports "enabled" / "disabled"; map "adaptive" → "enabled".
+      target.type = thinking.type === "adaptive" ? "enabled" : thinking.type;
       if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
         target.budgetTokens = thinking.budgetTokens;
       }

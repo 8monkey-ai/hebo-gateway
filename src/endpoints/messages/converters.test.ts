@@ -820,13 +820,13 @@ describe("Messages Converters", () => {
         thinking: { type: "enabled", budget_tokens: 4096 },
       });
       const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
-      expect(unknown["reasoning"]).toEqual({
-        enabled: true,
-        max_tokens: 4096,
+      expect(unknown["thinking"]).toEqual({
+        type: "enabled",
+        budget_tokens: 4096,
       });
-      expect(unknown["reasoning_effort"]).toBe("high");
+      expect(unknown["effort"]).toBe("high");
       // Should NOT be a top-level key
-      expect((result as Record<string, unknown>)["reasoning"]).toBeUndefined();
+      expect((result as Record<string, unknown>)["thinking"]).toBeUndefined();
     });
 
     test("should convert thinking adaptive into providerOptions.unknown", () => {
@@ -836,24 +836,23 @@ describe("Messages Converters", () => {
         thinking: { type: "adaptive" },
       });
       const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
-      expect(unknown["reasoning"]).toEqual({
-        enabled: true,
-        effort: "medium",
+      expect(unknown["thinking"]).toEqual({
+        type: "adaptive",
       });
-      expect(unknown["reasoning_effort"]).toBe("medium");
+      expect(unknown["effort"]).toBe("medium");
       // Should NOT be a top-level key
-      expect((result as Record<string, unknown>)["reasoning"]).toBeUndefined();
+      expect((result as Record<string, unknown>)["thinking"]).toBeUndefined();
     });
 
-    test("should not set reasoning for thinking disabled", () => {
+    test("should not set thinking for thinking disabled", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "Hi" }],
         max_tokens: 1000,
         thinking: { type: "disabled" },
       });
       const unknown = result.providerOptions["unknown"] as Record<string, unknown> | undefined;
-      expect(unknown?.["reasoning"]).toBeUndefined();
-      expect((result as Record<string, unknown>)["reasoning"]).toBeUndefined();
+      expect(unknown?.["thinking"]).toBeUndefined();
+      expect((result as Record<string, unknown>)["thinking"]).toBeUndefined();
     });
 
     test("should convert thinking enabled with display option", () => {
