@@ -396,8 +396,8 @@ Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
 ```ts
 hooks: {
   resolveModelId: (ctx) => {
-    ctx.otel["hebo.agent.slug"] = agentSlug;
-    ctx.otel["hebo.branch.slug"] = branchSlug;
+    ctx.otel["app.tenant.id"] = tenantId;
+    ctx.otel["app.user.id"] = userId;
     return resolvedModel;
   },
 }
@@ -893,6 +893,8 @@ The Gateway also emits `gen_ai` metrics:
 - `gen_ai.server.time_per_output_token` (histogram, seconds)
 - `gen_ai.server.time_to_first_token` (histogram, seconds)
 - `gen_ai.client.token.usage` (histogram, tokens; tagged with `gen_ai.token.type=input|output|cached|reasoning`)
+
+Metric names and attributes follow OpenTelemetry GenAI semantic conventions. Histogram bucket boundaries are tuned for practical dashboards and alerting rather than copied verbatim from upstream recommendations.
 
 To capture them, configure a global `MeterProvider` before creating the gateway:
 

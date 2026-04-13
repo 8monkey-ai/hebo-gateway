@@ -107,7 +107,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
-      let ttftRecorded = false;
+      let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
@@ -120,9 +120,9 @@ export const responses = (config: GatewayConfig): Endpoint => {
         },
         onError: () => {},
         onChunk: () => {
-          if (!ttftRecorded) {
-            ttftRecorded = true;
-            recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
+          if (!ttft) {
+            ttft = performance.now() - start;
+            recordTimeToFirstToken(ttft, genAiGeneralAttrs, genAiSignalLevel);
           }
         },
         onFinish: (res) => {
@@ -142,7 +142,13 @@ export const responses = (config: GatewayConfig): Endpoint => {
           );
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-          recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          recordTimePerOutputToken(
+            start,
+            ttft,
+            genAiResponseAttrs,
+            genAiGeneralAttrs,
+            genAiSignalLevel,
+          );
         },
         experimental_include: {
           requestBody: false,
@@ -194,7 +200,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 
