@@ -389,6 +389,21 @@ The `ctx` object is **readonly for core fields**. Use return values to override 
 > [!TIP]
 > To pass data between hooks, use `ctx.state`. It’s a per-request mutable bag in which you can stash things like auth info, routing decisions, timers, or trace IDs and read them later again in any of the other hooks.
 
+#### Custom Telemetry Attributes
+
+Use `ctx.otel` in any hook to attach attributes to both spans and metrics:
+
+```ts
+hooks: {
+  onRequest: (ctx) => {
+    ctx.otel["app.tenant.id"] = tenantId;
+    ctx.otel["app.user.id"] = userId;
+  },
+}
+```
+
+These attributes appear on the active span and on all metric instruments (request duration, token usage, TPOT, TTFT).
+
 ### Storage
 
 The `/conversations` endpoint stores conversation history and associated items. By default, the gateway uses an in-memory storage, which is suitable for development but not for production as data is lost when the server restarts.
@@ -875,7 +890,10 @@ The Gateway also emits `gen_ai` metrics:
 
 - `gen_ai.server.request.duration` (histogram, seconds)
 - `gen_ai.server.time_per_output_token` (histogram, seconds)
-- `gen_ai.client.token.usage` (histogram, tokens; tagged with `gen_ai.token.type=input|output`)
+- `gen_ai.server.time_to_first_token` (histogram, seconds)
+- `gen_ai.client.token.usage` (histogram, tokens; tagged with `gen_ai.token.type=input|output|cached|reasoning`)
+
+Metric names and attributes follow OpenTelemetry GenAI semantic conventions. Histogram bucket boundaries are tuned for practical dashboards and alerting rather than copied verbatim from upstream recommendations.
 
 To capture them, configure a global `MeterProvider` before creating the gateway:
 

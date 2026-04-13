@@ -16,6 +16,7 @@ import { resolveProvider } from "../../providers/registry";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
+  recordTimeToFirstToken,
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
@@ -106,6 +107,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
+      let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
@@ -117,6 +119,12 @@ export const responses = (config: GatewayConfig): Endpoint => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
         onError: () => {},
+        onChunk: () => {
+          if (!ttft) {
+            ttft = performance.now() - start;
+            recordTimeToFirstToken(ttft, genAiGeneralAttrs, genAiSignalLevel);
+          }
+        },
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toResponses(
@@ -134,7 +142,13 @@ export const responses = (config: GatewayConfig): Endpoint => {
           );
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-          recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          recordTimePerOutputToken(
+            start,
+            ttft,
+            genAiResponseAttrs,
+            genAiGeneralAttrs,
+            genAiSignalLevel,
+          );
         },
         experimental_include: {
           requestBody: false,
@@ -167,6 +181,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     });
     logger.trace({ requestId: ctx.requestId, result }, "[responses] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
+    recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
 
     ctx.result = toResponses(result, ctx.resolvedModelId, ctx.body.metadata);
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[responses] Responses");
@@ -185,7 +200,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 

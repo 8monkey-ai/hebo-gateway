@@ -16,6 +16,7 @@ import { resolveProvider } from "../../providers/registry";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
+  recordTimeToFirstToken,
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
@@ -124,6 +125,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Execute request (streaming vs. non-streaming).
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
+      let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
@@ -135,6 +137,12 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
         onError: () => {},
+        onChunk: () => {
+          if (!ttft) {
+            ttft = performance.now() - start;
+            recordTimeToFirstToken(ttft, genAiGeneralAttrs, genAiSignalLevel);
+          }
+        },
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
@@ -150,7 +158,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-          recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          recordTimePerOutputToken(
+            start,
+            ttft,
+            genAiResponseAttrs,
+            genAiGeneralAttrs,
+            genAiSignalLevel,
+          );
         },
         experimental_include: {
           requestBody: false,
@@ -183,6 +197,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     });
     logger.trace({ requestId: ctx.requestId, result }, "[chat] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
+    recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
 
     // Transform result.
     ctx.result = toChatCompletions(result, ctx.resolvedModelId);
@@ -198,7 +213,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 

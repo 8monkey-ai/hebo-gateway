@@ -1,5 +1,5 @@
 import type { ProviderV3 } from "@ai-sdk/provider";
-import type { Tracer } from "@opentelemetry/api";
+import type { Attributes, Tracer } from "@opentelemetry/api";
 
 import type {
   ChatCompletions,
@@ -24,6 +24,11 @@ export type GatewayContext = {
    * Mutable bag for passing data between hooks.
    */
   state: Record<string, unknown>;
+  /**
+   * OpenTelemetry attribute bag populated by hooks.
+   * Attributes set here are applied to both spans and all metric instruments.
+   */
+  otel: Attributes;
   /**
    * Provider registry from config.
    */
@@ -86,10 +91,11 @@ export type GatewayContext = {
 };
 
 /**
- * Hook context: all fields readonly except `state`.
+ * Hook context: all fields readonly except `state` and `otel`.
  */
-export type HookContext = Omit<Readonly<GatewayContext>, "state"> & {
+export type HookContext = Omit<Readonly<GatewayContext>, "state" | "otel"> & {
   state: GatewayContext["state"];
+  otel: GatewayContext["otel"];
 };
 
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &
