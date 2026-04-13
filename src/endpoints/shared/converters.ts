@@ -65,7 +65,10 @@ export function parseImageInput(url: string): { image: string | URL; mediaType?:
       throw new GatewayError("Invalid data URL", 400);
     }
     if (!mimeType.startsWith("image/")) {
-      throw new GatewayError(`Unsupported image media type: ${mimeType}`, 400);
+      throw new GatewayError(
+        `Unsupported image media type: ${mimeType}. Use the 'file' content part type for non-image media.`,
+        400,
+      );
     }
     return {
       image: url.slice(dataStart),
@@ -143,7 +146,7 @@ export function parsePromptCachingOptions(
 export function resolveResponseServiceTier(
   providerMetadata?: SharedV3ProviderMetadata,
 ): ServiceTier | undefined {
-  if (!providerMetadata) return;
+  if (!providerMetadata) return undefined;
 
   for (const metadata of Object.values(providerMetadata)) {
     const tier = parseReturnedServiceTier(
@@ -152,6 +155,8 @@ export function resolveResponseServiceTier(
     );
     if (tier) return tier;
   }
+
+  return undefined;
 }
 
 function parseReturnedServiceTier(value: unknown): ServiceTier | undefined {

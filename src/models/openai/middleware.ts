@@ -5,7 +5,6 @@ import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
-
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
@@ -27,11 +26,13 @@ export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-function mapGptOssReasoningEffort(effort?: ChatCompletionsReasoningEffort) {
+function mapGptOssReasoningEffort(
+  effort?: ChatCompletionsReasoningEffort,
+): "low" | "medium" | "high" | undefined {
   switch (effort) {
     case undefined:
     case "none":
-      return;
+      return undefined;
     case "minimal":
     case "low":
       return "low";
@@ -41,6 +42,8 @@ function mapGptOssReasoningEffort(effort?: ChatCompletionsReasoningEffort) {
     case "xhigh":
       return "high";
   }
+
+  return undefined;
 }
 
 export const openAIReasoningMiddleware: LanguageModelMiddleware = {

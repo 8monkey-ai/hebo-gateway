@@ -1,7 +1,6 @@
 import { SpanKind, type Attributes } from "@opentelemetry/api";
 
 import type { TelemetrySignalLevel } from "../types";
-
 import { setSpanAttributes, withSpan } from "./span";
 
 const ORIGINAL_FETCH_KEY = Symbol.for("@hebo/fetch/original-fetch");

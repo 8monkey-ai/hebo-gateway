@@ -1,6 +1,5 @@
-import type { SseFrame } from "./stream";
-
 import { REQUEST_ID_HEADER } from "./headers";
+import type { SseFrame } from "./stream";
 import { toSseStream } from "./stream";
 
 const TEXT_ENCODER = new TextEncoder();

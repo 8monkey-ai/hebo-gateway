@@ -19,9 +19,24 @@ import type {
   ImagePart,
   FilePart,
 } from "ai";
-
 import { Output, jsonSchema, tool } from "ai";
 
+import { GatewayError } from "../../errors/gateway";
+import { toResponse } from "../../utils/response";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import {
+  parseJsonOrText,
+  parseReasoningOptions,
+  parsePromptCachingOptions,
+  resolveResponseServiceTier,
+  normalizeToolName,
+  stripEmptyKeys,
+  parseBase64,
+  parseImageInput,
+  extractReasoningMetadata,
+  type TextCallOptions,
+  type ToolChoiceOptions,
+} from "../shared/converters";
 import type {
   ChatCompletionsToolCall,
   ChatCompletionsTool,
@@ -46,22 +61,6 @@ import type {
   ChatCompletionsContentPartText,
   ChatCompletionsCacheControl,
 } from "./schema";
-import type { SseErrorFrame, SseFrame } from "../../utils/stream";
-
-import { toResponse } from "../../utils/response";
-import {
-  parseJsonOrText,
-  parseReasoningOptions,
-  parsePromptCachingOptions,
-  resolveResponseServiceTier,
-  normalizeToolName,
-  stripEmptyKeys,
-  parseBase64,
-  parseImageInput,
-  extractReasoningMetadata,
-  type TextCallOptions,
-  type ToolChoiceOptions,
-} from "../shared/converters";
 
 // --- Request Flow ---
 
@@ -121,9 +120,11 @@ export function convertToTextCallOptions(params: ChatCompletionsInputs): TextCal
   };
 }
 
-function convertToOutput(responseFormat: ChatCompletionsResponseFormat | undefined) {
+function convertToOutput(
+  responseFormat: ChatCompletionsResponseFormat | undefined,
+): Output.Output | undefined {
   if (!responseFormat || responseFormat.type === "text") {
-    return;
+    return undefined;
   }
 
   const { name, description, schema } = responseFormat.json_schema;
@@ -333,7 +334,10 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
         return out;
       }
       default:
-        throw new Error(`Unhandled content part type: ${(part as { type: string }).type}`);
+        throw new GatewayError(
+          `Unsupported content part type: ${(part as { type: string }).type}`,
+          400,
+        );
     }
   });
 }
@@ -395,7 +399,7 @@ function fromFilePart(
 
 export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): ToolSet | undefined => {
   if (!tools) {
-    return;
+    return undefined;
   }
 
   const toolSet: ToolSet = {};

@@ -1,5 +1,7 @@
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 
+import type { SqlDialect, QueryExecutor } from "./dialects/types";
+import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 import type {
   ConversationStorage,
   ConversationEntity,
@@ -8,9 +10,6 @@ import type {
   ConversationItemInput,
   ConversationQueryOptions,
 } from "./types";
-import type { SqlDialect, QueryExecutor } from "./dialects/types";
-
-import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
 
 const rowMapper = createRowMapper<ConversationEntity | ConversationItemEntity>([
   parseJson("data"),
@@ -213,13 +212,12 @@ export class SqlStorage implements ConversationStorage {
 
     sqlParts.push(`ORDER BY c.${q("created_at")} ${dir}, c.${q("id")} ${dir}`);
 
-    const limitVal = Number(limit);
-    if (!isNaN(limitVal)) {
+    if (!Number.isNaN(limit)) {
       if (limitAsLiteral) {
-        sqlParts.push(`LIMIT ${limitVal}`);
+        sqlParts.push(`LIMIT ${limit}`);
       } else {
         sqlParts.push(`LIMIT ${p(nextIdx++)}`);
-        args.push(limitVal);
+        args.push(limit);
       }
     }
 
@@ -248,7 +246,7 @@ export class SqlStorage implements ConversationStorage {
       //    to deduplicate the row.
       const conversation = await this.getConversationInternal(id, tx);
 
-      if (!conversation) return;
+      if (!conversation) return conversation;
       const createdAt = conversation.created_at;
 
       const pk = ["id"];
@@ -296,7 +294,7 @@ export class SqlStorage implements ConversationStorage {
     return executor.transaction(async (tx) => {
       if (!skipCheck) {
         const conversation = await this.getConversationInternal(conversationId, tx);
-        if (!conversation) return;
+        if (!conversation) return conversation;
       }
 
       const { placeholder: p, quote: q } = this.config;
@@ -401,13 +399,12 @@ export class SqlStorage implements ConversationStorage {
 
     sqlParts.push(`ORDER BY c.${q("created_at")} ${dir}, c.${q("id")} ${dir}`);
 
-    const limitVal = Number(limit);
-    if (!isNaN(limitVal)) {
+    if (!Number.isNaN(limit)) {
       if (limitAsLiteral) {
-        sqlParts.push(`LIMIT ${limitVal}`);
+        sqlParts.push(`LIMIT ${limit}`);
       } else {
         sqlParts.push(`LIMIT ${p(nextIdx++)}`);
-        args.push(limitVal);
+        args.push(limit);
       }
     }
 

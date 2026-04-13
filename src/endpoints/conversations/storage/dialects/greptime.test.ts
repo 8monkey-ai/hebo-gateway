@@ -1,7 +1,8 @@
 import { describe, expect, test, mock } from "bun:test";
+
+import { SqlStorage } from "../sql";
 import { GrepTimeDialect, GrepTimeDialectConfig } from "./greptime";
 import { type PgPool } from "./postgres";
-import { SqlStorage } from "../sql";
 
 describe("Greptime Dialect (Mocked)", () => {
   const createMockPool = () => {

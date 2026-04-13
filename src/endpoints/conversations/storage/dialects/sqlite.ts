@@ -110,7 +110,7 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
     },
     async run(sql: string, params?: unknown[]) {
       const rs = await client.execute({ sql, args: mapParams(params) ?? [] });
-      return { changes: Number(rs.rowsAffected) };
+      return { changes: rs.rowsAffected };
     },
     async transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       const tx = await client.transaction("deferred");
@@ -125,7 +125,7 @@ function createLibsqlExecutor(client: LibsqlClient): QueryExecutor {
         },
         async run(sql: string, params?: unknown[]) {
           const rs = await tx.execute({ sql, args: mapParams(params) ?? [] });
-          return { changes: Number(rs.rowsAffected) };
+          return { changes: rs.rowsAffected };
         },
         transaction<ResultT>(
           txCallback: (executor: QueryExecutor) => Promise<ResultT>,
@@ -160,7 +160,7 @@ function createBunSqliteExecutor(sql: BunSql): QueryExecutor {
     async run(query: string, params?: unknown[]) {
       const res = (await sql.unsafe(query, mapParams(params))) as unknown;
       const result = res as { affectedRows?: number; count?: number };
-      return { changes: Number(result.affectedRows ?? result.count ?? 0) };
+      return { changes: result.affectedRows ?? result.count ?? 0 };
     },
     transaction<T>(fn: (executor: QueryExecutor) => Promise<T>) {
       return sql.transaction((tx) => {

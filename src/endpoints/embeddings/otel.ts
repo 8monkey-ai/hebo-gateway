@@ -1,8 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import type { Embeddings, EmbeddingsBody } from "./schema";
-
 import { type TelemetrySignalLevel } from "../../types";
+import type { Embeddings, EmbeddingsBody } from "./schema";
 
 export const getEmbeddingsRequestAttributes = (
   body: EmbeddingsBody,

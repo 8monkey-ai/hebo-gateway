@@ -1,8 +1,9 @@
+import { afterEach, describe, expect, test } from "bun:test";
+
 import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
 import { MockProviderV3 } from "ai/test";
-import { afterEach, describe, expect, test } from "bun:test";
 
 import { models } from "./endpoints/models/handler";
 

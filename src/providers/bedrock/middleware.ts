@@ -1,15 +1,13 @@
 import type { BedrockProviderOptions } from "@ai-sdk/amazon-bedrock";
-import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 import type { AnthropicLanguageModelOptions } from "@ai-sdk/anthropic";
+import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
-
 import type { LanguageModelMiddleware } from "ai";
 
 import type {
   ChatCompletionsCacheControl,
   ChatCompletionsServiceTier,
 } from "../../endpoints/chat-completions/schema";
-
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 const isClaude46 = (modelId: string) => modelId.includes("-4-6");
@@ -22,28 +20,25 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
     const bedrock = params.providerOptions?.["bedrock"] as BedrockProviderOptions;
     if (!bedrock || typeof bedrock !== "object") return params;
 
-    // UPSTREAM: https://github.com/vercel/ai/issues/13241
-    // @ts-expect-error AI SDK missing serviceTier, need to open PR
-    const tier = bedrock["serviceTier"] as ChatCompletionsServiceTier | undefined;
+    const tier = bedrock.serviceTier as ChatCompletionsServiceTier | undefined;
     switch (tier) {
       case undefined:
         return params;
       case "auto":
         // Bedrock uses its default tier when omitted.
-        // @ts-expect-error AI SDK missing serviceTier, need to open PR
         delete bedrock.serviceTier;
         return params;
       case "scale":
-        // @ts-expect-error AI SDK missing serviceTier, need to open PR
-        bedrock.serviceTier = { type: "reserved" };
+        bedrock.serviceTier = "reserved";
         return params;
       case "default":
       case "flex":
       case "priority":
-        // @ts-expect-error AI SDK missing serviceTier, need to open PR
-        bedrock.serviceTier = { type: tier };
+        bedrock.serviceTier = tier;
         return params;
     }
+
+    return params;
   },
 };
 

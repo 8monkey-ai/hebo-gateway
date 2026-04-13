@@ -1,7 +1,6 @@
 import { type OpenAIProvider } from "@ai-sdk/openai";
 
 import type { ModelId } from "../../models/types";
-
 import { withCanonicalIds } from "../registry";
 
 export const withCanonicalIdsForOpenAI = (

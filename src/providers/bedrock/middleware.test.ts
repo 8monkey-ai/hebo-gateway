@@ -1,5 +1,7 @@
-import { MockLanguageModelV3 } from "ai/test";
 import { expect, test } from "bun:test";
+
+import { type LanguageModelV3CallOptions, type LanguageModelV3TextPart } from "@ai-sdk/provider";
+import { MockLanguageModelV3 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import {
@@ -8,7 +10,6 @@ import {
   bedrockPromptCachingMiddleware,
   bedrockServiceTierMiddleware,
 } from "./middleware";
-import { type LanguageModelV3CallOptions, type LanguageModelV3TextPart } from "@ai-sdk/provider";
 
 test("bedrock middlewares > matching provider resolves GPT middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
@@ -34,10 +35,10 @@ test("bedrock middlewares > matching provider resolves Claude middleware", () =>
 
 const bedrockServiceTierCases = [
   { tier: "auto", expected: {} },
-  { tier: "default", expected: { serviceTier: { type: "default" } } },
-  { tier: "flex", expected: { serviceTier: { type: "flex" } } },
-  { tier: "priority", expected: { serviceTier: { type: "priority" } } },
-  { tier: "scale", expected: { serviceTier: { type: "reserved" } } },
+  { tier: "default", expected: { serviceTier: "default" } },
+  { tier: "flex", expected: { serviceTier: "flex" } },
+  { tier: "priority", expected: { serviceTier: "priority" } },
+  { tier: "scale", expected: { serviceTier: "reserved" } },
 ] as const;
 
 for (const { tier, expected } of bedrockServiceTierCases) {

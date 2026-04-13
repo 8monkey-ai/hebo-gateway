@@ -1,7 +1,6 @@
 import { type AnthropicProvider } from "@ai-sdk/anthropic";
 
 import type { ModelId } from "../../models/types";
-
 import { withCanonicalIds } from "../registry";
 
 export const withCanonicalIdsForAnthropic = (

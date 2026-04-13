@@ -1,8 +1,8 @@
+import type { GroqProviderOptions } from "@ai-sdk/groq";
 import type { LanguageModelMiddleware } from "ai";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions";
-import type { GroqProviderOptions } from "@ai-sdk/groq";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 // https://console.groq.com/docs/service-tiers
 export const groqServiceTierMiddleware: LanguageModelMiddleware = {
@@ -24,11 +24,11 @@ export const groqServiceTierMiddleware: LanguageModelMiddleware = {
         return params;
       case "scale":
       case "priority":
-        // UPSTREAM: https://github.com/vercel/ai/issues/13235
-        // @ts-expect-error AI SDK missing "performance", need to open PR
         groq.serviceTier = "performance";
         return params;
     }
+
+    return params;
   },
 };
 

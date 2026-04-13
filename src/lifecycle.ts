@@ -1,13 +1,3 @@
-import type {
-  GatewayConfig,
-  GatewayConfigParsed,
-  GatewayContext,
-  OnErrorHookContext,
-  OnRequestHookContext,
-  OnResponseHookContext,
-} from "./types";
-import type { SseFrame } from "./utils/stream";
-
 import { parseConfig } from "./config";
 import { GatewayError } from "./errors/gateway";
 import { toOpenAIErrorResponse } from "./errors/openai";
@@ -18,8 +8,17 @@ import { recordRequestDuration } from "./telemetry/gen-ai";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { observeV8jsMemoryMetrics } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
+import type {
+  GatewayConfig,
+  GatewayConfigParsed,
+  GatewayContext,
+  OnErrorHookContext,
+  OnRequestHookContext,
+  OnResponseHookContext,
+} from "./types";
 import { resolveOrCreateRequestId } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
+import type { SseFrame } from "./utils/stream";
 
 export const winterCgHandler = (
   run: (

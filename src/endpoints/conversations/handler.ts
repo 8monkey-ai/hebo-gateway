@@ -1,12 +1,12 @@
 import * as z from "zod";
 
-import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
-
 import { parseConfig } from "../../config";
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
 import { addSpanEvent } from "../../telemetry/span";
+import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
+import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
 import {
   ConversationCreateParamsSchema,
   ConversationItemsAddBodySchema,
@@ -19,7 +19,6 @@ import {
   type ConversationItemList,
   type ConversationList,
 } from "./schema";
-import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
 import type { ConversationMetadata } from "./storage/types";
 
 export const conversations = (config: GatewayConfig): Endpoint => {

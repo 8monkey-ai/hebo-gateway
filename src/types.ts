@@ -8,8 +8,8 @@ import type {
 } from "./endpoints/chat-completions/schema";
 import type { ConversationStorage } from "./endpoints/conversations/storage/types";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
-import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema";
 import type { Model, ModelList } from "./endpoints/models";
+import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";

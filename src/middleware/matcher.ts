@@ -1,9 +1,8 @@
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
+import { logger } from "../logger";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
-
-import { logger } from "../logger";
 import { addSpanEvent } from "../telemetry/span";
 import { forwardParamsEmbeddingMiddleware, forwardParamsMiddleware } from "./common";
 import { debugEmbeddingFinalParamsMiddleware, debugFinalParamsMiddleware } from "./debug";

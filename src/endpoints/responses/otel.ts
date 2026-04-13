@@ -1,6 +1,8 @@
 import type { Attributes } from "@opentelemetry/api";
 import type { FinishReason } from "ai";
 
+import { type TelemetrySignalLevel } from "../../types";
+import { parseDataUrl } from "../../utils/url";
 import type {
   Responses,
   ResponsesBody,
@@ -8,9 +10,6 @@ import type {
   ResponsesInputItem,
   ResponsesMessageItem,
 } from "./schema";
-
-import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
 
 type TelemetryPart = {
   type: string;
@@ -72,6 +71,9 @@ const toInputParts = (content: string | ResponsesInputContent[]): TelemetryPart[
         }
         break;
       }
+      default:
+        parts.push({ type: (part as { type: string }).type, content: "[UNHANDLED_CONTENT_PART]" });
+        break;
     }
   }
 
@@ -128,6 +130,8 @@ const toItemParts = (item: ResponsesInputItem): TelemetryPart[] => {
       }
       return parts;
     }
+    default:
+      return [{ type: (item as { type: string }).type, content: "[UNHANDLED_ITEM_TYPE]" }];
   }
 };
 
@@ -142,7 +146,7 @@ const toMessageParts = (item: ResponsesMessageItem): TelemetryPart[] => {
       // https://github.com/langfuse/langfuse/issues/11607
       return toInputParts(item.content);
     default:
-      return [];
+      return [{ type: (item as { role: string }).role, content: "[UNHANDLED_ROLE]" }];
   }
 };
 

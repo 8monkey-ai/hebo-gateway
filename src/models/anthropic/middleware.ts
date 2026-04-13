@@ -5,7 +5,6 @@ import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
-
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
@@ -24,7 +23,10 @@ const isOpus45 = isClaude("opus", "4.5");
 const isOpus4 = isClaude("opus", "4");
 const isSonnet46 = isClaude("sonnet", "4.6");
 
-export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort, modelId: string) {
+export function mapClaudeReasoningEffort(
+  effort: ChatCompletionsReasoningEffort,
+  modelId: string,
+): "low" | "medium" | "high" | "max" | undefined {
   if (isOpus46(modelId)) {
     switch (effort) {
       case "none":
@@ -51,6 +53,8 @@ export function mapClaudeReasoningEffort(effort: ChatCompletionsReasoningEffort,
     case "xhigh":
       return "high";
   }
+
+  return undefined;
 }
 
 function getMaxOutputTokens(modelId: string): number {

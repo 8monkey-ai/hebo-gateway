@@ -1,6 +1,7 @@
+import { describe, expect, test } from "bun:test";
+
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV3, MockProviderV3 } from "ai/test";
-import { describe, expect, test } from "bun:test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";

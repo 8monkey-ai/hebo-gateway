@@ -1,7 +1,6 @@
 import type { VoyageProvider } from "voyage-ai-provider";
 
 import type { ModelId } from "../../models/types";
-
 import { withCanonicalIds } from "../registry";
 
 export const withCanonicalIdsForVoyage = (

@@ -1,16 +1,15 @@
-import type { GoogleVertexEmbeddingModelOptions } from "@ai-sdk/google-vertex";
 import type { GoogleLanguageModelOptions } from "@ai-sdk/google";
+import type { GoogleVertexEmbeddingModelOptions } from "@ai-sdk/google-vertex";
+import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
-
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
-import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
-import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -32,7 +31,10 @@ export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
 };
 
 // https://ai.google.dev/gemini-api/docs/thinking#thinking-levels
-export function mapGeminiReasoningEffort(effort: ChatCompletionsReasoningEffort, modelId: string) {
+export function mapGeminiReasoningEffort(
+  effort: ChatCompletionsReasoningEffort,
+  modelId: string,
+): "minimal" | "low" | "medium" | "high" | undefined {
   if (modelId.includes("pro")) {
     switch (effort) {
       case "none":
@@ -60,6 +62,8 @@ export function mapGeminiReasoningEffort(effort: ChatCompletionsReasoningEffort,
     case "xhigh":
       return "high";
   }
+
+  return undefined;
 }
 
 export const GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 65536;

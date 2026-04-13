@@ -1,5 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
+import { type TelemetrySignalLevel } from "../../types";
+import { parseDataUrl } from "../../utils/url";
 import type {
   ChatCompletionsAssistantMessage,
   ChatCompletions,
@@ -8,9 +10,6 @@ import type {
   ChatCompletionsContentPartText,
   ChatCompletionsMessage,
 } from "./schema";
-
-import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
 
 const toTextParts = (content: string | ChatCompletionsContentPart[] | null | undefined) => {
   if (typeof content === "string") {
@@ -98,6 +97,9 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         parts.push(filePart);
         break;
       }
+      default:
+        parts.push({ type: (part as { type: string }).type, content: "[UNHANDLED_CONTENT_PART]" });
+        break;
     }
   }
 
@@ -117,7 +119,7 @@ const toMessageParts = (message: ChatCompletionsMessage) => {
     case "system":
       return toTextParts(message.content);
     default:
-      throw new Error(`Unhandled content part type: ${(message as { role: string }).role}`);
+      return [{ type: (message as { role: string }).role, content: "[UNHANDLED_ROLE]" }];
   }
 };
 

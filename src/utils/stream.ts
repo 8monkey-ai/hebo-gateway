@@ -108,7 +108,7 @@ export function toSseStream(
       finished = true;
       if (timer) clearTimeout(timer);
       options.onDone?.(499, reason);
-      return reader?.cancel(reason).catch(() => {});
+      void reader?.cancel(reason).catch(() => {});
     },
   });
 }

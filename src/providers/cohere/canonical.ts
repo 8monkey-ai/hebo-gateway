@@ -1,7 +1,6 @@
 import { type CohereProvider } from "@ai-sdk/cohere";
 
 import type { CanonicalModelId, ModelId } from "../../models/types";
-
 import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
