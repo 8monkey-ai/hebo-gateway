@@ -1,7 +1,7 @@
 import { parseConfig } from "./config";
 import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
 import { GatewayError } from "./errors/gateway";
-import { toOpenAIErrorResponse } from "./errors/openai";
+import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
@@ -112,9 +112,11 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
+          const formatError =
+            ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
           ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
             onDone: finalize,
-            formatError: ctx.operation === "messages" ? toAnthropicError : undefined,
+            formatError,
           });
         }
 

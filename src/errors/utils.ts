@@ -1,3 +1,4 @@
+import { isProduction } from "../utils/env";
 import { normalizeAiSdkError } from "./ai-sdk";
 import { GatewayError } from "./gateway";
 
@@ -26,8 +27,10 @@ export const STATUS_CODE = (status: number) => {
   return status >= 400 && status < 500 ? STATUS_CODES[400] : STATUS_CODES[500];
 };
 
+export type ErrorMeta = { status: number; code: string; message: string };
+
 // FUTURE: always return a wrapped GatewayError?
-export function getErrorMeta(error: unknown) {
+export function getErrorMeta(error: unknown): ErrorMeta {
   const message = error instanceof Error ? error.message : String(error);
 
   let status: number;
@@ -46,4 +49,11 @@ export function getErrorMeta(error: unknown) {
   }
 
   return { status, code, message };
+}
+
+export function maybeMaskMessage(meta: ErrorMeta, requestId?: string): string {
+  if (!(isProduction() && meta.status >= 500)) {
+    return meta.message;
+  }
+  return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
 }

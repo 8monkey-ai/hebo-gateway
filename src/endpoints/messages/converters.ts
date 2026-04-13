@@ -1,4 +1,3 @@
-import type { SharedV3ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -33,7 +32,7 @@ import {
   parseJsonOrText,
   type TextCallOptions,
 } from "../shared/converters";
-import type { CacheControl } from "../shared/schema";
+import type { ReasoningConfig, ReasoningEffort, CacheControl } from "../shared/schema";
 import type {
   MessagesInputs,
   MessagesMessage,
@@ -91,7 +90,10 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   // Top-level automatic caching:
   if (inputs.cache_control) {
     const cacheOpts = parsePromptCachingOptions(undefined, undefined, inputs.cache_control);
-    (options.providerOptions as Record<string, unknown>)["unknown"] = cacheOpts;
+    const providerOpts = options.providerOptions as Record<string, unknown>;
+    const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
+    Object.assign(unknown, cacheOpts);
+    providerOpts["unknown"] = unknown;
   }
 
   // Metadata passthrough
@@ -110,7 +112,7 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
     providerOpts["unknown"] = unknown;
   }
 
-  // Phase 1.5: structured output
+  // Structured output
   if (inputs.output_config) {
     options.output = convertToOutput(inputs.output_config);
   }
@@ -128,10 +130,10 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
   });
 }
 
-function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
+export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   | {
-      reasoning: { enabled: boolean; effort?: string; max_tokens?: number };
-      reasoning_effort?: string;
+      reasoning: ReasoningConfig;
+      reasoning_effort?: ReasoningEffort;
       display?: string;
     }
   | undefined {
@@ -173,10 +175,12 @@ export function convertToModelMessages(
       const text = system.map((block) => block.text).join("");
       const msg: ModelMessage = { role: "system", content: text };
 
-      // Apply cache_control from last system block with it
-      const lastCached = findLastCacheControl(system);
-      if (lastCached) {
-        msg.providerOptions = { unknown: { cache_control: lastCached } };
+      // Pass through cache_control from the last system block that has it
+      for (let i = system.length - 1; i >= 0; i--) {
+        if (system[i]!.cache_control) {
+          msg.providerOptions = { unknown: { cache_control: system[i]!.cache_control } };
+          break;
+        }
       }
 
       modelMessages.push(msg);
@@ -195,15 +199,6 @@ export function convertToModelMessages(
   }
 
   return modelMessages;
-}
-
-function findLastCacheControl(
-  blocks: Array<{ cache_control?: CacheControl }>,
-): CacheControl | undefined {
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    if (blocks[i]!.cache_control) return blocks[i]!.cache_control;
-  }
-  return undefined;
 }
 
 function fromUserMessage(
@@ -464,7 +459,7 @@ export function toMessages(
     model: modelId,
     stop_reason: mapStopReason(result.finishReason),
     stop_sequence: null,
-    usage: mapUsage(result.totalUsage, result.providerMetadata),
+    usage: mapUsage(result.totalUsage),
     service_tier: resolveResponseServiceTier(result.providerMetadata),
   };
 }
@@ -496,14 +491,12 @@ export function mapStopReason(reason: FinishReason): MessagesStopReason {
     case "error":
     case "other":
       return null;
+    default:
+      return null;
   }
-  return null;
 }
 
-export function mapUsage(
-  usage?: LanguageModelUsage,
-  providerMetadata?: SharedV3ProviderMetadata,
-): MessagesUsage {
+export function mapUsage(usage?: LanguageModelUsage): MessagesUsage {
   const result: MessagesUsage = {
     input_tokens: usage?.inputTokens ?? 0,
     output_tokens: usage?.outputTokens ?? 0,
@@ -515,22 +508,6 @@ export function mapUsage(
 
   if (usage?.inputTokenDetails?.cacheReadTokens !== undefined) {
     result.cache_read_input_tokens = usage.inputTokenDetails.cacheReadTokens;
-  }
-
-  // Also check provider metadata for cache info
-  if (providerMetadata && !result.cache_creation_input_tokens && !result.cache_read_input_tokens) {
-    for (const metadata of Object.values(providerMetadata)) {
-      if (metadata && typeof metadata === "object") {
-        const cacheCreation = metadata["cache_creation_input_tokens"];
-        if (typeof cacheCreation === "number") {
-          result.cache_creation_input_tokens = cacheCreation;
-        }
-        const cacheRead = metadata["cache_read_input_tokens"];
-        if (typeof cacheRead === "number") {
-          result.cache_read_input_tokens = cacheRead;
-        }
-      }
-    }
   }
 
   return result;
@@ -575,6 +552,7 @@ export class MessagesTransformStream extends TransformStream<
       },
 
       transform(part, controller) {
+        // Not all TextStreamPart types are relevant for Messages SSE format
         // oxlint-disable-next-line switch-exhaustiveness-check
         switch (part.type) {
           case "reasoning-start": {
@@ -771,6 +749,9 @@ export class MessagesTransformStream extends TransformStream<
             });
             break;
           }
+
+          default:
+            break;
         }
       },
     });

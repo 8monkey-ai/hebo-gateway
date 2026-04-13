@@ -11,20 +11,8 @@ import type {
   UserContentBlock,
 } from "./schema";
 
-type TelemetryPart = {
-  type: string;
-  [key: string]: unknown;
-};
-
-type TelemetryMessageLog = {
-  role?: string;
-  type?: string;
-  parts: TelemetryPart[];
-  [key: string]: unknown;
-};
-
-const toBlobPart = (modality: string, mimeType?: string): TelemetryPart => {
-  const part: TelemetryPart = {
+const toBlobPart = (modality: string, mimeType?: string) => {
+  const part: Record<string, unknown> = {
     type: "blob",
     modality,
     content: "[REDACTED_BINARY_DATA]",
@@ -33,7 +21,7 @@ const toBlobPart = (modality: string, mimeType?: string): TelemetryPart => {
   return part;
 };
 
-const toUserBlockParts = (block: UserContentBlock): TelemetryPart => {
+const toUserBlockParts = (block: UserContentBlock) => {
   switch (block.type) {
     case "text":
       return { type: "text", content: block.text };
@@ -66,12 +54,12 @@ const toUserBlockParts = (block: UserContentBlock): TelemetryPart => {
   }
 };
 
-const toMessageParts = (message: MessagesMessage): TelemetryPart[] => {
+const toMessageParts = (message: MessagesMessage) => {
   if (typeof message.content === "string") {
     return [{ type: "text", content: message.content }];
   }
 
-  const parts: TelemetryPart[] = [];
+  const parts: Record<string, unknown>[] = [];
   for (const block of message.content) {
     if (message.role === "user") {
       parts.push(toUserBlockParts(block as UserContentBlock));
@@ -104,7 +92,7 @@ const toMessageParts = (message: MessagesMessage): TelemetryPart[] => {
   return parts;
 };
 
-const toResponseBlockPart = (block: MessagesResponseContentBlock): TelemetryPart => {
+const toResponseBlockPart = (block: MessagesResponseContentBlock) => {
   switch (block.type) {
     case "text":
       return { type: "text", content: block.text };
@@ -159,7 +147,7 @@ export const getMessagesRequestAttributes = (
         JSON.stringify({
           role: "system",
           parts: [{ type: "text", content: systemText }],
-        } satisfies TelemetryMessageLog),
+        }),
       );
     }
 
@@ -169,7 +157,7 @@ export const getMessagesRequestAttributes = (
         JSON.stringify({
           role: message.role,
           parts: toMessageParts(message),
-        } satisfies TelemetryMessageLog),
+        }),
       );
     }
 
@@ -214,7 +202,7 @@ export const getMessagesResponseAttributes = (
         JSON.stringify({
           role: "assistant",
           parts: response.content.map(toResponseBlockPart),
-        } satisfies TelemetryMessageLog),
+        }),
       ],
     });
   }

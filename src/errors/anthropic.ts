@@ -1,7 +1,6 @@
-import { isProduction } from "../utils/env";
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta, STATUS_CODE } from "./utils";
+import { getErrorMeta, maybeMaskMessage } from "./utils";
 
 export class AnthropicError {
   readonly type = "error";
@@ -29,13 +28,6 @@ const mapType = (status: number): string => {
     default:
       return status >= 500 ? "api_error" : "invalid_request_error";
   }
-};
-
-const maybeMaskMessage = (meta: ReturnType<typeof getErrorMeta>, requestId?: string) => {
-  if (!(isProduction() && meta.status >= 500)) {
-    return meta.message;
-  }
-  return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
 };
 
 export function toAnthropicError(error: unknown): AnthropicError {

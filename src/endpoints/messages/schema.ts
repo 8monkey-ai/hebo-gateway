@@ -1,5 +1,6 @@
 import * as z from "zod";
 
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 import { CacheControlSchema, ServiceTierSchema, type ServiceTier } from "../shared/schema";
 
 // --- Content Block Schemas ---
@@ -7,7 +8,7 @@ import { CacheControlSchema, ServiceTierSchema, type ServiceTier } from "../shar
 const TextBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
-  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+  cache_control: CacheControlSchema.optional(),
 });
 
 const ImageSourceBase64Schema = z.object({
@@ -23,8 +24,8 @@ const ImageSourceUrlSchema = z.object({
 
 const ImageBlockSchema = z.object({
   type: z.literal("image"),
-  source: z.union([ImageSourceBase64Schema, ImageSourceUrlSchema]),
-  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+  source: z.discriminatedUnion("type", [ImageSourceBase64Schema, ImageSourceUrlSchema]),
+  cache_control: CacheControlSchema.optional(),
 });
 
 const DocumentSourceBase64Schema = z.object({
@@ -45,8 +46,12 @@ const DocumentSourceTextSchema = z.object({
 
 const DocumentBlockSchema = z.object({
   type: z.literal("document"),
-  source: z.union([DocumentSourceBase64Schema, DocumentSourceUrlSchema, DocumentSourceTextSchema]),
-  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+  source: z.discriminatedUnion("type", [
+    DocumentSourceBase64Schema,
+    DocumentSourceUrlSchema,
+    DocumentSourceTextSchema,
+  ]),
+  cache_control: CacheControlSchema.optional(),
 });
 
 const ToolUseBlockSchema = z.object({
@@ -66,7 +71,7 @@ const ToolResultBlockSchema = z.object({
   tool_use_id: z.string(),
   content: ToolResultContentBlockSchema.optional(),
   is_error: z.boolean().optional(),
-  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+  cache_control: CacheControlSchema.optional(),
 });
 
 const ThinkingBlockSchema = z.object({
@@ -119,7 +124,7 @@ export type MessagesMessage = z.infer<typeof MessagesMessageSchema>;
 const SystemBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
-  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+  cache_control: CacheControlSchema.optional(),
 });
 
 // --- Tool Schemas ---
@@ -139,7 +144,7 @@ const MessagesToolChoiceToolSchema = z.object({
   name: z.string(),
 });
 
-const MessagesToolChoiceSchema = z.union([
+const MessagesToolChoiceSchema = z.discriminatedUnion("type", [
   MessagesToolChoiceAutoSchema,
   MessagesToolChoiceAnySchema,
   MessagesToolChoiceNoneSchema,
@@ -171,7 +176,7 @@ const MessagesThinkingConfigSchema = z.discriminatedUnion("type", [
 ]);
 export type MessagesThinkingConfig = z.infer<typeof MessagesThinkingConfigSchema>;
 
-// --- Output Config Schema (Phase 1.5) ---
+// --- Output Config Schema ---
 
 const MessagesOutputConfigSchema = z.object({
   type: z.literal("json_schema"),
@@ -234,43 +239,64 @@ export type Messages = {
 
 // --- Stream Event Types ---
 
-export type MessagesStreamEvent =
-  | { event: "message_start"; data: { type: "message_start"; message: Messages } }
-  | {
-      event: "content_block_start";
-      data: {
-        type: "content_block_start";
-        index: number;
-        content_block:
-          | { type: "text"; text: string }
-          | { type: "thinking"; thinking: string }
-          | { type: "tool_use"; id: string; name: string; input: Record<string, never> };
-      };
-    }
-  | {
-      event: "content_block_delta";
-      data: {
-        type: "content_block_delta";
-        index: number;
-        delta:
-          | { type: "text_delta"; text: string }
-          | { type: "thinking_delta"; thinking: string }
-          | { type: "signature_delta"; signature: string }
-          | { type: "input_json_delta"; partial_json: string };
-      };
-    }
-  | { event: "content_block_stop"; data: { type: "content_block_stop"; index: number } }
-  | {
-      event: "message_delta";
-      data: {
-        type: "message_delta";
-        delta: { stop_reason: MessagesStopReason; stop_sequence: string | null };
-        usage: { output_tokens: number; input_tokens?: number };
-      };
-    }
-  | { event: "message_stop"; data: { type: "message_stop" } }
-  | { event: "error"; data: { type: "error"; error: { type: string; message: string } } };
-
-export type MessagesStream = ReadableStream<
-  MessagesStreamEvent | import("../../utils/stream").SseErrorFrame
+export type MessageStartEvent = SseFrame<
+  { type: "message_start"; message: Messages },
+  "message_start"
 >;
+
+export type ContentBlockStartEvent = SseFrame<
+  {
+    type: "content_block_start";
+    index: number;
+    content_block:
+      | { type: "text"; text: string }
+      | { type: "thinking"; thinking: string }
+      | { type: "tool_use"; id: string; name: string; input: Record<string, never> };
+  },
+  "content_block_start"
+>;
+
+export type ContentBlockDeltaEvent = SseFrame<
+  {
+    type: "content_block_delta";
+    index: number;
+    delta:
+      | { type: "text_delta"; text: string }
+      | { type: "thinking_delta"; thinking: string }
+      | { type: "signature_delta"; signature: string }
+      | { type: "input_json_delta"; partial_json: string };
+  },
+  "content_block_delta"
+>;
+
+export type ContentBlockStopEvent = SseFrame<
+  { type: "content_block_stop"; index: number },
+  "content_block_stop"
+>;
+
+export type MessageDeltaEvent = SseFrame<
+  {
+    type: "message_delta";
+    delta: { stop_reason: MessagesStopReason; stop_sequence: string | null };
+    usage: { output_tokens: number; input_tokens?: number };
+  },
+  "message_delta"
+>;
+
+export type MessageStopEvent = SseFrame<{ type: "message_stop" }, "message_stop">;
+
+export type MessageErrorEvent = SseFrame<
+  { type: "error"; error: { type: string; message: string } },
+  "error"
+>;
+
+export type MessagesStreamEvent =
+  | MessageStartEvent
+  | ContentBlockStartEvent
+  | ContentBlockDeltaEvent
+  | ContentBlockStopEvent
+  | MessageDeltaEvent
+  | MessageStopEvent
+  | MessageErrorEvent;
+
+export type MessagesStream = ReadableStream<MessagesStreamEvent | SseErrorFrame>;

@@ -575,18 +575,7 @@ describe("Messages Converters", () => {
       expect(usage.cache_read_input_tokens).toBe(60);
     });
 
-    test("should extract cache tokens from providerMetadata", () => {
-      const usage = mapUsage(mockUsage({ inputTokens: 100, outputTokens: 50 }), {
-        anthropic: {
-          cache_creation_input_tokens: 20,
-          cache_read_input_tokens: 40,
-        },
-      });
-      expect(usage.cache_creation_input_tokens).toBe(20);
-      expect(usage.cache_read_input_tokens).toBe(40);
-    });
-
-    test("should prefer inputTokenDetails over providerMetadata", () => {
+    test("should include both cache write and read tokens from inputTokenDetails", () => {
       const usage = mapUsage(
         mockUsage({
           inputTokens: 100,
@@ -597,14 +586,7 @@ describe("Messages Converters", () => {
             noCacheTokens: undefined,
           },
         }),
-        {
-          anthropic: {
-            cache_creation_input_tokens: 99,
-            cache_read_input_tokens: 99,
-          },
-        },
       );
-      // inputTokenDetails takes precedence
       expect(usage.cache_creation_input_tokens).toBe(10);
       expect(usage.cache_read_input_tokens).toBe(60);
     });
