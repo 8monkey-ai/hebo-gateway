@@ -8,17 +8,6 @@ import {
 } from "ai";
 import * as z from "zod/mini";
 
-import type {
-  AfterHookContext,
-  BeforeHookContext,
-  GatewayConfig,
-  Endpoint,
-  GatewayContext,
-  ResolveProviderHookContext,
-  ResolveModelHookContext,
-  GatewayConfigParsed,
-} from "../../types";
-
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
@@ -31,6 +20,16 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+import type {
+  AfterHookContext,
+  BeforeHookContext,
+  GatewayConfig,
+  Endpoint,
+  GatewayContext,
+  ResolveProviderHookContext,
+  ResolveModelHookContext,
+  GatewayConfigParsed,
+} from "../../types";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
@@ -126,7 +125,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Execute request (streaming vs. non-streaming).
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
-      let ttftRecorded = false;
+      let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
         headers: prepareForwardHeaders(ctx.request),
@@ -139,9 +138,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         },
         onError: () => {},
         onChunk: () => {
-          if (!ttftRecorded) {
-            ttftRecorded = true;
-            recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
+          if (!ttft) {
+            ttft = performance.now() - start;
+            recordTimeToFirstToken(ttft, genAiGeneralAttrs, genAiSignalLevel);
           }
         },
         onFinish: (res) => {
@@ -159,7 +158,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           const genAiResponseAttrs = getChatResponseAttributes(streamResult, genAiSignalLevel);
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-          recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+          recordTimePerOutputToken(
+            start,
+            ttft,
+            genAiResponseAttrs,
+            genAiGeneralAttrs,
+            genAiSignalLevel,
+          );
         },
         experimental_include: {
           requestBody: false,
@@ -208,7 +213,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 
