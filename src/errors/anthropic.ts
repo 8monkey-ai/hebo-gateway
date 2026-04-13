@@ -21,8 +21,14 @@ const mapType = (status: number): string => {
       return "permission_error";
     case 404:
       return "not_found_error";
+    case 402:
+      return "billing_error";
+    case 413:
+      return "request_too_large";
     case 429:
       return "rate_limit_error";
+    case 504:
+      return "timeout_error";
     case 529:
       return "overloaded_error";
     default:

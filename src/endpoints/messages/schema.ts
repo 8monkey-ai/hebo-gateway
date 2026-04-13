@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import type { SseFrame } from "../../utils/stream";
 import { CacheControlSchema, ServiceTierSchema, type ServiceTier } from "../shared/schema";
 
 // --- Content Block Schemas ---
@@ -190,7 +190,7 @@ export type MessagesOutputConfig = z.infer<typeof MessagesOutputConfigSchema>;
 
 export const MessagesBodySchema = z.object({
   model: z.string(),
-  max_tokens: z.number(),
+  max_tokens: z.number().int().min(1),
   messages: z.array(MessagesMessageSchema),
   system: z.union([z.string(), z.array(SystemBlockSchema)]).optional(),
   stream: z.boolean().optional(),
@@ -299,4 +299,4 @@ export type MessagesStreamEvent =
   | MessageStopEvent
   | MessageErrorEvent;
 
-export type MessagesStream = ReadableStream<MessagesStreamEvent | SseErrorFrame>;
+export type MessagesStream = ReadableStream<MessagesStreamEvent>;

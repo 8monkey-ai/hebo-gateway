@@ -300,7 +300,7 @@ test("bedrockClaudeReasoningMiddleware > should use default maxOutputTokens for 
       bedrock: {
         reasoningConfig: {
           type: "enabled",
-          budgetTokens: 8192, // medium effort (50%) of default 16384
+          budgetTokens: 32768, // medium effort (50%) of default 65536
         },
       },
     },

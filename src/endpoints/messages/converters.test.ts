@@ -15,15 +15,13 @@ import {
 import type { MessagesStreamEvent } from "./schema";
 
 async function collectStreamEvents(
-  stream: ReadableStream<MessagesStreamEvent | { data: Error }>,
+  stream: ReadableStream<MessagesStreamEvent>,
 ): Promise<{ events: MessagesStreamEvent[]; all: unknown[] }> {
   const events: MessagesStreamEvent[] = [];
   const all: unknown[] = [];
   for await (const value of stream) {
     all.push(value);
-    if (value && "event" in (value as object)) {
-      events.push(value as MessagesStreamEvent);
-    }
+    events.push(value);
   }
   return { events, all };
 }
@@ -1159,13 +1157,12 @@ describe("Messages Converters", () => {
       });
 
       const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
-      const { all } = await collectStreamEvents(transformed);
+      const { events } = await collectStreamEvents(transformed);
 
-      // Should have message_start + error frame
-      const errorFrame = all.find(
-        (e) => e !== null && typeof e === "object" && "data" in e && !("event" in e),
-      );
-      expect(errorFrame).toBeDefined();
+      // Should have message_start + named error event
+      const errorEvent = events.find((e) => e.event === "error");
+      expect(errorEvent).toBeDefined();
+      expect((errorEvent as { data: { type: string; error: { type: string; message: string } } }).data.error.message).toBe("Something went wrong");
     });
   });
 });

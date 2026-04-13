@@ -102,7 +102,7 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
           effort === "max" ? "xhigh" : (effort as ChatCompletionsReasoningEffort) ?? "medium";
         target.budgetTokens = calculateReasoningBudgetFromEffort(
           mappedEffort,
-          params.maxOutputTokens ?? 16384,
+          params.maxOutputTokens ?? 65536,
           1024,
         );
       }

@@ -678,14 +678,14 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   test(
     "thinking adaptive: accepted and produces valid response",
     async () => {
-      // Note: Bedrock's Converse API doesn't support "adaptive" thinking type directly.
-      // The gateway maps adaptive → enabled for Converse API compatibility.
-      // Once the Converse API adds native adaptive support, this mapping can be removed.
+      // Send adaptive thinking to exercise the gateway's adaptive → enabled mapping.
+      // Bedrock's Converse API doesn't support "adaptive" natively, so the gateway
+      // maps it to "enabled" with a computed budgetTokens fallback.
       // See: https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
       const message = await client.messages.create({
         model: THINKING_MODEL,
         max_tokens: 16000,
-        thinking: { type: "enabled", budget_tokens: 5000 },
+        thinking: { type: "adaptive" } as unknown as Anthropic.Messages.ThinkingConfigParam,
         messages: [
           {
             role: "user",

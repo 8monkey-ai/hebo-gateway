@@ -84,7 +84,7 @@ export function toSseStream(
           controller.enqueue(
             TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
           );
-          const openAiError = options.formatError ? undefined : toOpenAIError(value.data);
+          const openAiError = toOpenAIError(value.data);
           const errorStatus = openAiError?.error.type === "invalid_request_error" ? 422 : 502;
           done(controller, errorStatus, value.data);
           reader!.cancel(value.data).catch(() => {});
@@ -95,11 +95,14 @@ export function toSseStream(
         heartbeat(controller);
       } catch (error) {
         try {
+          const errorPayload = options.formatError
+            ? options.formatError(error)
+            : toOpenAIError(error);
           controller.enqueue(
             TEXT_ENCODER.encode(
               serializeSseFrame({
                 event: "error",
-                data: toOpenAIError(error),
+                data: errorPayload,
               }),
             ),
           );

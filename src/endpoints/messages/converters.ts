@@ -20,7 +20,6 @@ import type {
 } from "ai";
 import { Output, jsonSchema, tool } from "ai";
 
-import type { SseErrorFrame } from "../../utils/stream";
 import {
   parseBase64,
   parseImageInput,
@@ -68,14 +67,15 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
   if (toolChoice) options.toolChoice = toolChoice;
 
-  // Thinking/reasoning — convert to the shared `reasoning` config format and put into
-  // providerOptions.unknown so the model middleware (claudeReasoningMiddleware) and
-  // provider middleware (bedrockClaudeReasoningMiddleware) handle the conversion to
-  // provider-specific options. No direct references to `anthropic` here.
+  // Build providerOptions.unknown in one pass — reasoning, cache control, metadata,
+  // and service tier all go into the same object for middleware consumption.
+  const unknown: Record<string, unknown> = {};
+
+  // Thinking/reasoning — convert to the shared `reasoning` config format so the
+  // model middleware (claudeReasoningMiddleware) and provider middleware
+  // (bedrockClaudeReasoningMiddleware) handle provider-specific conversion.
   const reasoning = convertThinkingToReasoning(inputs.thinking);
   if (reasoning) {
-    const providerOpts = options.providerOptions as Record<string, unknown>;
-    const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
     unknown["reasoning"] = reasoning.reasoning;
     if (reasoning.reasoning_effort) {
       unknown["reasoning_effort"] = reasoning.reasoning_effort;
@@ -83,33 +83,26 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
     if (reasoning.display) {
       unknown["thinking_display"] = reasoning.display;
     }
-    providerOpts["unknown"] = unknown;
   }
 
   // Per-block cache control is handled in convertToModelMessages.
   // Top-level automatic caching:
   if (inputs.cache_control) {
-    const cacheOpts = parsePromptCachingOptions(undefined, undefined, inputs.cache_control);
-    const providerOpts = options.providerOptions as Record<string, unknown>;
-    const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
-    Object.assign(unknown, cacheOpts);
-    providerOpts["unknown"] = unknown;
+    Object.assign(unknown, parsePromptCachingOptions(undefined, undefined, inputs.cache_control));
   }
 
   // Metadata passthrough
   if (inputs.metadata) {
-    const providerOpts = options.providerOptions as Record<string, unknown>;
-    const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
     unknown["metadata"] = inputs.metadata;
-    providerOpts["unknown"] = unknown;
   }
 
   // Service tier
   if (inputs.service_tier) {
-    const providerOpts = options.providerOptions as Record<string, unknown>;
-    const unknown = (providerOpts["unknown"] ?? {}) as Record<string, unknown>;
     unknown["service_tier"] = inputs.service_tier;
-    providerOpts["unknown"] = unknown;
+  }
+
+  if (Object.keys(unknown).length > 0) {
+    (options.providerOptions as Record<string, unknown>)["unknown"] = unknown;
   }
 
   // Structured output
@@ -524,7 +517,7 @@ export function toMessagesStream(
 
 export class MessagesTransformStream extends TransformStream<
   TextStreamPart<ToolSet>,
-  MessagesStreamEvent | SseErrorFrame
+  MessagesStreamEvent
 > {
   constructor(modelId: string) {
     let blockIndex = 0;
@@ -744,8 +737,14 @@ export class MessagesTransformStream extends TransformStream<
           }
 
           case "error": {
+            const message =
+              part.error instanceof Error ? part.error.message : String(part.error);
             controller.enqueue({
-              data: part.error instanceof Error ? part.error : new Error(String(part.error)),
+              event: "error",
+              data: {
+                type: "error",
+                error: { type: "api_error", message },
+              },
             });
             break;
           }
