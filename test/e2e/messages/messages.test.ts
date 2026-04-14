@@ -873,21 +873,22 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   test(
     "thinking budget below minimum: returns validation error",
     async () => {
-      const res = await fetch(`${baseUrl}/v1/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await client.messages.create({
           model: THINKING_MODEL,
           max_tokens: 16000,
           thinking: { type: "enabled", budget_tokens: 100 },
           messages: [{ role: "user", content: "Hello" }],
-        }),
-      });
-
-      expect(res.status).toBe(400);
-      const body = (await res.json()) as { type: string; error: { type: string; message: string } };
-      expect(body.type).toBe("error");
-      expect(body.error.type).toBe("invalid_request_error");
+        });
+        expect(true).toBe(false);
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as APIError).status).toBe(400);
+        expect((error as APIError).error).toMatchObject({
+          type: "error",
+          error: { type: "invalid_request_error" },
+        });
+      }
     },
     { timeout: 15_000 },
   );
@@ -1026,18 +1027,17 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
     async () => {
       // Create a body larger than 10MB (DEFAULT_MAX_BODY_SIZE)
       const bigString = "x".repeat(11 * 1024 * 1024);
-      const res = await fetch(`${baseUrl}/v1/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await client.messages.create({
           model: MODEL,
           max_tokens: 64,
           messages: [{ role: "user", content: bigString }],
-        }),
-      });
-
-      // Should get an error (could be 413 or 400 depending on implementation)
-      expect(res.status).toBeGreaterThanOrEqual(400);
+        });
+        expect(true).toBe(false);
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as APIError).status).toBeGreaterThanOrEqual(400);
+      }
     },
     { timeout: 30_000 },
   );
