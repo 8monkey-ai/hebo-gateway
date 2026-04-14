@@ -240,7 +240,7 @@ describe("Messages Converters", () => {
           content: [
             {
               type: "document",
-              source: { type: "text", text: "Document content here" },
+              source: { type: "text", data: "Document content here", media_type: "text/plain" },
             },
           ],
         },
@@ -1279,7 +1279,10 @@ describe("Messages Converters", () => {
       // Should have message_start + named error event
       const errorEvent = events.find((e) => e.event === "error");
       expect(errorEvent).toBeDefined();
-      expect((errorEvent as { data: { type: string; error: { type: string; message: string } } }).data.error.message).toBe("Something went wrong");
+      expect(
+        (errorEvent as { data: { type: string; error: { type: string; message: string } } }).data
+          .error.message,
+      ).toBe("Something went wrong");
     });
   });
 });

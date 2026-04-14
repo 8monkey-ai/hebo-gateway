@@ -41,7 +41,8 @@ const DocumentSourceUrlSchema = z.object({
 
 const DocumentSourceTextSchema = z.object({
   type: z.literal("text"),
-  text: z.string(),
+  data: z.string(),
+  media_type: z.literal("text/plain"),
 });
 
 const DocumentBlockSchema = z.object({

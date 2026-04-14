@@ -297,7 +297,7 @@ function fromUserContentBlock(
         return filePart;
       }
       // text source
-      return { type: "text", text: block.source.text };
+      return { type: "text", text: block.source.data };
     }
     default:
       return undefined;
@@ -312,20 +312,19 @@ function fromToolResultBlock(block: UserContentBlock & { type: "tool_result" }):
   } else if (typeof block.content === "string") {
     output = parseJsonOrText(block.content);
   } else {
-    const parts: Array<{ type: "text"; text: string } | ImagePart> = [];
+    const parts: Extract<ToolResultPart["output"], { type: "content" }>["value"] = [];
     for (const part of block.content) {
       if (part.type === "text") {
         parts.push({ type: "text", text: part.text });
       } else if (part.type === "image") {
         if (part.source.type === "base64") {
           parts.push({
-            type: "image",
-            image: parseBase64(part.source.data),
+            type: "image-data",
+            data: part.source.data,
             mediaType: part.source.media_type,
           });
         } else {
-          const { image, mediaType } = parseImageInput(part.source.url);
-          parts.push({ type: "image", image, mediaType });
+          parts.push({ type: "image-url", url: part.source.url });
         }
       }
     }

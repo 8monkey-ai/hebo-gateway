@@ -48,7 +48,7 @@ const toUserBlockParts = (block: UserContentBlock) => {
       if (block.source.type === "url") {
         return { type: "uri", modality: "file", uri: block.source.url };
       }
-      return { type: "text", content: block.source.text };
+      return { type: "text", content: block.source.data };
     default:
       return { type: (block as { type: string }).type, content: "[UNHANDLED_CONTENT_BLOCK]" };
   }

@@ -252,7 +252,7 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       const textBlock = message.content.find((b) => b.type === "text");
       expect(textBlock).toBeDefined();
       // Model may format as "12,231" or "12231"
-      expect((textBlock as { type: "text"; text: string }).text.replace(/,/g, "")).toContain(
+      expect((textBlock as { type: "text"; text: string }).text.replaceAll(",", "")).toContain(
         "12231",
       );
     },
@@ -400,7 +400,7 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       expect(events).toContain("content_block_delta");
       expect(events).toContain("content_block_stop");
       expect(events).toContain("message_delta");
-      expect(events[events.length - 1]).toBe("message_stop");
+      expect(events.at(-1)).toBe("message_stop");
 
       // Validate ordering: message_start first, message_stop last
       const startIdx = events.indexOf("message_start");
@@ -468,7 +468,7 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
         ?.text;
       expect(text).toBeDefined();
       // The model should incorporate the tool result
-      expect(text!.toLowerCase()).toMatch(/paris|22|sunny|celsius/);
+      expect(text.toLowerCase()).toMatch(/paris|22|sunny|celsius/);
     },
     { timeout: 90_000 },
   );
@@ -685,7 +685,7 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       const message = await client.messages.create({
         model: THINKING_MODEL,
         max_tokens: 16000,
-        thinking: { type: "adaptive" } as unknown as Anthropic.Messages.ThinkingConfigParam,
+        thinking: { type: "adaptive" },
         messages: [
           {
             role: "user",
@@ -703,7 +703,9 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
 
       const textBlock = message.content.find((b) => b.type === "text");
       expect(textBlock).toBeDefined();
-      expect((textBlock as Anthropic.Messages.TextBlock).text.replace(/,/g, "")).toContain("3901");
+      expect((textBlock as Anthropic.Messages.TextBlock).text.replaceAll(",", "")).toContain(
+        "3901",
+      );
     },
     { timeout: 120_000 },
   );
@@ -810,42 +812,37 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   test(
     "structured output: returns valid JSON matching schema",
     async () => {
-      // NOTE: output_config is not part of the official Anthropic SDK types, so we use fetch
-      const res = await fetch(`${baseUrl}/v1/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 256,
-          messages: [
-            {
-              role: "user",
-              content: "Give me a person with name 'Alice' and age 30.",
-            },
-          ],
-          output_config: {
-            format: {
-              type: "json_schema",
-              schema: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  age: { type: "number" },
-                },
-                required: ["name", "age"],
+      const message = await client.messages.create({
+        model: MODEL,
+        max_tokens: 256,
+        messages: [
+          {
+            role: "user",
+            content: "Give me a person with name 'Alice' and age 30.",
+          },
+        ],
+        output_config: {
+          format: {
+            type: "json_schema",
+            schema: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                age: { type: "number" },
               },
+              required: ["name", "age"],
             },
           },
-        }),
+        },
       });
 
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.type).toBe("message");
-      const textBlock = body.content?.find((b: { type: string }) => b.type === "text");
+      expect(message.type).toBe("message");
+      const textBlock = message.content.find(
+        (b) => b.type === "text",
+      ) as Anthropic.Messages.TextBlock;
       expect(textBlock).toBeDefined();
       // The text should be valid JSON
-      const parsed = JSON.parse(textBlock.text);
+      const parsed = JSON.parse(textBlock.text) as { name: unknown; age: unknown };
       expect(parsed.name).toBeDefined();
       expect(parsed.age).toBeDefined();
     },
@@ -988,38 +985,34 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   test(
     "document input text: accepts document with text source",
     async () => {
-      // Use raw fetch since document blocks aren't in the SDK types directly
-      const res = await fetch(`${baseUrl}/v1/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 64,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "document",
-                  source: {
-                    type: "text",
-                    text: "The capital of France is Paris.",
-                  },
-                },
-                {
+      const message = await client.messages.create({
+        model: MODEL,
+        max_tokens: 64,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
                   type: "text",
-                  text: "What is the capital mentioned in the document?",
+                  data: "The capital of France is Paris.",
+                  media_type: "text/plain",
                 },
-              ],
-            },
-          ],
-        }),
+              },
+              {
+                type: "text",
+                text: "What is the capital mentioned in the document?",
+              },
+            ],
+          },
+        ],
       });
 
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.type).toBe("message");
-      const textBlock = body.content?.find((b: { type: string }) => b.type === "text");
+      expect(message.type).toBe("message");
+      const textBlock = message.content.find(
+        (b) => b.type === "text",
+      ) as Anthropic.Messages.TextBlock;
       expect(textBlock?.text?.toLowerCase()).toContain("paris");
     },
     { timeout: 60_000 },
@@ -1127,23 +1120,22 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       expect(msg1.type).toBe("message");
 
       // Wait for cache to be committed on Bedrock side before reading
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 3000);
+      });
 
       // Second request — should read from cache (within 5min TTL)
       const msg2 = await client.messages.create(createParams);
       expect(msg2.type).toBe("message");
 
-      const usage1 = msg1.usage as Record<string, number>;
-      const usage2 = msg2.usage as Record<string, number>;
-
-      expect(usage1["input_tokens"]).toBeGreaterThan(0);
-      expect(usage2["input_tokens"]).toBeGreaterThan(0);
+      expect(msg1.usage.input_tokens).toBeGreaterThan(0);
+      expect(msg2.usage.input_tokens).toBeGreaterThan(0);
 
       // The first request should show cache creation tokens (writing the prompt to cache)
-      expect(usage1["cache_creation_input_tokens"]).toBeGreaterThan(0);
+      expect(msg1.usage.cache_creation_input_tokens).toBeGreaterThan(0);
 
       // The second request should show cache read tokens (reading from cache)
-      expect(usage2["cache_read_input_tokens"]).toBeGreaterThan(0);
+      expect(msg2.usage.cache_read_input_tokens).toBeGreaterThan(0);
     },
     { timeout: 120_000 },
   );
