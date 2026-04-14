@@ -161,7 +161,6 @@ export const getResponsesRequestAttributes = (
   if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.request.stream": body.stream,
-      "gen_ai.request.service_tier": body.service_tier,
       "gen_ai.request.frequency_penalty": body.frequency_penalty,
       "gen_ai.request.max_tokens": body.max_output_tokens,
       "gen_ai.request.presence_penalty": body.presence_penalty,
