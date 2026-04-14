@@ -64,11 +64,8 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   const toolSet = convertToToolSet(inputs.tools);
   if (toolSet) options.tools = toolSet;
 
-  const toolChoiceOpts = convertToToolChoiceOptions(inputs.tool_choice);
-  if (toolChoiceOpts) {
-    options.toolChoice = toolChoiceOpts.toolChoice;
-    if (toolChoiceOpts.activeTools) options.activeTools = toolChoiceOpts.activeTools;
-  }
+  const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
+  if (toolChoice) options.toolChoice = toolChoice;
 
   // Build providerOptions.unknown in one pass — reasoning, cache control, metadata,
   // and service tier all go into the same object for middleware consumption.
@@ -123,11 +120,6 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
   });
 }
 
-function mapDisplayToSummary(display?: "summarized" | "omitted"): ReasoningConfig["summary"] {
-  if (!display) return undefined;
-  return display === "summarized" ? "auto" : "none";
-}
-
 export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   | {
       reasoning: ReasoningConfig;
@@ -140,12 +132,15 @@ export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
     return { reasoning: { enabled: false } };
   }
 
+  const summary =
+    thinking.display === "summarized" ? "auto" : thinking.display === "omitted" ? "none" : undefined;
+
   if (thinking.type === "enabled") {
     return {
       reasoning: {
         enabled: true,
         max_tokens: thinking.budget_tokens,
-        summary: mapDisplayToSummary(thinking.display),
+        summary,
       },
       reasoning_effort: "high",
     };
@@ -156,7 +151,7 @@ export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
     reasoning: {
       enabled: true,
       effort: "medium",
-      summary: mapDisplayToSummary(thinking.display),
+      summary,
     },
     reasoning_effort: "medium",
   };
@@ -415,28 +410,18 @@ export function convertToToolSet(tools: MessagesTool[] | undefined): ToolSet | u
 
 export function convertToToolChoiceOptions(
   toolChoice: MessagesToolChoice | undefined,
-): { toolChoice?: TextCallOptions["toolChoice"]; activeTools?: string[] } | undefined {
+): TextCallOptions["toolChoice"] | undefined {
   if (!toolChoice) return undefined;
 
   switch (toolChoice.type) {
     case "auto":
-      return { toolChoice: "auto" };
+      return "auto";
     case "any":
-      return { toolChoice: "required" };
+      return "required";
     case "none":
-      return { toolChoice: "none" };
+      return "none";
     case "tool":
-      return { toolChoice: { type: "tool", toolName: toolChoice.name } };
-    // FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
-    // we temporarily map it to auto for now
-    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
-    case "validated":
-      return { toolChoice: "auto" };
-    case "allowed_tools":
-      return {
-        toolChoice: toolChoice.allowed_tools.mode,
-        activeTools: toolChoice.allowed_tools.tools.map((toolRef) => toolRef.name),
-      };
+      return { type: "tool", toolName: toolChoice.name };
     default:
       return undefined;
   }

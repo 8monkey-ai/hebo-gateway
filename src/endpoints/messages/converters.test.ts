@@ -527,57 +527,21 @@ describe("Messages Converters", () => {
     });
 
     test("should map auto to auto", () => {
-      expect(convertToToolChoiceOptions({ type: "auto" })).toEqual({ toolChoice: "auto" });
+      expect(convertToToolChoiceOptions({ type: "auto" })).toBe("auto");
     });
 
     test("should map any to required", () => {
-      expect(convertToToolChoiceOptions({ type: "any" })).toEqual({ toolChoice: "required" });
+      expect(convertToToolChoiceOptions({ type: "any" })).toBe("required");
     });
 
     test("should map none to none", () => {
-      expect(convertToToolChoiceOptions({ type: "none" })).toEqual({ toolChoice: "none" });
+      expect(convertToToolChoiceOptions({ type: "none" })).toBe("none");
     });
 
     test("should map tool to specific tool choice", () => {
       expect(convertToToolChoiceOptions({ type: "tool", name: "my_tool" })).toEqual({
-        toolChoice: { type: "tool", toolName: "my_tool" },
-      });
-    });
-
-    test("should map validated to auto", () => {
-      expect(convertToToolChoiceOptions({ type: "validated" })).toEqual({ toolChoice: "auto" });
-    });
-
-    test("should map allowed_tools with mode and tool names", () => {
-      expect(
-        convertToToolChoiceOptions({
-          type: "allowed_tools",
-          allowed_tools: {
-            mode: "auto",
-            tools: [
-              { type: "function", name: "tool_a" },
-              { type: "function", name: "tool_b" },
-            ],
-          },
-        }),
-      ).toEqual({
-        toolChoice: "auto",
-        activeTools: ["tool_a", "tool_b"],
-      });
-    });
-
-    test("should map allowed_tools with required mode", () => {
-      expect(
-        convertToToolChoiceOptions({
-          type: "allowed_tools",
-          allowed_tools: {
-            mode: "required",
-            tools: [{ type: "function", name: "only_tool" }],
-          },
-        }),
-      ).toEqual({
-        toolChoice: "required",
-        activeTools: ["only_tool"],
+        type: "tool",
+        toolName: "my_tool",
       });
     });
   });
