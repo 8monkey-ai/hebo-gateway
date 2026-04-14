@@ -74,9 +74,15 @@ export const getGenAiGeneralAttributes = (
 
   const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
 
+  const serviceTier =
+    ctx.body && "service_tier" in ctx.body
+      ? (ctx.body.service_tier as string | undefined)
+      : undefined;
+
   const attrs: Attributes = {
     "gen_ai.operation.name": ctx.operation,
     "gen_ai.request.model": requestModel,
+    "gen_ai.request.service_tier": serviceTier,
     "gen_ai.response.model": ctx.resolvedModelId,
     "gen_ai.provider.name": ctx.resolvedProviderId,
   };
