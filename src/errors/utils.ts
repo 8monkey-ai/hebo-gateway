@@ -52,8 +52,10 @@ export function getErrorMeta(error: unknown): ErrorMeta {
 }
 
 export function maybeMaskMessage(meta: ErrorMeta, requestId?: string): string {
+  // FUTURE: consider masking all upstream errors, also 4xx
   if (!(isProduction() && meta.status >= 500)) {
     return meta.message;
   }
+  // FUTURE: always attach requestId to errors (masked and unmasked)
   return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
 }
