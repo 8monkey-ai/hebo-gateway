@@ -73,19 +73,19 @@ export const getGenAiGeneralAttributes = (
   if (!signalLevel || signalLevel === "off") return {};
 
   const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
-
   const serviceTier =
-    ctx.body && "service_tier" in ctx.body
-      ? (ctx.body.service_tier as string | undefined)
-      : undefined;
+    typeof ctx.body?.service_tier === "string" ? ctx.body.service_tier : undefined;
 
   const attrs: Attributes = {
     "gen_ai.operation.name": ctx.operation,
     "gen_ai.request.model": requestModel,
-    "gen_ai.request.service_tier": serviceTier,
     "gen_ai.response.model": ctx.resolvedModelId,
     "gen_ai.provider.name": ctx.resolvedProviderId,
   };
+
+  if (signalLevel !== "required" && serviceTier !== undefined) {
+    attrs["gen_ai.request.service_tier"] = serviceTier;
+  }
 
   for (const [key, value] of Object.entries(ctx.otel)) {
     if (value !== undefined) attrs[key] = value;
