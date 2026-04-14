@@ -346,7 +346,7 @@ describe("Messages Converters", () => {
       expect(output.type).toBe("content");
       expect(output.value).toHaveLength(2);
       expect((output.value[0] as { type: string }).type).toBe("text");
-      expect((output.value[1] as { type: string }).type).toBe("image");
+      expect((output.value[1] as { type: string }).type).toBe("image-data");
     });
 
     test("should apply cache_control on tool_result block", () => {
@@ -878,14 +878,35 @@ describe("Messages Converters", () => {
         thinking: { type: "enabled", budget_tokens: 4096 },
       });
       const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
-      expect(unknown["reasoning"]).toEqual({
-        enabled: true,
-        max_tokens: 4096,
-      });
-      expect(unknown["reasoning_effort"]).toBe("high");
+      expect(unknown["reasoning"]).toEqual({ enabled: true, max_tokens: 4096 });
+      expect(unknown["reasoning_effort"]).toBeUndefined();
       // Should NOT have any anthropic-specific or top-level keys
       expect(result.providerOptions["anthropic"]).toBeUndefined();
       expect((result as Record<string, unknown>)["thinking"]).toBeUndefined();
+    });
+
+    test("should merge output_config.effort into reasoning when thinking enabled", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        thinking: { type: "enabled", budget_tokens: 4096 },
+        output_config: { effort: "high" },
+      });
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({ enabled: true, max_tokens: 4096, effort: "high" });
+      expect(unknown["reasoning_effort"]).toBe("high");
+    });
+
+    test("should map output_config.effort max to xhigh", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        thinking: { type: "adaptive" },
+        output_config: { effort: "max" },
+      });
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({ enabled: true, effort: "xhigh" });
+      expect(unknown["reasoning_effort"]).toBe("xhigh");
     });
 
     test("should convert thinking adaptive into providerOptions.unknown.reasoning", () => {
@@ -895,14 +916,34 @@ describe("Messages Converters", () => {
         thinking: { type: "adaptive" },
       });
       const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
-      expect(unknown["reasoning"]).toEqual({
-        enabled: true,
-        effort: "medium",
-      });
-      expect(unknown["reasoning_effort"]).toBe("medium");
+      expect(unknown["reasoning"]).toEqual({ enabled: true, effort: "high" });
+      expect(unknown["reasoning_effort"]).toBe("high");
       // Should NOT have any anthropic-specific or top-level keys
       expect(result.providerOptions["anthropic"]).toBeUndefined();
       expect((result as Record<string, unknown>)["thinking"]).toBeUndefined();
+    });
+
+    test("should merge output_config.effort into reasoning when thinking adaptive", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        thinking: { type: "adaptive" },
+        output_config: { effort: "medium" },
+      });
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({ enabled: true, effort: "medium" });
+      expect(unknown["reasoning_effort"]).toBe("medium");
+    });
+
+    test("should create reasoning from output_config.effort alone (no thinking)", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        output_config: { effort: "low" },
+      });
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({ enabled: true, effort: "low" });
+      expect(unknown["reasoning_effort"]).toBe("low");
     });
 
     test("should convert thinking disabled into providerOptions.unknown.reasoning", () => {
@@ -943,11 +984,8 @@ describe("Messages Converters", () => {
         thinking: { type: "adaptive", display: "omitted" },
       });
       const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
-      expect(unknown["reasoning"]).toEqual({
-        enabled: true,
-        effort: "medium",
-        summary: "none",
-      });
+      expect(unknown["reasoning"]).toEqual({ enabled: true, effort: "high", summary: "none" });
+      expect(unknown["reasoning_effort"]).toBe("high");
     });
 
     test("should convert output_config with json_schema", () => {

@@ -31,7 +31,7 @@ import {
   parseJsonOrText,
   type TextCallOptions,
 } from "../shared/converters";
-import type { ReasoningConfig, ReasoningEffort, ServiceTier, CacheControl } from "../shared/schema";
+import type { ReasoningConfig, ServiceTier, CacheControl } from "../shared/schema";
 import type {
   MessagesInputs,
   MessagesMessage,
@@ -75,12 +75,10 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   // Thinking/reasoning — convert to the shared `reasoning` config format so the
   // model middleware (claudeReasoningMiddleware) and provider middleware
   // (bedrockClaudeReasoningMiddleware) handle provider-specific conversion.
-  const reasoning = convertThinkingToReasoning(inputs.thinking);
-  if (reasoning) {
-    unknown["reasoning"] = reasoning.reasoning;
-    if (reasoning.reasoning_effort) {
-      unknown["reasoning_effort"] = reasoning.reasoning_effort;
-    }
+  const reasoningResult = convertThinkingToReasoning(inputs.thinking, inputs.output_config);
+  if (reasoningResult) {
+    unknown["reasoning"] = reasoningResult.reasoning;
+    unknown["reasoning_effort"] = reasoningResult.reasoning_effort;
   }
 
   // Per-block cache control is handled in convertToModelMessages.
@@ -119,13 +117,17 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
   });
 }
 
-export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
-  | {
-      reasoning: ReasoningConfig;
-      reasoning_effort?: ReasoningEffort;
-    }
-  | undefined {
-  if (!thinking) return undefined;
+export function convertThinkingToReasoning(
+  thinking?: MessagesThinkingConfig,
+  outputConfig?: MessagesOutputConfig,
+): { reasoning: ReasoningConfig; reasoning_effort?: ReasoningConfig["effort"] } | undefined {
+  // Map Anthropic "max" effort → internal "xhigh"
+  const effort: ReasoningConfig["effort"] =
+    outputConfig?.effort === "max" ? "xhigh" : outputConfig?.effort;
+
+  if (!thinking) {
+    return effort ? { reasoning: { enabled: true, effort }, reasoning_effort: effort } : undefined;
+  }
 
   if (thinking.type === "disabled") {
     return { reasoning: { enabled: false } };
@@ -139,24 +141,20 @@ export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
         : undefined;
 
   if (thinking.type === "enabled") {
-    return {
-      reasoning: {
-        enabled: true,
-        max_tokens: thinking.budget_tokens,
-        summary,
-      },
-      reasoning_effort: "high",
+    const reasoning: ReasoningConfig = {
+      enabled: true,
+      max_tokens: thinking.budget_tokens,
+      summary,
     };
+    if (effort) reasoning.effort = effort;
+    return { reasoning, reasoning_effort: effort };
   }
 
-  // adaptive
+  // adaptive — no fixed token budget; effort defaults to "high" per API spec
+  const adaptiveEffort = effort ?? "high";
   return {
-    reasoning: {
-      enabled: true,
-      effort: "medium",
-      summary,
-    },
-    reasoning_effort: "medium",
+    reasoning: { enabled: true, effort: adaptiveEffort, summary },
+    reasoning_effort: adaptiveEffort,
   };
 }
 
