@@ -318,6 +318,37 @@ describe("Messages Converters", () => {
       });
     });
 
+    test("should convert tool_result block with image content", () => {
+      const messages = convertToModelMessages([
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "tool_1",
+              content: [
+                { type: "text", text: "Here is the image:" },
+                {
+                  type: "image",
+                  source: { type: "base64", media_type: "image/png", data: "aGVsbG8=" },
+                },
+              ],
+            },
+          ],
+        },
+      ]);
+      const toolMsg = messages.find((m) => m.role === "tool");
+      const toolContent = (toolMsg as { content: unknown[] }).content;
+      const output = (toolContent[0] as Record<string, unknown>)["output"] as {
+        type: string;
+        value: unknown[];
+      };
+      expect(output.type).toBe("content");
+      expect(output.value).toHaveLength(2);
+      expect((output.value[0] as { type: string }).type).toBe("text");
+      expect((output.value[1] as { type: string }).type).toBe("image");
+    });
+
     test("should apply cache_control on tool_result block", () => {
       const messages = convertToModelMessages([
         {
@@ -474,6 +505,19 @@ describe("Messages Converters", () => {
       ]);
       expect(Object.keys(toolSet!)).toEqual(["tool_a", "tool_b"]);
     });
+
+    test("should pass strict option to tool", () => {
+      const toolSet = convertToToolSet([
+        {
+          name: "strict_tool",
+          description: "A strict tool",
+          input_schema: { type: "object", properties: { x: { type: "string" } } },
+          strict: true,
+        },
+      ]);
+      expect(toolSet).toBeDefined();
+      expect(Object.keys(toolSet!)).toEqual(["strict_tool"]);
+    });
   });
 
   describe("convertToToolChoiceOptions", () => {
@@ -499,6 +543,10 @@ describe("Messages Converters", () => {
         type: "tool",
         toolName: "my_tool",
       });
+    });
+
+    test("should map validated to auto", () => {
+      expect(convertToToolChoiceOptions({ type: "validated" })).toBe("auto");
     });
   });
 

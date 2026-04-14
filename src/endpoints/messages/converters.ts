@@ -74,6 +74,8 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   // Thinking/reasoning — convert to the shared `reasoning` config format so the
   // model middleware (claudeReasoningMiddleware) and provider middleware
   // (bedrockClaudeReasoningMiddleware) handle provider-specific conversion.
+  // FUTURE: Map display ("summarized"/"omitted") to reasoning.summary ("auto"/"concise"/"detailed")
+  // for cross-provider compatibility once the shared ReasoningConfig supports summary.
   const reasoning = convertThinkingToReasoning(inputs.thinking);
   if (reasoning) {
     unknown["reasoning"] = reasoning.reasoning;
@@ -304,10 +306,21 @@ function fromToolResultBlock(block: UserContentBlock & { type: "tool_result" }):
   } else if (typeof block.content === "string") {
     output = parseJsonOrText(block.content);
   } else {
-    const parts: Array<{ type: "text"; text: string }> = [];
+    const parts: Array<{ type: "text"; text: string } | ImagePart> = [];
     for (const part of block.content) {
       if (part.type === "text") {
         parts.push({ type: "text", text: part.text });
+      } else if (part.type === "image") {
+        if (part.source.type === "base64") {
+          parts.push({
+            type: "image",
+            image: parseBase64(part.source.data),
+            mediaType: part.source.media_type,
+          });
+        } else {
+          const { image, mediaType } = parseImageInput(part.source.url);
+          parts.push({ type: "image", image, mediaType });
+        }
       }
     }
     output = { type: "content", value: parts };
@@ -386,6 +399,7 @@ export function convertToToolSet(tools: MessagesTool[] | undefined): ToolSet | u
     toolSet[t.name] = tool({
       description: t.description,
       inputSchema: jsonSchema(t.input_schema),
+      strict: t.strict,
     });
   }
   return toolSet;
@@ -405,6 +419,11 @@ export function convertToToolChoiceOptions(
       return "none";
     case "tool":
       return { type: "tool", toolName: toolChoice.name };
+    // FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
+    // we temporarily map it to auto for now
+    // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+    case "validated":
+      return "auto";
     default:
       return undefined;
   }
@@ -522,8 +541,6 @@ export class MessagesTransformStream extends TransformStream<
   constructor(modelId: string) {
     let blockIndex = 0;
     let currentToolCallId: string | undefined;
-    let accumulatedToolInput = "";
-    let totalOutputTokens = 0;
 
     super({
       start(controller) {
@@ -630,8 +647,6 @@ export class MessagesTransformStream extends TransformStream<
           case "tool-input-start": {
             currentToolCallId = part.id;
 
-            accumulatedToolInput = "";
-
             controller.enqueue({
               event: "content_block_start",
               data: {
@@ -649,8 +664,6 @@ export class MessagesTransformStream extends TransformStream<
           }
 
           case "tool-input-delta": {
-            accumulatedToolInput += part.delta;
-
             controller.enqueue({
               event: "content_block_delta",
               data: {
@@ -671,7 +684,6 @@ export class MessagesTransformStream extends TransformStream<
               });
               blockIndex++;
               currentToolCallId = undefined;
-              accumulatedToolInput = "";
             } else {
               // Non-streaming tool call: emit start + stop
               controller.enqueue({
@@ -717,7 +729,7 @@ export class MessagesTransformStream extends TransformStream<
 
           case "finish": {
             const stopReason = mapStopReason(part.finishReason);
-            totalOutputTokens = part.totalUsage?.outputTokens ?? 0;
+            const totalOutputTokens = part.totalUsage?.outputTokens ?? 0;
             const totalInputTokens = part.totalUsage?.inputTokens ?? 0;
 
             controller.enqueue({

@@ -121,6 +121,7 @@ export type MessagesMessage = z.infer<typeof MessagesMessageSchema>;
 
 // --- System Block Schema ---
 
+// FUTURE: Support multimodal content in system messages (currently limited to text by AI SDK)
 const SystemBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
@@ -133,6 +134,8 @@ const MessagesToolSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   input_schema: z.any(),
+  // FUTURE: cache_control support on tools
+  strict: z.boolean().optional(),
 });
 export type MessagesTool = z.infer<typeof MessagesToolSchema>;
 
@@ -143,12 +146,17 @@ const MessagesToolChoiceToolSchema = z.object({
   type: z.literal("tool"),
   name: z.string(),
 });
+// FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
+// we temporarily map it to auto for now
+// https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
+const MessagesToolChoiceValidatedSchema = z.object({ type: z.literal("validated") });
 
 const MessagesToolChoiceSchema = z.discriminatedUnion("type", [
   MessagesToolChoiceAutoSchema,
   MessagesToolChoiceAnySchema,
   MessagesToolChoiceNoneSchema,
   MessagesToolChoiceToolSchema,
+  MessagesToolChoiceValidatedSchema,
 ]);
 export type MessagesToolChoice = z.infer<typeof MessagesToolChoiceSchema>;
 
@@ -179,6 +187,7 @@ export type MessagesThinkingConfig = z.infer<typeof MessagesThinkingConfigSchema
 // --- Output Config Schema ---
 
 const MessagesOutputConfigSchema = z.object({
+  // FUTURE: consider support for legacy json_object (if demand)
   type: z.literal("json_schema"),
   schema: z.any(),
   name: z.string().optional(),

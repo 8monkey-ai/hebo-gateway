@@ -56,6 +56,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
 
     const parsed = MessagesBodySchema.safeParse(ctx.body);
     if (!parsed.success) {
+      // FUTURE: consider adding body shape to metadata
       throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
     }
     ctx.body = parsed.data;
