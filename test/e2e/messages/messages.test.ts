@@ -824,15 +824,16 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
             },
           ],
           output_config: {
-            type: "json_schema",
-            name: "person",
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                age: { type: "number" },
+            format: {
+              type: "json_schema",
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  age: { type: "number" },
+                },
+                required: ["name", "age"],
               },
-              required: ["name", "age"],
             },
           },
         }),

@@ -111,7 +111,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
         headers: prepareForwardHeaders(ctx.request),
         abortSignal: ctx.request.signal,
         timeout: {
-          totalMs: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
+          totalMs: cfg.timeouts.normal,
         },
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
@@ -169,7 +169,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
       model: languageModelWithMiddleware,
       headers: prepareForwardHeaders(ctx.request),
       abortSignal: ctx.request.signal,
-      timeout: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
+      timeout: cfg.timeouts.normal,
       experimental_include: {
         requestBody: false,
         responseBody: false,

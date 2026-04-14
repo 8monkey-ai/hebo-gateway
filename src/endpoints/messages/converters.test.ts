@@ -755,7 +755,7 @@ describe("Messages Converters", () => {
       expect(result.content.filter((c) => c.type === "text")).toHaveLength(0);
     });
 
-    test("should resolve service_tier from providerMetadata", () => {
+    test("should resolve service_tier from providerMetadata and map to Anthropic values", () => {
       const result = toMessages(
         mockGenerateTextResult({
           finishReason: "stop",
@@ -764,12 +764,46 @@ describe("Messages Converters", () => {
           usage: mockUsage(),
           totalUsage: mockUsage(),
           providerMetadata: {
-            anthropic: { service_tier: "priority" },
+            anthropic: { service_tier: "default" },
           },
         }),
         "anthropic/claude-3",
       );
-      expect(result.service_tier).toBe("priority");
+      expect(result.service_tier).toBe("standard_only");
+    });
+
+    test("should map service_tier 'auto' to Anthropic 'auto'", () => {
+      const result = toMessages(
+        mockGenerateTextResult({
+          finishReason: "stop",
+          text: "Hi",
+          content: [{ type: "text", text: "Hi" }],
+          usage: mockUsage(),
+          totalUsage: mockUsage(),
+          providerMetadata: {
+            anthropic: { service_tier: "auto" },
+          },
+        }),
+        "anthropic/claude-3",
+      );
+      expect(result.service_tier).toBe("auto");
+    });
+
+    test("should return undefined service_tier for unmapped values", () => {
+      const result = toMessages(
+        mockGenerateTextResult({
+          finishReason: "stop",
+          text: "Hi",
+          content: [{ type: "text", text: "Hi" }],
+          usage: mockUsage(),
+          totalUsage: mockUsage(),
+          providerMetadata: {
+            openai: { service_tier: "scale" },
+          },
+        }),
+        "anthropic/claude-3",
+      );
+      expect(result.service_tier).toBeUndefined();
     });
   });
 
@@ -921,12 +955,24 @@ describe("Messages Converters", () => {
         messages: [{ role: "user", content: "Hi" }],
         max_tokens: 1000,
         output_config: {
-          type: "json_schema",
-          schema: { type: "object", properties: { name: { type: "string" } } },
-          name: "person",
+          format: {
+            type: "json_schema",
+            schema: { type: "object", properties: { name: { type: "string" } } },
+          },
         },
       });
       expect(result.output).toBeDefined();
+    });
+
+    test("should handle output_config without format", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        output_config: {
+          effort: "high",
+        },
+      });
+      expect(result.output).toBeUndefined();
     });
 
     test("should apply cache_control to providerOptions", () => {
@@ -949,14 +995,25 @@ describe("Messages Converters", () => {
       });
     });
 
-    test("should pass service_tier in providerOptions", () => {
+    test("should map service_tier 'auto' to internal 'auto'", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "Hi" }],
         max_tokens: 1000,
-        service_tier: "priority",
+        service_tier: "auto",
       });
       expect((result.providerOptions["unknown"] as Record<string, unknown>)["service_tier"]).toBe(
-        "priority",
+        "auto",
+      );
+    });
+
+    test("should map service_tier 'standard_only' to internal 'default'", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        service_tier: "standard_only",
+      });
+      expect((result.providerOptions["unknown"] as Record<string, unknown>)["service_tier"]).toBe(
+        "default",
       );
     });
   });

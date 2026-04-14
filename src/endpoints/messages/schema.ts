@@ -1,7 +1,7 @@
 import * as z from "zod";
 
 import type { SseFrame } from "../../utils/stream";
-import { CacheControlSchema, ServiceTierSchema, type ServiceTier } from "../shared/schema";
+import { CacheControlSchema } from "../shared/schema";
 
 // --- Content Block Schemas ---
 
@@ -178,14 +178,21 @@ const MessagesThinkingConfigSchema = z.discriminatedUnion("type", [
 ]);
 export type MessagesThinkingConfig = z.infer<typeof MessagesThinkingConfigSchema>;
 
+// --- Service Tier Schema (Anthropic-native values) ---
+
+const MessagesServiceTierSchema = z.enum(["auto", "standard_only"]);
+export type MessagesServiceTier = z.infer<typeof MessagesServiceTierSchema>;
+
 // --- Output Config Schema ---
 
-const MessagesOutputConfigSchema = z.object({
-  // FUTURE: consider support for legacy json_object (if demand)
+const MessagesOutputFormatSchema = z.object({
   type: z.literal("json_schema"),
   schema: z.any(),
-  name: z.string().optional(),
-  description: z.string().optional(),
+});
+
+const MessagesOutputConfigSchema = z.object({
+  format: MessagesOutputFormatSchema.optional(),
+  effort: z.enum(["low", "medium", "high", "max"]).optional(),
 });
 export type MessagesOutputConfig = z.infer<typeof MessagesOutputConfigSchema>;
 
@@ -204,7 +211,7 @@ export const MessagesBodySchema = z.object({
   tool_choice: MessagesToolChoiceSchema.optional(),
   thinking: MessagesThinkingConfigSchema.optional(),
   metadata: z.object({ user_id: z.string().optional() }).optional(),
-  service_tier: ServiceTierSchema.optional(),
+  service_tier: MessagesServiceTierSchema.optional(),
   cache_control: CacheControlSchema.optional(),
   output_config: MessagesOutputConfigSchema.optional(),
 });
@@ -237,7 +244,7 @@ export type Messages = {
   stop_reason: MessagesStopReason;
   stop_sequence: string | null;
   usage: MessagesUsage;
-  service_tier?: ServiceTier;
+  service_tier?: MessagesServiceTier;
 };
 
 // --- Stream Event Types ---

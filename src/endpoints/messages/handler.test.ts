@@ -484,88 +484,36 @@ describe("Messages Handler", () => {
     expect(data!.usage.output_tokens).toBe(20);
   });
 
-  test("should use flex timeout when service_tier is flex", async () => {
-    const mockModel = new MockLanguageModelV3({
-      doGenerate: () => {
-        return Promise.resolve({
-          finishReason: { unified: "stop", raw: "stop" },
-          usage: {
-            inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
-            outputTokens: { total: 5, text: 5, reasoning: 0 },
-          },
-          content: [{ type: "text", text: "ok" }],
-          providerMetadata: {},
-          warnings: [],
-        });
-      },
-      doStream: () =>
-        Promise.resolve({
-          stream: simulateReadableStream({
-            chunks: [
-              { type: "text-start", id: "1" },
-              { type: "text-delta", delta: "ok", id: "1" },
-              { type: "text-end", id: "1" },
-              {
-                type: "finish",
-                finishReason: { unified: "stop", raw: "stop" },
-                usage: {
-                  inputTokens: { total: 5, noCache: 5, cacheRead: 0, cacheWrite: 0 },
-                  outputTokens: { total: 5, text: 5, reasoning: 0 },
-                },
-              },
-            ],
-          }),
-        }),
+  test("should accept Anthropic service_tier values", async () => {
+    // "auto" should be accepted
+    const autoRequest = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      max_tokens: 100,
+      messages: [{ role: "user", content: "hi" }],
+      service_tier: "auto",
     });
+    const autoRes = await endpoint.handler(autoRequest);
+    expect(autoRes.status).toBe(200);
 
-    const flexEndpoint = messages({
-      providers: {
-        groq: new MockProviderV3({
-          languageModels: {
-            "openai/gpt-oss-20b": mockModel,
-          },
-        }),
-      },
-      models: defineModelCatalog({
-        "openai/gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text", "file"], output: ["text"] },
-          providers: ["groq"],
-        },
-      }),
-      timeouts: { normal: 60_000, flex: 300_000 },
+    // "standard_only" should be accepted
+    const standardRequest = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      max_tokens: 100,
+      messages: [{ role: "user", content: "hi" }],
+      service_tier: "standard_only",
     });
+    const standardRes = await endpoint.handler(standardRequest);
+    expect(standardRes.status).toBe(200);
 
-    // Non-streaming flex request should succeed
+    // "flex" (OpenAI value) should be rejected by schema validation
     const flexRequest = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
       max_tokens: 100,
       messages: [{ role: "user", content: "hi" }],
       service_tier: "flex",
     });
-    const flexRes = await flexEndpoint.handler(flexRequest);
-    expect(flexRes.status).toBe(200);
-
-    // Streaming flex request should succeed
-    const streamFlexRequest = postJson(baseUrl, {
-      model: "openai/gpt-oss-20b",
-      max_tokens: 100,
-      messages: [{ role: "user", content: "hi" }],
-      service_tier: "flex",
-      stream: true,
-    });
-    const streamFlexRes = await flexEndpoint.handler(streamFlexRequest);
-    expect(streamFlexRes.status).toBe(200);
-    expect(streamFlexRes.headers.get("Content-Type")).toBe("text/event-stream");
-
-    // Normal (non-flex) request should also succeed
-    const normalRequest = postJson(baseUrl, {
-      model: "openai/gpt-oss-20b",
-      max_tokens: 100,
-      messages: [{ role: "user", content: "hi" }],
-    });
-    const normalRes = await flexEndpoint.handler(normalRequest);
-    expect(normalRes.status).toBe(200);
+    const flexRes = await endpoint.handler(flexRequest);
+    expect(flexRes.status).toBe(400);
   });
 
   test("should include input_tokens in streaming message_delta usage", async () => {

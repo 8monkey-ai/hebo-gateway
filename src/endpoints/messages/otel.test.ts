@@ -34,7 +34,7 @@ describe("Messages OTEL", () => {
       stream: true,
       temperature: 0.7,
       top_p: 0.9,
-      service_tier: "priority",
+      service_tier: "auto",
     };
 
     const attrs = getMessagesRequestAttributes(body, "recommended");
@@ -43,7 +43,7 @@ describe("Messages OTEL", () => {
     expect(attrs["gen_ai.request.max_tokens"]).toBe(500);
     expect(attrs["gen_ai.request.temperature"]).toBe(0.7);
     expect(attrs["gen_ai.request.top_p"]).toBe(0.9);
-    expect(attrs["gen_ai.request.service_tier"]).toBe("priority");
+    expect(attrs["gen_ai.request.service_tier"]).toBe("auto");
   });
 
   test("should map request metadata into per-key attributes", () => {
@@ -343,14 +343,14 @@ describe("Messages OTEL", () => {
         cache_read_input_tokens: 4,
         cache_creation_input_tokens: 2,
       },
-      service_tier: "default",
+      service_tier: "standard_only",
     };
 
     const attrs = getMessagesResponseAttributes(response, "recommended", "stop");
 
     expect(attrs["gen_ai.response.id"]).toBe("msg_123");
     expect(attrs["gen_ai.response.finish_reasons"]).toEqual(["stop"]);
-    expect(attrs["gen_ai.response.service_tier"]).toBe("default");
+    expect(attrs["gen_ai.response.service_tier"]).toBe("standard_only");
     expect(attrs["gen_ai.usage.input_tokens"]).toBe(10);
     expect(attrs["gen_ai.usage.output_tokens"]).toBe(20);
     expect(attrs["gen_ai.usage.cache_read.input_tokens"]).toBe(4);

@@ -31,7 +31,7 @@ import {
   parseJsonOrText,
   type TextCallOptions,
 } from "../shared/converters";
-import type { ReasoningConfig, ReasoningEffort, CacheControl } from "../shared/schema";
+import type { ReasoningConfig, ReasoningEffort, ServiceTier, CacheControl } from "../shared/schema";
 import type {
   MessagesInputs,
   MessagesMessage,
@@ -46,6 +46,7 @@ import type {
   MessagesUsage,
   MessagesStream,
   MessagesStreamEvent,
+  type MessagesServiceTier,
 } from "./schema";
 
 // --- Request Flow ---
@@ -93,9 +94,9 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
     unknown["metadata"] = inputs.metadata;
   }
 
-  // Service tier
+  // Service tier — map Anthropic-native values to internal representation
   if (inputs.service_tier) {
-    unknown["service_tier"] = inputs.service_tier;
+    unknown["service_tier"] = toInternalServiceTier(inputs.service_tier);
   }
 
   if (Object.keys(unknown).length > 0) {
@@ -111,12 +112,10 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
 }
 
 function convertToOutput(config: MessagesOutputConfig): Output.Output | undefined {
-  if (config.type !== "json_schema") return undefined;
+  if (!config.format || config.format.type !== "json_schema") return undefined;
 
   return Output.object({
-    name: config.name,
-    description: config.description,
-    schema: jsonSchema(config.schema),
+    schema: jsonSchema(config.format.schema),
   });
 }
 
@@ -470,7 +469,7 @@ export function toMessages(
     stop_reason: mapStopReason(result.finishReason),
     stop_sequence: null,
     usage: mapUsage(result.totalUsage),
-    service_tier: resolveResponseServiceTier(result.providerMetadata),
+    service_tier: toMessagesServiceTier(resolveResponseServiceTier(result.providerMetadata)),
   };
 }
 
@@ -521,6 +520,20 @@ export function mapUsage(usage?: LanguageModelUsage): MessagesUsage {
   }
 
   return result;
+}
+
+// --- Service Tier Mapping ---
+
+function toInternalServiceTier(tier: MessagesServiceTier): ServiceTier {
+  if (tier === "standard_only") return "default";
+  return tier; // "auto" maps directly
+}
+
+function toMessagesServiceTier(tier?: ServiceTier): MessagesServiceTier | undefined {
+  if (!tier) return undefined;
+  if (tier === "default") return "standard_only";
+  if (tier === "auto") return "auto";
+  return undefined; // flex, scale, priority don't have Anthropic equivalents
 }
 
 // --- Streaming ---
