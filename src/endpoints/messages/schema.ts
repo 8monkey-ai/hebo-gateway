@@ -1,7 +1,8 @@
 import * as z from "zod";
 
 import type { SseFrame } from "../../utils/stream";
-import { CacheControlSchema } from "../shared/schema";
+import { CacheControlSchema, ProviderMetadataSchema } from "../shared/schema";
+import type { ProviderMetadata } from "../shared/schema";
 
 // --- Content Block Schemas ---
 
@@ -63,8 +64,10 @@ const ToolUseBlockSchema = z.object({
   id: z.string(),
   name: z.string(),
   input: z.any(),
-  // FUTURE: pass caller through to provider (no AI SDK FilePart equivalent yet)
+  // FUTURE: pass caller through to provider (no AI SDK equivalent yet)
   caller: z.string().optional(),
+  // Extension origin: Gemini — carries thought_signature and other provider metadata for multi-turn
+  extra_content: ProviderMetadataSchema.optional().meta({ extension: true }),
 });
 
 const ToolResultContentBlockSchema = z.union([
@@ -235,7 +238,7 @@ export type MessagesInputs = Omit<MessagesBody, "model" | "stream">;
 
 export type MessagesResponseContentBlock =
   | { type: "text"; text: string }
-  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "tool_use"; id: string; name: string; input: unknown; extra_content?: ProviderMetadata }
   | { type: "thinking"; thinking: string; signature: string }
   | { type: "redacted_thinking"; data: string };
 
@@ -274,7 +277,13 @@ export type ContentBlockStartEvent = SseFrame<
     content_block:
       | { type: "text"; text: string }
       | { type: "thinking"; thinking: string }
-      | { type: "tool_use"; id: string; name: string; input: Record<string, never> };
+      | {
+          type: "tool_use";
+          id: string;
+          name: string;
+          input: Record<string, never>;
+          extra_content?: ProviderMetadata;
+        };
   },
   "content_block_start"
 >;

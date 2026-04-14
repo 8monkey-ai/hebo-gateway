@@ -47,6 +47,7 @@ import type {
   MessagesStream,
   MessagesStreamEvent,
   MessagesServiceTier,
+  ContentBlockStartEvent,
 } from "./schema";
 
 // --- Request Flow ---
@@ -186,13 +187,23 @@ export function convertToModelMessages(
     }
   }
 
+  // Tool call id → name map built incrementally; assistant messages always
+  // precede their corresponding tool results in a valid conversation.
+  const toolNameMap = new Map<string, string>();
+
   for (const message of messages) {
     if (message.role === "user") {
-      const userMessages = fromUserMessage(message);
+      const userMessages = fromUserMessage(message, toolNameMap);
       for (let i = 0; i < userMessages.length; i++) {
         modelMessages.push(userMessages[i]!);
       }
     } else if (message.role === "assistant") {
+      if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          // oxlint-disable-next-line max-depth
+          if (block.type === "tool_use") toolNameMap.set(block.id, block.name);
+        }
+      }
       modelMessages.push(fromAssistantMessage(message));
     }
   }
@@ -202,6 +213,7 @@ export function convertToModelMessages(
 
 function fromUserMessage(
   message: MessagesMessage & { role: "user" },
+  toolNameMap: Map<string, string>,
 ): Array<UserModelMessage | ToolModelMessage> {
   const result: Array<UserModelMessage | ToolModelMessage> = [];
 
@@ -215,7 +227,7 @@ function fromUserMessage(
 
   for (const block of message.content) {
     if (block.type === "tool_result") {
-      toolResultParts.push(fromToolResultBlock(block));
+      toolResultParts.push(fromToolResultBlock(block, toolNameMap));
     } else {
       const part = fromUserContentBlock(block);
       if (part) userParts.push(part);
@@ -306,7 +318,10 @@ function fromUserContentBlock(
   }
 }
 
-function fromToolResultBlock(block: UserContentBlock & { type: "tool_result" }): ToolResultPart {
+function fromToolResultBlock(
+  block: UserContentBlock & { type: "tool_result" },
+  toolNameMap: Map<string, string>,
+): ToolResultPart {
   let output: ToolResultPart["output"];
 
   if (block.content === undefined) {
@@ -336,7 +351,7 @@ function fromToolResultBlock(block: UserContentBlock & { type: "tool_result" }):
   const result: ToolResultPart = {
     type: "tool-result",
     toolCallId: block.tool_use_id,
-    toolName: "",
+    toolName: toolNameMap.get(block.tool_use_id) ?? "",
     output,
   };
 
@@ -361,14 +376,17 @@ function fromAssistantMessage(
       case "text":
         parts.push({ type: "text", text: block.text });
         break;
-      case "tool_use":
-        parts.push({
+      case "tool_use": {
+        const toolCallPart: ToolCallPart = {
           type: "tool-call",
           toolCallId: block.id,
           toolName: block.name,
           input: block.input,
-        } satisfies ToolCallPart);
+        };
+        if (block.extra_content) toolCallPart.providerOptions = block.extra_content;
+        parts.push(toolCallPart);
         break;
+      }
       case "thinking":
         parts.push({
           type: "reasoning",
@@ -457,12 +475,14 @@ export function toMessages(
   const toolCalls = result.toolCalls;
   for (let i = 0; i < toolCalls.length; i++) {
     const tc = toolCalls[i]!;
-    content.push({
+    const toolUseBlock: Extract<MessagesResponseContentBlock, { type: "tool_use" }> = {
       type: "tool_use",
       id: tc.toolCallId,
       name: normalizeToolName(tc.toolName),
       input: stripEmptyKeys(tc.input as Record<string, unknown>) ?? {},
-    });
+    };
+    if (tc.providerMetadata) toolUseBlock.extra_content = tc.providerMetadata;
+    content.push(toolUseBlock);
   }
 
   return {
@@ -702,17 +722,22 @@ export class MessagesTransformStream extends TransformStream<
               currentToolCallId = undefined;
             } else {
               // Non-streaming tool call: emit start + stop
+              const contentBlock: Extract<
+                ContentBlockStartEvent["data"]["content_block"],
+                { type: "tool_use" }
+              > = {
+                type: "tool_use",
+                id: part.toolCallId,
+                name: normalizeToolName(part.toolName),
+                input: {} as Record<string, never>,
+              };
+              if (part.providerMetadata) contentBlock.extra_content = part.providerMetadata;
               controller.enqueue({
                 event: "content_block_start",
                 data: {
                   type: "content_block_start",
                   index: blockIndex,
-                  content_block: {
-                    type: "tool_use",
-                    id: part.toolCallId,
-                    name: normalizeToolName(part.toolName),
-                    input: {} as Record<string, never>,
-                  },
+                  content_block: contentBlock,
                 },
               });
               const inputStr =
