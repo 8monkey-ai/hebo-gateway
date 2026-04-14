@@ -295,7 +295,11 @@ function fromUserContentBlock(
         return filePart;
       }
       // text source
-      return { type: "text", text: block.source.data };
+      const textPart: TextPart = { type: "text", text: block.source.data };
+      if (block.cache_control) {
+        textPart.providerOptions = { unknown: { cache_control: block.cache_control } };
+      }
+      return textPart;
     }
     default:
       return undefined;
