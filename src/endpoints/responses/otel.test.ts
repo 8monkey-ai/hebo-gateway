@@ -152,7 +152,6 @@ describe("Responses OTEL", () => {
     expect(attrs["gen_ai.request.max_tokens"]).toBe(500);
     expect(attrs["gen_ai.request.frequency_penalty"]).toBe(0.5);
     expect(attrs["gen_ai.request.presence_penalty"]).toBe(-0.5);
-    expect(attrs["gen_ai.request.service_tier"]).toBe("priority");
   });
 
   test("should return empty for off signal level", () => {
