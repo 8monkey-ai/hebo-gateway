@@ -527,26 +527,58 @@ describe("Messages Converters", () => {
     });
 
     test("should map auto to auto", () => {
-      expect(convertToToolChoiceOptions({ type: "auto" })).toBe("auto");
+      expect(convertToToolChoiceOptions({ type: "auto" })).toEqual({ toolChoice: "auto" });
     });
 
     test("should map any to required", () => {
-      expect(convertToToolChoiceOptions({ type: "any" })).toBe("required");
+      expect(convertToToolChoiceOptions({ type: "any" })).toEqual({ toolChoice: "required" });
     });
 
     test("should map none to none", () => {
-      expect(convertToToolChoiceOptions({ type: "none" })).toBe("none");
+      expect(convertToToolChoiceOptions({ type: "none" })).toEqual({ toolChoice: "none" });
     });
 
     test("should map tool to specific tool choice", () => {
       expect(convertToToolChoiceOptions({ type: "tool", name: "my_tool" })).toEqual({
-        type: "tool",
-        toolName: "my_tool",
+        toolChoice: { type: "tool", toolName: "my_tool" },
       });
     });
 
     test("should map validated to auto", () => {
-      expect(convertToToolChoiceOptions({ type: "validated" })).toBe("auto");
+      expect(convertToToolChoiceOptions({ type: "validated" })).toEqual({ toolChoice: "auto" });
+    });
+
+    test("should map allowed_tools with mode and tool names", () => {
+      expect(
+        convertToToolChoiceOptions({
+          type: "allowed_tools",
+          allowed_tools: {
+            mode: "auto",
+            tools: [
+              { type: "function", name: "tool_a" },
+              { type: "function", name: "tool_b" },
+            ],
+          },
+        }),
+      ).toEqual({
+        toolChoice: "auto",
+        activeTools: ["tool_a", "tool_b"],
+      });
+    });
+
+    test("should map allowed_tools with required mode", () => {
+      expect(
+        convertToToolChoiceOptions({
+          type: "allowed_tools",
+          allowed_tools: {
+            mode: "required",
+            tools: [{ type: "function", name: "only_tool" }],
+          },
+        }),
+      ).toEqual({
+        toolChoice: "required",
+        activeTools: ["only_tool"],
+      });
     });
   });
 
@@ -898,10 +930,26 @@ describe("Messages Converters", () => {
       expect(unknown["reasoning"]).toEqual({
         enabled: true,
         max_tokens: 4096,
+        summary: "auto",
       });
-      expect(unknown["thinking_display"]).toBe("summarized");
+      // display is mapped to reasoning.summary, not a separate key
+      expect(unknown["thinking_display"]).toBeUndefined();
       // Should NOT have any anthropic-specific keys
       expect(result.providerOptions["anthropic"]).toBeUndefined();
+    });
+
+    test("should map display omitted to reasoning.summary none", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        thinking: { type: "adaptive", display: "omitted" },
+      });
+      const unknown = result.providerOptions["unknown"] as Record<string, unknown>;
+      expect(unknown["reasoning"]).toEqual({
+        enabled: true,
+        effort: "medium",
+        summary: "none",
+      });
     });
 
     test("should convert output_config with json_schema", () => {

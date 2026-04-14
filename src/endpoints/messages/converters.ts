@@ -64,8 +64,11 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   const toolSet = convertToToolSet(inputs.tools);
   if (toolSet) options.tools = toolSet;
 
-  const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
-  if (toolChoice) options.toolChoice = toolChoice;
+  const toolChoiceOpts = convertToToolChoiceOptions(inputs.tool_choice);
+  if (toolChoiceOpts) {
+    options.toolChoice = toolChoiceOpts.toolChoice;
+    if (toolChoiceOpts.activeTools) options.activeTools = toolChoiceOpts.activeTools;
+  }
 
   // Build providerOptions.unknown in one pass — reasoning, cache control, metadata,
   // and service tier all go into the same object for middleware consumption.
@@ -74,16 +77,11 @@ export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOption
   // Thinking/reasoning — convert to the shared `reasoning` config format so the
   // model middleware (claudeReasoningMiddleware) and provider middleware
   // (bedrockClaudeReasoningMiddleware) handle provider-specific conversion.
-  // FUTURE: Map display ("summarized"/"omitted") to reasoning.summary ("auto"/"concise"/"detailed")
-  // for cross-provider compatibility once the shared ReasoningConfig supports summary.
   const reasoning = convertThinkingToReasoning(inputs.thinking);
   if (reasoning) {
     unknown["reasoning"] = reasoning.reasoning;
     if (reasoning.reasoning_effort) {
       unknown["reasoning_effort"] = reasoning.reasoning_effort;
-    }
-    if (reasoning.display) {
-      unknown["thinking_display"] = reasoning.display;
     }
   }
 
@@ -125,11 +123,15 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
   });
 }
 
+function mapDisplayToSummary(display?: "summarized" | "omitted"): ReasoningConfig["summary"] {
+  if (!display) return undefined;
+  return display === "summarized" ? "auto" : "none";
+}
+
 export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   | {
       reasoning: ReasoningConfig;
       reasoning_effort?: ReasoningEffort;
-      display?: string;
     }
   | undefined {
   if (!thinking) return undefined;
@@ -140,17 +142,23 @@ export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
 
   if (thinking.type === "enabled") {
     return {
-      reasoning: { enabled: true, max_tokens: thinking.budget_tokens },
+      reasoning: {
+        enabled: true,
+        max_tokens: thinking.budget_tokens,
+        summary: mapDisplayToSummary(thinking.display),
+      },
       reasoning_effort: "high",
-      display: thinking.display,
     };
   }
 
   // adaptive
   return {
-    reasoning: { enabled: true, effort: "medium" },
+    reasoning: {
+      enabled: true,
+      effort: "medium",
+      summary: mapDisplayToSummary(thinking.display),
+    },
     reasoning_effort: "medium",
-    display: thinking.display,
   };
 }
 
@@ -407,23 +415,28 @@ export function convertToToolSet(tools: MessagesTool[] | undefined): ToolSet | u
 
 export function convertToToolChoiceOptions(
   toolChoice: MessagesToolChoice | undefined,
-): TextCallOptions["toolChoice"] {
+): { toolChoice?: TextCallOptions["toolChoice"]; activeTools?: string[] } | undefined {
   if (!toolChoice) return undefined;
 
   switch (toolChoice.type) {
     case "auto":
-      return "auto";
+      return { toolChoice: "auto" };
     case "any":
-      return "required";
+      return { toolChoice: "required" };
     case "none":
-      return "none";
+      return { toolChoice: "none" };
     case "tool":
-      return { type: "tool", toolName: toolChoice.name };
+      return { toolChoice: { type: "tool", toolName: toolChoice.name } };
     // FUTURE: this is right now google specific, which is not supported by AI SDK, until then,
     // we temporarily map it to auto for now
     // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
     case "validated":
-      return "auto";
+      return { toolChoice: "auto" };
+    case "allowed_tools":
+      return {
+        toolChoice: toolChoice.allowed_tools.mode,
+        activeTools: toolChoice.allowed_tools.tools.map((toolRef) => toolRef.name),
+      };
     default:
       return undefined;
   }

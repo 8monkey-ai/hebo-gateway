@@ -150,6 +150,13 @@ const MessagesToolChoiceToolSchema = z.object({
 // we temporarily map it to auto for now
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview
 const MessagesToolChoiceValidatedSchema = z.object({ type: z.literal("validated") });
+const MessagesToolChoiceAllowedToolsSchema = z.object({
+  type: z.literal("allowed_tools"),
+  allowed_tools: z.object({
+    mode: z.enum(["none", "auto", "required"]),
+    tools: z.array(z.object({ type: z.literal("function"), name: z.string() })).nonempty(),
+  }),
+});
 
 const MessagesToolChoiceSchema = z.discriminatedUnion("type", [
   MessagesToolChoiceAutoSchema,
@@ -157,6 +164,7 @@ const MessagesToolChoiceSchema = z.discriminatedUnion("type", [
   MessagesToolChoiceNoneSchema,
   MessagesToolChoiceToolSchema,
   MessagesToolChoiceValidatedSchema,
+  MessagesToolChoiceAllowedToolsSchema,
 ]);
 export type MessagesToolChoice = z.infer<typeof MessagesToolChoiceSchema>;
 

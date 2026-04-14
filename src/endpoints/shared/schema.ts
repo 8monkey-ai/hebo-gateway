@@ -25,11 +25,15 @@ export type ProviderMetadata = SharedV3ProviderMetadata;
 export const ReasoningEffortSchema = z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]);
 export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>;
 
+export const ReasoningSummarySchema = z.enum(["auto", "concise", "detailed", "none"]);
+export type ReasoningSummary = z.infer<typeof ReasoningSummarySchema>;
+
 export const ReasoningConfigSchema = z.object({
   enabled: z.optional(z.boolean()),
   effort: z.optional(ReasoningEffortSchema),
   max_tokens: z.optional(z.number()),
   exclude: z.optional(z.boolean()),
+  summary: z.optional(ReasoningSummarySchema),
 });
 export type ReasoningConfig = z.infer<typeof ReasoningConfigSchema>;
 

@@ -83,9 +83,9 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     const clampedMaxTokens =
       reasoning.max_tokens && Math.min(reasoning.max_tokens, getMaxOutputTokens(modelId));
 
-    // Forward thinking display preference (from Messages endpoint thinking config)
-    const thinkingDisplay = unknown["thinking_display"] as string | undefined;
-    delete unknown["thinking_display"];
+    // Map reasoning.summary to Anthropic thinking.display
+    const summary = reasoning.summary as string | undefined;
+    const thinkingDisplay = summary === "none" ? "omitted" : summary ? "summarized" : undefined;
 
     if (!reasoning.enabled) {
       target.thinking = { type: "disabled" };
