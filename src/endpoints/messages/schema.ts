@@ -52,6 +52,9 @@ const DocumentBlockSchema = z.object({
     DocumentSourceUrlSchema,
     DocumentSourceTextSchema,
   ]),
+  // FUTURE: pass title/context through to provider (no AI SDK FilePart equivalent yet)
+  title: z.string().optional(),
+  context: z.string().optional(),
   cache_control: CacheControlSchema.optional(),
 });
 
@@ -60,6 +63,8 @@ const ToolUseBlockSchema = z.object({
   id: z.string(),
   name: z.string(),
   input: z.any(),
+  // FUTURE: pass caller through to provider (no AI SDK FilePart equivalent yet)
+  caller: z.string().optional(),
 });
 
 const ToolResultContentBlockSchema = z.union([
@@ -140,12 +145,19 @@ const MessagesToolSchema = z.object({
 });
 export type MessagesTool = z.infer<typeof MessagesToolSchema>;
 
-const MessagesToolChoiceAutoSchema = z.object({ type: z.literal("auto") });
-const MessagesToolChoiceAnySchema = z.object({ type: z.literal("any") });
+const MessagesToolChoiceAutoSchema = z.object({
+  type: z.literal("auto"),
+  disable_parallel_tool_use: z.boolean().optional(),
+});
+const MessagesToolChoiceAnySchema = z.object({
+  type: z.literal("any"),
+  disable_parallel_tool_use: z.boolean().optional(),
+});
 const MessagesToolChoiceNoneSchema = z.object({ type: z.literal("none") });
 const MessagesToolChoiceToolSchema = z.object({
   type: z.literal("tool"),
   name: z.string(),
+  disable_parallel_tool_use: z.boolean().optional(),
 });
 const MessagesToolChoiceSchema = z.discriminatedUnion("type", [
   MessagesToolChoiceAutoSchema,

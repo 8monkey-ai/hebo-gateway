@@ -12,7 +12,7 @@ import * as z from "zod";
 // Note: The 16-key limit is not currently validated.
 export const CacheControlSchema = z.object({
   type: z.literal("ephemeral"),
-  ttl: z.string().optional(),
+  ttl: z.enum(["5m", "1h", "24h"]).optional(),
 });
 export type CacheControl = z.infer<typeof CacheControlSchema>;
 
