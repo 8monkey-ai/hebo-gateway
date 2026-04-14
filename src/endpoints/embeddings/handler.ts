@@ -12,7 +12,6 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
-import { parseRequestBody } from "../../utils/body";
 import type {
   AfterHookContext,
   BeforeHookContext,
@@ -23,6 +22,7 @@ import type {
   ResolveModelHookContext,
   GatewayConfigParsed,
 } from "../../types";
+import { parseRequestBody } from "../../utils/body";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { getEmbeddingsRequestAttributes, getEmbeddingsResponseAttributes } from "./otel";
@@ -126,7 +126,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
     return ctx.result;
   };
 

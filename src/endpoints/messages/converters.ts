@@ -46,7 +46,7 @@ import type {
   MessagesUsage,
   MessagesStream,
   MessagesStreamEvent,
-  type MessagesServiceTier,
+  MessagesServiceTier,
 } from "./schema";
 
 // --- Request Flow ---
@@ -132,7 +132,11 @@ export function convertThinkingToReasoning(thinking?: MessagesThinkingConfig):
   }
 
   const summary =
-    thinking.display === "summarized" ? "auto" : thinking.display === "omitted" ? "none" : undefined;
+    thinking.display === "summarized"
+      ? "auto"
+      : thinking.display === "omitted"
+        ? "none"
+        : undefined;
 
   if (thinking.type === "enabled") {
     return {
@@ -760,8 +764,7 @@ export class MessagesTransformStream extends TransformStream<
           }
 
           case "error": {
-            const message =
-              part.error instanceof Error ? part.error.message : String(part.error);
+            const message = part.error instanceof Error ? part.error.message : String(part.error);
             controller.enqueue({
               event: "error",
               data: {
