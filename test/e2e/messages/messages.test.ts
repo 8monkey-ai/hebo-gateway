@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 import { defineModelCatalog, gateway } from "../../../src";
 import { claudeHaiku45, claudeSonnet4 } from "../../../src/models/anthropic";
@@ -13,9 +14,10 @@ import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
 
 const BEDROCK_ACCESS_KEY_ID = process.env["BEDROCK_ACCESS_KEY_ID"];
 const BEDROCK_SECRET_ACCESS_KEY = process.env["BEDROCK_SECRET_ACCESS_KEY"];
-const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY);
+// hasCredentials is true when explicit env vars are set OR when ~/.aws credentials may be present
+const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
 
-const REGION = process.env["BEDROCK_REGION"] ?? "us-east-1";
+const REGION = process.env["BEDROCK_REGION"] ?? "us-east-2";
 const MODEL = "anthropic/claude-haiku-4.5";
 const THINKING_MODEL = "anthropic/claude-sonnet-4";
 
@@ -64,8 +66,14 @@ const startServer = () => {
 
   const bedrock = createAmazonBedrock({
     region: REGION,
-    accessKeyId: BEDROCK_ACCESS_KEY_ID!,
-    secretAccessKey: BEDROCK_SECRET_ACCESS_KEY!,
+    credentialProvider:
+      BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY
+        ? () =>
+            Promise.resolve({
+              accessKeyId: BEDROCK_ACCESS_KEY_ID,
+              secretAccessKey: BEDROCK_SECRET_ACCESS_KEY,
+            })
+        : fromNodeProviderChain(),
   });
 
   const gw = gateway({
@@ -81,6 +89,7 @@ const startServer = () => {
 
   server = Bun.serve({
     port: 0, // random available port
+    maxRequestBodySize: 10 * 1024 * 1024, // 10 MB — matches DEFAULT_MAX_BODY_SIZE
     fetch: (request) => gw.handler(request),
   });
 
