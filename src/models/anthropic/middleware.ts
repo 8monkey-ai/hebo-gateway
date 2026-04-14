@@ -83,10 +83,6 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     const clampedMaxTokens =
       reasoning.max_tokens && Math.min(reasoning.max_tokens, getMaxOutputTokens(modelId));
 
-    // Map reasoning.summary to Anthropic thinking.display
-    const summary = reasoning.summary as string | undefined;
-    const thinkingDisplay = summary === "none" ? "omitted" : summary ? "summarized" : undefined;
-
     if (!reasoning.enabled) {
       target.thinking = { type: "disabled" };
     } else if (reasoning.effort) {
@@ -124,7 +120,9 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       target.thinking = { type: "enabled" };
     }
 
-    // Apply display preference to the resolved thinking config
+    // Map reasoning.summary to Anthropic thinking.display
+    const thinkingDisplay =
+      reasoning.summary === "none" ? "omitted" : reasoning.summary ? "summarized" : undefined;
     if (thinkingDisplay && target.thinking && target.thinking.type !== "disabled") {
       (target.thinking as Record<string, unknown>)["display"] = thinkingDisplay;
     }
