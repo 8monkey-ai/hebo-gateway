@@ -14,6 +14,7 @@ import {
   type ProviderMetadata as ChatCompletionsProviderMetadata,
   ContentPartAudioSchema as ChatCompletionsContentPartAudioSchema,
   type ContentPartAudio as ChatCompletionsContentPartAudio,
+  TraceSchema,
 } from "../shared/schema";
 
 export {
@@ -248,6 +249,7 @@ export type ChatCompletionsInputs = z.infer<typeof ChatCompletionsInputsSchema>;
 export const ChatCompletionsBodySchema = z.looseObject({
   model: z.string(),
   stream: z.boolean().optional(),
+  trace: TraceSchema,
   ...ChatCompletionsInputsSchema.shape,
 });
 export type ChatCompletionsBody = z.infer<typeof ChatCompletionsBodySchema>;

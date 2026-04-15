@@ -82,19 +82,19 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     logger.debug(`[embeddings] using ${embeddingModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const genAiSignalLevel = cfg.telemetry?.signals?.gen_ai;
-    const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
+    ctx.trace ??= ctx.body.trace ?? cfg.telemetry?.signals?.gen_ai;
+    const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, ctx.trace);
     setSpanAttributes(genAiGeneralAttrs);
 
     // Convert inputs to AI SDK call options.
-    const { model: _model, ...inputs } = ctx.body;
+    const { model: _model, trace: _trace, ...inputs } = ctx.body;
     const embedOptions = convertToEmbedCallOptions(inputs as EmbeddingsInputs);
     logger.trace(
       { requestId: ctx.requestId, options: embedOptions },
       "[embeddings] AI SDK options",
     );
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getEmbeddingsRequestAttributes(ctx.body, genAiSignalLevel));
+    setSpanAttributes(getEmbeddingsRequestAttributes(ctx.body, ctx.trace));
 
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
@@ -117,8 +117,8 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     ctx.result = toEmbeddings(result, ctx.modelId);
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[chat] Embeddings");
     addSpanEvent("hebo.result.transformed");
-    const genAiResponseAttrs = getEmbeddingsResponseAttributes(ctx.result, genAiSignalLevel);
-    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    const genAiResponseAttrs = getEmbeddingsResponseAttributes(ctx.result, ctx.trace);
+    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
     setSpanAttributes(genAiResponseAttrs);
 
     if (hooks?.after) {
@@ -126,7 +126,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
     return ctx.result;
   };
 

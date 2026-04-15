@@ -87,15 +87,15 @@ export const responses = (config: GatewayConfig): Endpoint => {
     logger.debug(`[responses] using ${languageModel.provider} for ${ctx.resolvedModelId}`);
     addSpanEvent("hebo.provider.resolved");
 
-    const genAiSignalLevel = cfg.telemetry?.signals?.gen_ai;
-    const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, genAiSignalLevel);
+    ctx.trace ??= ctx.body.trace ?? cfg.telemetry?.signals?.gen_ai;
+    const genAiGeneralAttrs = getGenAiGeneralAttributes(ctx, ctx.trace);
     setSpanAttributes(genAiGeneralAttrs);
 
-    const { model: _model, stream, ...inputs } = ctx.body;
+    const { model: _model, stream, trace: _trace, ...inputs } = ctx.body;
     const textOptions = convertToTextCallOptions(inputs as ResponsesInputs);
     logger.trace({ requestId: ctx.requestId, options: textOptions }, "[responses] AI SDK options");
     addSpanEvent("hebo.options.prepared");
-    setSpanAttributes(getResponsesRequestAttributes(ctx.body, genAiSignalLevel));
+    setSpanAttributes(getResponsesRequestAttributes(ctx.body, ctx.trace));
 
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
@@ -119,7 +119,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         onChunk: () => {
           if (!ttft) {
             ttft = performance.now() - start;
-            recordTimeToFirstToken(ttft, genAiGeneralAttrs, genAiSignalLevel);
+            recordTimeToFirstToken(ttft, genAiGeneralAttrs, ctx.trace);
           }
         },
         onFinish: (res) => {
@@ -134,18 +134,12 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
           const genAiResponseAttrs = getResponsesResponseAttributes(
             streamResult,
-            genAiSignalLevel,
+            ctx.trace,
             res.finishReason,
           );
           setSpanAttributes(genAiResponseAttrs);
-          recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
-          recordTimePerOutputToken(
-            start,
-            ttft,
-            genAiResponseAttrs,
-            genAiGeneralAttrs,
-            genAiSignalLevel,
-          );
+          recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
+          recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
         },
         experimental_include: {
           requestBody: false,
@@ -178,7 +172,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     });
     logger.trace({ requestId: ctx.requestId, result }, "[responses] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
-    recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, ctx.trace);
 
     ctx.result = toResponses(result, ctx.resolvedModelId, ctx.body.metadata);
     logger.trace({ requestId: ctx.requestId, result: ctx.result }, "[responses] Responses");
@@ -186,18 +180,18 @@ export const responses = (config: GatewayConfig): Endpoint => {
 
     const genAiResponseAttrs = getResponsesResponseAttributes(
       ctx.result,
-      genAiSignalLevel,
+      ctx.trace,
       result.finishReason,
     );
     setSpanAttributes(genAiResponseAttrs);
-    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
       addSpanEvent("hebo.hooks.after.completed");
     }
 
-    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, genAiSignalLevel);
+    recordTimePerOutputToken(start, 0, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
     return ctx.result;
   };
 

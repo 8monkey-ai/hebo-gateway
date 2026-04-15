@@ -94,6 +94,12 @@ export type GatewayContext = {
    */
   response?: Response;
   /**
+   * Per-request telemetry signal level override.
+   * When set (via body parameter or hook), overrides `cfg.telemetry.signals.gen_ai`
+   * for this request's span attributes and metrics.
+   */
+  trace?: TelemetrySignalLevel;
+  /**
    * Error thrown during execution.
    */
   error?: unknown;
@@ -102,9 +108,10 @@ export type GatewayContext = {
 /**
  * Hook context: all fields readonly except `state` and `otel`.
  */
-export type HookContext = Omit<Readonly<GatewayContext>, "state" | "otel"> & {
+export type HookContext = Omit<Readonly<GatewayContext>, "state" | "otel" | "trace"> & {
   state: GatewayContext["state"];
   otel: GatewayContext["otel"];
+  trace: GatewayContext["trace"];
 };
 
 type RequiredHookContext<K extends keyof GatewayContext> = Omit<HookContext, K> &

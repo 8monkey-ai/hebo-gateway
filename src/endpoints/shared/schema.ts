@@ -61,6 +61,17 @@ const InputAudioSchema = z.object({
   format: InputAudioFormatSchema,
 });
 
+/**
+ * Per-request trace control.
+ * Accepts a boolean (`false` → "off", `true` → stripped) or a signal level string.
+ */
+export const TraceSchema = z
+  .union([
+    z.boolean().transform((v) => (v ? undefined : ("off" as const))),
+    z.enum(["off", "required", "recommended", "full"]),
+  ])
+  .optional();
+
 export const ContentPartAudioSchema = z.object({
   type: z.literal("input_audio"),
   input_audio: InputAudioSchema,

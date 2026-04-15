@@ -221,6 +221,7 @@ import {
   type ProviderMetadata as ResponsesProviderMetadata,
   ContentPartAudioSchema as ResponsesInputAudioSchema,
   type ContentPartAudio as ResponsesInputAudio,
+  TraceSchema,
 } from "../shared/schema";
 
 export {
@@ -348,6 +349,7 @@ export type ResponsesInputs = z.infer<typeof ResponsesInputsSchema>;
 export const ResponsesBodySchema = z.object({
   model: z.string(),
   stream: z.boolean().optional(),
+  trace: TraceSchema,
   ...ResponsesInputsSchema.shape,
 });
 export type ResponsesBody = z.infer<typeof ResponsesBodySchema>;

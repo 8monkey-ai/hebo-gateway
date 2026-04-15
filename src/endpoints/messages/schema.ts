@@ -1,7 +1,7 @@
 import * as z from "zod";
 
 import type { SseFrame } from "../../utils/stream";
-import { CacheControlSchema, ProviderMetadataSchema } from "../shared/schema";
+import { CacheControlSchema, ProviderMetadataSchema, TraceSchema } from "../shared/schema";
 import type { ProviderMetadata } from "../shared/schema";
 
 // --- Content Block Schemas ---
@@ -220,6 +220,7 @@ export const MessagesBodySchema = z.object({
   messages: z.array(MessagesMessageSchema),
   system: z.union([z.string(), z.array(SystemBlockSchema)]).optional(),
   stream: z.boolean().optional(),
+  trace: TraceSchema,
   temperature: z.number().optional(),
   top_p: z.number().optional(),
   stop_sequences: z.array(z.string()).optional(),

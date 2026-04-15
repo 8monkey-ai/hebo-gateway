@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+import { TraceSchema } from "../shared/schema";
+
 export const EmbeddingsDimensionsSchema = z.int().nonnegative().max(65536);
 export type EmbeddingsDimensions = z.infer<typeof EmbeddingsDimensionsSchema>;
 
@@ -15,6 +17,7 @@ export type EmbeddingsInputs = z.infer<typeof EmbeddingsInputsSchema>;
 
 export const EmbeddingsBodySchema = z.looseObject({
   model: z.string(),
+  trace: TraceSchema,
   ...EmbeddingsInputsSchema.shape,
 });
 export type EmbeddingsBody = z.infer<typeof EmbeddingsBodySchema>;
