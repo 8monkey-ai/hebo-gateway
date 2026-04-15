@@ -91,7 +91,7 @@ export const winterCgHandler = (
           performance.now() - start,
           realStatus,
           ctx,
-          parsedConfig.telemetry?.signals?.gen_ai,
+          ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai,
         );
       }
 
