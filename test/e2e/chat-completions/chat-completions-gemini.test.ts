@@ -1,80 +1,27 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createVertex } from "@ai-sdk/google-vertex";
 import OpenAI, { APIError } from "openai";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 
-import { defineModelCatalog, gateway } from "../../../src";
 import { gemini3FlashPreview } from "../../../src/models/google";
-import { withCanonicalIdsForVertex } from "../../../src/providers/vertex";
+import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server";
+import { createVertexTestServer, type TestServer } from "../shared/server";
+import { CHAT_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
 
-const GOOGLE_VERTEX_API_KEY = process.env["GOOGLE_VERTEX_API_KEY"];
-const GOOGLE_VERTEX_PROJECT = process.env["GOOGLE_VERTEX_PROJECT"];
-const GOOGLE_VERTEX_LOCATION = process.env["GOOGLE_VERTEX_LOCATION"] ?? "us-central1";
 const hasVertexCredentials = !!(GOOGLE_VERTEX_API_KEY && GOOGLE_VERTEX_PROJECT);
 const VERTEX_MODEL = "google/gemini-3-flash-preview";
-
-// ---------------------------------------------------------------------------
-// Shared tool definitions (OpenAI format)
-// ---------------------------------------------------------------------------
-
-const WEATHER_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
-  type: "function",
-  function: {
-    name: "get_weather",
-    description: "Get the current weather for a given location.",
-    parameters: {
-      type: "object",
-      properties: {
-        location: { type: "string", description: "City and state" },
-      },
-      required: ["location"],
-    },
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
 // ---------------------------------------------------------------------------
 
-let server: ReturnType<typeof Bun.serve>;
+let testServer: TestServer;
 let client: OpenAI;
 let baseUrl: string;
-
-const startServer = () => {
-  const vertex = createVertex({
-    apiKey: GOOGLE_VERTEX_API_KEY!,
-    project: GOOGLE_VERTEX_PROJECT!,
-    location: GOOGLE_VERTEX_LOCATION,
-  });
-
-  const gw = gateway({
-    basePath: "/v1",
-    logger: { level: "warn" },
-    providers: {
-      vertex: withCanonicalIdsForVertex(vertex),
-    },
-    models: defineModelCatalog(gemini3FlashPreview()),
-    timeouts: { normal: 120_000, flex: 360_000 },
-  });
-
-  server = Bun.serve({
-    port: 0,
-    maxRequestBodySize: 10 * 1024 * 1024,
-    fetch: (request) => gw.handler(request),
-  });
-
-  baseUrl = `http://localhost:${server.port}`;
-
-  client = new OpenAI({
-    apiKey: "not-needed",
-    baseURL: `${baseUrl}/v1`,
-  });
-};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -82,11 +29,16 @@ const startServer = () => {
 
 describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_signature)", () => {
   beforeAll(() => {
-    startServer();
+    testServer = createVertexTestServer(gemini3FlashPreview());
+    baseUrl = testServer.baseUrl;
+    client = new OpenAI({
+      apiKey: "not-needed",
+      baseURL: `${baseUrl}/v1`,
+    });
   });
 
   afterAll(async () => {
-    await server?.stop(true);
+    await testServer?.server?.stop(true);
   });
 
   // =========================================================================
