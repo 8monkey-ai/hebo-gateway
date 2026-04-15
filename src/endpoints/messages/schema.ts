@@ -236,32 +236,63 @@ export type MessagesInputs = Omit<MessagesBody, "model" | "stream">;
 
 // --- Response Schemas ---
 
-export type MessagesResponseContentBlock =
-  | { type: "text"; text: string }
-  | { type: "tool_use"; id: string; name: string; input: unknown; extra_content?: ProviderMetadata }
-  | { type: "thinking"; thinking: string; signature: string }
-  | { type: "redacted_thinking"; data: string };
+const MessagesResponseTextBlockSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
 
-export type MessagesUsage = {
-  input_tokens: number;
-  output_tokens: number;
-  cache_creation_input_tokens?: number;
-  cache_read_input_tokens?: number;
-};
+const MessagesResponseToolUseBlockSchema = z.object({
+  type: z.literal("tool_use"),
+  id: z.string(),
+  name: z.string(),
+  input: z.unknown(),
+  extra_content: ProviderMetadataSchema.optional(),
+});
 
-export type MessagesStopReason = "end_turn" | "max_tokens" | "stop_sequence" | "tool_use" | null;
+const MessagesResponseThinkingBlockSchema = z.object({
+  type: z.literal("thinking"),
+  thinking: z.string(),
+  signature: z.string(),
+});
 
-export type Messages = {
-  id: string;
-  type: "message";
-  role: "assistant";
-  content: MessagesResponseContentBlock[];
-  model: string;
-  stop_reason: MessagesStopReason;
-  stop_sequence: string | null;
-  usage: MessagesUsage;
-  service_tier?: MessagesServiceTier;
-};
+const MessagesResponseRedactedThinkingBlockSchema = z.object({
+  type: z.literal("redacted_thinking"),
+  data: z.string(),
+});
+
+export const MessagesResponseContentBlockSchema = z.discriminatedUnion("type", [
+  MessagesResponseTextBlockSchema,
+  MessagesResponseToolUseBlockSchema,
+  MessagesResponseThinkingBlockSchema,
+  MessagesResponseRedactedThinkingBlockSchema,
+]);
+export type MessagesResponseContentBlock = z.infer<typeof MessagesResponseContentBlockSchema>;
+
+export const MessagesUsageSchema = z.object({
+  input_tokens: z.number().int().nonnegative(),
+  output_tokens: z.number().int().nonnegative(),
+  cache_creation_input_tokens: z.number().int().nonnegative().optional(),
+  cache_read_input_tokens: z.number().int().nonnegative().optional(),
+});
+export type MessagesUsage = z.infer<typeof MessagesUsageSchema>;
+
+export const MessagesStopReasonSchema = z
+  .enum(["end_turn", "max_tokens", "stop_sequence", "tool_use"])
+  .nullable();
+export type MessagesStopReason = z.infer<typeof MessagesStopReasonSchema>;
+
+export const MessagesSchema = z.object({
+  id: z.string(),
+  type: z.literal("message"),
+  role: z.literal("assistant"),
+  content: z.array(MessagesResponseContentBlockSchema),
+  model: z.string(),
+  stop_reason: MessagesStopReasonSchema,
+  stop_sequence: z.string().nullable(),
+  usage: MessagesUsageSchema,
+  service_tier: MessagesServiceTierSchema.optional(),
+});
+export type Messages = z.infer<typeof MessagesSchema>;
 
 // --- Stream Event Types ---
 
