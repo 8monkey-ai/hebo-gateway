@@ -15,7 +15,7 @@ import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
 
 const BEDROCK_ACCESS_KEY_ID = process.env["BEDROCK_ACCESS_KEY_ID"];
 const BEDROCK_SECRET_ACCESS_KEY = process.env["BEDROCK_SECRET_ACCESS_KEY"];
-const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
+const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY);
 
 const REGION = process.env["BEDROCK_REGION"] ?? "us-east-2";
 const MODEL = "anthropic/claude-sonnet-4.6";

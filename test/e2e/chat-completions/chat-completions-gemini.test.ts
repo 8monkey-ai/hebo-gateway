@@ -86,7 +86,7 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
   });
 
   afterAll(async () => {
-    await server.stop(true);
+    await server?.stop(true);
   });
 
   // =========================================================================
