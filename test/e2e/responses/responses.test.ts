@@ -21,7 +21,7 @@ import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
 
 const BEDROCK_ACCESS_KEY_ID = process.env["BEDROCK_ACCESS_KEY_ID"];
 const BEDROCK_SECRET_ACCESS_KEY = process.env["BEDROCK_SECRET_ACCESS_KEY"];
-const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY);
+const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
 
 const REGION = process.env["BEDROCK_REGION"] ?? "us-east-2";
 const MODEL = "openai/gpt-oss-120b";
@@ -32,21 +32,15 @@ const MODEL = "openai/gpt-oss-120b";
 
 /** Extract the first output_text string from a response. */
 function getOutputText(response: OpenAI.Responses.Response): string {
-  const msg = response.output.find(
-    (o): o is ResponseOutputMessage => o.type === "message",
-  );
-  const part = msg?.content.find(
-    (c): c is ResponseOutputText => c.type === "output_text",
-  );
+  const msg = response.output.find((o): o is ResponseOutputMessage => o.type === "message");
+  const part = msg?.content.find((c): c is ResponseOutputText => c.type === "output_text");
   return part?.text ?? "";
 }
 
 function getFunctionCall(
   response: OpenAI.Responses.Response,
 ): ResponseFunctionToolCall | undefined {
-  return response.output.find(
-    (o): o is ResponseFunctionToolCall => o.type === "function_call",
-  );
+  return response.output.find((o): o is ResponseFunctionToolCall => o.type === "function_call");
 }
 
 // ---------------------------------------------------------------------------
@@ -608,7 +602,9 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
             id: "msg_alice",
             role: "assistant",
             status: "completed",
-            content: [{ type: "output_text", text: "Hello Alice! Nice to meet you.", annotations: [] }],
+            content: [
+              { type: "output_text", text: "Hello Alice! Nice to meet you.", annotations: [] },
+            ],
           },
           { type: "message", role: "user", content: "What is my name?" },
         ],
@@ -946,8 +942,13 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
         try {
           await client.responses.create({
             model: MODEL,
-            // @ts-expect-error — intentionally missing required `input` field
-            input: undefined,
+            input: [
+              // @ts-expect-error — intentionally missing required `content` field
+              {
+                type: "message",
+                role: "user",
+              },
+            ],
           });
           expect(true).toBe(false);
         } catch (error: unknown) {

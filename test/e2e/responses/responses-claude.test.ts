@@ -21,7 +21,7 @@ import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
 
 const BEDROCK_ACCESS_KEY_ID = process.env["BEDROCK_ACCESS_KEY_ID"];
 const BEDROCK_SECRET_ACCESS_KEY = process.env["BEDROCK_SECRET_ACCESS_KEY"];
-const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY);
+const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
 
 const REGION = process.env["BEDROCK_REGION"] ?? "us-east-2";
 const MODEL = "anthropic/claude-sonnet-4.6";
@@ -31,21 +31,15 @@ const MODEL = "anthropic/claude-sonnet-4.6";
 // ---------------------------------------------------------------------------
 
 function getOutputText(response: OpenAI.Responses.Response): string {
-  const msg = response.output.find(
-    (o): o is ResponseOutputMessage => o.type === "message",
-  );
-  const part = msg?.content.find(
-    (c): c is ResponseOutputText => c.type === "output_text",
-  );
+  const msg = response.output.find((o): o is ResponseOutputMessage => o.type === "message");
+  const part = msg?.content.find((c): c is ResponseOutputText => c.type === "output_text");
   return part?.text ?? "";
 }
 
 function getFunctionCall(
   response: OpenAI.Responses.Response,
 ): ResponseFunctionToolCall | undefined {
-  return response.output.find(
-    (o): o is ResponseFunctionToolCall => o.type === "function_call",
-  );
+  return response.output.find((o): o is ResponseFunctionToolCall => o.type === "function_call");
 }
 
 // ---------------------------------------------------------------------------
@@ -208,7 +202,9 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
             id: "msg_alice",
             role: "assistant",
             status: "completed",
-            content: [{ type: "output_text", text: "Hello Alice! Nice to meet you.", annotations: [] }],
+            content: [
+              { type: "output_text", text: "Hello Alice! Nice to meet you.", annotations: [] },
+            ],
           },
           { type: "message", role: "user", content: "What is my name?" },
         ],
@@ -361,9 +357,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
       });
 
       expect(response.status).toBe("completed");
-      expect(
-        getOutputText(response).replaceAll(",", "").replaceAll(" ", ""),
-      ).toContain("12231");
+      expect(getOutputText(response).replaceAll(",", "").replaceAll(" ", "")).toContain("12231");
       expect(response.usage!.output_tokens).toBeGreaterThan(0);
     },
     { timeout: 120_000 },
@@ -386,9 +380,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
       });
 
       expect(response.status).toBe("completed");
-      expect(
-        getOutputText(response).replaceAll(",", "").replaceAll(" ", ""),
-      ).toContain("3901");
+      expect(getOutputText(response).replaceAll(",", "").replaceAll(" ", "")).toContain("3901");
     },
     { timeout: 120_000 },
   );
@@ -456,7 +448,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
       // and has a summary at minimum
       if (reasoningItem?.encrypted_content) {
         expect(typeof reasoningItem.encrypted_content).toBe("string");
-        expect((reasoningItem.encrypted_content as string).length).toBeGreaterThan(0);
+        expect(reasoningItem.encrypted_content.length).toBeGreaterThan(0);
       }
     },
     { timeout: 120_000 },
@@ -570,7 +562,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
         input: "Say hello",
         // @ts-expect-error — gateway extension
         cache_control: { type: "ephemeral" },
-      };
+      } satisfies OpenAI.Responses.ResponseCreateParamsNonStreaming;
 
       // First request — should create cache entry
       const msg1 = (await client.responses.create(body)) as OpenAI.Responses.Response & {

@@ -28,15 +28,10 @@ const VERTEX_MODEL = "google/gemini-3-flash-preview";
 // ---------------------------------------------------------------------------
 
 function getOutputText(response: OpenAI.Responses.Response): string {
-  const msg = response.output.find(
-    (o): o is ResponseOutputMessage => o.type === "message",
-  );
-  const part = msg?.content.find(
-    (c): c is ResponseOutputText => c.type === "output_text",
-  );
+  const msg = response.output.find((o): o is ResponseOutputMessage => o.type === "message");
+  const part = msg?.content.find((c): c is ResponseOutputText => c.type === "output_text");
   return part?.text ?? "";
 }
-
 
 // ---------------------------------------------------------------------------
 // Shared tool definitions (Responses API format)
@@ -144,7 +139,6 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
 
       // Turn 2: send back the function_call WITH extra_content so the model can
       // verify its chain-of-thought, then provide the tool result
-      // @ts-expect-error — gateway extensions (extra_content, reasoning)
       const turn2 = (await client.responses.create({
         model: VERTEX_MODEL,
         max_output_tokens: 256,
@@ -155,6 +149,7 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
             call_id: fnCall!.call_id,
             name: fnCall!.name,
             arguments: fnCall!.arguments,
+            // @ts-expect-error — gateway extension
             extra_content: fnCall!.extra_content,
           },
           {
@@ -164,6 +159,7 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
           },
         ],
         tools: [{ ...WEATHER_TOOL }],
+        // @ts-expect-error — gateway extension
         reasoning: { enabled: true, max_tokens: 2048 },
       })) as OpenAI.Responses.Response;
 
@@ -203,7 +199,6 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
 
       // Turn 2: send back function_call with corrupted thought_signature
       try {
-        // @ts-expect-error — gateway extensions (extra_content, reasoning)
         await client.responses.create({
           model: VERTEX_MODEL,
           max_output_tokens: 256,
@@ -214,6 +209,7 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
               call_id: fnCall!.call_id,
               name: fnCall!.name,
               arguments: fnCall!.arguments,
+              // @ts-expect-error — gateway extension
               extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
             },
             {
@@ -223,6 +219,7 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
             },
           ],
           tools: [{ ...WEATHER_TOOL }],
+          // @ts-expect-error — gateway extension
           reasoning: { enabled: true, max_tokens: 2048 },
         });
         expect(true).toBe(false);
