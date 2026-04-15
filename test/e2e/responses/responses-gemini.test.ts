@@ -1,13 +1,26 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import OpenAI, { APIError } from "openai";
-import type { ResponseFunctionToolCall } from "openai/resources/responses/responses";
+import type {
+  ResponseFunctionToolCall,
+  ResponseOutputMessage,
+  ResponseOutputText,
+} from "openai/resources/responses/responses";
 
 import { gemini3FlashPreview } from "../../../src/models/google";
 import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/env";
-import { getOutputText } from "../shared/responses-helpers";
 import { createVertexTestServer, type TestServer } from "../shared/server";
 import { RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getOutputText(response: OpenAI.Responses.Response): string {
+  const msg = response.output.find((o): o is ResponseOutputMessage => o.type === "message");
+  const part = msg?.content.find((c): c is ResponseOutputText => c.type === "output_text");
+  return part?.text ?? "";
+}
 
 // ---------------------------------------------------------------------------
 // Environment

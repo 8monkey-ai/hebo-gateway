@@ -1,11 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import OpenAI, { APIError } from "openai";
-import type { ResponseReasoningItem } from "openai/resources/responses/responses";
+import type {
+  ResponseFunctionToolCall,
+  ResponseOutputMessage,
+  ResponseOutputText,
+  ResponseReasoningItem,
+} from "openai/resources/responses/responses";
 
 import { claudeSonnet46 } from "../../../src/models/anthropic";
 import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/env";
-import { getFunctionCall, getOutputText } from "../shared/responses-helpers";
 import { createBedrockTestServer, type TestServer } from "../shared/server";
 import { RESPONSE_CALCULATOR_TOOL as CALCULATOR_TOOL, RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
@@ -15,6 +19,22 @@ import { RESPONSE_CALCULATOR_TOOL as CALCULATOR_TOOL, RESPONSE_WEATHER_TOOL as W
 
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
 const MODEL = "anthropic/claude-sonnet-4.6";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function getOutputText(response: OpenAI.Responses.Response): string {
+  const msg = response.output.find((o): o is ResponseOutputMessage => o.type === "message");
+  const part = msg?.content.find((c): c is ResponseOutputText => c.type === "output_text");
+  return part?.text ?? "";
+}
+
+function getFunctionCall(
+  response: OpenAI.Responses.Response,
+): ResponseFunctionToolCall | undefined {
+  return response.output.find((o): o is ResponseFunctionToolCall => o.type === "function_call");
+}
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
