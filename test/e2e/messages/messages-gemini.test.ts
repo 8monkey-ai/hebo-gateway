@@ -1,73 +1,25 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createVertex } from "@ai-sdk/google-vertex";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
-import { defineModelCatalog, gateway } from "../../../src";
 import { gemini3FlashPreview } from "../../../src/models/google";
-import { withCanonicalIdsForVertex } from "../../../src/providers/vertex";
+import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/env";
+import { createVertexTestServer, type TestServer } from "../shared/server";
+import { MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
 
-const GOOGLE_VERTEX_API_KEY = process.env["GOOGLE_VERTEX_API_KEY"];
-const GOOGLE_VERTEX_PROJECT = process.env["GOOGLE_VERTEX_PROJECT"];
-const GOOGLE_VERTEX_LOCATION = process.env["GOOGLE_VERTEX_LOCATION"] ?? "us-central1";
 const hasVertexCredentials = !!(GOOGLE_VERTEX_API_KEY && GOOGLE_VERTEX_PROJECT);
 const VERTEX_MODEL = "google/gemini-3-flash-preview";
-
-// ---------------------------------------------------------------------------
-// Shared tool definitions
-// ---------------------------------------------------------------------------
-
-const WEATHER_TOOL: Anthropic.Messages.Tool = {
-  name: "get_weather",
-  description: "Get the current weather for a given location.",
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      location: { type: "string", description: "City and state" },
-    },
-    required: ["location"],
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
 // ---------------------------------------------------------------------------
 
-let server: ReturnType<typeof Bun.serve>;
+let testServer: TestServer;
 let client: Anthropic;
-
-const startServer = () => {
-  const vertex = createVertex({
-    apiKey: GOOGLE_VERTEX_API_KEY!,
-    project: GOOGLE_VERTEX_PROJECT!,
-    location: GOOGLE_VERTEX_LOCATION,
-  });
-
-  const gw = gateway({
-    basePath: "/v1",
-    logger: { level: "warn" },
-    providers: {
-      vertex: withCanonicalIdsForVertex(vertex),
-    },
-    models: defineModelCatalog(gemini3FlashPreview()),
-    timeouts: { normal: 120_000, flex: 360_000 },
-  });
-
-  server = Bun.serve({
-    port: 0,
-    maxRequestBodySize: 10 * 1024 * 1024,
-    fetch: (request) => gw.handler(request),
-  });
-
-  client = new Anthropic({
-    apiKey: "not-needed",
-    baseURL: `http://localhost:${server.port}`,
-  });
-};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -75,11 +27,15 @@ const startServer = () => {
 
 describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature)", () => {
   beforeAll(() => {
-    startServer();
+    testServer = createVertexTestServer(gemini3FlashPreview());
+    client = new Anthropic({
+      apiKey: "not-needed",
+      baseURL: `http://localhost:${testServer.server.port}`,
+    });
   });
 
   afterAll(async () => {
-    await server.stop(true);
+    await testServer.server.stop(true);
   });
 
   // =========================================================================

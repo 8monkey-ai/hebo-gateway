@@ -1,128 +1,28 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
-import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import OpenAI, { APIError } from "openai";
-import type {
-  FunctionTool,
-  ResponseFunctionToolCall,
-  ResponseOutputMessage,
-  ResponseOutputText,
-  ResponseReasoningItem,
-} from "openai/resources/responses/responses";
+import type { ResponseReasoningItem } from "openai/resources/responses/responses";
 
-import { defineModelCatalog, gateway } from "../../../src";
 import { gptOss120b } from "../../../src/models/openai";
-import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
+import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/env";
+import { getFunctionCall, getOutputText } from "../shared/responses-helpers";
+import { createBedrockTestServer, type TestServer } from "../shared/server";
+import { RESPONSE_CALCULATOR_TOOL as CALCULATOR_TOOL, RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
 
-const BEDROCK_ACCESS_KEY_ID = process.env["BEDROCK_ACCESS_KEY_ID"];
-const BEDROCK_SECRET_ACCESS_KEY = process.env["BEDROCK_SECRET_ACCESS_KEY"];
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
-
-const REGION = process.env["BEDROCK_REGION"] ?? "us-east-2";
 const MODEL = "openai/gpt-oss-120b";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Extract the first output_text string from a response. */
-function getOutputText(response: OpenAI.Responses.Response): string {
-  const msg = response.output.find((o): o is ResponseOutputMessage => o.type === "message");
-  const part = msg?.content.find((c): c is ResponseOutputText => c.type === "output_text");
-  return part?.text ?? "";
-}
-
-function getFunctionCall(
-  response: OpenAI.Responses.Response,
-): ResponseFunctionToolCall | undefined {
-  return response.output.find((o): o is ResponseFunctionToolCall => o.type === "function_call");
-}
-
-// ---------------------------------------------------------------------------
-// Shared tool definitions (Responses API format)
-// ---------------------------------------------------------------------------
-
-const WEATHER_TOOL: FunctionTool = {
-  type: "function",
-  name: "get_weather",
-  description: "Get the current weather for a given location.",
-  strict: false,
-  parameters: {
-    type: "object",
-    properties: {
-      location: { type: "string", description: "City and state" },
-    },
-    required: ["location"],
-  },
-};
-
-const CALCULATOR_TOOL: FunctionTool = {
-  type: "function",
-  name: "calculator",
-  description: "Perform basic arithmetic. Returns the numeric result.",
-  strict: false,
-  parameters: {
-    type: "object",
-    properties: {
-      expression: { type: "string", description: "A math expression, e.g. 2+2" },
-    },
-    required: ["expression"],
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
 // ---------------------------------------------------------------------------
 
-let server: ReturnType<typeof Bun.serve>;
+let testServer: TestServer;
 let client: OpenAI;
 let baseUrl: string;
-
-const startServer = () => {
-  delete process.env["AWS_SESSION_TOKEN"];
-  delete process.env["AWS_ACCESS_KEY_ID"];
-  delete process.env["AWS_SECRET_ACCESS_KEY"];
-
-  const bedrock = createAmazonBedrock({
-    region: REGION,
-    credentialProvider:
-      BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY
-        ? () =>
-            Promise.resolve({
-              accessKeyId: BEDROCK_ACCESS_KEY_ID,
-              secretAccessKey: BEDROCK_SECRET_ACCESS_KEY,
-            })
-        : fromNodeProviderChain(),
-  });
-
-  const gw = gateway({
-    basePath: "/v1",
-    logger: { level: "warn" },
-    providers: {
-      bedrock: withCanonicalIdsForBedrock(bedrock),
-    },
-    models: defineModelCatalog(gptOss120b()),
-    timeouts: { normal: 120_000, flex: 360_000 },
-  });
-
-  server = Bun.serve({
-    port: 0,
-    maxRequestBodySize: 10 * 1024 * 1024,
-    fetch: (request) => gw.handler(request),
-  });
-
-  baseUrl = `http://localhost:${server.port}`;
-
-  client = new OpenAI({
-    apiKey: "not-needed",
-    baseURL: `${baseUrl}/v1`,
-  });
-};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -130,11 +30,16 @@ const startServer = () => {
 
 describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () => {
   beforeAll(() => {
-    startServer();
+    testServer = createBedrockTestServer(gptOss120b());
+    baseUrl = testServer.baseUrl;
+    client = new OpenAI({
+      apiKey: "not-needed",
+      baseURL: `${baseUrl}/v1`,
+    });
   });
 
   afterAll(async () => {
-    await server?.stop(true);
+    await testServer?.server?.stop(true);
   });
 
   // =========================================================================

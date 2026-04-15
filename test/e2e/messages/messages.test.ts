@@ -1,105 +1,28 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
-import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
-import { defineModelCatalog, gateway } from "../../../src";
 import { claudeHaiku45, claudeSonnet4 } from "../../../src/models/anthropic";
-import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
+import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/env";
+import { createBedrockTestServer, type TestServer } from "../shared/server";
+import { MESSAGE_CALCULATOR_TOOL as CALCULATOR_TOOL, MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
 
-const BEDROCK_ACCESS_KEY_ID = process.env["BEDROCK_ACCESS_KEY_ID"];
-const BEDROCK_SECRET_ACCESS_KEY = process.env["BEDROCK_SECRET_ACCESS_KEY"];
 // hasCredentials is true when explicit env vars are set OR when ~/.aws credentials may be present
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
-
-const REGION = process.env["BEDROCK_REGION"] ?? "us-east-2";
 const MODEL = "anthropic/claude-haiku-4.5";
 const THINKING_MODEL = "anthropic/claude-sonnet-4";
-
-// ---------------------------------------------------------------------------
-// Shared tool definitions
-// ---------------------------------------------------------------------------
-
-const WEATHER_TOOL: Anthropic.Messages.Tool = {
-  name: "get_weather",
-  description: "Get the current weather for a given location.",
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      location: { type: "string", description: "City and state" },
-    },
-    required: ["location"],
-  },
-};
-
-const CALCULATOR_TOOL: Anthropic.Messages.Tool = {
-  name: "calculator",
-  description: "Perform basic arithmetic. Returns the numeric result.",
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      expression: { type: "string", description: "A math expression, e.g. 2+2" },
-    },
-    required: ["expression"],
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
 // ---------------------------------------------------------------------------
 
-let server: ReturnType<typeof Bun.serve>;
+let testServer: TestServer;
 let client: Anthropic;
 let baseUrl: string;
-
-const startServer = () => {
-  // Prevent @ai-sdk/amazon-bedrock from inheriting CI's AWS_SESSION_TOKEN,
-  // which conflicts with the static BEDROCK_* credentials.
-  delete process.env["AWS_SESSION_TOKEN"];
-  delete process.env["AWS_ACCESS_KEY_ID"];
-  delete process.env["AWS_SECRET_ACCESS_KEY"];
-
-  const bedrock = createAmazonBedrock({
-    region: REGION,
-    credentialProvider:
-      BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY
-        ? () =>
-            Promise.resolve({
-              accessKeyId: BEDROCK_ACCESS_KEY_ID,
-              secretAccessKey: BEDROCK_SECRET_ACCESS_KEY,
-            })
-        : fromNodeProviderChain(),
-  });
-
-  const gw = gateway({
-    basePath: "/v1",
-    logger: { level: "warn" },
-    providers: {
-      bedrock: withCanonicalIdsForBedrock(bedrock),
-    },
-    models: defineModelCatalog(claudeHaiku45(), claudeSonnet4()),
-    // Extended timeout for Bedrock cold starts and thinking models
-    timeouts: { normal: 120_000, flex: 360_000 },
-  });
-
-  server = Bun.serve({
-    port: 0, // random available port
-    maxRequestBodySize: 10 * 1024 * 1024, // 10 MB — matches DEFAULT_MAX_BODY_SIZE
-    fetch: (request) => gw.handler(request),
-  });
-
-  baseUrl = `http://localhost:${server.port}`;
-
-  client = new Anthropic({
-    apiKey: "not-needed", // Auth is handled by the Bedrock provider
-    baseURL: baseUrl, // Gateway routes are at root, not /v1
-  });
-};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -107,11 +30,16 @@ const startServer = () => {
 
 describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   beforeAll(() => {
-    startServer();
+    testServer = createBedrockTestServer(claudeHaiku45(), claudeSonnet4());
+    baseUrl = testServer.baseUrl;
+    client = new Anthropic({
+      apiKey: "not-needed",
+      baseURL: baseUrl,
+    });
   });
 
   afterAll(async () => {
-    await server?.stop(true);
+    await testServer?.server?.stop(true);
   });
 
   // =========================================================================
