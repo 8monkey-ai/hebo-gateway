@@ -905,13 +905,13 @@ export class ResponsesTransformStream extends TransformStream<
         const lastContentPart = reasoningItem.content[reasoningContentIndex];
         if (lastContentPart) {
           controller.enqueue({
-            event: "response.reasoning_content_part.done",
+            event: "response.reasoning_text.done",
             data: {
-              type: "response.reasoning_content_part.done",
+              type: "response.reasoning_text.done",
               item_id: reasoningItem.id!,
               output_index: reasoningOutputIndex,
               content_index: reasoningContentIndex,
-              part: lastContentPart,
+              text: lastContentPart.text,
             },
           });
         }
@@ -1163,28 +1163,14 @@ export class ResponsesTransformStream extends TransformStream<
                 text: "",
               };
               contentArr.push(contentPart);
-
-              controller.enqueue({
-                event: "response.reasoning_content_part.added",
-                data: {
-                  type: "response.reasoning_content_part.added",
-                  item_id: reasoningItem!.id!,
-                  output_index: reasoningOutputIndex,
-                  content_index: reasoningContentIndex,
-                  part: {
-                    type: "reasoning_text",
-                    text: "",
-                  },
-                },
-              });
             }
 
             contentArr[reasoningContentIndex]!.text += part.text;
 
             controller.enqueue({
-              event: "response.reasoning_content_text.delta",
+              event: "response.reasoning_text.delta",
               data: {
-                type: "response.reasoning_content_text.delta",
+                type: "response.reasoning_text.delta",
                 item_id: reasoningItem!.id!,
                 output_index: reasoningOutputIndex,
                 content_index: reasoningContentIndex,

@@ -513,37 +513,26 @@ export type ResponseReasoningSummaryPartDoneEvent = SseFrame<
   "response.reasoning_summary_part.done"
 >;
 
-export type ResponseReasoningContentPartAddedEvent = SseFrame<
+export type ResponseReasoningTextDeltaEvent = SseFrame<
   {
-    type: "response.reasoning_content_part.added";
-    item_id: string;
-    output_index: number;
-    content_index: number;
-    part: ResponsesReasoningText;
-  },
-  "response.reasoning_content_part.added"
->;
-
-export type ResponseReasoningContentTextDeltaEvent = SseFrame<
-  {
-    type: "response.reasoning_content_text.delta";
+    type: "response.reasoning_text.delta";
     item_id: string;
     output_index: number;
     content_index: number;
     delta: string;
   },
-  "response.reasoning_content_text.delta"
+  "response.reasoning_text.delta"
 >;
 
-export type ResponseReasoningContentPartDoneEvent = SseFrame<
+export type ResponseReasoningTextDoneEvent = SseFrame<
   {
-    type: "response.reasoning_content_part.done";
+    type: "response.reasoning_text.done";
     item_id: string;
     output_index: number;
     content_index: number;
-    part: ResponsesReasoningText;
+    text: string;
   },
-  "response.reasoning_content_part.done"
+  "response.reasoning_text.done"
 >;
 
 export type ResponseOutputItemDoneEvent = SseFrame<
@@ -593,13 +582,12 @@ export type ResponsesStreamEvent =
   | ResponseOutputItemAddedEvent
   | ResponseContentPartAddedEvent
   | ResponseReasoningSummaryPartAddedEvent
-  | ResponseReasoningContentPartAddedEvent
   | ResponseOutputTextDeltaEvent
   | ResponseReasoningSummaryTextDeltaEvent
-  | ResponseReasoningContentTextDeltaEvent
+  | ResponseReasoningTextDeltaEvent
   | ResponseContentPartDoneEvent
   | ResponseReasoningSummaryPartDoneEvent
-  | ResponseReasoningContentPartDoneEvent
+  | ResponseReasoningTextDoneEvent
   | ResponseOutputItemDoneEvent
   | ResponseFunctionCallArgumentsDeltaEvent
   | ResponseFunctionCallArgumentsDoneEvent

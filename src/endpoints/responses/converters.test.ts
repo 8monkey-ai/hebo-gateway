@@ -22,7 +22,7 @@ import {
   type ResponsesStreamEvent,
   type ResponseOutputItemAddedEvent,
   type ResponseReasoningSummaryTextDeltaEvent,
-  type ResponseReasoningContentTextDeltaEvent,
+  type ResponseReasoningTextDeltaEvent,
   type ResponseOutputTextDeltaEvent,
   type ResponseCompletedEvent,
   type ResponseOutputItemDoneEvent,
@@ -798,23 +798,18 @@ describe("Responses Converters", () => {
 
       // Content deltas (parallel to summary)
       const contentDeltas = events.filter(
-        (e): e is ResponseReasoningContentTextDeltaEvent =>
-          e.event === "response.reasoning_content_text.delta",
+        (e): e is ResponseReasoningTextDeltaEvent =>
+          e.event === "response.reasoning_text.delta",
       );
       expect(contentDeltas).toHaveLength(2);
       expect(contentDeltas[0]!.data.delta).toBe("Let me");
       expect(contentDeltas[1]!.data.delta).toBe(" think...");
 
-      // Content part lifecycle events
-      const contentPartAdded = events.filter(
-        (e) => e.event === "response.reasoning_content_part.added",
+      // Content text done event
+      const contentTextDone = events.filter(
+        (e) => e.event === "response.reasoning_text.done",
       );
-      expect(contentPartAdded).toHaveLength(1);
-
-      const contentPartDone = events.filter(
-        (e) => e.event === "response.reasoning_content_part.done",
-      );
-      expect(contentPartDone).toHaveLength(1);
+      expect(contentTextDone).toHaveLength(1);
 
       // Text
       const textAdded = events.find(
