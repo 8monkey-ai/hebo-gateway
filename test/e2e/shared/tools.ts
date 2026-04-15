@@ -2,10 +2,6 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type OpenAI from "openai";
 import type { FunctionTool } from "openai/resources/responses/responses";
 
-// ---------------------------------------------------------------------------
-// Shared tool parameter schemas
-// ---------------------------------------------------------------------------
-
 const WEATHER_PARAMS = {
   type: "object" as const,
   properties: {
@@ -21,10 +17,6 @@ const CALCULATOR_PARAMS = {
   },
   required: ["expression"],
 };
-
-// ---------------------------------------------------------------------------
-// OpenAI Chat Completions format
-// ---------------------------------------------------------------------------
 
 export const CHAT_WEATHER_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
   type: "function",
@@ -44,10 +36,6 @@ export const CHAT_CALCULATOR_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = 
   },
 };
 
-// ---------------------------------------------------------------------------
-// OpenAI Responses format
-// ---------------------------------------------------------------------------
-
 export const RESPONSE_WEATHER_TOOL: FunctionTool = {
   type: "function",
   name: "get_weather",
@@ -63,10 +51,6 @@ export const RESPONSE_CALCULATOR_TOOL: FunctionTool = {
   strict: false,
   parameters: CALCULATOR_PARAMS,
 };
-
-// ---------------------------------------------------------------------------
-// Anthropic Messages format
-// ---------------------------------------------------------------------------
 
 export const MESSAGE_WEATHER_TOOL: Anthropic.Messages.Tool = {
   name: "get_weather",

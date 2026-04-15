@@ -3,8 +3,12 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
 import { gemini3FlashPreview } from "../../../src/models/google";
-import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server";
-import { createVertexTestServer, type TestServer } from "../shared/server";
+import {
+  createVertexTestServer,
+  GOOGLE_VERTEX_API_KEY,
+  GOOGLE_VERTEX_PROJECT,
+  type TestServer,
+} from "../shared/server";
 import { MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
 // ---------------------------------------------------------------------------
@@ -30,12 +34,12 @@ describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature
     testServer = createVertexTestServer(gemini3FlashPreview());
     client = new Anthropic({
       apiKey: "not-needed",
-      baseURL: `http://localhost:${testServer.server.port}`,
+      baseURL: testServer.baseUrl,
     });
   });
 
   afterAll(async () => {
-    await testServer.server.stop(true);
+    await testServer?.server?.stop(true);
   });
 
   // =========================================================================
