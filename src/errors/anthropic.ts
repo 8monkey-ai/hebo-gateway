@@ -1,10 +1,20 @@
+import * as z from "zod";
+
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
 import { getErrorMeta, maybeMaskMessage } from "./utils";
 
+export const AnthropicErrorSchema = z.object({
+  type: z.literal("error"),
+  error: z.object({
+    type: z.string(),
+    message: z.string(),
+  }),
+});
+
 export class AnthropicError {
-  readonly type = "error";
-  readonly error: { type: string; message: string };
+  readonly type = "error" as const;
+  readonly error: z.infer<typeof AnthropicErrorSchema>["error"];
 
   constructor(message: string, type: string = "api_error") {
     this.error = { type, message };
