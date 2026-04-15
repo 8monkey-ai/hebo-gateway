@@ -191,6 +191,8 @@ export const ResponsesReasoningItemSchema = z.object({
   status: ResponsesItemStatusSchema.optional(),
   // Extension origin: Gemini
   extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
+  // Extension origin: Anthropic/OpenRouter
+  signature: z.string().optional().meta({ extension: true }),
 });
 export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
 
@@ -511,6 +513,28 @@ export type ResponseReasoningSummaryPartDoneEvent = SseFrame<
   "response.reasoning_summary_part.done"
 >;
 
+export type ResponseReasoningTextDeltaEvent = SseFrame<
+  {
+    type: "response.reasoning_text.delta";
+    item_id: string;
+    output_index: number;
+    content_index: number;
+    delta: string;
+  },
+  "response.reasoning_text.delta"
+>;
+
+export type ResponseReasoningTextDoneEvent = SseFrame<
+  {
+    type: "response.reasoning_text.done";
+    item_id: string;
+    output_index: number;
+    content_index: number;
+    text: string;
+  },
+  "response.reasoning_text.done"
+>;
+
 export type ResponseOutputItemDoneEvent = SseFrame<
   {
     type: "response.output_item.done";
@@ -560,8 +584,10 @@ export type ResponsesStreamEvent =
   | ResponseReasoningSummaryPartAddedEvent
   | ResponseOutputTextDeltaEvent
   | ResponseReasoningSummaryTextDeltaEvent
+  | ResponseReasoningTextDeltaEvent
   | ResponseContentPartDoneEvent
   | ResponseReasoningSummaryPartDoneEvent
+  | ResponseReasoningTextDoneEvent
   | ResponseOutputItemDoneEvent
   | ResponseFunctionCallArgumentsDeltaEvent
   | ResponseFunctionCallArgumentsDoneEvent

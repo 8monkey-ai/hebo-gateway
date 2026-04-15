@@ -22,12 +22,14 @@ import {
   type ResponsesStreamEvent,
   type ResponseOutputItemAddedEvent,
   type ResponseReasoningSummaryTextDeltaEvent,
+  type ResponseReasoningTextDeltaEvent,
   type ResponseOutputTextDeltaEvent,
   type ResponseCompletedEvent,
   type ResponseOutputItemDoneEvent,
   type ResponsesOutputItem,
   type ResponsesFunctionCall,
   type ResponsesOutputMessage,
+  type ResponsesReasoningItem,
 } from "./schema";
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
@@ -212,7 +214,7 @@ describe("Responses Converters", () => {
       });
     });
 
-    test("should convert reasoning items to assistant messages", () => {
+    test("should convert reasoning items to assistant messages from summary", () => {
       const messages = convertToModelMessages([
         {
           type: "reasoning",
@@ -226,6 +228,45 @@ describe("Responses Converters", () => {
         content: [{ type: "reasoning", text: "I'm thinking...", providerOptions: undefined }],
       });
       expect(messages[1]).toEqual({ role: "user", content: "Hi" });
+    });
+
+    test("should prefer content over summary in reasoning items", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "reasoning",
+          summary: [{ type: "summary_text", text: "Short summary" }],
+          content: [{ type: "reasoning_text", text: "Full detailed thinking..." }],
+        },
+      ] satisfies ResponsesInputItem[]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: [
+          { type: "reasoning", text: "Full detailed thinking...", providerOptions: undefined },
+        ],
+      });
+    });
+
+    test("should pass signature through providerOptions on reasoning items", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "reasoning",
+          summary: [{ type: "summary_text", text: "Thinking..." }],
+          content: [{ type: "reasoning_text", text: "Thinking..." }],
+          signature: "sig-abc123",
+        },
+      ] satisfies ResponsesInputItem[]);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: [
+          {
+            type: "reasoning",
+            text: "Thinking...",
+            providerOptions: { unknown: { signature: "sig-abc123" } },
+          },
+        ],
+      });
     });
 
     test("should convert user message with input content parts", () => {
@@ -527,7 +568,7 @@ describe("Responses Converters", () => {
       }
     });
 
-    test("should include reasoning output items", () => {
+    test("should include reasoning output items with both summary and content", () => {
       const result = toResponses(
         mockGenerateTextResult({
           finishReason: "stop",
@@ -546,7 +587,36 @@ describe("Responses Converters", () => {
       expect(reasoning).toBeDefined();
       if (reasoning?.type === "reasoning") {
         expect(reasoning.summary[0]!.text).toBe("Let me think...");
+        expect(reasoning.content).toBeDefined();
+        expect(reasoning.content![0]!.type).toBe("reasoning_text");
+        expect(reasoning.content![0]!.text).toBe("Let me think...");
       }
+    });
+
+    test("should surface signature on reasoning output items", () => {
+      const result = toResponses(
+        mockGenerateTextResult({
+          finishReason: "stop",
+          text: "42",
+          content: [
+            {
+              type: "reasoning",
+              text: "Thinking...",
+              providerMetadata: { anthropic: { signature: "sig-abc123" } },
+            },
+            { type: "text", text: "42" },
+          ],
+          usage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+        }),
+        "anthropic/claude-4-opus",
+      );
+
+      const reasoning = result.output.find(
+        (o): o is ResponsesReasoningItem => o.type === "reasoning",
+      );
+      expect(reasoning).toBeDefined();
+      expect(reasoning!.signature).toBe("sig-abc123");
     });
 
     test("should set incomplete status for length finish reason", () => {
@@ -726,6 +796,21 @@ describe("Responses Converters", () => {
       expect(reasoningDeltas[0]!.data.delta).toBe("Let me");
       expect(reasoningDeltas[1]!.data.delta).toBe(" think...");
 
+      // Content deltas (parallel to summary)
+      const contentDeltas = events.filter(
+        (e): e is ResponseReasoningTextDeltaEvent =>
+          e.event === "response.reasoning_text.delta",
+      );
+      expect(contentDeltas).toHaveLength(2);
+      expect(contentDeltas[0]!.data.delta).toBe("Let me");
+      expect(contentDeltas[1]!.data.delta).toBe(" think...");
+
+      // Content text done event
+      const contentTextDone = events.filter(
+        (e) => e.event === "response.reasoning_text.done",
+      );
+      expect(contentTextDone).toHaveLength(1);
+
       // Text
       const textAdded = events.find(
         (e): e is ResponseOutputItemAddedEvent =>
@@ -748,10 +833,60 @@ describe("Responses Converters", () => {
       expect(completedResponse.status).toBe("completed");
       expect(completedResponse.output).toHaveLength(2);
       expect(completedResponse.output[0]!.type).toBe("reasoning");
+      const completedReasoning = completedResponse.output[0] as ResponsesReasoningItem;
+      expect(completedReasoning.summary[0]!.text).toBe("Let me think...");
+      expect(completedReasoning.content).toBeDefined();
+      expect(completedReasoning.content![0]!.text).toBe("Let me think...");
       expect(completedResponse.output[1]!.type).toBe("message");
       expect((completedResponse.output[1] as ResponsesOutputMessage).content[0]!.text).toBe(
         "Hello",
       );
+    });
+
+    test("should surface signature on streamed reasoning items", async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: "reasoning-start",
+            id: "r1",
+            providerMetadata: { anthropic: { signature: "sig-stream123" } },
+          });
+          controller.enqueue({ type: "reasoning-delta", text: "Thinking" });
+          controller.enqueue({ type: "reasoning-end", id: "r1" });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "stop",
+            totalUsage: mockUsage({ inputTokens: 5, outputTokens: 5, totalTokens: 10 }),
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new ResponsesTransformStream("anthropic/claude-4"));
+      const reader = transformed.getReader();
+      const events: ResponsesStreamEvent[] = [];
+
+      while (true) {
+        // oxlint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value && "event" in (value as object)) {
+          events.push(value as ResponsesStreamEvent);
+        }
+      }
+
+      const reasoningAdded = events.find(
+        (e): e is ResponseOutputItemAddedEvent =>
+          e.event === "response.output_item.added" && e.data.item.type === "reasoning",
+      );
+      expect(reasoningAdded).toBeDefined();
+      expect((reasoningAdded!.data.item as ResponsesReasoningItem).signature).toBe("sig-stream123");
+
+      const completed = events.find(
+        (e): e is ResponseCompletedEvent => e.event === "response.completed",
+      );
+      const completedReasoning = completed!.data.response.output[0] as ResponsesReasoningItem;
+      expect(completedReasoning.signature).toBe("sig-stream123");
     });
 
     test("should carry final tool-call metadata onto the streamed item when inProgress", async () => {
