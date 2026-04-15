@@ -926,6 +926,42 @@ These attributes appear on the active span and on all metric instruments (reques
 > To populate custom span attributes, the inbound W3C `baggage` header is supported. Keys in the `hebo.` namespace are mapped to span attributes, with the namespace stripped. For example: `baggage: hebo.user_id=u-123` becomes span attribute `user_id=u-123`.  
 > For `/chat/completions` and `/embeddings`, request `metadata` (`Record<string, string>`, key 1-64 chars, value up to 512 chars) is also forwarded to spans as `gen_ai.request.metadata.<key>`.
 
+#### Per-Request Trace Control
+
+You can override the global `telemetry.signals.gen_ai` level on a per-request basis using the `trace` body parameter. This is useful for selectively enabling detailed traces on specific requests without changing the gateway-wide configuration.
+
+The `trace` parameter is accepted on all endpoints (`/chat/completions`, `/embeddings`, `/messages`, `/responses`):
+
+```json
+{
+  "model": "openai/gpt-oss-20b",
+  "messages": [{ "role": "user", "content": "Hello" }],
+  "trace": "full"
+}
+```
+
+Accepted values:
+
+- `false` — disables tracing for this request (equivalent to `"off"`)
+- `true` — uses the global default (same as omitting the parameter)
+- `"off"` | `"required"` | `"recommended"` | `"full"` — sets the signal level for this request
+
+The resolution order is: **hook-set `ctx.trace`** > **body `trace` parameter** > **`cfg.telemetry.signals.gen_ai`**. This means hooks can always override the body parameter by setting `ctx.trace` directly:
+
+```ts
+hooks: {
+  before: (ctx) => {
+    // Force full tracing for a specific user
+    if (ctx.state.userId === "debug-user") {
+      ctx.trace = "full";
+    }
+  },
+}
+```
+
+> [!NOTE]
+> The `trace` parameter only affects span attributes and metrics signal level — it does not control whether tracing is enabled globally. The `telemetry.enabled` config field must still be `true` for any telemetry to be emitted.
+
 #### Metrics
 
 The Gateway also emits `gen_ai` metrics:
