@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
 import { gemini3FlashPreview } from "../../../src/models/google";
-import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/env";
+import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server";
 import { createVertexTestServer, type TestServer } from "../shared/server";
 import { MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 

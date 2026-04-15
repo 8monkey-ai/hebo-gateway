@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
 import { claudeHaiku45, claudeSonnet4 } from "../../../src/models/anthropic";
-import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/env";
+import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server";
 import { createBedrockTestServer, type TestServer } from "../shared/server";
 import { MESSAGE_CALCULATOR_TOOL as CALCULATOR_TOOL, MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
 
