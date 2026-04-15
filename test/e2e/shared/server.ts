@@ -50,8 +50,8 @@ export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestSe
       BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY
         ? () =>
             Promise.resolve({
-              accessKeyId: BEDROCK_ACCESS_KEY_ID!,
-              secretAccessKey: BEDROCK_SECRET_ACCESS_KEY!,
+              accessKeyId: BEDROCK_ACCESS_KEY_ID,
+              secretAccessKey: BEDROCK_SECRET_ACCESS_KEY,
             })
         : fromNodeProviderChain(),
   });
