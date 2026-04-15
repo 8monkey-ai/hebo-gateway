@@ -112,8 +112,7 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-          const formatError =
-            ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
+          const formatError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
           ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
             onDone: finalize,
             formatError,

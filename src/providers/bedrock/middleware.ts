@@ -99,7 +99,7 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
         // the same effort-based logic as other model cases, defaulting to "medium".
         // Note: Bedrock Converse API doesn't support "adaptive" natively — see vercel/ai#8513
         const mappedEffort: ChatCompletionsReasoningEffort =
-          effort === "max" ? "xhigh" : (effort as ChatCompletionsReasoningEffort) ?? "medium";
+          effort === "max" ? "xhigh" : ((effort as ChatCompletionsReasoningEffort) ?? "medium");
         target.budgetTokens = calculateReasoningBudgetFromEffort(
           mappedEffort,
           params.maxOutputTokens ?? 65536,
