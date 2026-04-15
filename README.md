@@ -792,10 +792,9 @@ Provider behavior:
 - **Google Gemini**: maps `cached_content` to Gemini `cachedContent`.
 - **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 
-
 ### Compressed Requests
 
-The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum *decompressed* body size for these compressed requests, protecting against gzip bombs and oversized payloads.
+The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum _decompressed_ body size for these compressed requests, protecting against gzip bombs and oversized payloads.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
@@ -811,7 +810,7 @@ const gw = gateway({
 Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
 
 > [!IMPORTANT]
-> **Plain (uncompressed) request body size limits** are *not* enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
+> **Plain (uncompressed) request body size limits** are _not_ enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
 >
 > Framework-level configuration examples:
 >
@@ -1122,10 +1121,9 @@ Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
 
-
 ### Request Body Size
 
-The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum *decompressed* body size for these compressed requests, protecting against gzip bombs and oversized payloads.
+The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum _decompressed_ body size for these compressed requests, protecting against gzip bombs and oversized payloads.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
@@ -1141,7 +1139,7 @@ const gw = gateway({
 Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
 
 > [!IMPORTANT]
-> **Plain (uncompressed) request body size limits** are *not* enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
+> **Plain (uncompressed) request body size limits** are _not_ enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
 >
 > Framework-level configuration examples:
 >

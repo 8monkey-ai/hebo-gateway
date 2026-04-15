@@ -117,7 +117,9 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   } else {
     maxBodySize = DEFAULT_MAX_BODY_SIZE;
     if (rawMax !== undefined) {
-      logger.warn(`[config] invalid maxBodySize (${rawMax}), using default ${DEFAULT_MAX_BODY_SIZE}`);
+      logger.warn(
+        `[config] invalid maxBodySize (${rawMax}), using default ${DEFAULT_MAX_BODY_SIZE}`,
+      );
     }
   }
 

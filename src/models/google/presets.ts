@@ -132,29 +132,23 @@ const GEMMA4_BASE = {
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
-export const gemma31b = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemma-3-1b" as const,
-  {
-    ...GEMMA3_BASE,
-    name: "Gemma 3 1B",
-    created: "2025-03-12",
-    modalities: {
-      input: ["text"] as const,
-      output: ["text"] as const,
-    },
-    context: 32768,
-    providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
-  } satisfies CatalogModel,
-);
+export const gemma31b = presetFor<CanonicalModelId, CatalogModel>()("google/gemma-3-1b" as const, {
+  ...GEMMA3_BASE,
+  name: "Gemma 3 1B",
+  created: "2025-03-12",
+  modalities: {
+    input: ["text"] as const,
+    output: ["text"] as const,
+  },
+  context: 32768,
+  providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
+} satisfies CatalogModel);
 
-export const gemma34b = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemma-3-4b" as const,
-  {
-    ...GEMMA3_BASE,
-    name: "Gemma 3 4B",
-    created: "2025-03-12",
-  } satisfies DeepPartial<CatalogModel>,
-);
+export const gemma34b = presetFor<CanonicalModelId, CatalogModel>()("google/gemma-3-4b" as const, {
+  ...GEMMA3_BASE,
+  name: "Gemma 3 4B",
+  created: "2025-03-12",
+} satisfies DeepPartial<CatalogModel>);
 
 export const gemma312b = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemma-3-12b" as const,

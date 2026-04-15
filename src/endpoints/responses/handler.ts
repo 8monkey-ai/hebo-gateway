@@ -20,7 +20,6 @@ import {
   recordTokenUsage,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
-import { parseRequestBody } from "../../utils/body";
 import type {
   AfterHookContext,
   BeforeHookContext,
@@ -31,6 +30,7 @@ import type {
   ResolveModelHookContext,
   GatewayConfigParsed,
 } from "../../types";
+import { parseRequestBody } from "../../utils/body";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";

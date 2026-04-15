@@ -66,9 +66,7 @@ describe("parseRequestBody", () => {
 
   test("handles identity encoding as plain", async () => {
     const payload = { hello: "world" };
-    const result = await parseRequestBody(
-      jsonRequest(payload, { "Content-Encoding": "identity" }),
-    );
+    const result = await parseRequestBody(jsonRequest(payload, { "Content-Encoding": "identity" }));
     expect(result).toEqual(payload);
   });
 
