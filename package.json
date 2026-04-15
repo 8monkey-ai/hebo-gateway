@@ -208,6 +208,7 @@
     "lefthook": "^2.1.5",
     "mysql2": "^3.21.0",
     "next": "^16.2.3",
+    "openai": "^6.34.0",
     "oxfmt": "^0.44.0",
     "oxlint": "^1.59.0",
     "oxlint-tsgolint": "^0.20.0",
