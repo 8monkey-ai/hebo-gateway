@@ -6,9 +6,11 @@ import type { LanguageModelMiddleware } from "ai";
 
 import type {
   ChatCompletionsCacheControl,
+  ChatCompletionsReasoningEffort,
   ChatCompletionsServiceTier,
 } from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
 const isClaude46 = (modelId: string) => modelId.includes("-4-6");
 
@@ -82,9 +84,27 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
     const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
 
     if (thinking && typeof thinking === "object") {
-      target.type = thinking.type;
+      // Bedrock's InvokeModel (Messages) API supports "adaptive" thinking natively,
+      // but @ai-sdk/amazon-bedrock only uses the Converse API which rejects "adaptive"
+      // in additionalModelRequestFields — it only accepts "enabled" / "disabled".
+      // Map "adaptive" → "enabled" until the SDK adds InvokeModel support.
+      // See: https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
+      // SDK tracking issue: https://github.com/vercel/ai/issues/8513
+      target.type = thinking.type === "adaptive" ? "enabled" : thinking.type;
       if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
         target.budgetTokens = thinking.budgetTokens;
+      } else if (target.type === "enabled") {
+        // Bedrock requires budgetTokens when type is "enabled". When mapping from
+        // "adaptive" (which doesn't require budgetTokens), compute a fallback using
+        // the same effort-based logic as other model cases, defaulting to "medium".
+        // Note: Bedrock Converse API doesn't support "adaptive" natively — see vercel/ai#8513
+        const mappedEffort: ChatCompletionsReasoningEffort =
+          effort === "max" ? "xhigh" : (effort as ChatCompletionsReasoningEffort) ?? "medium";
+        target.budgetTokens = calculateReasoningBudgetFromEffort(
+          mappedEffort,
+          params.maxOutputTokens ?? 65536,
+          1024,
+        );
       }
     }
 

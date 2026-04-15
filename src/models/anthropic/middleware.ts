@@ -120,6 +120,13 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       target.thinking = { type: "enabled" };
     }
 
+    // Map reasoning.summary to Anthropic thinking.display
+    const thinkingDisplay =
+      reasoning.summary === "none" ? "omitted" : reasoning.summary ? "summarized" : undefined;
+    if (thinkingDisplay && target.thinking && target.thinking.type !== "disabled") {
+      (target.thinking as Record<string, unknown>)["display"] = thinkingDisplay;
+    }
+
     delete unknown["reasoning"];
 
     return params;

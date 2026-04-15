@@ -19,6 +19,7 @@ export function toSseStream(
   options: {
     onDone?: (status: number, reason?: unknown) => void;
     keepAliveMs?: number;
+    formatError?: (error: unknown) => unknown;
   } = {},
 ): ReadableStream<Uint8Array> {
   const keepAliveMs = options.keepAliveMs ?? SSE_DEFAULT_KEEP_ALIVE_MS;
@@ -77,11 +78,15 @@ export function toSseStream(
 
         const value = result.value;
         if (value.event === "error" || value.data instanceof Error) {
-          const error = toOpenAIError(value.data);
+          const error = options.formatError
+            ? options.formatError(value.data)
+            : toOpenAIError(value.data);
           controller.enqueue(
             TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
           );
-          done(controller, error.error.type === "invalid_request_error" ? 422 : 502, value.data);
+          const openAiError = toOpenAIError(value.data);
+          const errorStatus = openAiError?.error.type === "invalid_request_error" ? 422 : 502;
+          done(controller, errorStatus, value.data);
           reader!.cancel(value.data).catch(() => {});
           return;
         }
@@ -90,11 +95,14 @@ export function toSseStream(
         heartbeat(controller);
       } catch (error) {
         try {
+          const errorPayload = options.formatError
+            ? options.formatError(error)
+            : toOpenAIError(error);
           controller.enqueue(
             TEXT_ENCODER.encode(
               serializeSseFrame({
                 event: "error",
-                data: toOpenAIError(error),
+                data: errorPayload,
               }),
             ),
           );

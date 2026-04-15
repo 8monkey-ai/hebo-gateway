@@ -31,7 +31,10 @@ export const mergeResponseInit = (
 export const toResponse = (
   result: ReadableStream<SseFrame> | Uint8Array<ArrayBuffer> | object | string,
   responseInit?: ResponseInit,
-  streamOptions?: { onDone?: (status: number, reason?: unknown) => void },
+  streamOptions?: {
+    onDone?: (status: number, reason?: unknown) => void;
+    formatError?: (error: unknown) => unknown;
+  },
 ): Response => {
   let body: BodyInit;
   const isStream = result instanceof ReadableStream;

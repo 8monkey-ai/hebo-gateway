@@ -1,6 +1,7 @@
 export * from "./gateway";
 export type * from "./types";
 
+export * from "./errors/anthropic";
 export * from "./errors/gateway";
 export * from "./errors/openai";
 export * from "./logger";

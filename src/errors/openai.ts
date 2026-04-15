@@ -1,9 +1,8 @@
 import * as z from "zod";
 
-import { isProduction } from "../utils/env";
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta, STATUS_CODE } from "./utils";
+import { getErrorMeta, maybeMaskMessage } from "./utils";
 
 export const OpenAIErrorSchema = z.object({
   error: z.object({
@@ -23,15 +22,6 @@ export class OpenAIError {
 }
 
 const mapType = (status: number) => (status < 500 ? "invalid_request_error" : "server_error");
-
-const maybeMaskMessage = (meta: ReturnType<typeof getErrorMeta>, requestId?: string) => {
-  // FUTURE: consider masking all upstream errors, also 4xx
-  if (!(isProduction() && meta.status >= 500)) {
-    return meta.message;
-  }
-  // FUTURE: always attach requestId to errors (masked and unmasked)
-  return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
-};
 
 export function toOpenAIError(error: unknown): OpenAIError {
   const meta = getErrorMeta(error);
