@@ -1,7 +1,7 @@
 {
   "name": "@hebo-ai/gateway",
-  "version": "0.9.4",
-  "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI-compatible /chat/completions, /embeddings & /models.",
+  "version": "0.10.0",
+  "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI /chat/completions, OpenResponses /responses & Anthropic /messages.",
   "keywords": [
     "ai",
     "ai-gateway",
