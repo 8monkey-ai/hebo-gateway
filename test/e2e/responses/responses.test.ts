@@ -281,44 +281,33 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
   );
 
   // =========================================================================
-  // 7. Streaming event structure (raw HTTP)
+  // 7. Streaming event structure
   // =========================================================================
   test(
-    "streaming event structure: correct SSE format",
+    "streaming event structure: correct event sequence",
     async () => {
-      const res = await fetch(`${baseUrl}/v1/responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          max_output_tokens: 32,
-          stream: true,
-          input: "Say hi",
-        }),
+      const stream = await client.responses.create({
+        model: MODEL,
+        max_output_tokens: 32,
+        stream: true,
+        input: "Say hi",
       });
 
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toContain("text/event-stream");
-
-      const text = await res.text();
-      const events = text
-        .split("\n\n")
-        .filter((e) => e.startsWith("event:"))
-        .map((e) => {
-          const eventLine = e.split("\n").find((l) => l.startsWith("event:"));
-          return eventLine?.replace("event: ", "").trim();
-        });
+      const eventTypes: string[] = [];
+      for await (const event of stream) {
+        eventTypes.push(event.type);
+      }
 
       // Validate the event sequence
-      expect(events[0]).toBe("response.created");
-      expect(events[1]).toBe("response.in_progress");
-      expect(events).toContain("response.output_item.added");
-      expect(events).toContain("response.output_item.done");
-      expect(events.at(-1)).toBe("response.completed");
+      expect(eventTypes[0]).toBe("response.created");
+      expect(eventTypes[1]).toBe("response.in_progress");
+      expect(eventTypes).toContain("response.output_item.added");
+      expect(eventTypes).toContain("response.output_item.done");
+      expect(eventTypes.at(-1)).toBe("response.completed");
       // Model may emit text deltas or reasoning summary events depending on config
-      const hasTextDelta = events.includes("response.output_text.delta");
-      const hasContentPart = events.includes("response.content_part.added");
-      const hasReasoningSummary = events.includes("response.reasoning_summary_text.delta");
+      const hasTextDelta = eventTypes.includes("response.output_text.delta");
+      const hasContentPart = eventTypes.includes("response.content_part.added");
+      const hasReasoningSummary = eventTypes.includes("response.reasoning_summary_text.delta");
       expect(hasTextDelta || hasContentPart || hasReasoningSummary).toBe(true);
     },
     { timeout: 60_000 },
@@ -954,15 +943,17 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
     test(
       "missing required fields: returns a 400 error",
       async () => {
-        const res = await fetch(`${baseUrl}/v1/responses`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        try {
+          await client.responses.create({
             model: MODEL,
-            // missing input
-          }),
-        });
-        expect(res.status).toBe(400);
+            // @ts-expect-error — intentionally missing required `input` field
+            input: undefined,
+          });
+          expect(true).toBe(false);
+        } catch (error: unknown) {
+          expect(error).toBeInstanceOf(APIError);
+          expect((error as APIError).status).toBe(400);
+        }
       },
       { timeout: 30_000 },
     );
@@ -970,6 +961,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
     test(
       "wrong HTTP method: GET returns 405",
       async () => {
+        // SDK does not support GET for this endpoint, so raw fetch is required
         const res = await fetch(`${baseUrl}/v1/responses`, {
           method: "GET",
         });

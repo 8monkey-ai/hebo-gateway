@@ -568,18 +568,12 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
         max_output_tokens: 128,
         instructions: longInstructions,
         input: "Say hello",
+        // @ts-expect-error — gateway extension
         cache_control: { type: "ephemeral" },
       };
 
       // First request — should create cache entry
-      const res1 = await fetch(`${baseUrl}/v1/responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      expect(res1.status).toBe(200);
-      const msg1 = (await res1.json()) as {
-        status: string;
+      const msg1 = (await client.responses.create(body)) as OpenAI.Responses.Response & {
         usage: {
           input_tokens: number;
           input_tokens_details?: { cached_tokens?: number };
@@ -593,13 +587,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
       });
 
       // Second request — should read from cache
-      const res2 = await fetch(`${baseUrl}/v1/responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      expect(res2.status).toBe(200);
-      const msg2 = (await res2.json()) as typeof msg1;
+      const msg2 = (await client.responses.create(body)) as typeof msg1;
       expect(msg2.status).toBe("completed");
 
       expect(msg1.usage.input_tokens).toBeGreaterThan(0);

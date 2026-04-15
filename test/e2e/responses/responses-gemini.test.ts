@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { createVertex } from "@ai-sdk/google-vertex";
-import OpenAI from "openai";
+import OpenAI, { APIError } from "openai";
 import type {
   FunctionTool,
   ResponseFunctionToolCall,
@@ -144,7 +144,8 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
 
       // Turn 2: send back the function_call WITH extra_content so the model can
       // verify its chain-of-thought, then provide the tool result
-      const turn2Body = {
+      // @ts-expect-error — gateway extensions (extra_content, reasoning)
+      const turn2 = (await client.responses.create({
         model: VERTEX_MODEL,
         max_output_tokens: 256,
         input: [
@@ -164,15 +165,7 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
         ],
         tools: [{ ...WEATHER_TOOL }],
         reasoning: { enabled: true, max_tokens: 2048 },
-      };
-
-      const res = await fetch(`${baseUrl}/v1/responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(turn2Body),
-      });
-      expect(res.status).toBe(200);
-      const turn2 = (await res.json()) as OpenAI.Responses.Response;
+      })) as OpenAI.Responses.Response;
 
       expect(turn2.status).toBe("completed");
       expect(getOutputText(turn2).toLowerCase()).toContain("berlin");
@@ -208,36 +201,35 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
         | undefined;
       expect(fnCall).toBeDefined();
 
-      // Turn 2: send back function_call with corrupted thought_signature via raw fetch
-      const turn2Body = {
-        model: VERTEX_MODEL,
-        max_output_tokens: 256,
-        input: [
-          { type: "message", role: "user", content: "What's the weather in Paris?" },
-          {
-            type: "function_call",
-            call_id: fnCall!.call_id,
-            name: fnCall!.name,
-            arguments: fnCall!.arguments,
-            extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
-          },
-          {
-            type: "function_call_output",
-            call_id: fnCall!.call_id,
-            output: "Paris: 22°C, sunny",
-          },
-        ],
-        tools: [{ ...WEATHER_TOOL }],
-        reasoning: { enabled: true, max_tokens: 2048 },
-      };
-
-      const res = await fetch(`${baseUrl}/v1/responses`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(turn2Body),
-      });
-
-      expect(res.status).toBeGreaterThanOrEqual(400);
+      // Turn 2: send back function_call with corrupted thought_signature
+      try {
+        // @ts-expect-error — gateway extensions (extra_content, reasoning)
+        await client.responses.create({
+          model: VERTEX_MODEL,
+          max_output_tokens: 256,
+          input: [
+            { type: "message", role: "user", content: "What's the weather in Paris?" },
+            {
+              type: "function_call",
+              call_id: fnCall!.call_id,
+              name: fnCall!.name,
+              arguments: fnCall!.arguments,
+              extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
+            },
+            {
+              type: "function_call_output",
+              call_id: fnCall!.call_id,
+              output: "Paris: 22°C, sunny",
+            },
+          ],
+          tools: [{ ...WEATHER_TOOL }],
+          reasoning: { enabled: true, max_tokens: 2048 },
+        });
+        expect(true).toBe(false);
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as APIError).status).toBeGreaterThanOrEqual(400);
+      }
     },
     { timeout: 120_000 },
   );
