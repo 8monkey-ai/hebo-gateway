@@ -8,13 +8,20 @@ import type {
 } from "./endpoints/chat-completions/schema";
 import type { ConversationStorage } from "./endpoints/conversations/storage/types";
 import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
+import type { Messages, MessagesBody, MessagesStream } from "./endpoints/messages/schema";
 import type { Model, ModelList } from "./endpoints/models";
 import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
 import type { ProviderId, ProviderRegistry } from "./providers/types";
 
-export type GatewayOperation = "chat" | "embeddings" | "responses" | "models" | "conversations";
+export type GatewayOperation =
+  | "chat"
+  | "embeddings"
+  | "messages"
+  | "responses"
+  | "models"
+  | "conversations";
 
 /**
  * Per-request context shared across handlers and hooks.
@@ -48,7 +55,7 @@ export type GatewayContext = {
   /**
    * Parsed body from the request.
    */
-  body?: ChatCompletionsBody | EmbeddingsBody | ResponsesBody;
+  body?: ChatCompletionsBody | EmbeddingsBody | MessagesBody | ResponsesBody;
   /**
    * Incoming model ID.
    */
@@ -76,6 +83,8 @@ export type GatewayContext = {
     | ChatCompletions
     | ChatCompletionsStream
     | Embeddings
+    | Messages
+    | MessagesStream
     | Model
     | ModelList
     | Responses
@@ -140,8 +149,9 @@ export type GatewayHooks = {
     | void
     | ChatCompletionsBody
     | EmbeddingsBody
+    | MessagesBody
     | ResponsesBody
-    | Promise<void | ChatCompletionsBody | EmbeddingsBody | ResponsesBody>;
+    | Promise<void | ChatCompletionsBody | EmbeddingsBody | MessagesBody | ResponsesBody>;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @returns Canonical model ID or undefined to keep original.
@@ -165,6 +175,8 @@ export type GatewayHooks = {
     | ChatCompletions
     | ChatCompletionsStream
     | Embeddings
+    | Messages
+    | MessagesStream
     | Model
     | ModelList
     | Responses
@@ -174,6 +186,8 @@ export type GatewayHooks = {
         | ChatCompletions
         | ChatCompletionsStream
         | Embeddings
+        | Messages
+        | MessagesStream
         | Model
         | ModelList
         | Responses
