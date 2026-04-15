@@ -191,6 +191,8 @@ export const ResponsesReasoningItemSchema = z.object({
   status: ResponsesItemStatusSchema.optional(),
   // Extension origin: Gemini
   extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
+  // Extension origin: Anthropic/OpenRouter
+  signature: z.string().optional().meta({ extension: true }),
 });
 export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
 
@@ -511,6 +513,39 @@ export type ResponseReasoningSummaryPartDoneEvent = SseFrame<
   "response.reasoning_summary_part.done"
 >;
 
+export type ResponseReasoningContentPartAddedEvent = SseFrame<
+  {
+    type: "response.reasoning_content_part.added";
+    item_id: string;
+    output_index: number;
+    content_index: number;
+    part: ResponsesReasoningText;
+  },
+  "response.reasoning_content_part.added"
+>;
+
+export type ResponseReasoningContentTextDeltaEvent = SseFrame<
+  {
+    type: "response.reasoning_content_text.delta";
+    item_id: string;
+    output_index: number;
+    content_index: number;
+    delta: string;
+  },
+  "response.reasoning_content_text.delta"
+>;
+
+export type ResponseReasoningContentPartDoneEvent = SseFrame<
+  {
+    type: "response.reasoning_content_part.done";
+    item_id: string;
+    output_index: number;
+    content_index: number;
+    part: ResponsesReasoningText;
+  },
+  "response.reasoning_content_part.done"
+>;
+
 export type ResponseOutputItemDoneEvent = SseFrame<
   {
     type: "response.output_item.done";
@@ -558,10 +593,13 @@ export type ResponsesStreamEvent =
   | ResponseOutputItemAddedEvent
   | ResponseContentPartAddedEvent
   | ResponseReasoningSummaryPartAddedEvent
+  | ResponseReasoningContentPartAddedEvent
   | ResponseOutputTextDeltaEvent
   | ResponseReasoningSummaryTextDeltaEvent
+  | ResponseReasoningContentTextDeltaEvent
   | ResponseContentPartDoneEvent
   | ResponseReasoningSummaryPartDoneEvent
+  | ResponseReasoningContentPartDoneEvent
   | ResponseOutputItemDoneEvent
   | ResponseFunctionCallArgumentsDeltaEvent
   | ResponseFunctionCallArgumentsDoneEvent

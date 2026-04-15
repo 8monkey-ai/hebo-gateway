@@ -59,6 +59,7 @@ import type {
   ResponsesTool,
   ResponsesTextConfig,
   ResponsesSummaryText,
+  ResponsesReasoningText,
 } from "./schema";
 
 // --- Helpers ---
@@ -187,19 +188,27 @@ export function convertToModelMessages(
 function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage {
   const parts: AssistantContent = [];
 
-  if (!item.summary || item.summary.length === 0) {
+  // Prefer content (full thinking text) over summary when available
+  const source = item.content && item.content.length > 0 ? item.content : item.summary;
+
+  if (!source || source.length === 0) {
     return { role: "assistant", content: parts };
   }
 
   let providerOptions: SharedV3ProviderOptions | undefined;
-  if (item.extra_content || item.encrypted_content) {
-    providerOptions = item.extra_content ?? { unknown: {} };
+  if (item.extra_content || item.encrypted_content || item.signature) {
+    providerOptions = item.extra_content ? { ...item.extra_content } : { unknown: {} };
+    const existing = (providerOptions["unknown"] ?? {}) as Record<string, string>;
     if (item.encrypted_content) {
-      (providerOptions ??= {})["unknown"] = { redactedData: item.encrypted_content };
+      existing["redactedData"] = item.encrypted_content;
     }
+    if (item.signature) {
+      existing["signature"] = item.signature;
+    }
+    providerOptions["unknown"] = existing;
   }
 
-  for (const s of item.summary) {
+  for (const s of source) {
     parts.push({
       type: "reasoning",
       text: s.text,
@@ -648,14 +657,18 @@ function toReasoningOutputItem(reasoning: ReasoningOutput): ResponsesReasoningIt
 
   if (reasoning.text) {
     item.summary = [{ type: "summary_text", text: reasoning.text }];
+    item.content = [{ type: "reasoning_text", text: reasoning.text }];
   }
 
   const providerMetadata = reasoning.providerMetadata ?? {};
   item.extra_content = providerMetadata;
 
-  const { redactedData } = extractReasoningMetadata(providerMetadata);
+  const { redactedData, signature } = extractReasoningMetadata(providerMetadata);
   if (redactedData) {
     item.encrypted_content = redactedData;
+  }
+  if (signature) {
+    item.signature = signature;
   }
 
   return item;
@@ -756,6 +769,7 @@ export class ResponsesTransformStream extends TransformStream<
     let reasoningItem: ResponsesReasoningItem | undefined;
     let reasoningOutputIndex = -1;
     let summaryIndex = 0;
+    let reasoningContentIndex = 0;
     let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
     const outputItems: ResponsesOutputItem[] = [];
     const inProgressToolCalls = new Map<
@@ -796,11 +810,16 @@ export class ResponsesTransformStream extends TransformStream<
             id: item.id,
             status: item.status,
             summary: item.summary.map((s) => ({
-              type: "summary_text",
+              type: "summary_text" as const,
               text: s.text,
+            })),
+            content: item.content?.map((c) => ({
+              type: "reasoning_text" as const,
+              text: c.text,
             })),
             extra_content: item.extra_content,
             encrypted_content: item.encrypted_content,
+            signature: item.signature,
           };
         }
         if (item.type === "function_call") {
@@ -877,6 +896,22 @@ export class ResponsesTransformStream extends TransformStream<
               output_index: reasoningOutputIndex,
               summary_index: summaryIndex,
               part: lastSummaryPart,
+            },
+          });
+        }
+      }
+
+      if (reasoningItem && reasoningItem.content && reasoningItem.content.length > 0) {
+        const lastContentPart = reasoningItem.content[reasoningContentIndex];
+        if (lastContentPart) {
+          controller.enqueue({
+            event: "response.reasoning_content_part.done",
+            data: {
+              type: "response.reasoning_content_part.done",
+              item_id: reasoningItem.id!,
+              output_index: reasoningOutputIndex,
+              content_index: reasoningContentIndex,
+              part: lastContentPart,
             },
           });
         }
@@ -1044,18 +1079,23 @@ export class ResponsesTransformStream extends TransformStream<
               id: uuidv7(),
               status: "in_progress",
               summary: [],
+              content: [],
             };
 
             const providerMetadata = part.providerMetadata;
             if (providerMetadata) {
               reasoningItem.extra_content = providerMetadata;
-              const { redactedData } = extractReasoningMetadata(providerMetadata);
+              const { redactedData, signature } = extractReasoningMetadata(providerMetadata);
               if (redactedData) {
                 reasoningItem.encrypted_content = redactedData;
+              }
+              if (signature) {
+                reasoningItem.signature = signature;
               }
             }
 
             reasoningOutputIndex = outputIndex++;
+            reasoningContentIndex = 0;
             outputItems.push(reasoningItem);
 
             controller.enqueue({
@@ -1068,8 +1108,10 @@ export class ResponsesTransformStream extends TransformStream<
                   id: reasoningItem.id,
                   status: "in_progress",
                   summary: [],
+                  content: [],
                   extra_content: reasoningItem.extra_content,
                   encrypted_content: reasoningItem.encrypted_content,
+                  signature: reasoningItem.signature,
                 },
               },
             });
@@ -1077,6 +1119,7 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "reasoning-delta": {
+            // Summary deltas
             if (summaryIndex === reasoningItem!.summary.length) {
               const summaryPart: ResponsesSummaryText = {
                 type: "summary_text",
@@ -1108,6 +1151,43 @@ export class ResponsesTransformStream extends TransformStream<
                 item_id: reasoningItem!.id!,
                 output_index: reasoningOutputIndex,
                 summary_index: summaryIndex,
+                delta: part.text,
+              },
+            });
+
+            // Content deltas (parallel to summary)
+            const contentArr = reasoningItem!.content!;
+            if (reasoningContentIndex === contentArr.length) {
+              const contentPart: ResponsesReasoningText = {
+                type: "reasoning_text",
+                text: "",
+              };
+              contentArr.push(contentPart);
+
+              controller.enqueue({
+                event: "response.reasoning_content_part.added",
+                data: {
+                  type: "response.reasoning_content_part.added",
+                  item_id: reasoningItem!.id!,
+                  output_index: reasoningOutputIndex,
+                  content_index: reasoningContentIndex,
+                  part: {
+                    type: "reasoning_text",
+                    text: "",
+                  },
+                },
+              });
+            }
+
+            contentArr[reasoningContentIndex]!.text += part.text;
+
+            controller.enqueue({
+              event: "response.reasoning_content_text.delta",
+              data: {
+                type: "response.reasoning_content_text.delta",
+                item_id: reasoningItem!.id!,
+                output_index: reasoningOutputIndex,
+                content_index: reasoningContentIndex,
                 delta: part.text,
               },
             });
