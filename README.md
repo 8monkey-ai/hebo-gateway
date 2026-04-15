@@ -12,9 +12,9 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 
 ## 🍌 Features
 
-- 🌐 OpenAI-compatible /chat/completions, /embeddings & /models endpoints.
-- 🔄 /responses endpoint implementing the Open Responses API (stateless).
-- 💬 /conversations endpoint built on top of the Responses API.
+- 🌐 OpenAI-compatible `/chat/completions`, `/embeddings` & `/models` endpoints.
+- 💬 Open Responses `/responses` endpoint (stateless), including /conversations.
+- 🗨️ Anthropic-compatible `/messages` endpoint.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
@@ -40,7 +40,7 @@ bun install @hebo-ai/gateway
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
 - Endpoints
-  - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/conversations](#conversations)
+  - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/messages](#messages) | [/conversations](#conversations)
 - OpenAI Extensions
   - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching) | [Compressed Requests](#compressed-requests)
 - Advanced Usage
@@ -584,7 +584,7 @@ export const handler = awsLambdaEventHandler({
 
 ## 🚀 Endpoints
 
-Hebo Gateway provides several OpenAI-compatible and standard-based endpoints.
+Hebo Gateway provides OpenAI-, OpenResponses- and Anthropic-compatible endpoints.
 
 ### `/chat/completions`
 
@@ -664,6 +664,19 @@ It supports:
 - **`logprobs` / `top_logprobs`**: Token-level logprobs.
 - **`include`**: Selective response fields (e.g., `logprobs`, `reasoning.encrypted_content`, and tool-specific outputs).
 - **`stream_options.include_obfuscation`**: Normalizing payload sizes to mitigate side-channel attacks.
+
+### `/messages`
+
+Hebo Gateway provides a `/messages` endpoint compatible with the [Anthropic Messages API](https://docs.anthropic.com/en/api/messages).
+
+Official documentation: [Anthropic Messages API Reference](https://docs.anthropic.com/en/api/messages)
+
+It supports:
+
+- The same models, providers, hooks, and extensions as `/chat/completions`.
+- Anthropic Messages API request/response format.
+- Streaming responses.
+- Tool use and multimodal inputs.
 
 ### `/conversations`
 
