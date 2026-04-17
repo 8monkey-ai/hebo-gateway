@@ -12,7 +12,8 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
-const isClaude46 = (modelId: string) => modelId.includes("-4-6");
+const isClaude46or47 = (modelId: string) =>
+  modelId.includes("-4-6") || modelId.includes("-4-7");
 
 // https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
 export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
@@ -109,7 +110,7 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
     }
 
     // FUTURE: bedrock currently does not support "effort" for other 4.x models
-    if (effort !== undefined && isClaude46(model.modelId)) {
+    if (effort !== undefined && isClaude46or47(model.modelId)) {
       target.maxReasoningEffort = effort;
     }
 

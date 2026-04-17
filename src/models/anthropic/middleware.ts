@@ -18,6 +18,7 @@ const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
 
 const isClaude4 = (modelId: string) => modelId.includes("claude-") && modelId.includes("-4");
 
+const isOpus47 = isClaude("opus", "4.7");
 const isOpus46 = isClaude("opus", "4.6");
 const isOpus45 = isClaude("opus", "4.5");
 const isOpus4 = isClaude("opus", "4");
@@ -26,7 +27,22 @@ const isSonnet46 = isClaude("sonnet", "4.6");
 export function mapClaudeReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
   modelId: string,
-): "low" | "medium" | "high" | "max" | undefined {
+): "low" | "medium" | "high" | "xhigh" | "max" | undefined {
+  if (isOpus47(modelId)) {
+    switch (effort) {
+      case "none":
+      case "minimal":
+      case "low":
+        return "low";
+      case "medium":
+        return "medium";
+      case "high":
+        return "high";
+      case "xhigh":
+        return "xhigh";
+    }
+  }
+
   if (isOpus46(modelId)) {
     switch (effort) {
       case "none":
@@ -58,6 +74,7 @@ export function mapClaudeReasoningEffort(
 }
 
 function getMaxOutputTokens(modelId: string): number {
+  if (isOpus47(modelId)) return 128_000;
   if (isOpus46(modelId)) return 128_000;
   if (isOpus45(modelId)) return 64_000;
   if (isOpus4(modelId)) return 32_000;
@@ -87,9 +104,12 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       target.thinking = { type: "disabled" };
     } else if (reasoning.effort) {
       if (isClaude4(modelId)) {
+        // @ts-expect-error AI SDK type missing "xhigh" effort level (native on Opus 4.7+)
         target.effort = mapClaudeReasoningEffort(reasoning.effort, modelId);
       }
-      if (isOpus46(modelId)) {
+      if (isOpus47(modelId)) {
+        target.thinking = { type: "adaptive" };
+      } else if (isOpus46(modelId)) {
         target.thinking = clampedMaxTokens
           ? // @ts-expect-error AI SDK type missing type:adaptive with budgetToken
             { type: "adaptive", budgetTokens: clampedMaxTokens }
