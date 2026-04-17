@@ -10,7 +10,7 @@ let spanEventsEnabled = false;
 
 const NOOP_SPAN = {
   runWithContext: <T>(fn: () => Promise<T> | T) => fn(),
-  recordError: (_error: unknown) => {},
+  recordError: (_error: unknown, _setError: boolean) => {},
   finish: () => {},
   isExisting: true,
 };
@@ -40,10 +40,12 @@ export const startSpan = (name: string, options?: SpanOptions) => {
   const runWithContext = <T>(fn: () => Promise<T> | T) =>
     context.with(trace.setSpan(parentContext, span), fn);
 
-  const recordError = (error: unknown) => {
+  const recordError = (error: unknown, setError: boolean) => {
     const err = error instanceof Error ? error : new Error(String(error));
     span.recordException(err);
-    span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+    if (setError) {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+    }
   };
 
   const finish = () => {
@@ -66,7 +68,7 @@ export const withSpan = async <T>(
   try {
     return await started.runWithContext(run);
   } catch (error) {
-    started.recordError(error);
+    started.recordError(error, true);
     throw error;
   } finally {
     started.finish();
