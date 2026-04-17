@@ -218,7 +218,7 @@ Out-of-the-box model presets:
   Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
 - **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+  Claude: `claude` (`v4.7`, `v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
   Command: `command` (`A`, `R`, `latest`, `all`)
@@ -730,7 +730,7 @@ Normalization rules:
 
 - `enabled` -> fall-back to model default if none provided
 - `max_tokens`: fall-back to model default if model supports
-- `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
+- `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`
 - Generic `effort` -> budget = percentage of `max_tokens`
   - `none`: 0%
   - `minimal`: 10%
@@ -738,6 +738,7 @@ Normalization rules:
   - `medium`: 50% (default)
   - `high`: 80%
   - `xhigh`: 95%
+  - `max`: 100%
 
 Reasoning output is surfaced as extension to the `completion` object.
 

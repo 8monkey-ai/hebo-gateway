@@ -374,6 +374,50 @@ test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async (
   });
 });
 
+test("bedrock middlewares > matching provider resolves Claude middleware for Opus 4.7", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "anthropic/claude-opus-4.7",
+    providerId: "amazon-bedrock",
+  });
+
+  expect(middleware).toContain(bedrockClaudeReasoningMiddleware);
+  expect(middleware).toContain(bedrockServiceTierMiddleware);
+});
+
+test("bedrockClaudeReasoningMiddleware > should set maxReasoningEffort for Claude Opus 4.7", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "xhigh",
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-7" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "enabled",
+          budgetTokens: 62259,
+          maxReasoningEffort: "xhigh",
+        },
+      },
+    },
+  });
+});
+
 test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for Claude 3.x", async () => {
   const params = {
     prompt: [],
