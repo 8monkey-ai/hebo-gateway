@@ -40,6 +40,8 @@ export function mapClaudeReasoningEffort(
         return "high";
       case "xhigh":
         return "xhigh";
+      case "max":
+        return "max";
     }
   }
 
@@ -54,6 +56,7 @@ export function mapClaudeReasoningEffort(
       case "high":
         return "high";
       case "xhigh":
+      case "max":
         return "max";
     }
   }
@@ -67,6 +70,7 @@ export function mapClaudeReasoningEffort(
       return "medium";
     case "high":
     case "xhigh":
+    case "max":
       return "high";
   }
 

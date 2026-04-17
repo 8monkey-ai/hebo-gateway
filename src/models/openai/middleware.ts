@@ -40,6 +40,7 @@ function mapGptOssReasoningEffort(
       return "medium";
     case "high":
     case "xhigh":
+    case "max":
       return "high";
   }
 
@@ -65,7 +66,7 @@ export const openAIReasoningMiddleware: LanguageModelMiddleware = {
     } else if (reasoning.enabled === false) {
       target.reasoningEffort = "none";
     } else if (reasoning.effort) {
-      target.reasoningEffort = reasoning.effort;
+      target.reasoningEffort = reasoning.effort === "max" ? "xhigh" : reasoning.effort;
     }
 
     // FUTURE: warn that reasoning.max_tokens (not supported) was ignored

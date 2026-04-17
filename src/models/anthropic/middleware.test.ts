@@ -410,7 +410,7 @@ test("claudeReasoningMiddleware > should map xhigh effort to native xhigh for Cl
   });
 });
 
-test("claudeReasoningMiddleware > should clamp max_tokens to 128k for Claude Opus 4.7", async () => {
+test("claudeReasoningMiddleware > should ignore max_tokens for Claude Opus 4.7 (adaptive only)", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -442,6 +442,7 @@ test("claudeReasoningMiddleware > should clamp max_tokens to 128k for Claude Opu
       unknown: {},
     },
   });
+  expect(result.providerOptions!["anthropic"]!["thinking"]).not.toHaveProperty("budgetTokens");
 });
 
 test("claudeReasoningMiddleware > should use adaptive thinking without budget for Claude Opus 4.7", async () => {
@@ -745,6 +746,106 @@ test("claudeReasoningMiddleware > should keep xhigh as budget for non-4.6 models
         thinking: {
           type: "enabled",
           budgetTokens: 60800,
+        },
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("claudeReasoningMiddleware > should map max effort to native max for Claude Opus 4.7", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "max",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.7" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "max",
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("claudeReasoningMiddleware > should map max effort to max for Claude Opus 4.6", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "max",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "max",
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("claudeReasoningMiddleware > should map max effort to high for non-Opus models", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "max",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-4.5" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        effort: "high",
+        thinking: {
+          type: "enabled",
+          budgetTokens: 64000,
         },
       },
       unknown: {},
