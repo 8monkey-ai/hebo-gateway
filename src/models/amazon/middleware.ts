@@ -46,6 +46,7 @@ function mapNovaEffort(
       return "medium";
     case "high":
     case "xhigh":
+    case "max":
       return "high";
   }
 

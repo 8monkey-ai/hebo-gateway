@@ -22,7 +22,15 @@ export const ProviderMetadataSchema = z.record(
 ) as z.ZodType<SharedV3ProviderMetadata>;
 export type ProviderMetadata = SharedV3ProviderMetadata;
 
-export const ReasoningEffortSchema = z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]);
+export const ReasoningEffortSchema = z.enum([
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
 export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>;
 
 export const ReasoningSummarySchema = z.enum(["auto", "concise", "detailed", "none"]);
