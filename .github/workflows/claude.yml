@@ -53,7 +53,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Run Claude
-        uses: anthropics/claude-code-action@v1.0.89
+        uses: anthropics/claude-code-action@v1
         with:
           settings: |
             {
