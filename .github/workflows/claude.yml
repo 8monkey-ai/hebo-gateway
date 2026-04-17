@@ -67,6 +67,6 @@ jobs:
           use_bedrock: "true"
           branch_prefix: "claude-"
           claude_args: |
-            --model us.anthropic.claude-opus-4-7
+            --model us.anthropic.claude-opus-4-6-v1
             --allowedTools Bash,Edit,Read,Write,Glob,Grep,LS,WebFetch,WebSearch
             --max-turns 1000
