@@ -2,6 +2,7 @@ import { parseConfig } from "./config";
 import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
 import { GatewayError } from "./errors/gateway";
 import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai";
+import { getErrorMeta } from "./errors/utils";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
@@ -18,7 +19,13 @@ import type {
   OnResponseHookContext,
 } from "./types";
 import { resolveOrCreateRequestId } from "./utils/request";
-import { prepareResponseInit, toResponse } from "./utils/response";
+import {
+  buildRetryHeaders,
+  filterResponseHeaders,
+  mergeResponseInit,
+  prepareResponseInit,
+  toResponse,
+} from "./utils/response";
 import type { SseFrame } from "./utils/stream";
 
 export const winterCgHandler = (
@@ -63,7 +70,7 @@ export const winterCgHandler = (
       if (!span.isExisting) {
         // FUTURE add http.server.request.duration
         span.setAttributes(
-          getResponseAttributes(ctx.response!, parsedConfig.telemetry?.signals?.http),
+          getResponseAttributes(ctx.response as Response, parsedConfig.telemetry?.signals?.http),
         );
       }
 
@@ -114,15 +121,25 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
+          const responseInit = prepareResponseInit(ctx.requestId);
+          const upstreamInit = ctx.response as ResponseInit | undefined;
+          const filtered = filterResponseHeaders(
+            upstreamInit?.headers as Record<string, string> | undefined,
+          );
+          const successResponseInit = filtered
+            ? mergeResponseInit(filtered, responseInit)
+            : responseInit;
           const formatError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
-          ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
+          ctx.response = toResponse(ctx.result!, successResponseInit, {
             onDone: finalize,
             formatError,
           });
         }
 
         if (parsedConfig.hooks?.onResponse) {
-          const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
+          const onResponse = await parsedConfig.hooks.onResponse(
+            ctx as unknown as OnResponseHookContext,
+          );
           addSpanEvent("hebo.hooks.on_response.completed");
           if (onResponse) {
             ctx.response = onResponse;
@@ -131,7 +148,7 @@ export const winterCgHandler = (
 
         // FUTURE: this can leak if onResponse removed wrapper from response.body
         if (!(ctx.result instanceof ReadableStream)) {
-          finalize(ctx.response.status);
+          finalize((ctx.response as Response).status);
         }
       } catch (error) {
         if (parsedConfig.hooks?.onError) {
@@ -149,15 +166,22 @@ export const winterCgHandler = (
         const errorPayload = ctx.request.signal.aborted
           ? new GatewayError(error ?? ctx.request.signal.reason, 499)
           : error;
-        const errorResponseInit = prepareResponseInit(ctx.requestId);
-        ctx.response ??=
-          ctx.operation === "messages"
-            ? toAnthropicErrorResponse(errorPayload, errorResponseInit)
-            : toOpenAIErrorResponse(errorPayload, errorResponseInit);
-        finalize(ctx.response.status, error);
+        const meta = getErrorMeta(errorPayload);
+        const retryHeaders = buildRetryHeaders(meta.status, meta.responseHeaders);
+        const errorResponseInit = mergeResponseInit(
+          retryHeaders,
+          prepareResponseInit(ctx.requestId),
+        );
+        if (!(ctx.response instanceof Response)) {
+          ctx.response =
+            ctx.operation === "messages"
+              ? toAnthropicErrorResponse(errorPayload, errorResponseInit)
+              : toOpenAIErrorResponse(errorPayload, errorResponseInit);
+        }
+        finalize((ctx.response as Response).status, error);
       }
     });
 
-    return ctx.response ?? new Response("Internal Server Error", { status: 500 });
+    return (ctx.response as Response) ?? new Response("Internal Server Error", { status: 500 });
   };
 };

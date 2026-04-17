@@ -91,8 +91,11 @@ export type GatewayContext = {
     | ResponsesStream;
   /**
    * Response object returned by the handler.
+   *
+   * Handlers may set this to a `ResponseInit` containing upstream response
+   * headers; the lifecycle merges allowlisted headers into the final `Response`.
    */
-  response?: Response;
+  response?: Response | ResponseInit;
   /**
    * Per-request telemetry signal level override.
    * When set (via body parameter or hook), overrides `cfg.telemetry.signals.gen_ai`

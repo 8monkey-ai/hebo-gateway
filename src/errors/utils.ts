@@ -27,7 +27,12 @@ export const STATUS_CODE = (status: number) => {
   return status >= 400 && status < 500 ? STATUS_CODES[400] : STATUS_CODES[500];
 };
 
-export type ErrorMeta = { status: number; code: string; message: string };
+export type ErrorMeta = {
+  status: number;
+  code: string;
+  message: string;
+  responseHeaders: Record<string, string> | undefined;
+};
 
 // FUTURE: always return a wrapped GatewayError?
 export function getErrorMeta(error: unknown): ErrorMeta {
@@ -35,20 +40,22 @@ export function getErrorMeta(error: unknown): ErrorMeta {
 
   let status: number;
   let code: string;
+  let responseHeaders: Record<string, string> | undefined;
 
   if (error instanceof GatewayError) {
-    ({ status, code } = error);
+    ({ status, code, responseHeaders } = error);
   } else {
     const normalized = normalizeAiSdkError(error);
     if (normalized) {
-      ({ status, code } = normalized);
+      ({ status, code, responseHeaders } = normalized);
     } else {
       status = 500;
       code = STATUS_CODE(status);
+      responseHeaders = undefined;
     }
   }
 
-  return { status, code, message };
+  return { status, code, message, responseHeaders };
 }
 
 export function maybeMaskMessage(meta: ErrorMeta, requestId?: string): string {

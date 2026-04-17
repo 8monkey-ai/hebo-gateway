@@ -39,9 +39,9 @@ export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseIni
       meta.code,
     ),
     {
-      ...responseInit,
       status: meta.status,
       statusText: meta.code,
+      headers: responseInit?.headers,
     },
   );
 }

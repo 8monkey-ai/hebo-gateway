@@ -3,8 +3,15 @@ import { STATUS_CODE } from "./utils";
 export class GatewayError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly responseHeaders: Record<string, string> | undefined;
 
-  constructor(error: unknown, status: number, code?: string, cause?: unknown) {
+  constructor(
+    error: unknown,
+    status: number,
+    code?: string,
+    cause?: unknown,
+    responseHeaders?: Record<string, string>,
+  ) {
     const isError = error instanceof Error;
     super(isError ? error.message : String(error));
 
@@ -13,5 +20,6 @@ export class GatewayError extends Error {
 
     this.status = status;
     this.code = code ?? STATUS_CODE(status);
+    this.responseHeaders = responseHeaders;
   }
 }

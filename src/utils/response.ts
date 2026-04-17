@@ -4,6 +4,58 @@ import { toSseStream } from "./stream";
 
 const TEXT_ENCODER = new TextEncoder();
 
+const RESPONSE_HEADER_ALLOWLIST = ["retry-after", "retry-after-ms", "x-should-retry"] as const;
+
+const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 502, 503]);
+
+const DEFAULT_RETRY_AFTER_MS = "1000";
+
+export const filterResponseHeaders = (
+  upstream?: Record<string, string>,
+): Record<string, string> | undefined => {
+  if (!upstream) return undefined;
+
+  let filtered: Record<string, string> | undefined;
+  for (const key of RESPONSE_HEADER_ALLOWLIST) {
+    const value = upstream[key];
+    if (value !== undefined) {
+      filtered ??= {};
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+};
+
+export const buildRetryHeaders = (
+  status: number,
+  upstream?: Record<string, string>,
+): Record<string, string> => {
+  const filtered = filterResponseHeaders(upstream);
+
+  if (!RETRYABLE_STATUS_CODES.has(status)) {
+    if (filtered?.["x-should-retry"] !== undefined) return filtered;
+    const result: Record<string, string> = { "x-should-retry": "false" };
+    if (filtered) {
+      for (const key in filtered) result[key] = filtered[key]!;
+    }
+    return result;
+  }
+
+  const hasTimingHint =
+    filtered?.["retry-after"] !== undefined || filtered?.["retry-after-ms"] !== undefined;
+  const shouldRetry = filtered?.["x-should-retry"];
+
+  if (filtered && hasTimingHint && shouldRetry !== undefined) return filtered;
+
+  const result: Record<string, string> = {};
+  if (filtered) {
+    for (const key in filtered) result[key] = filtered[key]!;
+  }
+  if (!hasTimingHint) result["retry-after-ms"] = DEFAULT_RETRY_AFTER_MS;
+  if (shouldRetry === undefined) result["x-should-retry"] = "true";
+  return result;
+};
+
 export const prepareResponseInit = (requestId: string): ResponseInit => ({
   headers: { [REQUEST_ID_HEADER]: requestId },
 });

@@ -187,6 +187,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     });
     logger.trace({ requestId: ctx.requestId, result }, "[chat] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
+    if (result.response.headers) ctx.response = { headers: result.response.headers };
     recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, ctx.trace);
 
     // Transform result.
