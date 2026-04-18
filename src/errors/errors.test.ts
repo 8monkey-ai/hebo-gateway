@@ -7,20 +7,20 @@ import { GatewayError } from "./gateway";
 import { getErrorMeta } from "./utils";
 
 describe("GatewayError", () => {
-  test("carries responseHeaders when provided", () => {
+  test("carries response when provided", () => {
     const headers = { "retry-after": "5", "x-should-retry": "true" };
-    const error = new GatewayError("test", 429, "TOO_MANY_REQUESTS", undefined, headers);
-    expect(error.responseHeaders).toEqual(headers);
+    const error = new GatewayError("test", 429, "TOO_MANY_REQUESTS", undefined, { headers });
+    expect(error.response).toEqual({ headers });
   });
 
-  test("responseHeaders defaults to undefined", () => {
+  test("response defaults to undefined", () => {
     const error = new GatewayError("test", 500);
-    expect(error.responseHeaders).toBeUndefined();
+    expect(error.response).toBeUndefined();
   });
 });
 
 describe("normalizeAiSdkError", () => {
-  test("extracts responseHeaders from APICallError", () => {
+  test("wraps responseHeaders from APICallError into ResponseInit", () => {
     const apiError = new APICallError({
       message: "Too many requests",
       url: "https://api.openai.com/v1/chat/completions",
@@ -33,10 +33,12 @@ describe("normalizeAiSdkError", () => {
     const normalized = normalizeAiSdkError(apiError);
     expect(normalized).toBeInstanceOf(GatewayError);
     expect(normalized!.status).toBe(429);
-    expect(normalized!.responseHeaders).toEqual({ "retry-after": "2", "retry-after-ms": "2000" });
+    expect(normalized!.response).toEqual({
+      headers: { "retry-after": "2", "retry-after-ms": "2000" },
+    });
   });
 
-  test("extracts responseHeaders from RetryError wrapping APICallError", () => {
+  test("wraps responseHeaders from RetryError wrapping APICallError into ResponseInit", () => {
     const apiError = new APICallError({
       message: "Service unavailable",
       url: "https://api.openai.com/v1/chat/completions",
@@ -55,7 +57,7 @@ describe("normalizeAiSdkError", () => {
     const normalized = normalizeAiSdkError(retryError);
     expect(normalized).toBeInstanceOf(GatewayError);
     expect(normalized!.status).toBe(503);
-    expect(normalized!.responseHeaders).toEqual({ "retry-after": "10" });
+    expect(normalized!.response).toEqual({ headers: { "retry-after": "10" } });
   });
 
   test("handles RetryError without APICallError inner error", () => {
@@ -68,7 +70,7 @@ describe("normalizeAiSdkError", () => {
     const normalized = normalizeAiSdkError(retryError);
     expect(normalized).toBeInstanceOf(GatewayError);
     expect(normalized!.status).toBe(502);
-    expect(normalized!.responseHeaders).toBeUndefined();
+    expect(normalized!.response).toBeUndefined();
   });
 
   test("handles APICallError without responseHeaders", () => {
@@ -80,19 +82,19 @@ describe("normalizeAiSdkError", () => {
     });
 
     const normalized = normalizeAiSdkError(apiError);
-    expect(normalized!.responseHeaders).toBeUndefined();
+    expect(normalized!.response).toBeUndefined();
   });
 });
 
 describe("getErrorMeta", () => {
-  test("includes responseHeaders from GatewayError", () => {
+  test("includes response from GatewayError", () => {
     const headers = { "retry-after-ms": "1000" };
-    const error = new GatewayError("test", 429, "TOO_MANY_REQUESTS", undefined, headers);
+    const error = new GatewayError("test", 429, "TOO_MANY_REQUESTS", undefined, { headers });
     const meta = getErrorMeta(error);
-    expect(meta.responseHeaders).toEqual(headers);
+    expect(meta.response).toEqual({ headers });
   });
 
-  test("includes responseHeaders from normalized APICallError", () => {
+  test("includes response from normalized APICallError", () => {
     const apiError = new APICallError({
       message: "Rate limited",
       url: "https://api.openai.com/v1/chat/completions",
@@ -104,17 +106,17 @@ describe("getErrorMeta", () => {
 
     const meta = getErrorMeta(apiError);
     expect(meta.status).toBe(429);
-    expect(meta.responseHeaders).toEqual({ "retry-after": "3" });
+    expect(meta.response).toEqual({ headers: { "retry-after": "3" } });
   });
 
-  test("responseHeaders is undefined for non-API errors", () => {
+  test("response is undefined for non-API errors", () => {
     const meta = getErrorMeta(new Error("something broke"));
-    expect(meta.responseHeaders).toBeUndefined();
+    expect(meta.response).toBeUndefined();
   });
 
-  test("responseHeaders is undefined for gateway-originated errors", () => {
+  test("response is undefined for gateway-originated errors", () => {
     const error = new GatewayError("Model not found", 422, "MODEL_NOT_FOUND");
     const meta = getErrorMeta(error);
-    expect(meta.responseHeaders).toBeUndefined();
+    expect(meta.response).toBeUndefined();
   });
 });

@@ -167,7 +167,8 @@ export const winterCgHandler = (
           ? new GatewayError(error ?? ctx.request.signal.reason, 499)
           : error;
         const meta = getErrorMeta(errorPayload);
-        const retryHeaders = buildRetryHeaders(meta.status, meta.responseHeaders);
+        const upstreamHeaders = meta.response?.headers as Record<string, string> | undefined;
+        const retryHeaders = buildRetryHeaders(meta.status, upstreamHeaders);
         const errorResponseInit = mergeResponseInit(
           retryHeaders,
           prepareResponseInit(ctx.requestId),
