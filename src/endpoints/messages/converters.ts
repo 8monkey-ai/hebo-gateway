@@ -614,19 +614,6 @@ export class MessagesTransformStream extends TransformStream<
           }
 
           case "reasoning-delta": {
-            controller.enqueue({
-              event: "content_block_delta",
-              data: {
-                type: "content_block_delta",
-                index: blockIndex,
-                delta: { type: "thinking_delta", thinking: part.text },
-              },
-            });
-            break;
-          }
-
-          case "reasoning-end": {
-            // Emit signature delta if available from provider metadata
             const { signature } = extractReasoningMetadata(part.providerMetadata);
             if (signature) {
               controller.enqueue({
@@ -637,8 +624,20 @@ export class MessagesTransformStream extends TransformStream<
                   delta: { type: "signature_delta", signature },
                 },
               });
+            } else {
+              controller.enqueue({
+                event: "content_block_delta",
+                data: {
+                  type: "content_block_delta",
+                  index: blockIndex,
+                  delta: { type: "thinking_delta", thinking: part.text },
+                },
+              });
             }
+            break;
+          }
 
+          case "reasoning-end": {
             controller.enqueue({
               event: "content_block_stop",
               data: { type: "content_block_stop", index: blockIndex },
