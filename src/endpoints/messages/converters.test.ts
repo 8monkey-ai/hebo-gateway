@@ -1233,10 +1233,12 @@ describe("Messages Converters", () => {
           controller.enqueue({ type: "reasoning-start", id: "r1" });
           controller.enqueue({ type: "reasoning-delta", id: "r1", text: "Thinking..." });
           controller.enqueue({
-            type: "reasoning-end",
+            type: "reasoning-delta",
             id: "r1",
-            providerMetadata: { unknown: { signature: "sig_xyz" } },
+            text: "",
+            providerMetadata: { anthropic: { signature: "sig_xyz" } },
           });
+          controller.enqueue({ type: "reasoning-end", id: "r1" });
           controller.enqueue({ type: "text-start", id: "t1" });
           controller.enqueue({ type: "text-delta", id: "t1", text: "Answer" });
           controller.enqueue({ type: "text-end", id: "t1" });
