@@ -19,13 +19,7 @@ import type {
   OnResponseHookContext,
 } from "./types";
 import { resolveOrCreateRequestId } from "./utils/request";
-import {
-  buildRetryHeaders,
-  filterResponseHeaders,
-  mergeResponseInit,
-  prepareResponseInit,
-  toResponse,
-} from "./utils/response";
+import { buildRetryHeaders, prepareResponseInit, toResponse } from "./utils/response";
 import type { SseFrame } from "./utils/stream";
 
 export const winterCgHandler = (
@@ -121,14 +115,10 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-          const responseInit = prepareResponseInit(ctx.requestId);
-          const upstreamInit = ctx.response as ResponseInit | undefined;
-          const filtered = filterResponseHeaders(
-            upstreamInit?.headers as Record<string, string> | undefined,
+          const successResponseInit = prepareResponseInit(
+            ctx.requestId,
+            ctx.response as ResponseInit | undefined,
           );
-          const successResponseInit = filtered
-            ? mergeResponseInit(filtered, responseInit)
-            : responseInit;
           const formatError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
           ctx.response = toResponse(ctx.result!, successResponseInit, {
             onDone: finalize,
@@ -168,11 +158,9 @@ export const winterCgHandler = (
           : error;
         const meta = getErrorMeta(errorPayload);
         const upstreamHeaders = meta.response?.headers as Record<string, string> | undefined;
-        const retryHeaders = buildRetryHeaders(meta.status, upstreamHeaders);
-        const errorResponseInit = mergeResponseInit(
-          retryHeaders,
-          prepareResponseInit(ctx.requestId),
-        );
+        const errorResponseInit = prepareResponseInit(ctx.requestId, {
+          headers: buildRetryHeaders(meta.status, upstreamHeaders),
+        });
         if (!(ctx.response instanceof Response)) {
           ctx.response =
             ctx.operation === "messages"

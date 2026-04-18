@@ -53,9 +53,17 @@ export const buildRetryHeaders = (
   return headers;
 };
 
-export const prepareResponseInit = (requestId: string): ResponseInit => ({
-  headers: { [REQUEST_ID_HEADER]: requestId },
-});
+export const prepareResponseInit = (
+  requestId: string,
+  upstream?: ResponseInit,
+): ResponseInit => {
+  const filtered = filterResponseHeaders(
+    upstream?.headers as Record<string, string> | undefined,
+  );
+  return {
+    headers: { ...filtered, [REQUEST_ID_HEADER]: requestId },
+  };
+};
 
 export const mergeResponseInit = (
   defaultHeaders: HeadersInit,
