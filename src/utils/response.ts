@@ -1,68 +1,14 @@
-import { REQUEST_ID_HEADER } from "./headers";
+import { REQUEST_ID_HEADER, filterResponseHeaders } from "./headers";
 import type { SseFrame } from "./stream";
 import { toSseStream } from "./stream";
 
 const TEXT_ENCODER = new TextEncoder();
 
-const RESPONSE_HEADER_ALLOWLIST = ["retry-after", "retry-after-ms", "x-should-retry"] as const;
-
-const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
-
-const DEFAULT_RETRY_AFTER_MS = "1000";
-
-export const filterResponseHeaders = (
-  upstream?: Record<string, string>,
-): Record<string, string> | undefined => {
-  if (!upstream) return undefined;
-
-  let filtered: Record<string, string> | undefined;
-  for (const key of RESPONSE_HEADER_ALLOWLIST) {
-    const value = upstream[key];
-    if (value !== undefined) {
-      filtered ??= {};
-      filtered[key] = value;
-    }
-  }
-  return filtered;
-};
-
-export const buildRetryHeaders = (
-  status: number,
-  upstream?: Record<string, string>,
-): Record<string, string> => {
-  const headers = filterResponseHeaders(upstream) ?? {};
-
-  const shouldRetryHeader = headers["x-should-retry"];
-  const hasTimingHint =
-    headers["retry-after"] !== undefined || headers["retry-after-ms"] !== undefined;
-
-  if (!RETRYABLE_STATUS_CODES.has(status)) {
-    if (shouldRetryHeader === undefined) {
-      headers["x-should-retry"] = "false";
-    }
-    return headers;
-  }
-
-  if (!hasTimingHint) {
-    headers["retry-after-ms"] = DEFAULT_RETRY_AFTER_MS;
-  }
-
-  if (shouldRetryHeader === undefined) {
-    headers["x-should-retry"] = "true";
-  }
-  return headers;
-};
-
-export const prepareResponseInit = (
-  requestId: string,
-  upstream?: ResponseInit,
-): ResponseInit => {
-  const filtered = filterResponseHeaders(
-    upstream?.headers as Record<string, string> | undefined,
-  );
-  return {
-    headers: { ...filtered, [REQUEST_ID_HEADER]: requestId },
-  };
+export const prepareResponseInit = (requestId: string, upstream?: ResponseInit): ResponseInit => {
+  const filtered = filterResponseHeaders(upstream?.headers as Record<string, string> | undefined);
+  const headers: Record<string, string> = filtered ?? {};
+  headers[REQUEST_ID_HEADER] = requestId;
+  return { headers };
 };
 
 export const mergeResponseInit = (

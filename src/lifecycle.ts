@@ -18,8 +18,9 @@ import type {
   OnRequestHookContext,
   OnResponseHookContext,
 } from "./types";
+import { buildRetryHeaders } from "./utils/headers";
 import { resolveOrCreateRequestId } from "./utils/request";
-import { buildRetryHeaders, prepareResponseInit, toResponse } from "./utils/response";
+import { prepareResponseInit, toResponse } from "./utils/response";
 import type { SseFrame } from "./utils/stream";
 
 export const winterCgHandler = (

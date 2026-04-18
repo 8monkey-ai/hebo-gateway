@@ -11,7 +11,10 @@ import type {
 import { claudeSonnet46 } from "../../../src/models/anthropic";
 import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server";
 import { createBedrockTestServer, type TestServer } from "../shared/server";
-import { RESPONSE_CALCULATOR_TOOL as CALCULATOR_TOOL, RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
+import {
+  RESPONSE_CALCULATOR_TOOL as CALCULATOR_TOOL,
+  RESPONSE_WEATHER_TOOL as WEATHER_TOOL,
+} from "../shared/tools";
 
 // ---------------------------------------------------------------------------
 // Environment
