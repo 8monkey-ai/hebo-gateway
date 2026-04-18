@@ -60,37 +60,24 @@ export const buildRetryHeaders = (
   upstream?: Record<string, string>,
 ): Record<string, string> => {
   const headers = filterResponseHeaders(upstream) ?? {};
+  const retryable = RETRYABLE_STATUS_CODES.has(status);
 
-  const shouldRetryHeader = headers[X_SHOULD_RETRY_HEADER];
-  const hasRetryAfter = headers[RETRY_AFTER_HEADER] !== undefined;
-  const hasRetryAfterMs = headers[RETRY_AFTER_MS_HEADER] !== undefined;
+  const retryAfterMs =
+    headers[RETRY_AFTER_MS_HEADER] ??
+    (headers[RETRY_AFTER_HEADER]
+      ? String(Number(headers[RETRY_AFTER_HEADER]) * 1000)
+      : retryable
+        ? String(DEFAULT_RETRY_AFTER_MS)
+        : undefined);
 
-  if (!RETRYABLE_STATUS_CODES.has(status)) {
-    if (shouldRetryHeader === undefined) {
-      headers[X_SHOULD_RETRY_HEADER] = "false";
-    }
-    if (hasRetryAfterMs && !hasRetryAfter) {
-      headers[RETRY_AFTER_HEADER] = String(
-        Math.ceil(Number(headers[RETRY_AFTER_MS_HEADER]) / 1000),
-      );
-    }
-    if (hasRetryAfter && !hasRetryAfterMs) {
-      headers[RETRY_AFTER_MS_HEADER] = String(Number(headers[RETRY_AFTER_HEADER]) * 1000);
-    }
-    return headers;
-  }
+  const retryAfter =
+    headers[RETRY_AFTER_HEADER] ??
+    (retryAfterMs ? String(Math.ceil(Number(retryAfterMs) / 1000)) : undefined);
 
-  if (!hasRetryAfter && !hasRetryAfterMs) {
-    headers[RETRY_AFTER_MS_HEADER] = String(DEFAULT_RETRY_AFTER_MS);
-    headers[RETRY_AFTER_HEADER] = String(Math.ceil(DEFAULT_RETRY_AFTER_MS / 1000));
-  } else if (hasRetryAfterMs && !hasRetryAfter) {
-    headers[RETRY_AFTER_HEADER] = String(Math.ceil(Number(headers[RETRY_AFTER_MS_HEADER]) / 1000));
-  } else if (hasRetryAfter && !hasRetryAfterMs) {
-    headers[RETRY_AFTER_MS_HEADER] = String(Number(headers[RETRY_AFTER_HEADER]) * 1000);
-  }
+  if (retryAfterMs) headers[RETRY_AFTER_MS_HEADER] = retryAfterMs;
+  if (retryAfter) headers[RETRY_AFTER_HEADER] = retryAfter;
 
-  if (shouldRetryHeader === undefined) {
-    headers[X_SHOULD_RETRY_HEADER] = "true";
-  }
+  headers[X_SHOULD_RETRY_HEADER] ??= retryable ? "true" : "false";
+
   return headers;
 };
