@@ -36,20 +36,22 @@ export const buildRetryHeaders = (
   status: number,
   upstream?: Record<string, string>,
 ): Record<string, string> => {
-  const headers = filterResponseHeaders(upstream) ?? {};
+  const headers = upstream ?? {};
   const retryable = RETRYABLE_STATUS_CODES.has(status);
 
+  const upstreamMs = headers[RETRY_AFTER_MS_HEADER];
+  const upstreamSec = headers[RETRY_AFTER_HEADER];
+
   const retryAfterMs =
-    headers[RETRY_AFTER_MS_HEADER] ??
-    (headers[RETRY_AFTER_HEADER]
-      ? String(Number(headers[RETRY_AFTER_HEADER]) * 1000)
+    upstreamMs ??
+    (upstreamSec
+      ? String(Number(upstreamSec) * 1000)
       : retryable
         ? String(DEFAULT_RETRY_AFTER_MS)
         : undefined);
 
   const retryAfter =
-    headers[RETRY_AFTER_HEADER] ??
-    (retryAfterMs ? String(Math.ceil(Number(retryAfterMs) / 1000)) : undefined);
+    upstreamSec ?? (retryAfterMs ? String(Math.ceil(Number(retryAfterMs) / 1000)) : undefined);
 
   if (retryAfterMs) headers[RETRY_AFTER_MS_HEADER] = retryAfterMs;
   if (retryAfter) headers[RETRY_AFTER_HEADER] = retryAfter;

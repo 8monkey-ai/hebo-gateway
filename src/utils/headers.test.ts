@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildRetryHeaders, filterResponseHeaders } from "./headers";
+import { RETRY_AFTER_MS_HEADER, buildRetryHeaders, filterResponseHeaders } from "./headers";
 
 describe("filterResponseHeaders", () => {
   test("returns undefined for undefined input", () => {
@@ -130,7 +130,14 @@ describe("buildRetryHeaders", () => {
     });
   });
 
-  test("filters out non-allowlisted headers from upstream", () => {
+  test("mutates upstream record in place", () => {
+    const upstream: Record<string, string> = { "retry-after": "5" };
+    const result = buildRetryHeaders(429, upstream);
+    expect(result).toBe(upstream);
+    expect(upstream[RETRY_AFTER_MS_HEADER]).toBe("5000");
+  });
+
+  test("does not filter non-retry headers from upstream", () => {
     const upstream = {
       "retry-after-ms": "500",
       "x-should-retry": "true",
@@ -140,6 +147,7 @@ describe("buildRetryHeaders", () => {
       "retry-after": "1",
       "retry-after-ms": "500",
       "x-should-retry": "true",
+      "x-request-id": "req_123",
     });
   });
 
