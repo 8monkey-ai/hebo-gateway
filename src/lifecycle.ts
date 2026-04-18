@@ -116,21 +116,19 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-          const successResponseInit = prepareResponseInit(
-            ctx.requestId,
-            ctx.response as ResponseInit | undefined,
-          );
           const formatError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
-          ctx.response = toResponse(ctx.result!, successResponseInit, {
-            onDone: finalize,
-            formatError,
-          });
+          ctx.response = toResponse(
+            ctx.result!,
+            prepareResponseInit(ctx.requestId, ctx.response as ResponseInit | undefined),
+            {
+              onDone: finalize,
+              formatError,
+            },
+          );
         }
 
         if (parsedConfig.hooks?.onResponse) {
-          const onResponse = await parsedConfig.hooks.onResponse(
-            ctx as unknown as OnResponseHookContext,
-          );
+          const onResponse = await parsedConfig.hooks.onResponse(ctx as OnResponseHookContext);
           addSpanEvent("hebo.hooks.on_response.completed");
           if (onResponse) {
             ctx.response = onResponse;
