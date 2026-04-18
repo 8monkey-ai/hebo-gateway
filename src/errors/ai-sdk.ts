@@ -42,8 +42,7 @@ import { STATUS_CODE } from "./utils";
 const normalizeApiCallError = (error: APICallError): GatewayError => {
   const status = error.statusCode ?? (error.isRetryable ? 502 : 422);
   const code = `UPSTREAM_${STATUS_CODE(status)}`;
-  const response = error.responseHeaders ? { headers: error.responseHeaders } : undefined;
-  return new GatewayError(error, status, code, undefined, response);
+  return new GatewayError(error, status, code, undefined, error.responseHeaders ?? undefined);
 };
 
 export const normalizeAiSdkError = (error: unknown): GatewayError | undefined => {

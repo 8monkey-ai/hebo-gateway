@@ -31,9 +31,8 @@ export function toOpenAIError(error: unknown): OpenAIError {
 
 export function toOpenAIErrorResponse(error: unknown, requestId: string): Response {
   const meta = getErrorMeta(error);
-  const upstreamHeaders = meta.response?.headers as Record<string, string> | undefined;
   const responseInit = prepareResponseInit(requestId, {
-    headers: buildRetryHeaders(meta.status, upstreamHeaders),
+    headers: buildRetryHeaders(meta.status, meta.headers as Record<string, string> | undefined),
   });
 
   return toResponse(

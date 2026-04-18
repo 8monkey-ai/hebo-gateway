@@ -31,7 +31,7 @@ export type ErrorMeta = {
   status: number;
   code: string;
   message: string;
-  response: ResponseInit | undefined;
+  headers: HeadersInit | undefined;
 };
 
 // FUTURE: always return a wrapped GatewayError?
@@ -40,22 +40,22 @@ export function getErrorMeta(error: unknown): ErrorMeta {
 
   let status: number;
   let code: string;
-  let response: ResponseInit | undefined;
+  let headers: HeadersInit | undefined;
 
   if (error instanceof GatewayError) {
-    ({ status, code, response } = error);
+    ({ status, code, headers } = error);
   } else {
     const normalized = normalizeAiSdkError(error);
     if (normalized) {
-      ({ status, code, response } = normalized);
+      ({ status, code, headers } = normalized);
     } else {
       status = 500;
       code = STATUS_CODE(status);
-      response = undefined;
+      headers = undefined;
     }
   }
 
-  return { status, code, message, response };
+  return { status, code, message, headers };
 }
 
 export function maybeMaskMessage(meta: ErrorMeta, requestId?: string): string {
