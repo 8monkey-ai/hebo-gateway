@@ -2,7 +2,6 @@ import { parseConfig } from "./config";
 import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
 import { GatewayError } from "./errors/gateway";
 import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai";
-import { getErrorMeta } from "./errors/utils";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
@@ -18,7 +17,6 @@ import type {
   OnRequestHookContext,
   OnResponseHookContext,
 } from "./types";
-import { buildRetryHeaders } from "./utils/headers";
 import { resolveOrCreateRequestId } from "./utils/request";
 import { prepareResponseInit, toResponse } from "./utils/response";
 import type { SseFrame } from "./utils/stream";
@@ -155,16 +153,10 @@ export const winterCgHandler = (
         const errorPayload = ctx.request.signal.aborted
           ? new GatewayError(error ?? ctx.request.signal.reason, 499)
           : error;
-        const meta = getErrorMeta(errorPayload);
-        const upstreamHeaders = meta.response?.headers as Record<string, string> | undefined;
-        const errorResponseInit = prepareResponseInit(ctx.requestId, {
-          headers: buildRetryHeaders(meta.status, upstreamHeaders),
-        });
         if (!(ctx.response instanceof Response)) {
-          ctx.response =
-            ctx.operation === "messages"
-              ? toAnthropicErrorResponse(errorPayload, errorResponseInit)
-              : toOpenAIErrorResponse(errorPayload, errorResponseInit);
+          const format =
+            ctx.operation === "messages" ? toAnthropicErrorResponse : toOpenAIErrorResponse;
+          ctx.response = format(errorPayload, ctx.requestId);
         }
         finalize((ctx.response as Response).status, error);
       }

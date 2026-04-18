@@ -1,7 +1,7 @@
 import * as z from "zod";
 
-import { resolveRequestId } from "../utils/headers";
-import { toResponse } from "../utils/response";
+import { buildRetryHeaders } from "../utils/headers";
+import { prepareResponseInit, toResponse } from "../utils/response";
 import { getErrorMeta, maybeMaskMessage } from "./utils";
 
 export const OpenAIErrorSchema = z.object({
@@ -29,19 +29,19 @@ export function toOpenAIError(error: unknown): OpenAIError {
   return new OpenAIError(maybeMaskMessage(meta), mapType(meta.status), meta.code);
 }
 
-export function toOpenAIErrorResponse(error: unknown, responseInit?: ResponseInit) {
+export function toOpenAIErrorResponse(error: unknown, requestId: string): Response {
   const meta = getErrorMeta(error);
+  const upstreamHeaders = meta.response?.headers as Record<string, string> | undefined;
+  const responseInit = prepareResponseInit(requestId, {
+    headers: buildRetryHeaders(meta.status, upstreamHeaders),
+  });
 
   return toResponse(
-    new OpenAIError(
-      maybeMaskMessage(meta, resolveRequestId(responseInit)),
-      mapType(meta.status),
-      meta.code,
-    ),
+    new OpenAIError(maybeMaskMessage(meta, requestId), mapType(meta.status), meta.code),
     {
       status: meta.status,
       statusText: meta.code,
-      headers: responseInit?.headers,
+      headers: responseInit.headers,
     },
   );
 }
