@@ -1,25 +1,30 @@
-import { REQUEST_ID_HEADER } from "./headers";
+import { buildRetryHeaders, filterResponseHeaders, REQUEST_ID_HEADER } from "./headers";
 import type { SseFrame } from "./stream";
 import { toSseStream } from "./stream";
 
 const TEXT_ENCODER = new TextEncoder();
 
-export const prepareResponseInit = (requestId: string): ResponseInit => ({
-  headers: { [REQUEST_ID_HEADER]: requestId },
-});
+export const prepareResponseInit = (requestId: string, upstream?: ResponseInit): ResponseInit => {
+  const init = upstream ?? {};
+  init.headers = filterResponseHeaders(upstream?.headers);
+  if (init.status && init.status >= 400)
+    init.headers = buildRetryHeaders(init.status, init.headers);
+  init.headers[REQUEST_ID_HEADER] = requestId;
+  return init;
+};
 
 export const mergeResponseInit = (
-  defaultHeaders: HeadersInit,
+  headers: Record<string, string>,
   responseInit?: ResponseInit,
 ): ResponseInit => {
-  const headers = new Headers(defaultHeaders);
+  if (!responseInit) return { headers };
+
   const override = responseInit?.headers;
   if (override) {
     new Headers(override).forEach((value, key) => {
-      headers.set(key, value);
+      headers[key] = value;
     });
   }
-  if (!responseInit) return { headers };
 
   return {
     status: responseInit.status,
@@ -33,7 +38,7 @@ export const toResponse = (
   responseInit?: ResponseInit,
   streamOptions?: {
     onDone?: (status: number, reason?: unknown) => void;
-    formatError?: (error: unknown) => unknown;
+    toError?: (error: unknown) => unknown;
   },
 ): Response => {
   let body: BodyInit;

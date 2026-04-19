@@ -16,7 +16,7 @@ These examples use the root dev dependencies, so run `bun install` at the repo r
 ### Elysia
 
 ```sh
-cd e2e/elysia
+cd examples/elysia
 bun index.ts
 ```
 
@@ -25,7 +25,7 @@ Route: `/v1/gateway/models`
 ### Hono
 
 ```sh
-cd e2e/hono
+cd examples/hono
 bun index.ts
 ```
 
@@ -34,7 +34,7 @@ Route: `/v1/gateway/models`
 ### Next.js
 
 ```sh
-cd e2e/next
+cd examples/next
 bun --bun next dev
 ```
 
@@ -46,7 +46,7 @@ Routes:
 ### TanStack
 
 ```sh
-cd e2e/tanstack
+cd examples/tanstack
 bun --bun vite dev
 ```
 

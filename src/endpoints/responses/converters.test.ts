@@ -798,17 +798,14 @@ describe("Responses Converters", () => {
 
       // Content deltas (parallel to summary)
       const contentDeltas = events.filter(
-        (e): e is ResponseReasoningTextDeltaEvent =>
-          e.event === "response.reasoning_text.delta",
+        (e): e is ResponseReasoningTextDeltaEvent => e.event === "response.reasoning_text.delta",
       );
       expect(contentDeltas).toHaveLength(2);
       expect(contentDeltas[0]!.data.delta).toBe("Let me");
       expect(contentDeltas[1]!.data.delta).toBe(" think...");
 
       // Content text done event
-      const contentTextDone = events.filter(
-        (e) => e.event === "response.reasoning_text.done",
-      );
+      const contentTextDone = events.filter((e) => e.event === "response.reasoning_text.done");
       expect(contentTextDone).toHaveLength(1);
 
       // Text

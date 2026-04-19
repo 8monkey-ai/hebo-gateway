@@ -1,5 +1,3 @@
-import { toOpenAIError } from "../errors/openai";
-
 const TEXT_ENCODER = new TextEncoder();
 
 const SSE_DONE_CHUNK = TEXT_ENCODER.encode("data: [DONE]\n\n");
@@ -18,8 +16,8 @@ export function toSseStream(
   src: ReadableStream<SseFrame>,
   options: {
     onDone?: (status: number, reason?: unknown) => void;
+    toError?: (error: unknown) => unknown;
     keepAliveMs?: number;
-    formatError?: (error: unknown) => unknown;
   } = {},
 ): ReadableStream<Uint8Array> {
   const keepAliveMs = options.keepAliveMs ?? SSE_DEFAULT_KEEP_ALIVE_MS;
@@ -78,15 +76,11 @@ export function toSseStream(
 
         const value = result.value;
         if (value.event === "error" || value.data instanceof Error) {
-          const error = options.formatError
-            ? options.formatError(value.data)
-            : toOpenAIError(value.data);
+          const error = options.toError?.(value.data) ?? value.data;
           controller.enqueue(
             TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
           );
-          const openAiError = toOpenAIError(value.data);
-          const errorStatus = openAiError?.error.type === "invalid_request_error" ? 422 : 502;
-          done(controller, errorStatus, value.data);
+          done(controller, (error as Record<string, number>)["status"] ?? 502, value.data);
           reader!.cancel(value.data).catch(() => {});
           return;
         }
@@ -95,14 +89,11 @@ export function toSseStream(
         heartbeat(controller);
       } catch (error) {
         try {
-          const errorPayload = options.formatError
-            ? options.formatError(error)
-            : toOpenAIError(error);
           controller.enqueue(
             TEXT_ENCODER.encode(
               serializeSseFrame({
                 event: "error",
-                data: errorPayload,
+                data: options.toError?.(error) ?? error,
               }),
             ),
           );

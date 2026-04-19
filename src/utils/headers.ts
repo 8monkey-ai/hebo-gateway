@@ -1,27 +1,83 @@
 export const REQUEST_ID_HEADER = "x-request-id";
+export const RETRY_AFTER_HEADER = "retry-after";
+export const RETRY_AFTER_MS_HEADER = "retry-after-ms";
+export const X_SHOULD_RETRY_HEADER = "x-should-retry";
+
+const RESPONSE_HEADER_ALLOWLIST = [
+  RETRY_AFTER_HEADER,
+  RETRY_AFTER_MS_HEADER,
+  X_SHOULD_RETRY_HEADER,
+] as const;
+
+const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
+
+const DEFAULT_RETRY_AFTER_MS = 1000;
 
 type HeaderSource = Request | ResponseInit | undefined;
 
 export const resolveRequestId = (source: HeaderSource): string | undefined => {
   if (!source) return undefined;
-
   if (source instanceof Request) {
     return source.headers.get(REQUEST_ID_HEADER) ?? undefined;
   }
+  if (!source.headers) return undefined;
+  return getHeader(source.headers, REQUEST_ID_HEADER);
+};
 
-  const headers = source.headers;
-  if (!headers) return undefined;
-
+function getHeader(headers: HeadersInit, key: string): string | undefined {
   if (headers instanceof Headers) {
-    return headers.get(REQUEST_ID_HEADER) ?? undefined;
+    return headers.get(key) ?? undefined;
   }
-
   if (Array.isArray(headers)) {
-    for (const [key, value] of headers) {
-      if (key.toLowerCase() === REQUEST_ID_HEADER) return value;
+    for (const [k, v] of headers) {
+      if (k.toLowerCase() === key.toLowerCase()) {
+        return v;
+      }
     }
     return undefined;
   }
+  return headers[key] ?? headers[key.toLowerCase()];
+}
 
-  return headers[REQUEST_ID_HEADER];
+export const filterResponseHeaders = (upstream?: HeadersInit): Record<string, string> => {
+  if (!upstream) return {};
+
+  const filtered: Record<string, string> = {};
+  for (const key of RESPONSE_HEADER_ALLOWLIST) {
+    const value = getHeader(upstream, key);
+    if (value !== undefined) {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+};
+
+function deriveRetryAfterMs(retryAfter: string | undefined): number | undefined {
+  if (retryAfter === undefined) return undefined;
+  const num = Number(retryAfter);
+  if (Number.isFinite(num) && num > 0) return num * 1000;
+  const dateMs = Date.parse(retryAfter);
+  if (!Number.isFinite(dateMs)) return undefined;
+  const deltaMs = dateMs - Date.now();
+  return deltaMs > 0 ? deltaMs : undefined;
+}
+
+export const buildRetryHeaders = (
+  status: number,
+  upstream: Record<string, string> = {},
+): Record<string, string> => {
+  if (!RETRYABLE_STATUS_CODES.has(status)) {
+    upstream[X_SHOULD_RETRY_HEADER] = "false";
+    return upstream;
+  }
+
+  upstream[RETRY_AFTER_MS_HEADER] ??= String(
+    deriveRetryAfterMs(upstream[RETRY_AFTER_HEADER]) ?? DEFAULT_RETRY_AFTER_MS,
+  );
+  upstream[RETRY_AFTER_HEADER] = String(
+    Math.ceil((Number(upstream[RETRY_AFTER_MS_HEADER]) || DEFAULT_RETRY_AFTER_MS) / 1000),
+  );
+  upstream[X_SHOULD_RETRY_HEADER] ??= "true";
+
+  return upstream;
 };

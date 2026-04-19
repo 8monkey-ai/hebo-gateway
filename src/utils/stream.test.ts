@@ -74,6 +74,14 @@ describe("stream utils", () => {
             controller.close();
           },
         }),
+        {
+          toError: (e) => ({
+            error: {
+              message: e instanceof Error ? e.message : String(e),
+              type: "server_error",
+            },
+          }),
+        },
       ),
     );
 

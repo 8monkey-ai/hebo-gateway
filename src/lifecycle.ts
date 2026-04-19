@@ -2,6 +2,7 @@ import { parseConfig } from "./config";
 import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
 import { GatewayError } from "./errors/gateway";
 import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai";
+import { getErrorMeta } from "./errors/utils";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
@@ -63,7 +64,7 @@ export const winterCgHandler = (
       if (!span.isExisting) {
         // FUTURE add http.server.request.duration
         span.setAttributes(
-          getResponseAttributes(ctx.response!, parsedConfig.telemetry?.signals?.http),
+          getResponseAttributes(ctx.response as Response, parsedConfig.telemetry?.signals?.http),
         );
       }
 
@@ -78,7 +79,7 @@ export const winterCgHandler = (
         });
 
         const isUpstreamError =
-          reason instanceof GatewayError && reason.code.startsWith("UPSTREAM_");
+          reason instanceof GatewayError && reason.statusText.startsWith("UPSTREAM_");
         span.recordError(reason, realStatus >= 500 || isUpstreamError);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
@@ -114,11 +115,15 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-          const formatError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
-          ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId), {
-            onDone: finalize,
-            formatError,
-          });
+          const toError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
+          ctx.response = toResponse(
+            ctx.result!,
+            prepareResponseInit(ctx.requestId, ctx.response as ResponseInit | undefined),
+            {
+              onDone: finalize,
+              toError: (error) => toError(error, ctx.requestId),
+            },
+          );
         }
 
         if (parsedConfig.hooks?.onResponse) {
@@ -131,7 +136,7 @@ export const winterCgHandler = (
 
         // FUTURE: this can leak if onResponse removed wrapper from response.body
         if (!(ctx.result instanceof ReadableStream)) {
-          finalize(ctx.response.status);
+          finalize((ctx.response as Response).status);
         }
       } catch (error) {
         if (parsedConfig.hooks?.onError) {
@@ -149,15 +154,18 @@ export const winterCgHandler = (
         const errorPayload = ctx.request.signal.aborted
           ? new GatewayError(error ?? ctx.request.signal.reason, 499)
           : error;
-        const errorResponseInit = prepareResponseInit(ctx.requestId);
-        ctx.response ??=
-          ctx.operation === "messages"
-            ? toAnthropicErrorResponse(errorPayload, errorResponseInit)
-            : toOpenAIErrorResponse(errorPayload, errorResponseInit);
-        finalize(ctx.response.status, error);
+        if (!(ctx.response instanceof Response)) {
+          const toErrorResponse =
+            ctx.operation === "messages" ? toAnthropicErrorResponse : toOpenAIErrorResponse;
+          ctx.response = toErrorResponse(
+            errorPayload,
+            prepareResponseInit(ctx.requestId, getErrorMeta(errorPayload)),
+          );
+        }
+        finalize((ctx.response as Response).status, error);
       }
     });
 
-    return ctx.response ?? new Response("Internal Server Error", { status: 500 });
+    return (ctx.response as Response) ?? new Response("Internal Server Error", { status: 500 });
   };
 };

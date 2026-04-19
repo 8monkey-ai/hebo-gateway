@@ -15,9 +15,13 @@ export const AnthropicErrorSchema = z.object({
 export class AnthropicError {
   readonly type = "error" as const;
   readonly error: z.infer<typeof AnthropicErrorSchema>["error"];
+  declare status: number;
 
   constructor(message: string, type: string = "api_error") {
     this.error = { type, message };
+
+    // internal property to derive status from error handlers without breaking official format
+    Object.defineProperty(this, "status", { value: 500, writable: true });
   }
 }
 
@@ -27,12 +31,12 @@ const mapType = (status: number): string => {
       return "invalid_request_error";
     case 401:
       return "authentication_error";
+    case 402:
+      return "billing_error";
     case 403:
       return "permission_error";
     case 404:
       return "not_found_error";
-    case 402:
-      return "billing_error";
     case 413:
       return "request_too_large";
     case 429:
@@ -46,24 +50,32 @@ const mapType = (status: number): string => {
   }
 };
 
-export function toAnthropicError(error: unknown): AnthropicError {
+export function toAnthropicError(error: unknown, requestId?: string): AnthropicError {
   const meta = getErrorMeta(error);
 
-  return new AnthropicError(maybeMaskMessage(meta), mapType(meta.status));
+  const anthropicError = new AnthropicError(
+    maybeMaskMessage(
+      error instanceof Error ? error.message : String(error),
+      meta.status,
+      requestId,
+    ),
+    mapType(meta.status),
+  );
+  anthropicError.status = meta.status;
+
+  return anthropicError;
 }
 
-export function toAnthropicErrorResponse(error: unknown, responseInit?: ResponseInit) {
-  const meta = getErrorMeta(error);
-
+export function toAnthropicErrorResponse(error: unknown, init: ResponseInit): Response {
   return toResponse(
     new AnthropicError(
-      maybeMaskMessage(meta, resolveRequestId(responseInit)),
-      mapType(meta.status),
+      maybeMaskMessage(
+        error instanceof Error ? error.message : String(error),
+        init.status ?? 500,
+        resolveRequestId(init),
+      ),
+      mapType(init.status ?? 500),
     ),
-    {
-      status: meta.status,
-      statusText: meta.code,
-      headers: responseInit?.headers,
-    },
+    init,
   );
 }

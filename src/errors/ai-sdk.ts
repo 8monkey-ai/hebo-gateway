@@ -37,13 +37,24 @@ import {
 } from "ai";
 
 import { GatewayError } from "./gateway";
-import { STATUS_CODE } from "./utils";
+import { STATUS_TEXT } from "./utils";
+
+const normalizeApiCallError = (error: APICallError): GatewayError => {
+  const status = error.statusCode ?? (error.isRetryable ? 502 : 422);
+  const statusText = `UPSTREAM_${STATUS_TEXT(status)}`;
+  return new GatewayError(error, status, statusText, undefined, error.responseHeaders ?? undefined);
+};
 
 export const normalizeAiSdkError = (error: unknown): GatewayError | undefined => {
   if (APICallError.isInstance(error)) {
-    const status = error.statusCode ?? (error.isRetryable ? 502 : 422);
-    const code = `UPSTREAM_${STATUS_CODE(status)}`;
-    return new GatewayError(error, status, code);
+    return normalizeApiCallError(error);
+  }
+
+  if (RetryError.isInstance(error)) {
+    if (APICallError.isInstance(error.lastError)) {
+      return normalizeApiCallError(error.lastError);
+    }
+    return new GatewayError(error, 502, `UPSTREAM_${STATUS_TEXT(502)}`);
   }
 
   if (
@@ -55,7 +66,6 @@ export const normalizeAiSdkError = (error: unknown): GatewayError | undefined =>
     NoOutputGeneratedError.isInstance(error) ||
     InvalidStreamPartError.isInstance(error) ||
     UIMessageStreamError.isInstance(error) ||
-    RetryError.isInstance(error) ||
     DownloadError.isInstance(error) ||
     ToolCallRepairError.isInstance(error) ||
     NoImageGeneratedError.isInstance(error) ||
@@ -64,7 +74,7 @@ export const normalizeAiSdkError = (error: unknown): GatewayError | undefined =>
     NoTranscriptGeneratedError.isInstance(error) ||
     NoVideoGeneratedError.isInstance(error)
   ) {
-    return new GatewayError(error, 502, `UPSTREAM_${STATUS_CODE(502)}`);
+    return new GatewayError(error, 502, `UPSTREAM_${STATUS_TEXT(502)}`);
   }
 
   if (
@@ -84,7 +94,7 @@ export const normalizeAiSdkError = (error: unknown): GatewayError | undefined =>
     NoSuchModelError.isInstance(error) ||
     NoSuchProviderError.isInstance(error)
   ) {
-    return new GatewayError(error, 422, `UPSTREAM_${STATUS_CODE(422)}`);
+    return new GatewayError(error, 422, `UPSTREAM_${STATUS_TEXT(422)}`);
   }
 
   if (LoadSettingError.isInstance(error) || LoadAPIKeyError.isInstance(error)) {

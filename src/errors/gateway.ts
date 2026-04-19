@@ -1,10 +1,18 @@
-import { STATUS_CODE } from "./utils";
+import { X_SHOULD_RETRY_HEADER } from "../utils/headers";
+import { STATUS_TEXT } from "./utils";
 
 export class GatewayError extends Error {
   readonly status: number;
-  readonly code: string;
+  readonly statusText: string;
+  readonly headers: Record<string, string> | undefined;
 
-  constructor(error: unknown, status: number, code?: string, cause?: unknown) {
+  constructor(
+    error: unknown,
+    status: number,
+    statusText?: string,
+    cause?: unknown,
+    headers?: Record<string, string>,
+  ) {
     const isError = error instanceof Error;
     super(isError ? error.message : String(error));
 
@@ -12,6 +20,11 @@ export class GatewayError extends Error {
     this.cause = cause ?? (isError ? error : undefined);
 
     this.status = status;
-    this.code = code ?? STATUS_CODE(status);
+    this.statusText = statusText ?? STATUS_TEXT(status);
+    this.headers = headers;
+
+    if (!this.statusText.startsWith("UPSTREAM_")) {
+      (this.headers ??= {})[X_SHOULD_RETRY_HEADER] = "false";
+    }
   }
 }
