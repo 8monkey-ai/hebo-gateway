@@ -29,12 +29,12 @@ const mapType = (status: number): string => {
       return "invalid_request_error";
     case 401:
       return "authentication_error";
+    case 402:
+      return "billing_error";
     case 403:
       return "permission_error";
     case 404:
       return "not_found_error";
-    case 402:
-      return "billing_error";
     case 413:
       return "request_too_large";
     case 429:

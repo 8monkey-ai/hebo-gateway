@@ -80,7 +80,7 @@ export function toSseStream(
           controller.enqueue(
             TEXT_ENCODER.encode(serializeSseFrame({ event: value.event, data: error })),
           );
-          done(controller, (error as Record<string, number>)["status"] ?? 500, value.data);
+          done(controller, (error as Record<string, number>)["status"] ?? 502, value.data);
           reader!.cancel(value.data).catch(() => {});
           return;
         }
