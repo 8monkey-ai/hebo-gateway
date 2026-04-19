@@ -19,6 +19,8 @@ export class OpenAIError {
 
   constructor(message: string, type: string = "server_error", code?: string, param: string = "") {
     this.error = { message, type, code: code?.toLowerCase(), param };
+
+    // internal property to derive status from error handlers without breaking official format
     Object.defineProperty(this, "status", { value: 500, writable: true });
   }
 }

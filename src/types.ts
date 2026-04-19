@@ -91,7 +91,6 @@ export type GatewayContext = {
     | ResponsesStream;
   /**
    * Response object returned by the handler.
-   *
    * Handlers may set this to a `ResponseInit` containing upstream response
    * headers; the lifecycle merges allowlisted headers into the final `Response`.
    */

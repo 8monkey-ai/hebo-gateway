@@ -19,6 +19,8 @@ export class AnthropicError {
 
   constructor(message: string, type: string = "api_error") {
     this.error = { type, message };
+
+    // internal property to derive status from error handlers without breaking official format
     Object.defineProperty(this, "status", { value: 500, writable: true });
   }
 }
