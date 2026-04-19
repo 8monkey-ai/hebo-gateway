@@ -21,41 +21,44 @@ export const STATUS_CODES = {
   504: "GATEWAY_TIMEOUT",
 } as const;
 
-export const STATUS_CODE = (status: number) => {
+export const STATUS_TEXT = (status: number) => {
   const label = STATUS_CODES[status as keyof typeof STATUS_CODES];
   if (label) return label;
   return status >= 400 && status < 500 ? STATUS_CODES[400] : STATUS_CODES[500];
 };
 
-export type ErrorMeta = { status: number; code: string; message: string };
+export type ErrorMeta = {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+};
 
-// FUTURE: always return a wrapped GatewayError?
 export function getErrorMeta(error: unknown): ErrorMeta {
-  const message = error instanceof Error ? error.message : String(error);
-
   let status: number;
-  let code: string;
+  let statusText: string;
+  let headers: Record<string, string> | undefined;
 
   if (error instanceof GatewayError) {
-    ({ status, code } = error);
+    ({ status, statusText, headers } = error);
   } else {
     const normalized = normalizeAiSdkError(error);
     if (normalized) {
-      ({ status, code } = normalized);
+      ({ status, statusText, headers } = normalized);
     } else {
       status = 500;
-      code = STATUS_CODE(status);
+      statusText = STATUS_TEXT(status);
+      headers = {};
     }
   }
 
-  return { status, code, message };
+  return { status, statusText, headers: headers ?? {} };
 }
 
-export function maybeMaskMessage(meta: ErrorMeta, requestId?: string): string {
+export function maybeMaskMessage(message: string, status: number, requestId?: string): string {
   // FUTURE: consider masking all upstream errors, also 4xx
-  if (!(isProduction() && meta.status >= 500)) {
-    return meta.message;
+  if (!(isProduction() && status >= 500)) {
+    return message;
   }
   // FUTURE: always attach requestId to errors (masked and unmasked)
-  return `${STATUS_CODE(meta.status)} (${requestId ?? "see requestId in response headers"})`;
+  return `${STATUS_TEXT(status)} (${requestId ?? "see requestId in response headers"})`;
 }

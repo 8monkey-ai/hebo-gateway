@@ -1,6 +1,6 @@
 import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
 
-import { STATUS_CODE } from "../errors/utils";
+import { STATUS_TEXT } from "../errors/utils";
 import type { GatewayContext, TelemetrySignalLevel } from "../types";
 
 const getMeter = () => metrics.getMeter("@hebo/gateway");
@@ -105,7 +105,7 @@ export const recordRequestDuration = (
   const attrs = getGenAiGeneralAttributes(ctx, signalLevel);
 
   if (status !== 200) {
-    attrs["error.type"] = `${status} ${STATUS_CODE(status).toLowerCase()}`;
+    attrs["error.type"] = `${status} ${STATUS_TEXT(status).toLowerCase()}`;
   }
 
   getRequestDurationHistogram().record(duration / 1000, attrs);

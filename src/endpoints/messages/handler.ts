@@ -172,6 +172,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
     });
     logger.trace({ requestId: ctx.requestId, result }, "[messages] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
+    if (result.response.headers) ctx.response = { headers: result.response.headers };
     recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, ctx.trace);
 
     ctx.result = toMessages(result, ctx.resolvedModelId);
