@@ -3,12 +3,12 @@ import { describe, expect, test } from "bun:test";
 import { RETRY_AFTER_MS_HEADER, buildRetryHeaders, filterResponseHeaders } from "./headers";
 
 describe("filterResponseHeaders", () => {
-  test("returns undefined for undefined input", () => {
-    expect(filterResponseHeaders()).toBeUndefined();
+  test("returns empty object for undefined input", () => {
+    expect(filterResponseHeaders()).toEqual({});
   });
 
-  test("returns undefined when no allowlisted headers present", () => {
-    expect(filterResponseHeaders({ "content-type": "application/json" })).toBeUndefined();
+  test("returns empty object when no allowlisted headers present", () => {
+    expect(filterResponseHeaders({ "content-type": "application/json" })).toEqual({});
   });
 
   test("filters to only allowlisted headers", () => {
@@ -32,15 +32,15 @@ describe("filterResponseHeaders", () => {
 });
 
 describe("buildRetryHeaders", () => {
-  test("returns x-should-retry false for non-retryable status without upstream", () => {
-    expect(buildRetryHeaders(400)).toEqual({ "x-should-retry": "false" });
+  test("returns empty object for non-retryable status without upstream", () => {
+    expect(buildRetryHeaders(400)).toEqual({});
   });
 
-  test("returns x-should-retry false for 422", () => {
-    expect(buildRetryHeaders(422)).toEqual({ "x-should-retry": "false" });
+  test("returns empty object for 422", () => {
+    expect(buildRetryHeaders(422)).toEqual({});
   });
 
-  test("preserves upstream x-should-retry for non-retryable status", () => {
+  test("preserves upstream headers for non-retryable status", () => {
     const upstream = { "x-should-retry": "true" };
     expect(buildRetryHeaders(400, upstream)).toEqual({ "x-should-retry": "true" });
   });
@@ -148,24 +148,6 @@ describe("buildRetryHeaders", () => {
       "retry-after-ms": "500",
       "x-should-retry": "true",
       "x-request-id": "req_123",
-    });
-  });
-
-  test("derives retry-after-ms from retry-after for non-retryable status", () => {
-    const upstream = { "retry-after": "3", "x-should-retry": "true" };
-    expect(buildRetryHeaders(400, upstream)).toEqual({
-      "retry-after": "3",
-      "retry-after-ms": "3000",
-      "x-should-retry": "true",
-    });
-  });
-
-  test("derives retry-after from retry-after-ms for non-retryable status", () => {
-    const upstream = { "retry-after-ms": "2500", "x-should-retry": "true" };
-    expect(buildRetryHeaders(400, upstream)).toEqual({
-      "retry-after": "3",
-      "retry-after-ms": "2500",
-      "x-should-retry": "true",
     });
   });
 });

@@ -2,6 +2,7 @@ import { parseConfig } from "./config";
 import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
 import { GatewayError } from "./errors/gateway";
 import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai";
+import { getErrorMeta } from "./errors/utils";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
@@ -78,7 +79,7 @@ export const winterCgHandler = (
         });
 
         const isUpstreamError =
-          reason instanceof GatewayError && reason.code.startsWith("UPSTREAM_");
+          reason instanceof GatewayError && reason.statusText.startsWith("UPSTREAM_");
         span.recordError(reason, realStatus >= 500 || isUpstreamError);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
@@ -114,13 +115,12 @@ export const winterCgHandler = (
         if (!ctx.response) {
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
-          const formatError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
           ctx.response = toResponse(
             ctx.result!,
             prepareResponseInit(ctx.requestId, ctx.response as ResponseInit | undefined),
             {
               onDone: finalize,
-              formatError,
+              toError: ctx.operation === "messages" ? toAnthropicError : toOpenAIError,
             },
           );
         }
@@ -154,9 +154,12 @@ export const winterCgHandler = (
           ? new GatewayError(error ?? ctx.request.signal.reason, 499)
           : error;
         if (!(ctx.response instanceof Response)) {
-          const format =
+          const toErrorResponse =
             ctx.operation === "messages" ? toAnthropicErrorResponse : toOpenAIErrorResponse;
-          ctx.response = format(errorPayload, ctx.requestId);
+          ctx.response = toErrorResponse(
+            errorPayload,
+            prepareResponseInit(ctx.requestId, getErrorMeta(errorPayload)),
+          );
         }
         finalize((ctx.response as Response).status, error);
       }

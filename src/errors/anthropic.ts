@@ -1,7 +1,7 @@
 import * as z from "zod";
 
-import { buildRetryHeaders } from "../utils/headers";
-import { prepareResponseInit, toResponse } from "../utils/response";
+import { resolveRequestId } from "../utils/headers";
+import { toResponse } from "../utils/response";
 import { getErrorMeta, maybeMaskMessage } from "./utils";
 
 export const AnthropicErrorSchema = z.object({
@@ -15,9 +15,11 @@ export const AnthropicErrorSchema = z.object({
 export class AnthropicError {
   readonly type = "error" as const;
   readonly error: z.infer<typeof AnthropicErrorSchema>["error"];
+  declare status: number;
 
   constructor(message: string, type: string = "api_error") {
     this.error = { type, message };
+    Object.defineProperty(this, "status", { value: 500, writable: true });
   }
 }
 
@@ -49,18 +51,25 @@ const mapType = (status: number): string => {
 export function toAnthropicError(error: unknown): AnthropicError {
   const meta = getErrorMeta(error);
 
-  return new AnthropicError(maybeMaskMessage(meta), mapType(meta.status));
+  const anthropicError = new AnthropicError(
+    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status),
+    mapType(meta.status),
+  );
+  anthropicError.status = meta.status;
+
+  return anthropicError;
 }
 
-export function toAnthropicErrorResponse(error: unknown, requestId: string): Response {
-  const meta = getErrorMeta(error);
-  const responseInit = prepareResponseInit(requestId, {
-    headers: buildRetryHeaders(meta.status, meta.headers as Record<string, string> | undefined),
-  });
-
-  return toResponse(new AnthropicError(maybeMaskMessage(meta, requestId), mapType(meta.status)), {
-    status: meta.status,
-    statusText: meta.code,
-    headers: responseInit.headers,
-  });
+export function toAnthropicErrorResponse(error: unknown, init: ResponseInit): Response {
+  return toResponse(
+    new AnthropicError(
+      maybeMaskMessage(
+        error instanceof Error ? error.message : String(error),
+        init.status ?? 500,
+        resolveRequestId(init),
+      ),
+      mapType(init.status ?? 500),
+    ),
+    init,
+  );
 }

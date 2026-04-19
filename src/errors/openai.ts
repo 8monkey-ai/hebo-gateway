@@ -1,7 +1,7 @@
 import * as z from "zod";
 
-import { buildRetryHeaders } from "../utils/headers";
-import { prepareResponseInit, toResponse } from "../utils/response";
+import { resolveRequestId } from "../utils/headers";
+import { toResponse } from "../utils/response";
 import { getErrorMeta, maybeMaskMessage } from "./utils";
 
 export const OpenAIErrorSchema = z.object({
@@ -15,9 +15,11 @@ export const OpenAIErrorSchema = z.object({
 
 export class OpenAIError {
   readonly error: z.infer<typeof OpenAIErrorSchema>["error"];
+  declare status: number;
 
   constructor(message: string, type: string = "server_error", code?: string, param: string = "") {
     this.error = { message, type, code: code?.toLowerCase(), param };
+    Object.defineProperty(this, "status", { value: 500, writable: true });
   }
 }
 
@@ -26,21 +28,27 @@ const mapType = (status: number) => (status < 500 ? "invalid_request_error" : "s
 export function toOpenAIError(error: unknown): OpenAIError {
   const meta = getErrorMeta(error);
 
-  return new OpenAIError(maybeMaskMessage(meta), mapType(meta.status), meta.code);
+  const openAIError = new OpenAIError(
+    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status),
+    mapType(meta.status),
+    meta.statusText,
+  );
+  openAIError.status = meta.status;
+
+  return openAIError;
 }
 
-export function toOpenAIErrorResponse(error: unknown, requestId: string): Response {
-  const meta = getErrorMeta(error);
-  const responseInit = prepareResponseInit(requestId, {
-    headers: buildRetryHeaders(meta.status, meta.headers as Record<string, string> | undefined),
-  });
-
+export function toOpenAIErrorResponse(error: unknown, init: ResponseInit): Response {
   return toResponse(
-    new OpenAIError(maybeMaskMessage(meta, requestId), mapType(meta.status), meta.code),
-    {
-      status: meta.status,
-      statusText: meta.code,
-      headers: responseInit.headers,
-    },
+    new OpenAIError(
+      maybeMaskMessage(
+        error instanceof Error ? error.message : String(error),
+        init.status ?? 500,
+        resolveRequestId(init),
+      ),
+      mapType(init.status ?? 500),
+      init.statusText ?? "INTERNAL_SERVER_ERROR",
+    ),
+    init,
   );
 }

@@ -13,19 +13,39 @@ const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
 
 const DEFAULT_RETRY_AFTER_MS = 1000;
 
-export const resolveRequestId = (request: Request): string | undefined =>
-  request.headers.get(REQUEST_ID_HEADER) ?? undefined;
+type HeaderSource = Request | ResponseInit | undefined;
 
-export const filterResponseHeaders = (
-  upstream?: Record<string, string>,
-): Record<string, string> | undefined => {
-  if (!upstream) return undefined;
+export const resolveRequestId = (source: HeaderSource): string | undefined => {
+  if (!source) return undefined;
+  if (source instanceof Request) {
+    return source.headers.get(REQUEST_ID_HEADER) ?? undefined;
+  }
+  if (!source.headers) return undefined;
+  return getHeader(source.headers, REQUEST_ID_HEADER);
+};
 
-  let filtered: Record<string, string> | undefined;
+function getHeader(headers: HeadersInit, key: string): string | undefined {
+  if (headers instanceof Headers) {
+    return headers.get(key) ?? undefined;
+  }
+  if (Array.isArray(headers)) {
+    for (const [k, v] of headers) {
+      if (k.toLowerCase() === key.toLowerCase()) {
+        return v;
+      }
+    }
+    return undefined;
+  }
+  return headers[key] ?? headers[key.toLowerCase()];
+}
+
+export const filterResponseHeaders = (upstream?: HeadersInit): Record<string, string> => {
+  if (!upstream) return {};
+
+  let filtered: Record<string, string> = {};
   for (const key of RESPONSE_HEADER_ALLOWLIST) {
-    const value = upstream[key];
+    const value = getHeader(upstream, key);
     if (value !== undefined) {
-      filtered ??= {};
       filtered[key] = value;
     }
   }
@@ -34,13 +54,13 @@ export const filterResponseHeaders = (
 
 export const buildRetryHeaders = (
   status: number,
-  upstream?: Record<string, string>,
+  upstream: Record<string, string> = {},
 ): Record<string, string> => {
-  const headers = upstream ?? {};
   const retryable = RETRYABLE_STATUS_CODES.has(status);
+  if (!retryable) return upstream;
 
-  const upstreamMs = headers[RETRY_AFTER_MS_HEADER];
-  const upstreamSec = headers[RETRY_AFTER_HEADER];
+  const upstreamMs = upstream[RETRY_AFTER_MS_HEADER];
+  const upstreamSec = upstream[RETRY_AFTER_HEADER];
 
   const retryAfterMs =
     upstreamMs ??
@@ -53,10 +73,10 @@ export const buildRetryHeaders = (
   const retryAfter =
     upstreamSec ?? (retryAfterMs ? String(Math.ceil(Number(retryAfterMs) / 1000)) : undefined);
 
-  if (retryAfterMs) headers[RETRY_AFTER_MS_HEADER] = retryAfterMs;
-  if (retryAfter) headers[RETRY_AFTER_HEADER] = retryAfter;
+  if (retryAfterMs) upstream[RETRY_AFTER_MS_HEADER] = retryAfterMs;
+  if (retryAfter) upstream[RETRY_AFTER_HEADER] = retryAfter;
 
-  headers[X_SHOULD_RETRY_HEADER] ??= retryable ? "true" : "false";
+  upstream[X_SHOULD_RETRY_HEADER] ??= retryable ? "true" : "false";
 
-  return headers;
+  return upstream;
 };

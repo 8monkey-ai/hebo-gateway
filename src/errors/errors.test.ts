@@ -107,14 +107,14 @@ describe("getErrorMeta", () => {
     expect(meta.headers).toEqual({ "retry-after": "3" });
   });
 
-  test("headers is undefined for non-API errors", () => {
+  test("headers is empty for non-API errors", () => {
     const meta = getErrorMeta(new Error("something broke"));
-    expect(meta.headers).toBeUndefined();
+    expect(meta.headers).toEqual({});
   });
 
-  test("headers is undefined for gateway-originated errors", () => {
+  test("headers is empty for gateway-originated errors", () => {
     const error = new GatewayError("Model not found", 422, "MODEL_NOT_FOUND");
     const meta = getErrorMeta(error);
-    expect(meta.headers).toBeUndefined();
+    expect(meta.headers).toEqual({});
   });
 });
