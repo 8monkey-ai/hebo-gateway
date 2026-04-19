@@ -52,6 +52,16 @@ export const filterResponseHeaders = (upstream?: HeadersInit): Record<string, st
   return filtered;
 };
 
+function deriveRetryAfterMs(retryAfter: string | undefined): number | undefined {
+  if (retryAfter === undefined) return undefined;
+  const num = Number(retryAfter);
+  if (Number.isFinite(num)) return num * 1000;
+  const dateMs = Date.parse(retryAfter);
+  if (!Number.isFinite(dateMs)) return undefined;
+  const deltaMs = dateMs - Date.now();
+  return deltaMs > 0 ? deltaMs : undefined;
+}
+
 export const buildRetryHeaders = (
   status: number,
   upstream: Record<string, string> = {},
@@ -65,15 +75,11 @@ export const buildRetryHeaders = (
 
   const upstreamMs = upstream[RETRY_AFTER_MS_HEADER];
   const upstreamSec = upstream[RETRY_AFTER_HEADER];
-  const upstreamSecNum = upstreamSec === undefined ? NaN : Number(upstreamSec);
 
-  const retryAfterMs =
-    upstreamMs ??
-    (Number.isFinite(upstreamSecNum)
-      ? String(upstreamSecNum * 1000)
-      : String(DEFAULT_RETRY_AFTER_MS));
+  const derivedMs = deriveRetryAfterMs(upstreamSec);
 
-  const retryAfter = upstreamSec ?? String(Math.ceil(Number(retryAfterMs) / 1000));
+  const retryAfterMs = upstreamMs ?? (derivedMs !== undefined ? String(derivedMs) : String(DEFAULT_RETRY_AFTER_MS));
+  const retryAfter = String(Math.ceil(Number(retryAfterMs) / 1000));
 
   upstream[RETRY_AFTER_MS_HEADER] = retryAfterMs;
   upstream[RETRY_AFTER_HEADER] = retryAfter;

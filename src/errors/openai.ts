@@ -25,11 +25,11 @@ export class OpenAIError {
 
 const mapType = (status: number) => (status < 500 ? "invalid_request_error" : "server_error");
 
-export function toOpenAIError(error: unknown): OpenAIError {
+export function toOpenAIError(error: unknown, requestId?: string): OpenAIError {
   const meta = getErrorMeta(error);
 
   const openAIError = new OpenAIError(
-    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status),
+    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status, requestId),
     mapType(meta.status),
     meta.statusText,
   );

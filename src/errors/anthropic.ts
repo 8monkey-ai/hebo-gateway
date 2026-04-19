@@ -48,11 +48,11 @@ const mapType = (status: number): string => {
   }
 };
 
-export function toAnthropicError(error: unknown): AnthropicError {
+export function toAnthropicError(error: unknown, requestId?: string): AnthropicError {
   const meta = getErrorMeta(error);
 
   const anthropicError = new AnthropicError(
-    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status),
+    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status, requestId),
     mapType(meta.status),
   );
   anthropicError.status = meta.status;

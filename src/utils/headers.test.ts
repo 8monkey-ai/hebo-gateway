@@ -137,10 +137,31 @@ describe("buildRetryHeaders", () => {
     expect(upstream[RETRY_AFTER_MS_HEADER]).toBe("5000");
   });
 
-  test("ignores HTTP-date Retry-After and falls back to default", () => {
-    const upstream = { "retry-after": "Sat, 19 Apr 2026 05:00:00 GMT" };
+  test("derives consistent values from HTTP-date Retry-After in the future", () => {
+    const futureDate = new Date(Date.now() + 5000).toUTCString();
+    const upstream = { "retry-after": futureDate };
+    const result = buildRetryHeaders(429, upstream);
+    const ms = Number(result["retry-after-ms"]);
+    expect(ms).toBeGreaterThan(0);
+    expect(ms).toBeLessThanOrEqual(5000);
+    expect(result["retry-after"]).toBe(String(Math.ceil(ms / 1000)));
+    expect(result["x-should-retry"]).toBe("true");
+  });
+
+  test("falls back to default for HTTP-date Retry-After in the past", () => {
+    const pastDate = new Date(Date.now() - 5000).toUTCString();
+    const upstream = { "retry-after": pastDate };
     expect(buildRetryHeaders(429, upstream)).toEqual({
-      "retry-after": "Sat, 19 Apr 2026 05:00:00 GMT",
+      "retry-after": "1",
+      "retry-after-ms": "1000",
+      "x-should-retry": "true",
+    });
+  });
+
+  test("falls back to default for unparseable Retry-After", () => {
+    const upstream = { "retry-after": "not-a-date-or-number" };
+    expect(buildRetryHeaders(429, upstream)).toEqual({
+      "retry-after": "1",
       "retry-after-ms": "1000",
       "x-should-retry": "true",
     });
