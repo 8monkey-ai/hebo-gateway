@@ -29,7 +29,11 @@ export function toOpenAIError(error: unknown, requestId?: string): OpenAIError {
   const meta = getErrorMeta(error);
 
   const openAIError = new OpenAIError(
-    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status, requestId),
+    maybeMaskMessage(
+      error instanceof Error ? error.message : String(error),
+      meta.status,
+      requestId,
+    ),
     mapType(meta.status),
     meta.statusText,
   );

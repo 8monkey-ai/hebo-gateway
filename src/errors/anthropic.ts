@@ -52,7 +52,11 @@ export function toAnthropicError(error: unknown, requestId?: string): AnthropicE
   const meta = getErrorMeta(error);
 
   const anthropicError = new AnthropicError(
-    maybeMaskMessage(error instanceof Error ? error.message : String(error), meta.status, requestId),
+    maybeMaskMessage(
+      error instanceof Error ? error.message : String(error),
+      meta.status,
+      requestId,
+    ),
     mapType(meta.status),
   );
   anthropicError.status = meta.status;
