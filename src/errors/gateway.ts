@@ -1,3 +1,4 @@
+import { X_SHOULD_RETRY_HEADER } from "../utils/headers";
 import { STATUS_TEXT } from "./utils";
 
 export class GatewayError extends Error {
@@ -21,5 +22,9 @@ export class GatewayError extends Error {
     this.status = status;
     this.statusText = statusText ?? STATUS_TEXT(status);
     this.headers = headers;
+
+    if (!this.statusText.startsWith("UPSTREAM_")) {
+      (this.headers ??= {})[X_SHOULD_RETRY_HEADER] = "false";
+    }
   }
 }

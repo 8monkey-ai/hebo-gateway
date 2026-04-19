@@ -49,4 +49,22 @@ describe("prepareResponseInit", () => {
       headers: { "x-request-id": "req_4" },
     });
   });
+
+  test("accepts Headers instance as upstream headers", () => {
+    const upstream: ResponseInit = {
+      headers: new Headers({ "retry-after-ms": "1500" }),
+    };
+    expect(prepareResponseInit("req_5", upstream)).toEqual({
+      headers: { "retry-after-ms": "1500", "x-request-id": "req_5" },
+    });
+  });
+
+  test("x-request-id argument takes precedence over upstream", () => {
+    const upstream: ResponseInit = {
+      headers: { "x-request-id": "from_upstream" },
+    };
+    expect(prepareResponseInit("req_6", upstream)).toEqual({
+      headers: { "x-request-id": "req_6" },
+    });
+  });
 });

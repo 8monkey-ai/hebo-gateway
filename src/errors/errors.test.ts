@@ -13,9 +13,15 @@ describe("GatewayError", () => {
     expect(error.headers).toEqual(headers);
   });
 
-  test("headers defaults to undefined", () => {
+  test("sets x-should-retry false for non-upstream errors", () => {
     const error = new GatewayError("test", 500);
-    expect(error.headers).toBeUndefined();
+    expect(error.headers).toEqual({ "x-should-retry": "false" });
+  });
+
+  test("does not override headers for upstream errors", () => {
+    const headers = { "retry-after": "5" };
+    const error = new GatewayError("test", 502, "UPSTREAM_BAD_GATEWAY", undefined, headers);
+    expect(error.headers).toEqual({ "retry-after": "5" });
   });
 });
 
@@ -112,9 +118,9 @@ describe("getErrorMeta", () => {
     expect(meta.headers).toEqual({});
   });
 
-  test("headers is empty for gateway-originated errors", () => {
+  test("gateway-originated errors carry x-should-retry false", () => {
     const error = new GatewayError("Model not found", 422, "MODEL_NOT_FOUND");
     const meta = getErrorMeta(error);
-    expect(meta.headers).toEqual({});
+    expect(meta.headers).toEqual({ "x-should-retry": "false" });
   });
 });

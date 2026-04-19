@@ -32,17 +32,17 @@ describe("filterResponseHeaders", () => {
 });
 
 describe("buildRetryHeaders", () => {
-  test("returns empty object for non-retryable status without upstream", () => {
-    expect(buildRetryHeaders(400)).toEqual({});
+  test("sets x-should-retry false for non-retryable status without upstream", () => {
+    expect(buildRetryHeaders(400)).toEqual({ "x-should-retry": "false" });
   });
 
-  test("returns empty object for 422", () => {
-    expect(buildRetryHeaders(422)).toEqual({});
+  test("sets x-should-retry false for 422", () => {
+    expect(buildRetryHeaders(422)).toEqual({ "x-should-retry": "false" });
   });
 
-  test("preserves upstream headers for non-retryable status", () => {
+  test("overrides upstream x-should-retry for non-retryable status", () => {
     const upstream = { "x-should-retry": "true" };
-    expect(buildRetryHeaders(400, upstream)).toEqual({ "x-should-retry": "true" });
+    expect(buildRetryHeaders(400, upstream)).toEqual({ "x-should-retry": "false" });
   });
 
   test("generates fallback retry-after and retry-after-ms for 429 without upstream hints", () => {
@@ -135,6 +135,15 @@ describe("buildRetryHeaders", () => {
     const result = buildRetryHeaders(429, upstream);
     expect(result).toBe(upstream);
     expect(upstream[RETRY_AFTER_MS_HEADER]).toBe("5000");
+  });
+
+  test("ignores HTTP-date Retry-After and falls back to default", () => {
+    const upstream = { "retry-after": "Sat, 19 Apr 2026 05:00:00 GMT" };
+    expect(buildRetryHeaders(429, upstream)).toEqual({
+      "retry-after": "Sat, 19 Apr 2026 05:00:00 GMT",
+      "retry-after-ms": "1000",
+      "x-should-retry": "true",
+    });
   });
 
   test("does not filter non-retry headers from upstream", () => {

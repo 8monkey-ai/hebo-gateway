@@ -42,7 +42,7 @@ function getHeader(headers: HeadersInit, key: string): string | undefined {
 export const filterResponseHeaders = (upstream?: HeadersInit): Record<string, string> => {
   if (!upstream) return {};
 
-  let filtered: Record<string, string> = {};
+  const filtered: Record<string, string> = {};
   for (const key of RESPONSE_HEADER_ALLOWLIST) {
     const value = getHeader(upstream, key);
     if (value !== undefined) {
@@ -57,26 +57,27 @@ export const buildRetryHeaders = (
   upstream: Record<string, string> = {},
 ): Record<string, string> => {
   const retryable = RETRYABLE_STATUS_CODES.has(status);
-  if (!retryable) return upstream;
+
+  if (!retryable) {
+    upstream[X_SHOULD_RETRY_HEADER] = "false";
+    return upstream;
+  }
 
   const upstreamMs = upstream[RETRY_AFTER_MS_HEADER];
   const upstreamSec = upstream[RETRY_AFTER_HEADER];
+  const upstreamSecNum = upstreamSec === undefined ? NaN : Number(upstreamSec);
 
   const retryAfterMs =
     upstreamMs ??
-    (upstreamSec
-      ? String(Number(upstreamSec) * 1000)
-      : retryable
-        ? String(DEFAULT_RETRY_AFTER_MS)
-        : undefined);
+    (Number.isFinite(upstreamSecNum)
+      ? String(upstreamSecNum * 1000)
+      : String(DEFAULT_RETRY_AFTER_MS));
 
-  const retryAfter =
-    upstreamSec ?? (retryAfterMs ? String(Math.ceil(Number(retryAfterMs) / 1000)) : undefined);
+  const retryAfter = upstreamSec ?? String(Math.ceil(Number(retryAfterMs) / 1000));
 
-  if (retryAfterMs) upstream[RETRY_AFTER_MS_HEADER] = retryAfterMs;
-  if (retryAfter) upstream[RETRY_AFTER_HEADER] = retryAfter;
-
-  upstream[X_SHOULD_RETRY_HEADER] ??= retryable ? "true" : "false";
+  upstream[RETRY_AFTER_MS_HEADER] = retryAfterMs;
+  upstream[RETRY_AFTER_HEADER] = retryAfter;
+  upstream[X_SHOULD_RETRY_HEADER] ??= "true";
 
   return upstream;
 };
