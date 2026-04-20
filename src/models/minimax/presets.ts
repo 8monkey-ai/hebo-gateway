@@ -15,13 +15,6 @@ const MINIMAX_BASE = {
     "temperature",
   ] as const,
   context: 1048576,
-  providers: [
-    "minimax",
-    "togetherai",
-    "deepinfra",
-    "fireworks",
-    "chutes",
-  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const minimaxM25 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m2.5" as const, {
@@ -29,6 +22,12 @@ export const minimaxM25 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m
   name: "MiniMax M2.5",
   created: "2025-06-30",
   knowledge: "2025-06",
+  providers: [
+    "minimax",
+    "togetherai",
+    "deepinfra",
+    "chutes",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies CatalogModel);
 
 export const minimaxM27 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m2.7" as const, {
@@ -36,6 +35,11 @@ export const minimaxM27 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m
   name: "MiniMax M2.7",
   created: "2025-07-17",
   knowledge: "2025-06",
+  providers: [
+    "minimax",
+    "togetherai",
+    "fireworks",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies CatalogModel);
 
 const minimaxAtomic = {
