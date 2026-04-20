@@ -43,7 +43,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     }
 
     // Parse + validate input (handles Content-Encoding decompression + body size limits).
-    ctx.body = (await parseRequestBody(ctx.request, cfg.maxBodySize)) as typeof ctx.body;
+    ctx.body = (await parseRequestBody(ctx.request, cfg.advanced.maxBodySize)) as typeof ctx.body;
     logger.trace({ requestId: ctx.requestId, result: ctx.body }, "[chat] EmbeddingsBody");
     addSpanEvent("hebo.request.deserialized");
 
@@ -106,7 +106,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.ai-sdk.started");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request),
+      headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });

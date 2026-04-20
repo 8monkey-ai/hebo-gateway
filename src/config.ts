@@ -10,6 +10,7 @@ import {
   type TelemetrySignalLevel,
 } from "./types";
 import { DEFAULT_MAX_BODY_SIZE } from "./utils/body";
+import { FORWARD_HEADER_ALLOWLIST } from "./utils/request";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // If it has been parsed before, just return.
@@ -91,7 +92,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   let normal: number | undefined;
   let flex: number | undefined;
 
-  const t = config.timeouts;
+  const t = config.advanced?.timeouts;
   if (t === null) {
     normal = flex = undefined;
   } else if (typeof t === "number") {
@@ -110,7 +111,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const parsedTimeouts = { normal, flex };
 
   // Body size limit
-  const rawMax = config.maxBodySize;
+  const rawMax = config.advanced?.maxBodySize;
   let maxBodySize: number;
   if (typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 0) {
     maxBodySize = rawMax;
@@ -123,11 +124,29 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     }
   }
 
+  // Merge forward header allowlist once.
+  const customHeaders = config.advanced?.forwardHeaders ?? [];
+  const forwardHeaders = new Set<string>(FORWARD_HEADER_ALLOWLIST);
+  for (const header of customHeaders) {
+    try {
+      void new Headers([[header, ""]]);
+    } catch {
+      logger.warn(
+        `[config] invalid advanced.forwardHeaders entry ignored: ${JSON.stringify(header)}`,
+      );
+      continue;
+    }
+    forwardHeaders.add(header.trim().toLowerCase());
+  }
+
   // Return parsed config.
   return {
     ...config,
-    timeouts: parsedTimeouts,
-    maxBodySize,
+    advanced: {
+      timeouts: parsedTimeouts,
+      maxBodySize,
+      forwardHeaders: [...forwardHeaders],
+    },
     telemetry: {
       ...config.telemetry,
       enabled: telemetryEnabled,

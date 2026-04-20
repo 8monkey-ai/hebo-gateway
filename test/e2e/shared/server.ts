@@ -63,7 +63,7 @@ export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestSe
       bedrock: withCanonicalIdsForBedrock(bedrock),
     },
     models: defineModelCatalog(...presets),
-    timeouts: { normal: 120_000, flex: 360_000 },
+    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({
@@ -93,7 +93,7 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
       vertex: withCanonicalIdsForVertex(vertex),
     },
     models: defineModelCatalog(...presets),
-    timeouts: { normal: 120_000, flex: 360_000 },
+    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({

@@ -3,28 +3,56 @@ import { resolveRequestId } from "./headers";
 
 const GATEWAY_VERSION = pkg.version;
 
-const FORWARD_HEADER_ALLOWLIST = [
-  // OpenAI + OpenAI-compatible providers (Azure, Groq, Together, Fireworks, etc.)
+export const FORWARD_HEADER_ALLOWLIST = [
+  // OpenAI
   "openai-beta",
   "openai-organization",
   "openai-project",
   // OpenRouter
+  "or_app_name",
+  "or_site_url",
   "x-openrouter-categories",
   "x-openrouter-title",
   "x-title",
   // Anthropic
   "anthropic-beta",
+  "anthropic-version",
+  "x-claude-code-session-id",
   // AWS Bedrock
   "x-amzn-bedrock-guardrailidentifier",
   "x-amzn-bedrock-guardrailversion",
   "x-amzn-bedrock-performanceconfig-latency",
   "x-amzn-bedrock-trace",
-  // Cohere
-  "x-client-name",
-  // Vertex provisioned throughput / endpoint routing
+  // Google Vertex
+  "x-goog-api-client",
   "x-vertex-ai-endpoint-id",
   "x-vertex-ai-llm-request-type",
   "x-vertex-ai-llm-shared-request-type",
+  // Kilocode
+  "x-kilo-session",
+  "x-kilocode-taskid",
+  "x-kilocode-editorname",
+  "x-kilocode-feature",
+  "x-kilocode-machineid",
+  "x-kilocode-organizationid",
+  "x-kilocode-projectid",
+  "x-kilocode-tester",
+  // Agent / org / project / session ids
+  "agent-session-id",
+  "x-client",
+  "x-client-name",
+  "x-client-type",
+  "x-client-version",
+  "x-platform",
+  "x-platform-version",
+  "x-task-id",
+  // SDK / protocol identification
+  "x-stainless-arch",
+  "x-stainless-lang",
+  "x-stainless-os",
+  "x-stainless-package-version",
+  "x-stainless-runtime",
+  "x-stainless-runtime-version",
 ] as const;
 
 const createRequestId = () =>
@@ -33,7 +61,10 @@ const createRequestId = () =>
 export const resolveOrCreateRequestId = (request: Request) =>
   resolveRequestId(request) ?? createRequestId();
 
-export const prepareForwardHeaders = (request: Request): Record<string, string> => {
+export const prepareForwardHeaders = (
+  request: Request,
+  allowlist: readonly string[] = FORWARD_HEADER_ALLOWLIST,
+): Record<string, string> => {
   const userAgent = request.headers.get("user-agent");
   const appendedUserAgent = userAgent
     ? `${userAgent} @hebo-ai/gateway/${GATEWAY_VERSION}`
@@ -43,7 +74,7 @@ export const prepareForwardHeaders = (request: Request): Record<string, string> 
     "user-agent": appendedUserAgent,
   };
 
-  for (const key of FORWARD_HEADER_ALLOWLIST) {
+  for (const key of allowlist) {
     const value = request.headers.get(key);
     if (value !== null) headers[key] = value;
   }
