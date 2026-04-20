@@ -155,6 +155,10 @@
     "./telemetry": {
       "types": "./dist/telemetry/index.d.ts",
       "import": "./dist/telemetry/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
     }
   },
   "scripts": {
