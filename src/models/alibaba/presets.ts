@@ -9,7 +9,7 @@ const QWEN3_BASE = {
   },
   capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
   context: 131072,
-  providers: ["alibaba", "bedrock", "vertex", "azure", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["alibaba", "bedrock", "vertex", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const QWEN3_VL_BASE = {
@@ -41,7 +41,7 @@ export const qwen3_32b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...QWEN3_BASE,
     name: "Qwen3 32B",
-    providers: ["alibaba", "groq", "bedrock", "vertex", "azure", "chutes", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+    providers: ["alibaba", "groq", "bedrock", "vertex", "chutes", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
     created: "2025-04-29",
     knowledge: "2025-04",
   } satisfies CatalogModel,
@@ -260,7 +260,7 @@ export const qwen3Vl235b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...QWEN3_VL_BASE,
     name: "Qwen3 VL 235B",
-    created: "2025-04-29",
+    created: "2025-09-23",
     knowledge: "2025-04",
   } satisfies CatalogModel,
 );
