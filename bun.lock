@@ -15,9 +15,12 @@
         "@ai-sdk/amazon-bedrock": "^4.0.92",
         "@ai-sdk/anthropic": "^3.0.68",
         "@ai-sdk/cohere": "^3.0.30",
+        "@ai-sdk/deepinfra": "^2.0.45",
+        "@ai-sdk/fireworks": "^2.0.46",
         "@ai-sdk/google-vertex": "^4.0.105",
         "@ai-sdk/groq": "^3.0.35",
         "@ai-sdk/openai": "^3.0.52",
+        "@ai-sdk/togetherai": "^2.0.45",
         "@ai-sdk/xai": "^3.0.83",
         "@anthropic-ai/sdk": "^0.88.0",
         "@aws-sdk/credential-providers": "^3.1027.0",
@@ -57,10 +60,14 @@
         "@ai-sdk/amazon-bedrock": "^4.0.77",
         "@ai-sdk/anthropic": "^3.0.58",
         "@ai-sdk/cohere": "^3.0.25",
+        "@ai-sdk/deepinfra": "^2.0.45",
+        "@ai-sdk/fireworks": "^2.0.46",
         "@ai-sdk/google": "^3.0.43",
         "@ai-sdk/google-vertex": "^4.0.80",
         "@ai-sdk/groq": "^3.0.29",
         "@ai-sdk/openai": "^3.0.41",
+        "@ai-sdk/openai-compatible": "",
+        "@ai-sdk/togetherai": "^2.0.45",
         "@libsql/client": "^0.14.0",
         "@opentelemetry/api": "^1.9.1",
         "better-sqlite3": "^11.0.0",
@@ -74,10 +81,14 @@
         "@ai-sdk/amazon-bedrock",
         "@ai-sdk/anthropic",
         "@ai-sdk/cohere",
+        "@ai-sdk/deepinfra",
+        "@ai-sdk/fireworks",
         "@ai-sdk/google",
         "@ai-sdk/google-vertex",
         "@ai-sdk/groq",
         "@ai-sdk/openai",
+        "@ai-sdk/openai-compatible",
+        "@ai-sdk/togetherai",
         "@libsql/client",
         "better-sqlite3",
         "mysql2",
@@ -94,6 +105,10 @@
 
     "@ai-sdk/cohere": ["@ai-sdk/cohere@3.0.30", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-j3fe/6lUUkHPD/51OgMXN9UD7p1QSQEAlroIinmb3MhJ1s+O0MnqdRa30IM7dRHafNp0FQ9X4YpobY85iMknUQ=="],
 
+    "@ai-sdk/deepinfra": ["@ai-sdk/deepinfra@2.0.45", "", { "dependencies": { "@ai-sdk/openai-compatible": "2.0.41", "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-CJeAoIBDwz+nxEgH1ivWaBGMqmDZuz/sgpuhNHFyrY/dYooXb0/vdkWV1SyQtEpHhJu5BUql+7A6gRh/2CL+FQ=="],
+
+    "@ai-sdk/fireworks": ["@ai-sdk/fireworks@2.0.46", "", { "dependencies": { "@ai-sdk/openai-compatible": "2.0.41", "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-XRKR0zgRyegdmtK5CDUEjlyRp0Fo+XVCdoG+301U1SGtgRIAYG3ObVtgzVJBVpJdHFSLHuYeLTnNiQoUxD7+FQ=="],
+
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.94", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-uDDwLZhCkvC89crVS3S90D5L7AcVN8WriGuYVNYgVAaVcvy3Mthy3R9ICfzG75BObhz6pm2FWnhxDfNRK+t69Q=="],
 
     "@ai-sdk/google": ["@ai-sdk/google@3.0.60", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-ye/hG0LeO24VmjLbfgkFZV8V8k/l4nVBODutpJQkFPyUiGOCbFtFUTgxSeC7+njrk5+HhgyHrzJay4zmhwMH+w=="],
@@ -109,6 +124,8 @@
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.8", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ=="],
 
     "@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@4.0.23", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@standard-schema/spec": "^1.1.0", "eventsource-parser": "^3.0.6" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-z8GlDaCmRSDlqkMF2f4/RFgWxdarvIbyuk+m6WXT1LYgsnGiXRJGTD2Z1+SDl3LqtFuRtGX1aghYvQLoHL/9pg=="],
+
+    "@ai-sdk/togetherai": ["@ai-sdk/togetherai@2.0.45", "", { "dependencies": { "@ai-sdk/openai-compatible": "2.0.41", "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-+20Gruk4fF6FZxjMX7QT8PtFNNadBvBz2xgNDEf+O8uMpyi2FP11DOE9W2AShio/lh82Gjd8b7wxSC+RfxXnPg=="],
 
     "@ai-sdk/xai": ["@ai-sdk/xai@3.0.83", "", { "dependencies": { "@ai-sdk/openai-compatible": "2.0.41", "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-SuQz68BZGeuZjrSUJAzku97IlhdiNJJBsvG/Tvm3K2tuxkBS7TJq0fH4/AzAM7w2H2jxVUgboP7kRR6IfpRxcg=="],
 
