@@ -118,7 +118,7 @@ const GEMMA3_BASE = {
   capabilities: ["tool_call", "structured_output", "temperature"] as const,
   context: 131072,
   knowledge: "2025-01",
-  providers: ["vertex", "bedrock"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["vertex", "bedrock", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const GEMMA4_BASE = {
@@ -201,7 +201,8 @@ export const gemma426bA4b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemma 4 26B-A4B",
     created: "2026-04-02",
     context: 262144,
-  } satisfies DeepPartial<CatalogModel>,
+    providers: ["vertex", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
+  } satisfies CatalogModel,
 );
 
 export const gemma431b = presetFor<CanonicalModelId, CatalogModel>()(
@@ -211,7 +212,8 @@ export const gemma431b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemma 4 31B",
     created: "2026-04-02",
     context: 262144,
-  } satisfies DeepPartial<CatalogModel>,
+    providers: ["vertex", "deepinfra", "togetherai"] as const satisfies readonly CanonicalProviderId[],
+  } satisfies CatalogModel,
 );
 
 const gemmaAtomic = {

@@ -19,7 +19,7 @@ export const llama31_8b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.1 8B",
     created: "2024-07-23",
     knowledge: "2023-12",
-    providers: ["groq", ...LLAMA_3_BASE.providers],
+    providers: ["groq", ...LLAMA_3_BASE.providers, "togetherai", "deepinfra", "fireworks"],
   } satisfies CatalogModel,
 );
 
@@ -30,6 +30,7 @@ export const llama31_70b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.1 70B",
     created: "2024-07-23",
     knowledge: "2023-12",
+    providers: [...LLAMA_3_BASE.providers, "togetherai", "deepinfra"],
   } satisfies CatalogModel,
 );
 
@@ -40,6 +41,7 @@ export const llama31_405b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.1 405B",
     created: "2024-07-23",
     knowledge: "2023-12",
+    providers: [...LLAMA_3_BASE.providers, "togetherai", "deepinfra", "fireworks"],
   } satisfies CatalogModel,
 );
 
@@ -60,6 +62,7 @@ export const llama32_3b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.2 3B",
     created: "2024-09-25",
     knowledge: "2023-12",
+    providers: [...LLAMA_3_BASE.providers, "togetherai", "fireworks"],
   } satisfies CatalogModel,
 );
 
@@ -70,6 +73,7 @@ export const llama32_11b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.2 11B",
     created: "2024-09-25",
     knowledge: "2023-12",
+    providers: [...LLAMA_3_BASE.providers, "deepinfra", "fireworks"],
   } satisfies CatalogModel,
 );
 
@@ -80,6 +84,7 @@ export const llama32_90b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.2 90B",
     created: "2024-09-25",
     knowledge: "2023-12",
+    providers: [...LLAMA_3_BASE.providers, "deepinfra"],
   } satisfies CatalogModel,
 );
 
@@ -90,7 +95,7 @@ export const llama33_70b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.3 70B",
     created: "2024-12-06",
     knowledge: "2023-12",
-    providers: ["groq", ...LLAMA_3_BASE.providers],
+    providers: ["groq", ...LLAMA_3_BASE.providers, "togetherai", "deepinfra", "fireworks"],
   } satisfies CatalogModel,
 );
 
@@ -111,7 +116,7 @@ export const llama4Scout = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 4 Scout",
     created: "2025-08-05",
     knowledge: "2024-06",
-    providers: ["groq", ...LLAMA_4_BASE.providers],
+    providers: ["groq", ...LLAMA_4_BASE.providers, "deepinfra"],
   } satisfies CatalogModel,
 );
 
@@ -122,6 +127,7 @@ export const llama4Maverick = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 4 Maverick",
     created: "2025-08-05",
     knowledge: "2024-06",
+    providers: [...LLAMA_4_BASE.providers, "togetherai", "deepinfra"],
   } satisfies CatalogModel,
 );
 
