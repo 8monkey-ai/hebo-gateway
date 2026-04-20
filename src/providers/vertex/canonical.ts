@@ -4,8 +4,7 @@ import type { CanonicalModelId, ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
-  "alibaba/qwen3-235b": "qwen3-235b-a22b",
-  "alibaba/qwen3-vl-235b": "qwen3-vl-235b-a22b",
+  "alibaba/qwen3-235b": "qwen3-235b-a22b-instruct-2507-maas",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForVertex = (

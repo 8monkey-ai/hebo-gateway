@@ -23,7 +23,6 @@ const QWEN3_VL_BASE = {
     "alibaba",
     "azure",
     "bedrock",
-    "vertex",
   ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
