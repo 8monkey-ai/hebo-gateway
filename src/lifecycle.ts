@@ -78,9 +78,7 @@ export const winterCgHandler = (
           err: reason ?? ctx.request.signal.reason,
         });
 
-        const isUpstreamError =
-          reason instanceof GatewayError && reason.statusText.startsWith("UPSTREAM_");
-        span.recordError(reason, realStatus >= 500 || isUpstreamError);
+        span.recordError(reason, true);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 
