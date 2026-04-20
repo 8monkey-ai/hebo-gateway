@@ -778,7 +778,6 @@ Provider-specific mapping:
   - `priority` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: priority`
   - `scale` -> `x-vertex-ai-llm-request-type: dedicated`
 - **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
-- **MiniMax / Together AI / DeepInfra / Fireworks / Chutes**: forwards as `serviceTier` via the standard OpenAI-compatible path (no middleware remap).
 
 When available, the resolved value is echoed back on response as `service_tier`.
 

@@ -4,6 +4,7 @@ import type { CanonicalModelId, ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
+  "google/gemma-4-31b": "google/gemma-4-31B-it",
   "meta/llama-3.1-8b": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
   "meta/llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
   "meta/llama-3.1-405b": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",

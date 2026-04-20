@@ -4,6 +4,11 @@ import type { CanonicalModelId, ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
+  "google/gemma-3-4b": "google/gemma-3-4b-it",
+  "google/gemma-3-12b": "google/gemma-3-12b-it",
+  "google/gemma-3-27b": "google/gemma-3-27b-it",
+  "google/gemma-4-26b-a4b": "google/gemma-4-26b-a4b-it",
+  "google/gemma-4-31b": "google/gemma-4-31b-it",
   "meta/llama-3.1-8b": "meta-llama/Meta-Llama-3.1-8B-Instruct",
   "meta/llama-3.1-70b": "meta-llama/Meta-Llama-3.1-70B-Instruct",
   "meta/llama-3.1-405b": "meta-llama/Meta-Llama-3.1-405B-Instruct",
