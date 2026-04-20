@@ -1069,11 +1069,14 @@ Compressed requests that exceed this limit after decompression receive an HTTP `
 > - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
 > - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
 > - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
-> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)
+> - **Node.js `http`** — no built-in request-body size option; enforce a limit while reading the request stream, or use a reverse proxy like nginx (`client_max_body_size 10m`)
 
 #### Forward Headers
 
 Additional headers to forward to upstream providers, merged with the built-in allowlist at startup. Header names are matched case-insensitively. The merge is computed once at config parse time, not per-request.
+
+> [!CAUTION]
+> Only add non-sensitive headers. Any header listed in `advanced.forwardHeaders` is forwarded to upstream providers when present on the incoming request — avoid credentials, cookies, user tokens, or raw PII.
 
 The gateway ships a built-in allowlist covering common provider, agent, and SDK headers (OpenAI, Anthropic, Bedrock, Vertex, OpenRouter, Cohere, Stainless, Google, Kilo Code, Cline, Roo Code, Goose, Claude Code). Use `forwardHeaders` to extend it with your own headers without modifying the gateway source.
 

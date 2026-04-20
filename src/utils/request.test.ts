@@ -71,12 +71,20 @@ describe("prepareForwardHeaders", () => {
         "x-kilocode-editorname": "vscode",
         "x-kilocode-feature": "chat",
         "x-openrouter-title": "Cline",
+        "x-kilo-session": "kilo_sess_5",
+        "x-task-id": "task_alias_6",
+        "x-client": "cline",
         // Agent organization / project context
+        "x-client-type": "extension",
+        "x-client-version": "1.2.3",
         "x-kilocode-organizationid": "org_kilo_1",
         "x-kilocode-projectid": "proj_kilo_2",
         "x-kilocode-machineid": "machine_3",
         "x-kilocode-tester": "tester_4",
+        "x-platform": "vscode",
+        "x-platform-version": "1.99.0",
         // SDK / protocol identification
+        "x-goog-api-client": "gl-python/3.12",
         "anthropic-version": "2023-06-01",
         "x-stainless-lang": "python",
         "x-stainless-package-version": "0.30.0",
@@ -97,10 +105,19 @@ describe("prepareForwardHeaders", () => {
     expect(headers["or_site_url"]).toBe("https://openhands.ai");
     expect(headers["x-kilocode-editorname"]).toBe("vscode");
     expect(headers["x-kilocode-feature"]).toBe("chat");
+    expect(headers["x-openrouter-title"]).toBe("Cline");
+    expect(headers["x-kilo-session"]).toBe("kilo_sess_5");
+    expect(headers["x-task-id"]).toBe("task_alias_6");
+    expect(headers["x-client"]).toBe("cline");
+    expect(headers["x-client-type"]).toBe("extension");
+    expect(headers["x-client-version"]).toBe("1.2.3");
     expect(headers["x-kilocode-organizationid"]).toBe("org_kilo_1");
     expect(headers["x-kilocode-projectid"]).toBe("proj_kilo_2");
     expect(headers["x-kilocode-machineid"]).toBe("machine_3");
     expect(headers["x-kilocode-tester"]).toBe("tester_4");
+    expect(headers["x-platform"]).toBe("vscode");
+    expect(headers["x-platform-version"]).toBe("1.99.0");
+    expect(headers["x-goog-api-client"]).toBe("gl-python/3.12");
     expect(headers["anthropic-version"]).toBe("2023-06-01");
     expect(headers["x-stainless-lang"]).toBe("python");
     expect(headers["x-stainless-package-version"]).toBe("0.30.0");

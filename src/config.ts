@@ -128,7 +128,23 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const customHeaders = config.advanced?.forwardHeaders;
   const forwardHeaders =
     customHeaders && customHeaders.length > 0
-      ? [...FORWARD_HEADER_ALLOWLIST, ...customHeaders.map((h) => h.toLowerCase())]
+      ? Array.from(
+          new Set([
+            ...FORWARD_HEADER_ALLOWLIST,
+            ...customHeaders.map((h) => {
+              const normalized = h.trim().toLowerCase();
+              try {
+                const probe = new Headers([[normalized, ""]]);
+                void probe;
+              } catch {
+                throw new Error(
+                  `[config] invalid advanced.forwardHeaders entry: ${JSON.stringify(h)}`,
+                );
+              }
+              return normalized;
+            }),
+          ]),
+        )
       : [...FORWARD_HEADER_ALLOWLIST];
 
   // Return parsed config.

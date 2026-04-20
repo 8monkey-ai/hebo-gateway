@@ -47,4 +47,35 @@ describe("parseConfig", () => {
     });
     expect(parsed.advanced.forwardHeaders).toContain("x-upper-case");
   });
+
+  test("deduplicates custom headers that overlap with built-in allowlist", () => {
+    const parsed = parseConfig({
+      ...minimalConfig,
+      advanced: { forwardHeaders: ["openai-beta", "OpenAI-Beta", "x-new-header"] },
+    });
+    const count = parsed.advanced.forwardHeaders.filter((h) => h === "openai-beta").length;
+    expect(count).toBe(1);
+    expect(parsed.advanced.forwardHeaders).toContain("x-new-header");
+    expect(parsed.advanced.forwardHeaders.length).toBe(FORWARD_HEADER_ALLOWLIST.length + 1);
+  });
+
+  test("trims whitespace from custom forward headers", () => {
+    const parsed = parseConfig({
+      ...minimalConfig,
+      advanced: { forwardHeaders: ["  x-padded-header  "] },
+    });
+    expect(parsed.advanced.forwardHeaders).toContain("x-padded-header");
+  });
+
+  test("throws on invalid header names", () => {
+    expect(() =>
+      parseConfig({ ...minimalConfig, advanced: { forwardHeaders: ["x invalid header"] } }),
+    ).toThrow("[config] invalid advanced.forwardHeaders entry");
+  });
+
+  test("throws on empty header name", () => {
+    expect(() => parseConfig({ ...minimalConfig, advanced: { forwardHeaders: [""] } })).toThrow(
+      "[config] invalid advanced.forwardHeaders entry",
+    );
+  });
 });
