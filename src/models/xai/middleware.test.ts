@@ -104,10 +104,86 @@ test("xaiReasoningMiddleware > should map medium effort to high", async () => {
   });
 });
 
+test("xaiReasoningMiddleware > should map minimal effort to low", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "minimal" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "low" },
+      unknown: {},
+    },
+  });
+});
+
+test("xaiReasoningMiddleware > should map xhigh effort to high", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "xhigh" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "high" },
+      unknown: {},
+    },
+  });
+});
+
+test("xaiReasoningMiddleware > should map max effort to high", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "max" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "high" },
+      unknown: {},
+    },
+  });
+});
+
 test("xaiReasoningMiddleware > should clear reasoning when disabled", async () => {
   const params = {
     prompt: [],
     providerOptions: {
+      xai: { reasoningEffort: "high" },
       unknown: {
         reasoning: { enabled: false },
       },

@@ -74,6 +74,6 @@ const grokGroups = {} as const;
 export const grok = {
   ...grokAtomic,
   ...grokGroups,
-  latest: [grok42, grok42Reasoning],
+  latest: [grok42, grok42Reasoning, grok42MultiAgent],
   all: Object.values(grokAtomic).flat(),
 } as const;
