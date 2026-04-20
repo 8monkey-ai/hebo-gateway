@@ -10,7 +10,6 @@ const LLAMA_3_BASE = {
   capabilities: ["attachments", "tool_call", "temperature"] as const,
   context: 128000,
   providers: [
-    "groq",
     "bedrock",
     "vertex",
     "azure",
@@ -24,6 +23,7 @@ export const llama31_8b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.1 8B",
     created: "2024-07-23",
     knowledge: "2023-12",
+    providers: ["groq", ...LLAMA_3_BASE.providers],
   } satisfies CatalogModel,
 );
 
@@ -94,6 +94,7 @@ export const llama33_70b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 3.3 70B",
     created: "2024-12-06",
     knowledge: "2023-12",
+    providers: ["groq", ...LLAMA_3_BASE.providers],
   } satisfies CatalogModel,
 );
 
@@ -105,7 +106,6 @@ const LLAMA_4_BASE = {
   capabilities: ["attachments", "tool_call", "temperature"] as const,
   context: 1000000,
   providers: [
-    "groq",
     "bedrock",
     "vertex",
     "azure",
@@ -119,6 +119,7 @@ export const llama4Scout = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 4 Scout",
     created: "2025-08-05",
     knowledge: "2024-06",
+    providers: ["groq", ...LLAMA_4_BASE.providers],
   } satisfies CatalogModel,
 );
 
