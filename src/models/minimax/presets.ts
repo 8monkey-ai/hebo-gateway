@@ -4,17 +4,16 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 
 const MINIMAX_BASE = {
   modalities: {
-    input: ["text", "image"] as const,
+    input: ["text"] as const,
     output: ["text"] as const,
   },
   capabilities: [
-    "attachments",
     "reasoning",
     "tool_call",
     "structured_output",
     "temperature",
   ] as const,
-  context: 1048576,
+  context: 204800,
 } satisfies DeepPartial<CatalogModel>;
 
 export const minimaxM25 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m2.5" as const, {
