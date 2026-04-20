@@ -89,6 +89,15 @@ export const CANONICAL_MODEL_IDS = [
   "cohere/command-a-vision",
   "cohere/command-r",
   "cohere/command-r-plus",
+  // MiniMax
+  "minimax/m2.5",
+  "minimax/m2.7",
+  // xAI
+  "xai/grok-4.1-fast",
+  "xai/grok-4.1-fast-reasoning",
+  "xai/grok-4.2",
+  "xai/grok-4.2-reasoning",
+  "xai/grok-4.2-multi-agent",
   // Voyage
   "voyage/voyage-2-code",
   "voyage/voyage-2-law",

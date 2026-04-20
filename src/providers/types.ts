@@ -5,11 +5,17 @@ export const CANONICAL_PROVIDER_IDS = [
   "anthropic",
   "azure",
   "bedrock",
+  "chutes",
   "cohere",
+  "deepinfra",
+  "fireworks",
   "groq",
+  "minimax",
   "openai",
+  "togetherai",
   "vertex",
   "voyage",
+  "xai",
 ] as const;
 
 export type CanonicalProviderId = (typeof CANONICAL_PROVIDER_IDS)[number];

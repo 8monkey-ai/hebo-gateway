@@ -93,6 +93,8 @@ When adding/updating a model preset:
 When adjusting canonicalization:
 
 - Keep canonical IDs stable and provider-agnostic (`vendor/model-name`).
+- Use `https://openrouter.ai/provider/<provider-name>` as a reference for which provider supports which models. It is not complete, but better than nothing.
+- Only add models into the canonical mapping list of a provider if the default mapping can't cover them (i.e. the provider-native model ID differs from the canonical ID after applying `stripNamespace`/`prefix`/`postfix` options).
 - Ensure mapping rules stay compatible with provider-specific quirks (prefixes/templates/postfixes).
 - Verify both text-generation and embedding model resolution paths when applicable.
 - Add targeted tests in `src/providers/*.test.ts` or nearby endpoint tests.

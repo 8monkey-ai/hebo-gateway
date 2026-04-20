@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { prepareForwardHeaders } from "./request";
+import { FORWARD_HEADER_ALLOWLIST, prepareForwardHeaders } from "./request";
 
 describe("prepareForwardHeaders", () => {
   test("always appends gateway user-agent suffix", () => {
@@ -57,6 +57,74 @@ describe("prepareForwardHeaders", () => {
     expect(headers["x-unrelated-header"]).toBeUndefined();
   });
 
+  test("forwards agent attribution headers", () => {
+    const request = new Request("https://example.com", {
+      headers: {
+        // Agent session / run correlation
+        "agent-session-id": "sess_abc123",
+        "x-claude-code-session-id": "cc_sess_456",
+        "x-kilocode-taskid": "task_789",
+        // Agent identification
+        or_app_name: "OpenHands",
+        or_site_url: "https://openhands.ai",
+        "x-kilocode-editorname": "vscode",
+        "x-kilocode-feature": "chat",
+        "x-openrouter-title": "Cline",
+        "x-kilo-session": "kilo_sess_5",
+        "x-task-id": "task_alias_6",
+        "x-client": "cline",
+        // Agent organization / project context
+        "x-client-type": "extension",
+        "x-client-version": "1.2.3",
+        "x-kilocode-organizationid": "org_kilo_1",
+        "x-kilocode-projectid": "proj_kilo_2",
+        "x-kilocode-machineid": "machine_3",
+        "x-kilocode-tester": "tester_4",
+        "x-platform": "vscode",
+        "x-platform-version": "1.99.0",
+        // SDK / protocol identification
+        "x-goog-api-client": "gl-python/3.12",
+        "anthropic-version": "2023-06-01",
+        "x-stainless-lang": "python",
+        "x-stainless-package-version": "0.30.0",
+        "x-stainless-os": "linux",
+        "x-stainless-arch": "x86_64",
+        "x-stainless-runtime": "cpython",
+        "x-stainless-runtime-version": "3.12.0",
+      },
+    });
+
+    const headers = prepareForwardHeaders(request);
+
+    expect(headers["agent-session-id"]).toBe("sess_abc123");
+    expect(headers["x-claude-code-session-id"]).toBe("cc_sess_456");
+    expect(headers["x-kilocode-taskid"]).toBe("task_789");
+    expect(headers["or_app_name"]).toBe("OpenHands");
+    expect(headers["or_site_url"]).toBe("https://openhands.ai");
+    expect(headers["x-kilocode-editorname"]).toBe("vscode");
+    expect(headers["x-kilocode-feature"]).toBe("chat");
+    expect(headers["x-openrouter-title"]).toBe("Cline");
+    expect(headers["x-kilo-session"]).toBe("kilo_sess_5");
+    expect(headers["x-task-id"]).toBe("task_alias_6");
+    expect(headers["x-client"]).toBe("cline");
+    expect(headers["x-client-type"]).toBe("extension");
+    expect(headers["x-client-version"]).toBe("1.2.3");
+    expect(headers["x-kilocode-organizationid"]).toBe("org_kilo_1");
+    expect(headers["x-kilocode-projectid"]).toBe("proj_kilo_2");
+    expect(headers["x-kilocode-machineid"]).toBe("machine_3");
+    expect(headers["x-kilocode-tester"]).toBe("tester_4");
+    expect(headers["x-platform"]).toBe("vscode");
+    expect(headers["x-platform-version"]).toBe("1.99.0");
+    expect(headers["x-goog-api-client"]).toBe("gl-python/3.12");
+    expect(headers["anthropic-version"]).toBe("2023-06-01");
+    expect(headers["x-stainless-lang"]).toBe("python");
+    expect(headers["x-stainless-package-version"]).toBe("0.30.0");
+    expect(headers["x-stainless-os"]).toBe("linux");
+    expect(headers["x-stainless-arch"]).toBe("x86_64");
+    expect(headers["x-stainless-runtime"]).toBe("cpython");
+    expect(headers["x-stainless-runtime-version"]).toBe("3.12.0");
+  });
+
   test("does not forward headers outside the allowlist", () => {
     const request = new Request("https://example.com", {
       headers: {
@@ -71,5 +139,35 @@ describe("prepareForwardHeaders", () => {
     expect(headers["authorization"]).toBeUndefined();
     expect(headers["cookie"]).toBeUndefined();
     expect(headers["x-custom-header"]).toBeUndefined();
+  });
+
+  test("forwards custom headers when a merged allowlist is provided", () => {
+    const merged = [...FORWARD_HEADER_ALLOWLIST, "x-custom-trace-id", "x-internal-team"];
+    const request = new Request("https://example.com", {
+      headers: {
+        "x-custom-trace-id": "trace_123",
+        "x-internal-team": "platform",
+        "x-not-allowed": "blocked",
+        "openai-beta": "responses=v1",
+      },
+    });
+
+    const headers = prepareForwardHeaders(request, merged);
+
+    expect(headers["x-custom-trace-id"]).toBe("trace_123");
+    expect(headers["x-internal-team"]).toBe("platform");
+    expect(headers["openai-beta"]).toBe("responses=v1");
+    expect(headers["x-not-allowed"]).toBeUndefined();
+  });
+
+  test("uses built-in allowlist when no custom list is provided", () => {
+    const request = new Request("https://example.com", {
+      headers: { "openai-beta": "responses=v1" },
+    });
+
+    const withDefault = prepareForwardHeaders(request);
+    const withExplicit = prepareForwardHeaders(request, FORWARD_HEADER_ALLOWLIST);
+
+    expect(withDefault).toEqual(withExplicit);
   });
 });

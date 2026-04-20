@@ -1,0 +1,49 @@
+import { expect, test } from "bun:test";
+
+import { xai } from "@ai-sdk/xai";
+
+import { withCanonicalIdsForXai } from "./canonical";
+
+test("withCanonicalIdsForXai > maps grok-4.1-fast via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.1-fast");
+  expect(model.modelId).toBe("grok-4-1-fast-non-reasoning");
+});
+
+test("withCanonicalIdsForXai > normalizes grok-4.1-fast-reasoning via delimiter fallback", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.1-fast-reasoning");
+  expect(model.modelId).toBe("grok-4-1-fast-reasoning");
+});
+
+test("withCanonicalIdsForXai > maps grok-4.2 via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.2");
+  expect(model.modelId).toBe("grok-4.20-0309-non-reasoning");
+});
+
+test("withCanonicalIdsForXai > maps grok-4.2 reasoning via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.2-reasoning");
+  expect(model.modelId).toBe("grok-4.20-0309-reasoning");
+});
+
+test("withCanonicalIdsForXai > maps grok-4.2-multi-agent via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.2-multi-agent");
+  expect(model.modelId).toBe("grok-4.20-multi-agent-0309");
+});
+
+test("withCanonicalIdsForXai > supports extra mapping override", () => {
+  const provider = withCanonicalIdsForXai(xai, {
+    "xai/custom-model": "custom-native-id",
+  });
+
+  const model = provider.languageModel("xai/custom-model");
+  expect(model.modelId).toBe("custom-native-id");
+});

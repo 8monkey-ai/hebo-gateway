@@ -14,3 +14,5 @@ export * from "./models/types";
 
 export * from "./providers/registry";
 export * from "./providers/types";
+
+export { FORWARD_HEADER_ALLOWLIST } from "./utils";
