@@ -16,12 +16,13 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 💬 Open Responses `/responses` endpoint (stateless), including /conversations.
 - 🗨️ Anthropic-compatible `/messages` endpoint.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
-- 🧩 Provider registry compatible with Vercel AI SDK providers.
+- 🧩 Provider registry compatible with any Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
-- 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 - 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
+- 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
+
 
 ## 📦 Installation
 
@@ -71,21 +72,13 @@ export const gw = gateway({
 
   // MODEL CATALOG
   models: defineModelCatalog(
-    // Choose a pre-configured preset for common SOTA models
+    // Choose a pre-configured preset
     gptOss20b,
-    // Or add a whole model family with your own provider list
-    gptOss["all"].map((preset) =>
-      preset({
-        providers: ["groq"],
-      }),
-    ),
+    // Or add a whole model family
+    gptOss["all"]
   ),
 });
 ```
-
-> [!NOTE]
-> Don't forget to install the Groq provider package too: `@ai-sdk/groq`.
-
 > [!TIP]
 > Why `withCanonicalIdsForX`? In most cases you want your gateway to route using model IDs that are consistent across providers (e.g. `openai/gpt-oss-20b` rather than `openai.gpt-oss-20b-v1:0`). We call that `Canonical IDs` - they are what enable routing, fallbacks, and policy rules. Without this wrapper, providers only understands their native IDs, which would make cross-provider routing impossible.
 
@@ -110,11 +103,14 @@ const app = new Elysia().mount("/v1/gateway/", gw.handler).listen(3000);
 console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 ```
 
+See [Framework Support](#-framework-support) for all supported framework examples.
+
+
 ### Call the Gateway
 
-Since Hebo Gateway exposes OpenAI-compatible endpoints, it can be used with a broad set of common AI SDKs like **Vercel AI SDK**, **TanStack AI**, **LangChain**, the official **OpenAI SDK** and others.
+Since Hebo Gateway exposes OpenAI-compatible and Anthropic-compatible endpoints, it can be used with a broad set of common AI SDKs like **Vercel AI SDK**, **TanStack AI**, **LangChain**, the official **OpenAI SDK**, the official **Anthropic SDK**, and others.
 
-Here is a quick example using the Vercel AI SDK:
+Here is a quick example using the Vercel AI SDK against the OpenAI-compatible surface:
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -139,20 +135,22 @@ console.log(text);
 
 ### Providers
 
-Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For Hebo to be able to route a model across different providers, the names need to be canonicalized to a common form, for example 'openai/gpt-4.1-mini' instead of 'gpt-4.1-mini'.
+For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-We currently provide out-of-the-box canonical providers for: `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`. Import the helper from the matching package path:
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
+
+Import the helper from the matching package path:
 
 ```ts
 // pattern: @hebo-ai/gateway/providers/<provider>
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 ```
 
-If an adapter is not yet provided, you can create your own by wrapping the provider instance with the `withCanonicalIds` helper and define your custom canonicalization mapping & rules.
+If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
 For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
 
-For other providers, use `withCanonicalIds` with an explicit `mapping`:
+For custom provider setups, wrap the provider instance with `withCanonicalIds` and define your own canonicalization mapping and rules:
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -184,11 +182,13 @@ const gw = gateway({
 
 ### Models
 
-Register models to tell the gateway what's available, under which canonical ID and what capabilities each one has.
+Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
+
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
 
 #### Model Presets
 
-To simplify the registration, Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
+Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
 
 Presets come in two forms:
 
@@ -249,7 +249,7 @@ Out-of-the-box model presets:
 
 #### User-defined Models
 
-As the ecosystem is moving faster than anyone can keep-up with, you can always register your own model entries by following the `CatalogModel` type.
+If a built-in preset does not exist yet, you can always register your own model entries by following the `CatalogModel` type.
 
 ```ts
 const gw = gateway({
