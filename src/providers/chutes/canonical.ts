@@ -5,6 +5,8 @@ import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
   "minimax/m2.5": "MiniMax/MiniMax-M2.5",
+  "alibaba/qwen3-32b": "qwen/qwen3-32b",
+  "alibaba/qwen3.5-397b": "qwen/qwen3.5-397b-a17b",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForChutes = (

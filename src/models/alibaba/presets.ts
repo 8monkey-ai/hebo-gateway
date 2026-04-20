@@ -50,7 +50,7 @@ export const qwen3_32b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...QWEN3_BASE,
     name: "Qwen3 32B",
-    providers: ["alibaba", "groq", "bedrock", "vertex", "azure", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+    providers: ["alibaba", "groq", "bedrock", "vertex", "azure", "chutes", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
     created: "2025-04-29",
     knowledge: "2025-04",
   } satisfies CatalogModel,
@@ -105,6 +105,7 @@ export const qwen35_397b = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...QWEN3_ALIBABA_ONLY,
     name: "Qwen3.5 397B",
+    providers: ["alibaba", "chutes"] as const satisfies readonly CanonicalProviderId[],
     context: 262144,
     created: "2026-02-16",
     knowledge: "2025-04",
