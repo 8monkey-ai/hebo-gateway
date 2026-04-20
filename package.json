@@ -1,4 +1,5 @@
 {
+  "packageManager": "bun@1.3.13",
   "name": "@hebo-ai/gateway",
   "version": "0.10.7",
   "description": "AI gateway as a framework. For full control over models, routing & lifecycle. OpenAI /chat/completions, OpenResponses /responses & Anthropic /messages.",
