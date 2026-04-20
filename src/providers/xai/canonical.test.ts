@@ -4,14 +4,21 @@ import { xai } from "@ai-sdk/xai";
 
 import { withCanonicalIdsForXai } from "./canonical";
 
-test("withCanonicalIdsForXai > maps canonical IDs to xAI native model IDs", () => {
+test("withCanonicalIdsForXai > maps grok-4.1-fast via explicit mapping", () => {
   const provider = withCanonicalIdsForXai(xai);
 
   const model = provider.languageModel("xai/grok-4.1-fast");
   expect(model.modelId).toBe("grok-4-1-fast-non-reasoning");
 });
 
-test("withCanonicalIdsForXai > maps reasoning model IDs", () => {
+test("withCanonicalIdsForXai > normalizes grok-4.1-fast-reasoning via delimiter fallback", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.1-fast-reasoning");
+  expect(model.modelId).toBe("grok-4-1-fast-reasoning");
+});
+
+test("withCanonicalIdsForXai > maps grok-4.2 reasoning via explicit mapping", () => {
   const provider = withCanonicalIdsForXai(xai);
 
   const model = provider.languageModel("xai/grok-4.2-reasoning");
