@@ -34,7 +34,7 @@ bun install @hebo-ai/gateway
 - Quickstart
   - [Setup A Gateway Instance](#setup-a-gateway-instance) | [Mount Route Handlers](#mount-route-handlers) | [Call the Gateway](#call-the-gateway)
 - Configuration Reference
-  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Storage](#storage) | [Logger](#logger-settings) | [Observability](#observability) | [Timeouts](#timeout-settings)
+  - [Providers](#providers) | [Models](#models) | [Hooks](#hooks) | [Storage](#storage) | [Logger](#logger-settings) | [Observability](#observability) | [Advanced](#advanced-settings)
 - Framework Support
   - [ElysiaJS](#elysiajs) | [Hono](#hono) | [Next.js](#nextjs) | [TanStack Start](#tanstack-start)
 - Runtime Support
@@ -808,32 +808,7 @@ Provider behavior:
 
 ### Compressed Requests
 
-The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum _decompressed_ body size for these compressed requests, protecting against gzip bombs and oversized payloads.
-
-```ts
-import { gateway } from "@hebo-ai/gateway";
-
-const gw = gateway({
-  // ...
-  // Maximum decompressed body size in bytes (default: 10 MB).
-  // Set to 0 to disable the decompressed size limit.
-  maxBodySize: 10 * 1024 * 1024,
-});
-```
-
-Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
-
-> [!IMPORTANT]
-> **Plain (uncompressed) request body size limits** are _not_ enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
->
-> Framework-level configuration examples:
->
-> - **Bun** — [`Bun.serve({ maxRequestBodySize: 10_485_760 })`](https://bun.sh/docs/api/http#bun-serve)
-> - **Elysia** — inherits from Bun's `maxRequestBodySize`
-> - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
-> - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
-> - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
-> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)
+The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The [`advanced.maxBodySize`](#max-body-size) option controls the maximum _decompressed_ body size for these compressed requests, protecting against gzip bombs and oversized payloads. See [Advanced Settings](#advanced-settings) for configuration details.
 
 ## 🧪 Advanced Usage
 
@@ -1034,25 +1009,38 @@ const gw = gateway({
 
 Langfuse credentials are read from environment variables by the Langfuse OTel SDK (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`).
 
-### Timeout Settings
+### Advanced Settings
 
-You can configure request timeouts via the `timeouts` field:
+The `advanced` field groups optional settings for timeouts, body size limits, and header forwarding.
 
 ```ts
 import { gateway } from "@hebo-ai/gateway";
 
 const gw = gateway({
   // ...
-  // default timeout is 300_000 (5 minutes).
-  // You can set one timeout for all tiers...
+  advanced: {
+    timeouts: { normal: 60_000, flex: 180_000 },
+    maxBodySize: 10 * 1024 * 1024,
+    forwardHeaders: ["x-my-custom-trace-id", "x-internal-team"],
+  },
+});
+```
+
+#### Timeouts
+
+Controls upstream request timeouts. Accepts a number (milliseconds), `null` (disabled), or a tiered object. Default is `300_000` (5 minutes).
+
+```ts
+advanced: {
+  // Single timeout for all tiers
   timeouts: 60_000,
-  // ...disable timeouts completely:
+  // ...or disable completely:
   // timeouts: null,
   // ...or split by service tier:
   // - normal: all non-flex tiers (set null to disable)
   // - flex: defaults to 3x normal when omitted (set null to disable)
   // timeouts: { normal: 30_000, flex: null },
-});
+}
 ```
 
 > [!NOTE]
@@ -1064,6 +1052,39 @@ const gw = gateway({
 >
 > **Provider/service timeout limits**
 > Serverless platforms (e.g. Cloudflare Workers, Vercel Edge/Serverless, AWS Lambda) also enforce platform time limits (roughly ~25-100s on edge paths, ~300s for streaming, and up to ~900s configurable for some).
+
+#### Max Body Size
+
+Maximum _decompressed_ request body size in bytes for gzip/deflate-encoded requests. Protects against gzip bombs and oversized payloads. Default is `10_485_760` (10 MB). Set to `0` to disable.
+
+Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
+
+> [!IMPORTANT]
+> **Plain (uncompressed) request body size limits** are _not_ enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
+>
+> Framework-level configuration examples:
+>
+> - **Bun** — [`Bun.serve({ maxRequestBodySize: 10_485_760 })`](https://bun.sh/docs/api/http#bun-serve)
+> - **Elysia** — inherits from Bun's `maxRequestBodySize`
+> - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
+> - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
+> - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
+> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)
+
+#### Forward Headers
+
+Additional headers to forward to upstream providers, merged with the built-in allowlist at startup. Header names are matched case-insensitively. The merge is computed once at config parse time, not per-request.
+
+The gateway ships a built-in allowlist covering common provider, agent, and SDK headers (OpenAI, Anthropic, Bedrock, Vertex, OpenRouter, Cohere, Stainless, Google, Kilo Code, Cline, Roo Code, Goose, Claude Code). Use `forwardHeaders` to extend it with your own headers without modifying the gateway source.
+
+```ts
+advanced: {
+  forwardHeaders: [
+    "x-my-custom-trace-id",
+    "x-internal-team",
+  ],
+}
+```
 
 ### Passing Framework State to Hooks
 
@@ -1170,32 +1191,3 @@ Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
-
-### Request Body Size
-
-The gateway supports gzip and deflate compressed request bodies via the Web Compression Streams API. The `maxBodySize` option controls the maximum _decompressed_ body size for these compressed requests, protecting against gzip bombs and oversized payloads.
-
-```ts
-import { gateway } from "@hebo-ai/gateway";
-
-const gw = gateway({
-  // ...
-  // Maximum decompressed body size in bytes (default: 10 MB).
-  // Set to 0 to disable the decompressed size limit.
-  maxBodySize: 10 * 1024 * 1024,
-});
-```
-
-Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
-
-> [!IMPORTANT]
-> **Plain (uncompressed) request body size limits** are _not_ enforced by the gateway — they should be configured at the framework or server level. The gateway only enforces `maxBodySize` on decompressed output, since the framework cannot know the decompressed size ahead of time.
->
-> Framework-level configuration examples:
->
-> - **Bun** — [`Bun.serve({ maxRequestBodySize: 10_485_760 })`](https://bun.sh/docs/api/http#bun-serve)
-> - **Elysia** — inherits from Bun's `maxRequestBodySize`
-> - **Hono** — [`bodyLimit` middleware](https://hono.dev/docs/middleware/builtin/body-limit): `app.use(bodyLimit({ maxSize: 10 * 1024 * 1024 }))`
-> - **Express** — [`express.json({ limit: '10mb' })`](https://expressjs.com/en/api.html#express.json)
-> - **Fastify** — [`fastify({ bodyLimit: 10485760 })`](https://fastify.dev/docs/latest/Reference/Server/#bodylimit)
-> - **Node.js `http`** — [`server.maxRequestSize`](https://nodejs.org/api/http.html) (v22.6+), or use a reverse proxy like nginx (`client_max_body_size 10m`)

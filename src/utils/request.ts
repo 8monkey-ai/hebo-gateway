@@ -32,16 +32,24 @@ export const FORWARD_HEADER_ALLOWLIST = [
   // Agent session / run correlation
   "agent-session-id",
   "x-claude-code-session-id",
+  "x-kilo-session",
   "x-kilocode-taskid",
+  "x-task-id",
   // Agent identification
+  "x-client",
   "x-kilocode-editorname",
   "x-kilocode-feature",
   // Agent organization / project context
+  "x-client-type",
+  "x-client-version",
   "x-kilocode-machineid",
   "x-kilocode-organizationid",
   "x-kilocode-projectid",
   "x-kilocode-tester",
+  "x-platform",
+  "x-platform-version",
   // SDK / protocol identification
+  "x-goog-api-client",
   "x-stainless-arch",
   "x-stainless-lang",
   "x-stainless-os",
