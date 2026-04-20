@@ -300,6 +300,12 @@ export type GatewayConfig = {
    * Defaults to 10 MB (10,485,760 bytes).
    */
   maxBodySize?: number;
+  /**
+   * Additional headers to forward to upstream providers,
+   * merged with the built-in allowlist at startup.
+   * Header names are matched case-insensitively.
+   */
+  forwardHeaders?: string[];
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
@@ -310,6 +316,7 @@ export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts"> & 
     flex?: number;
   };
   maxBodySize: number;
+  forwardHeaders: string[];
   [kParsed]: true;
 };
 

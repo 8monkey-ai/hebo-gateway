@@ -10,6 +10,7 @@ import {
   type TelemetrySignalLevel,
 } from "./types";
 import { DEFAULT_MAX_BODY_SIZE } from "./utils/body";
+import { FORWARD_HEADER_ALLOWLIST } from "./utils/request";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // If it has been parsed before, just return.
@@ -123,11 +124,18 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     }
   }
 
+  // Merge forward header allowlist once.
+  const forwardHeaders =
+    config.forwardHeaders && config.forwardHeaders.length > 0
+      ? [...FORWARD_HEADER_ALLOWLIST, ...config.forwardHeaders.map((h) => h.toLowerCase())]
+      : [...FORWARD_HEADER_ALLOWLIST];
+
   // Return parsed config.
   return {
     ...config,
     timeouts: parsedTimeouts,
     maxBodySize,
+    forwardHeaders,
     telemetry: {
       ...config.telemetry,
       enabled: telemetryEnabled,

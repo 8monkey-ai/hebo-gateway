@@ -106,7 +106,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.ai-sdk.started");
     const result = await embedMany({
       model: embeddingModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request),
+      headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
       abortSignal: ctx.request.signal,
       ...embedOptions,
     });

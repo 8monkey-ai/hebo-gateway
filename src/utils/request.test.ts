@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { prepareForwardHeaders } from "./request";
+import { FORWARD_HEADER_ALLOWLIST, prepareForwardHeaders } from "./request";
 
 describe("prepareForwardHeaders", () => {
   test("always appends gateway user-agent suffix", () => {
@@ -66,8 +66,8 @@ describe("prepareForwardHeaders", () => {
         "x-kilocode-taskid": "task_789",
         // Agent identification
         "http-referer": "https://cline.bot",
-        "or_app_name": "OpenHands",
-        "or_site_url": "https://openhands.ai",
+        or_app_name: "OpenHands",
+        or_site_url: "https://openhands.ai",
         "x-kilocode-editorname": "vscode",
         "x-kilocode-feature": "chat",
         "x-openrouter-title": "Cline",
@@ -124,5 +124,35 @@ describe("prepareForwardHeaders", () => {
     expect(headers["authorization"]).toBeUndefined();
     expect(headers["cookie"]).toBeUndefined();
     expect(headers["x-custom-header"]).toBeUndefined();
+  });
+
+  test("forwards custom headers when a merged allowlist is provided", () => {
+    const merged = [...FORWARD_HEADER_ALLOWLIST, "x-custom-trace-id", "x-internal-team"];
+    const request = new Request("https://example.com", {
+      headers: {
+        "x-custom-trace-id": "trace_123",
+        "x-internal-team": "platform",
+        "x-not-allowed": "blocked",
+        "openai-beta": "responses=v1",
+      },
+    });
+
+    const headers = prepareForwardHeaders(request, merged);
+
+    expect(headers["x-custom-trace-id"]).toBe("trace_123");
+    expect(headers["x-internal-team"]).toBe("platform");
+    expect(headers["openai-beta"]).toBe("responses=v1");
+    expect(headers["x-not-allowed"]).toBeUndefined();
+  });
+
+  test("uses built-in allowlist when no custom list is provided", () => {
+    const request = new Request("https://example.com", {
+      headers: { "openai-beta": "responses=v1" },
+    });
+
+    const withDefault = prepareForwardHeaders(request);
+    const withExplicit = prepareForwardHeaders(request, FORWARD_HEADER_ALLOWLIST);
+
+    expect(withDefault).toEqual(withExplicit);
   });
 });

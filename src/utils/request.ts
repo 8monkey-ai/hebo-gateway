@@ -3,7 +3,7 @@ import { resolveRequestId } from "./headers";
 
 const GATEWAY_VERSION = pkg.version;
 
-const FORWARD_HEADER_ALLOWLIST = [
+export const FORWARD_HEADER_ALLOWLIST = [
   // OpenAI + OpenAI-compatible providers (Azure, Groq, Together, Fireworks, etc.)
   "openai-beta",
   "openai-organization",
@@ -56,7 +56,10 @@ const createRequestId = () =>
 export const resolveOrCreateRequestId = (request: Request) =>
   resolveRequestId(request) ?? createRequestId();
 
-export const prepareForwardHeaders = (request: Request): Record<string, string> => {
+export const prepareForwardHeaders = (
+  request: Request,
+  allowlist: readonly string[] = FORWARD_HEADER_ALLOWLIST,
+): Record<string, string> => {
   const userAgent = request.headers.get("user-agent");
   const appendedUserAgent = userAgent
     ? `${userAgent} @hebo-ai/gateway/${GATEWAY_VERSION}`
@@ -66,7 +69,7 @@ export const prepareForwardHeaders = (request: Request): Record<string, string> 
     "user-agent": appendedUserAgent,
   };
 
-  for (const key of FORWARD_HEADER_ALLOWLIST) {
+  for (const key of allowlist) {
     const value = request.headers.get(key);
     if (value !== null) headers[key] = value;
   }

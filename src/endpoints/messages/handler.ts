@@ -108,7 +108,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
       let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
-        headers: prepareForwardHeaders(ctx.request),
+        headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
         abortSignal: ctx.request.signal,
         timeout: {
           totalMs: cfg.timeouts.normal,
@@ -161,7 +161,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.ai-sdk.started");
     const result = await generateText({
       model: languageModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request),
+      headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
       abortSignal: ctx.request.signal,
       timeout: cfg.timeouts.normal,
       experimental_include: {
