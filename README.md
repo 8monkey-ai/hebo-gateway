@@ -141,7 +141,7 @@ console.log(text);
 
 Hebo Gateway’s provider registry accepts any **Vercel AI SDK Provider**. For Hebo to be able to route a model across different providers, the names need to be canonicalized to a common form, for example 'openai/gpt-4.1-mini' instead of 'gpt-4.1-mini'.
 
-We currently provide out-of-the-box canonical providers for: `Bedrock`, `Anthropic`, `Cohere`, `Vertex`, `Groq`, `OpenAI`, and `Voyage`. Import the helper from the matching package path:
+We currently provide out-of-the-box canonical providers for: `Bedrock`, `Anthropic`, `Cohere`, `Vertex`, `Groq`, `OpenAI`, `Voyage`, and `xAI`. Import the helper from the matching package path:
 
 ```ts
 // pattern: @hebo-ai/gateway/providers/<provider>
@@ -237,6 +237,9 @@ Out-of-the-box model presets:
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
+
+- **xAI** — `@hebo-ai/gateway/models/xai`  
+  Grok: `grok` (`v4.1`, `v4.2`, `latest`, `all`)
 
 #### User-defined Models
 

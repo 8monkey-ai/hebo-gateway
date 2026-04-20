@@ -9,6 +9,7 @@ export const CANONICAL_PROVIDER_IDS = [
   "openai",
   "vertex",
   "voyage",
+  "xai",
 ] as const;
 
 export type CanonicalProviderId = (typeof CANONICAL_PROVIDER_IDS)[number];
