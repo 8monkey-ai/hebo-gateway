@@ -146,6 +146,80 @@ test("qwenReasoningMiddleware > should use default max tokens when not specified
   });
 });
 
+test("qwenReasoningMiddleware > should map all effort levels to correct budgets", async () => {
+  const maxTokens = 8192;
+  const cases = [
+    { effort: "minimal" as const, enabled: true },
+    { effort: "low" as const, enabled: true },
+    { effort: "medium" as const, enabled: true },
+    { effort: "high" as const, enabled: true },
+    { effort: "xhigh" as const, enabled: true },
+    { effort: "max" as const, enabled: true },
+  ];
+
+  await Promise.all(
+    cases.map(async ({ effort, enabled }) => {
+      const params = {
+        prompt: [],
+        maxOutputTokens: maxTokens,
+        providerOptions: {
+          unknown: {
+            reasoning: { enabled, effort },
+          },
+        },
+      };
+
+      const result = await qwenReasoningMiddleware.transformParams!({
+        type: "generate",
+        params,
+        model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+      });
+
+      expect(result).toEqual({
+        prompt: [],
+        maxOutputTokens: maxTokens,
+        providerOptions: {
+          alibaba: {
+            enableThinking: true,
+            thinkingBudget: calculateReasoningBudgetFromEffort(effort, maxTokens),
+          },
+          unknown: {},
+        },
+      });
+    }),
+  );
+});
+
+test("qwenReasoningMiddleware > should clear pre-existing enableThinking when disabled", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      alibaba: {
+        enableThinking: true,
+      },
+      unknown: {
+        reasoning: { enabled: false },
+      },
+    },
+  };
+
+  const result = await qwenReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      alibaba: {
+        enableThinking: false,
+      },
+      unknown: {},
+    },
+  });
+});
+
 test("qwenReasoningMiddleware > should skip when no reasoning config", async () => {
   const params = {
     prompt: [],
