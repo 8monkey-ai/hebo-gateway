@@ -21,7 +21,7 @@ export const qwenReasoningMiddleware: LanguageModelMiddleware = {
 
     if (!reasoning.enabled || reasoning.effort === "none") {
       target.enableThinking = false;
-      target.thinkingBudget = undefined;
+      delete target.thinkingBudget;
     } else {
       target.enableThinking = true;
       target.thinkingBudget =
@@ -32,7 +32,7 @@ export const qwenReasoningMiddleware: LanguageModelMiddleware = {
         );
     }
 
-    unknown["reasoning"] = undefined;
+    delete unknown["reasoning"];
 
     return params;
   },
