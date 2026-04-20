@@ -19,8 +19,7 @@ const MINIMAX_BASE = {
 export const minimaxM25 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m2.5" as const, {
   ...MINIMAX_BASE,
   name: "MiniMax M2.5",
-  created: "2025-06-30",
-  knowledge: "2025-06",
+  created: "2026-02-12",
   providers: [
     "minimax",
     "togetherai",
@@ -32,8 +31,7 @@ export const minimaxM25 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m
 export const minimaxM27 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m2.7" as const, {
   ...MINIMAX_BASE,
   name: "MiniMax M2.7",
-  created: "2025-07-17",
-  knowledge: "2025-06",
+  created: "2026-03-18",
   providers: [
     "minimax",
     "togetherai",
