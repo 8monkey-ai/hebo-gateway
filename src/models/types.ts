@@ -100,6 +100,22 @@ export const CANONICAL_MODEL_IDS = [
   "voyage/voyage-4-lite",
   "voyage/voyage-4",
   "voyage/voyage-4-large",
+  // Alibaba (Qwen)
+  "alibaba/qwen3-235b",
+  "alibaba/qwen3-32b",
+  "alibaba/qwen3-14b",
+  "alibaba/qwen3-8b",
+  "alibaba/qwen3-max",
+  "alibaba/qwen3.5-plus",
+  "alibaba/qwen3.5-397b",
+  "alibaba/qwen3.6-plus",
+  "alibaba/qwen3.6-flash",
+  "alibaba/qwen3-coder-plus",
+  "alibaba/qwen3-coder-flash",
+  "alibaba/qwen3-coder-480b",
+  "alibaba/qwen3-coder-30b",
+  "alibaba/qwen3-vl-plus",
+  "alibaba/qwen3-vl-235b",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];

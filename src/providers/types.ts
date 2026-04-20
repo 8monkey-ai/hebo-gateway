@@ -1,6 +1,7 @@
 import { type ProviderV3 } from "@ai-sdk/provider";
 
 export const CANONICAL_PROVIDER_IDS = [
+  "alibaba",
   "anthropic",
   "azure",
   "bedrock",

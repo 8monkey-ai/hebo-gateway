@@ -5,6 +5,7 @@
   "keywords": [
     "ai",
     "ai-gateway",
+    "alibaba",
     "anthropic",
     "bedrock",
     "elysiajs",
@@ -16,6 +17,7 @@
     "llmops",
     "nextjs",
     "openai",
+    "qwen",
     "tanstack-start",
     "vercel-ai-sdk",
     "vertex",
@@ -96,6 +98,10 @@
       "types": "./dist/middleware/common.d.ts",
       "import": "./dist/middleware/common.js"
     },
+    "./models/alibaba": {
+      "types": "./dist/models/alibaba/index.d.ts",
+      "import": "./dist/models/alibaba/index.js"
+    },
     "./models/amazon": {
       "types": "./dist/models/amazon/index.d.ts",
       "import": "./dist/models/amazon/index.js"
@@ -123,6 +129,10 @@
     "./models/voyage": {
       "types": "./dist/models/voyage/index.d.ts",
       "import": "./dist/models/voyage/index.js"
+    },
+    "./providers/alibaba": {
+      "types": "./dist/providers/alibaba/index.d.ts",
+      "import": "./dist/providers/alibaba/index.js"
     },
     "./providers/anthropic": {
       "types": "./dist/providers/anthropic/index.d.ts",
@@ -180,6 +190,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@ai-sdk/alibaba": "^1.0.17",
     "@ai-sdk/amazon-bedrock": "^4.0.92",
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/cohere": "^3.0.30",
@@ -221,6 +232,7 @@
     "voyage-ai-provider": "^3.0.0"
   },
   "peerDependencies": {
+    "@ai-sdk/alibaba": "^1.0.0",
     "@ai-sdk/amazon-bedrock": "^4.0.77",
     "@ai-sdk/anthropic": "^3.0.58",
     "@ai-sdk/cohere": "^3.0.25",
@@ -238,6 +250,9 @@
     "voyage-ai-provider": "^3.0.0"
   },
   "peerDependenciesMeta": {
+    "@ai-sdk/alibaba": {
+      "optional": true
+    },
     "@ai-sdk/amazon-bedrock": {
       "optional": true
     },
