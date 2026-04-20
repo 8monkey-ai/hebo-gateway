@@ -11,10 +11,9 @@ test("qwenReasoningMiddleware > matching patterns", () => {
   const matching = [
     "alibaba/qwen3-235b",
     "alibaba/qwen3-32b",
-    "alibaba/qwen3-max",
     "alibaba/qwen3.5-plus",
-    "alibaba/qwen3.6-plus",
-    "alibaba/qwen3-coder-plus",
+    "alibaba/qwen3.5-flash",
+    "alibaba/qwen3-coder-480b",
     "alibaba/qwen3-vl-plus",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
@@ -76,7 +75,7 @@ test("qwenReasoningMiddleware > should disable thinking with none effort", async
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3.6-plus" }),
+    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3.5-plus" }),
   });
 
   expect(result).toEqual({
@@ -107,7 +106,7 @@ test("qwenReasoningMiddleware > should use explicit max_tokens", async () => {
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-coder-plus" }),
+    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-coder-480b" }),
   });
 
   expect(result).toEqual({

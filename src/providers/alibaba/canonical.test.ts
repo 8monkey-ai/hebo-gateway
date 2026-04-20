@@ -27,13 +27,8 @@ const stripNamespaceFallbacks: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3-32b", "qwen3-32b"],
   ["alibaba/qwen3-14b", "qwen3-14b"],
   ["alibaba/qwen3-8b", "qwen3-8b"],
-  ["alibaba/qwen3-max", "qwen3-max"],
   ["alibaba/qwen3.5-plus", "qwen3.5-plus"],
-  ["alibaba/qwen3.6-plus", "qwen3.6-plus"],
-  ["alibaba/qwen3.6-plus-preview", "qwen3.6-plus-preview"],
-  ["alibaba/qwen3.6-flash", "qwen3.6-flash"],
-  ["alibaba/qwen3-coder-plus", "qwen3-coder-plus"],
-  ["alibaba/qwen3-coder-flash", "qwen3-coder-flash"],
+  ["alibaba/qwen3.5-flash", "qwen3.5-flash"],
   ["alibaba/qwen3-vl-plus", "qwen3-vl-plus"],
 ];
 
