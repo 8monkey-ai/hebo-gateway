@@ -15,8 +15,8 @@ test("qwenReasoningMiddleware > matching patterns", () => {
     "alibaba/qwen3.5-flash",
     "alibaba/qwen3.5-27b",
     "alibaba/qwen3.6-plus",
-    "alibaba/qwen3-coder-480b",
-    "alibaba/qwen3-vl-plus",
+    "alibaba/qwen3-coder-next",
+    "alibaba/qwen3-vl-235b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const nonMatching = ["openai/gpt-5", "anthropic/claude-opus-4.7", "google/gemini-3-flash-preview"];
@@ -108,7 +108,7 @@ test("qwenReasoningMiddleware > should use explicit max_tokens", async () => {
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-coder-480b" }),
+    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-coder-next" }),
   });
 
   expect(result).toEqual({

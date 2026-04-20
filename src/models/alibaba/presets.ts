@@ -47,28 +47,6 @@ export const qwen3_32b = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
-export const qwen3_14b = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3-14b" as const,
-  {
-    ...QWEN3_BASE,
-    name: "Qwen3 14B",
-    providers: ["alibaba", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
-    created: "2025-04-29",
-    knowledge: "2025-04",
-  } satisfies CatalogModel,
-);
-
-export const qwen3_8b = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3-8b" as const,
-  {
-    ...QWEN3_BASE,
-    name: "Qwen3 8B",
-    providers: ["alibaba", "deepinfra", "togetherai"] as const satisfies readonly CanonicalProviderId[],
-    created: "2025-04-29",
-    knowledge: "2025-04",
-  } satisfies CatalogModel,
-);
-
 export const qwen35Plus = presetFor<CanonicalModelId, CatalogModel>()(
   "alibaba/qwen3.5-plus" as const,
   {
@@ -245,59 +223,34 @@ export const qwen36Plus = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
-export const qwen36Flash = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3.6-flash" as const,
+export const qwen36_35bA3b = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.6-35b-a3b" as const,
   {
     modalities: {
       input: ["text", "image", "video", "file"] as const,
       output: ["text"] as const,
     },
     capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    providers: ["alibaba"] as const satisfies readonly CanonicalProviderId[],
-    name: "Qwen3.6 Flash",
-    context: 1048576,
+    providers: ["alibaba", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3.6 35B A3B",
+    context: 262144,
     created: "2026-04-02",
     knowledge: "2025-04",
   } satisfies CatalogModel,
 );
 
-export const qwen3Coder480b = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3-coder-480b" as const,
+export const qwen3CoderNext = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3-coder-next" as const,
   {
-    ...QWEN3_BASE,
-    name: "Qwen3 Coder 480B",
-    providers: [
-      "alibaba",
-      "bedrock",
-      "deepinfra",
-    ] as const satisfies readonly CanonicalProviderId[],
-    created: "2025-04-29",
-    knowledge: "2025-04",
-  } satisfies CatalogModel,
-);
-
-export const qwen3Coder30b = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3-coder-30b" as const,
-  {
-    ...QWEN3_BASE,
-    name: "Qwen3 Coder 30B",
-    providers: [
-      "alibaba",
-      "bedrock",
-      "deepinfra",
-    ] as const satisfies readonly CanonicalProviderId[],
-    created: "2025-04-29",
-    knowledge: "2025-04",
-  } satisfies CatalogModel,
-);
-
-export const qwen3VlPlus = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3-vl-plus" as const,
-  {
-    ...QWEN3_VL_BASE,
-    name: "Qwen3 VL Plus",
-    context: 1048576,
-    created: "2025-07-23",
+    modalities: {
+      input: ["text", "file"] as const,
+      output: ["text"] as const,
+    },
+    capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    providers: ["alibaba"] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3 Coder Next",
+    context: 131072,
+    created: "2026-03-15",
     knowledge: "2025-04",
   } satisfies CatalogModel,
 );
@@ -349,11 +302,11 @@ export const qwen3Embedding8b = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const qwenAtomic = {
-  v3: [qwen3_235b, qwen3_32b, qwen3_14b, qwen3_8b],
+  v3: [qwen3_235b, qwen3_32b],
   "v3.5": [qwen35Plus, qwen35Flash, qwen35_397b, qwen35_122b, qwen35_35b, qwen35_27b, qwen35_9b, qwen35_4b, qwen35_2b, qwen35_08b],
-  "v3.6": [qwen36Plus, qwen36Flash],
-  coder: [qwen3Coder480b, qwen3Coder30b],
-  vl: [qwen3VlPlus, qwen3Vl235b],
+  "v3.6": [qwen36Plus, qwen36_35bA3b],
+  coder: [qwen3CoderNext],
+  vl: [qwen3Vl235b],
   embedding: [qwen3Embedding06b, qwen3Embedding4b, qwen3Embedding8b],
 } as const;
 

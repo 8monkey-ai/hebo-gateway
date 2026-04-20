@@ -9,8 +9,7 @@ const MAPPING = {
   "alibaba/qwen3.5-122b": "qwen3.5-122b-a10b",
   "alibaba/qwen3.5-35b": "qwen3.5-35b-a3b",
   "alibaba/qwen3.5-0.8b": "qwen3.5-0.8b",
-  "alibaba/qwen3-coder-480b": "qwen3-coder-480b-a35b-instruct",
-  "alibaba/qwen3-coder-30b": "qwen3-coder-30b-a3b-instruct",
+  "alibaba/qwen3.6-35b-a3b": "qwen3.6-35b-a3b",
   "alibaba/qwen3-vl-235b": "qwen3-vl-235b-a22b",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
