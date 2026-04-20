@@ -9,11 +9,15 @@ const FORWARD_HEADER_ALLOWLIST = [
   "openai-organization",
   "openai-project",
   // OpenRouter
+  "http-referer",
+  "or_app_name",
+  "or_site_url",
   "x-openrouter-categories",
   "x-openrouter-title",
   "x-title",
   // Anthropic
   "anthropic-beta",
+  "anthropic-version",
   // AWS Bedrock
   "x-amzn-bedrock-guardrailidentifier",
   "x-amzn-bedrock-guardrailversion",
@@ -25,6 +29,25 @@ const FORWARD_HEADER_ALLOWLIST = [
   "x-vertex-ai-endpoint-id",
   "x-vertex-ai-llm-request-type",
   "x-vertex-ai-llm-shared-request-type",
+  // Agent session / run correlation
+  "agent-session-id",
+  "x-claude-code-session-id",
+  "x-kilocode-taskid",
+  // Agent identification
+  "x-kilocode-editorname",
+  "x-kilocode-feature",
+  // Agent organization / project context
+  "x-kilocode-machineid",
+  "x-kilocode-organizationid",
+  "x-kilocode-projectid",
+  "x-kilocode-tester",
+  // SDK / protocol identification
+  "x-stainless-arch",
+  "x-stainless-lang",
+  "x-stainless-os",
+  "x-stainless-package-version",
+  "x-stainless-runtime",
+  "x-stainless-runtime-version",
 ] as const;
 
 const createRequestId = () =>

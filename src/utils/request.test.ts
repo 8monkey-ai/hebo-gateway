@@ -57,6 +57,59 @@ describe("prepareForwardHeaders", () => {
     expect(headers["x-unrelated-header"]).toBeUndefined();
   });
 
+  test("forwards agent attribution headers", () => {
+    const request = new Request("https://example.com", {
+      headers: {
+        // Agent session / run correlation
+        "agent-session-id": "sess_abc123",
+        "x-claude-code-session-id": "cc_sess_456",
+        "x-kilocode-taskid": "task_789",
+        // Agent identification
+        "http-referer": "https://cline.bot",
+        "or_app_name": "OpenHands",
+        "or_site_url": "https://openhands.ai",
+        "x-kilocode-editorname": "vscode",
+        "x-kilocode-feature": "chat",
+        "x-openrouter-title": "Cline",
+        // Agent organization / project context
+        "x-kilocode-organizationid": "org_kilo_1",
+        "x-kilocode-projectid": "proj_kilo_2",
+        "x-kilocode-machineid": "machine_3",
+        "x-kilocode-tester": "tester_4",
+        // SDK / protocol identification
+        "anthropic-version": "2023-06-01",
+        "x-stainless-lang": "python",
+        "x-stainless-package-version": "0.30.0",
+        "x-stainless-os": "linux",
+        "x-stainless-arch": "x86_64",
+        "x-stainless-runtime": "cpython",
+        "x-stainless-runtime-version": "3.12.0",
+      },
+    });
+
+    const headers = prepareForwardHeaders(request);
+
+    expect(headers["agent-session-id"]).toBe("sess_abc123");
+    expect(headers["x-claude-code-session-id"]).toBe("cc_sess_456");
+    expect(headers["x-kilocode-taskid"]).toBe("task_789");
+    expect(headers["http-referer"]).toBe("https://cline.bot");
+    expect(headers["or_app_name"]).toBe("OpenHands");
+    expect(headers["or_site_url"]).toBe("https://openhands.ai");
+    expect(headers["x-kilocode-editorname"]).toBe("vscode");
+    expect(headers["x-kilocode-feature"]).toBe("chat");
+    expect(headers["x-kilocode-organizationid"]).toBe("org_kilo_1");
+    expect(headers["x-kilocode-projectid"]).toBe("proj_kilo_2");
+    expect(headers["x-kilocode-machineid"]).toBe("machine_3");
+    expect(headers["x-kilocode-tester"]).toBe("tester_4");
+    expect(headers["anthropic-version"]).toBe("2023-06-01");
+    expect(headers["x-stainless-lang"]).toBe("python");
+    expect(headers["x-stainless-package-version"]).toBe("0.30.0");
+    expect(headers["x-stainless-os"]).toBe("linux");
+    expect(headers["x-stainless-arch"]).toBe("x86_64");
+    expect(headers["x-stainless-runtime"]).toBe("cpython");
+    expect(headers["x-stainless-runtime-version"]).toBe("3.12.0");
+  });
+
   test("does not forward headers outside the allowlist", () => {
     const request = new Request("https://example.com", {
       headers: {
