@@ -15,7 +15,7 @@ const GPT_OSS_BASE = {
     "temperature",
   ] as const,
   context: 131072,
-  providers: ["groq", "bedrock", "vertex", "togetherai"] as const satisfies readonly CanonicalProviderId[],
+  providers: ["groq", "bedrock", "vertex", "togetherai", "deepinfra", "fireworks"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const GPT_BASE = {

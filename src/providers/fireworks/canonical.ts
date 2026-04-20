@@ -9,6 +9,8 @@ const MAPPING = {
   "meta/llama-3.2-3b": "accounts/fireworks/models/llama-v3p2-3b-instruct",
   "meta/llama-3.2-11b": "accounts/fireworks/models/llama-v3p2-11b-vision-instruct",
   "meta/llama-3.3-70b": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+  "openai/gpt-oss-20b": "accounts/fireworks/models/gpt-oss-20b",
+  "openai/gpt-oss-120b": "accounts/fireworks/models/gpt-oss-120b",
   "minimax/m2.7": "accounts/fireworks/models/minimax-m2p7",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
