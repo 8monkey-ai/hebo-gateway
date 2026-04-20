@@ -215,7 +215,7 @@ const modelsFromFamily = defineModelCatalog(
 Out-of-the-box model presets:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`  
-  Qwen: `qwen` (`v3`, `v3.5`, `v3.6`, `v3.x`, `coder`, `vl`, `embedding`, `latest`, `all`)
+  Qwen: `qwen` (`v3`, `v3.5`, `v3.6`, `v3.x`, `coder`, `vl`, `embedding`, `embeddings`, `latest`, `all`)
 
 - **Amazon** — `@hebo-ai/gateway/models/amazon`  
   Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
