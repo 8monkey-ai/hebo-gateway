@@ -39,6 +39,9 @@ const stripNamespaceFallbacks: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3.6-plus", "qwen3.6-plus"],
   ["alibaba/qwen3.6-flash", "qwen3.6-flash"],
   ["alibaba/qwen3-vl-plus", "qwen3-vl-plus"],
+  ["alibaba/qwen3-embedding-0.6b", "qwen3-embedding-0.6b"],
+  ["alibaba/qwen3-embedding-4b", "qwen3-embedding-4b"],
+  ["alibaba/qwen3-embedding-8b", "qwen3-embedding-8b"],
 ];
 
 for (const [canonical, nativeId] of stripNamespaceFallbacks) {

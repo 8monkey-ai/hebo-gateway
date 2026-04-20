@@ -312,16 +312,54 @@ export const qwen3Vl235b = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+const QWEN3_EMBEDDING_BASE = {
+  modalities: {
+    input: ["text"] as const,
+    output: ["embedding"] as const,
+  },
+  context: 32768,
+  providers: ["alibaba", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
+export const qwen3Embedding06b = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3-embedding-0.6b" as const,
+  {
+    ...QWEN3_EMBEDDING_BASE,
+    name: "Qwen3 Embedding 0.6B",
+    created: "2025-06-05",
+  } satisfies CatalogModel,
+);
+
+export const qwen3Embedding4b = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3-embedding-4b" as const,
+  {
+    ...QWEN3_EMBEDDING_BASE,
+    name: "Qwen3 Embedding 4B",
+    created: "2025-06-05",
+  } satisfies CatalogModel,
+);
+
+export const qwen3Embedding8b = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3-embedding-8b" as const,
+  {
+    ...QWEN3_EMBEDDING_BASE,
+    name: "Qwen3 Embedding 8B",
+    created: "2025-06-05",
+  } satisfies CatalogModel,
+);
+
 const qwenAtomic = {
   v3: [qwen3_235b, qwen3_32b, qwen3_14b, qwen3_8b],
   "v3.5": [qwen35Plus, qwen35Flash, qwen35_397b, qwen35_122b, qwen35_35b, qwen35_27b, qwen35_9b, qwen35_4b, qwen35_2b, qwen35_08b],
   "v3.6": [qwen36Plus, qwen36Flash],
   coder: [qwen3Coder480b, qwen3Coder30b],
   vl: [qwen3VlPlus, qwen3Vl235b],
+  embedding: [qwen3Embedding06b, qwen3Embedding4b, qwen3Embedding8b],
 } as const;
 
 const qwenGroups = {
   "v3.x": [...qwenAtomic["v3"], ...qwenAtomic["v3.5"], ...qwenAtomic["v3.6"]],
+  embeddings: [...qwenAtomic["embedding"]],
 } as const;
 
 export const qwen = {

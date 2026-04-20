@@ -130,6 +130,9 @@ export const CANONICAL_MODEL_IDS = [
   "alibaba/qwen3-coder-30b",
   "alibaba/qwen3-vl-plus",
   "alibaba/qwen3-vl-235b",
+  "alibaba/qwen3-embedding-0.6b",
+  "alibaba/qwen3-embedding-4b",
+  "alibaba/qwen3-embedding-8b",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];
