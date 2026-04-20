@@ -4,12 +4,11 @@ import { resolveRequestId } from "./headers";
 const GATEWAY_VERSION = pkg.version;
 
 export const FORWARD_HEADER_ALLOWLIST = [
-  // OpenAI + OpenAI-compatible providers (Azure, Groq, Together, Fireworks, etc.)
+  // OpenAI
   "openai-beta",
   "openai-organization",
   "openai-project",
   // OpenRouter
-  "http-referer",
   "or_app_name",
   "or_site_url",
   "x-openrouter-categories",
@@ -18,38 +17,36 @@ export const FORWARD_HEADER_ALLOWLIST = [
   // Anthropic
   "anthropic-beta",
   "anthropic-version",
+  "x-claude-code-session-id",
   // AWS Bedrock
   "x-amzn-bedrock-guardrailidentifier",
   "x-amzn-bedrock-guardrailversion",
   "x-amzn-bedrock-performanceconfig-latency",
   "x-amzn-bedrock-trace",
-  // Cohere
-  "x-client-name",
-  // Vertex provisioned throughput / endpoint routing
+  // Google Vertex
+  "x-goog-api-client",
   "x-vertex-ai-endpoint-id",
   "x-vertex-ai-llm-request-type",
   "x-vertex-ai-llm-shared-request-type",
-  // Agent session / run correlation
-  "agent-session-id",
-  "x-claude-code-session-id",
+  // Kilocode
   "x-kilo-session",
   "x-kilocode-taskid",
-  "x-task-id",
-  // Agent identification
-  "x-client",
   "x-kilocode-editorname",
   "x-kilocode-feature",
-  // Agent organization / project context
-  "x-client-type",
-  "x-client-version",
   "x-kilocode-machineid",
   "x-kilocode-organizationid",
   "x-kilocode-projectid",
   "x-kilocode-tester",
+  // Agent / org / project / session ids
+  "agent-session-id",
+  "x-client",
+  "x-client-name",
+  "x-client-type",
+  "x-client-version",
   "x-platform",
   "x-platform-version",
+  "x-task-id",
   // SDK / protocol identification
-  "x-goog-api-client",
   "x-stainless-arch",
   "x-stainless-lang",
   "x-stainless-os",
