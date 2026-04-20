@@ -17,6 +17,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🗨️ Anthropic-compatible `/messages` endpoint.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with Vercel AI SDK providers.
+- 📚 Works with common client SDKs including the official OpenAI SDK and Anthropic SDK.
 - 🧭 Canonical model IDs and parameter naming across providers.
 - 🗂️ Model catalog with extensible metadata capabilities.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
@@ -112,9 +113,9 @@ console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 
 ### Call the Gateway
 
-Since Hebo Gateway exposes OpenAI-compatible endpoints, it can be used with a broad set of common AI SDKs like **Vercel AI SDK**, **TanStack AI**, **LangChain**, the official **OpenAI SDK** and others.
+Since Hebo Gateway exposes OpenAI-compatible and Anthropic-compatible endpoints, it can be used with a broad set of common AI SDKs like **Vercel AI SDK**, **TanStack AI**, **LangChain**, the official **OpenAI SDK**, the official **Anthropic SDK**, and others.
 
-Here is a quick example using the Vercel AI SDK:
+Here is a quick example using the Vercel AI SDK against the OpenAI-compatible surface:
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
