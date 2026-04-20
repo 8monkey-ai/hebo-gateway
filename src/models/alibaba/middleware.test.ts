@@ -56,7 +56,9 @@ test("qwenReasoningMiddleware > should enable thinking with medium effort", asyn
         enableThinking: true,
         thinkingBudget: calculateReasoningBudgetFromEffort("medium", 8192),
       },
-      unknown: {},
+      unknown: {
+        reasoning: undefined,
+      },
     },
   });
 });
@@ -82,8 +84,11 @@ test("qwenReasoningMiddleware > should disable thinking with none effort", async
     providerOptions: {
       alibaba: {
         enableThinking: false,
+        thinkingBudget: undefined,
       },
-      unknown: {},
+      unknown: {
+        reasoning: undefined,
+      },
     },
   });
 });
@@ -113,7 +118,9 @@ test("qwenReasoningMiddleware > should use explicit max_tokens", async () => {
         enableThinking: true,
         thinkingBudget: 4096,
       },
-      unknown: {},
+      unknown: {
+        reasoning: undefined,
+      },
     },
   });
 });
@@ -141,7 +148,9 @@ test("qwenReasoningMiddleware > should use default max tokens when not specified
         enableThinking: true,
         thinkingBudget: calculateReasoningBudgetFromEffort("high", 16384),
       },
-      unknown: {},
+      unknown: {
+        reasoning: undefined,
+      },
     },
   });
 });
@@ -183,7 +192,9 @@ test("qwenReasoningMiddleware > should map all effort levels to correct budgets"
             enableThinking: true,
             thinkingBudget: calculateReasoningBudgetFromEffort(effort, maxTokens),
           },
-          unknown: {},
+          unknown: {
+            reasoning: undefined,
+          },
         },
       });
     }),
@@ -214,8 +225,11 @@ test("qwenReasoningMiddleware > should clear pre-existing enableThinking when di
     providerOptions: {
       alibaba: {
         enableThinking: false,
+        thinkingBudget: undefined,
       },
-      unknown: {},
+      unknown: {
+        reasoning: undefined,
+      },
     },
   });
 });

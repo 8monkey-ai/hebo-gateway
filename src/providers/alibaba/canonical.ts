@@ -17,7 +17,4 @@ export const withCanonicalIdsForAlibaba = (
 ) =>
   withCanonicalIds(provider, {
     mapping: { ...MAPPING, ...extraMapping },
-    options: {
-      stripNamespace: true,
-    },
   });

@@ -12,6 +12,8 @@ const MAPPING = {
   "openai/gpt-oss-20b": "accounts/fireworks/models/gpt-oss-20b",
   "openai/gpt-oss-120b": "accounts/fireworks/models/gpt-oss-120b",
   "minimax/m2.7": "accounts/fireworks/models/minimax-m2p7",
+  "alibaba/qwen3-235b": "accounts/fireworks/models/qwen3-235b-a22b",
+  "alibaba/qwen3-32b": "accounts/fireworks/models/qwen3-32b",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForFireworks = (

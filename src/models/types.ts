@@ -118,6 +118,7 @@ export const CANONICAL_MODEL_IDS = [
   "alibaba/qwen3.5-plus",
   "alibaba/qwen3.5-397b",
   "alibaba/qwen3.6-plus",
+  "alibaba/qwen3.6-plus-preview",
   "alibaba/qwen3.6-flash",
   "alibaba/qwen3-coder-plus",
   "alibaba/qwen3-coder-flash",
