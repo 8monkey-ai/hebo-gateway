@@ -65,7 +65,6 @@ describe("prepareForwardHeaders", () => {
         "x-claude-code-session-id": "cc_sess_456",
         "x-kilocode-taskid": "task_789",
         // Agent identification
-        "http-referer": "https://cline.bot",
         or_app_name: "OpenHands",
         or_site_url: "https://openhands.ai",
         "x-kilocode-editorname": "vscode",
@@ -100,7 +99,6 @@ describe("prepareForwardHeaders", () => {
     expect(headers["agent-session-id"]).toBe("sess_abc123");
     expect(headers["x-claude-code-session-id"]).toBe("cc_sess_456");
     expect(headers["x-kilocode-taskid"]).toBe("task_789");
-    expect(headers["http-referer"]).toBe("https://cline.bot");
     expect(headers["or_app_name"]).toBe("OpenHands");
     expect(headers["or_site_url"]).toBe("https://openhands.ai");
     expect(headers["x-kilocode-editorname"]).toBe("vscode");

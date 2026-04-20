@@ -125,27 +125,19 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   }
 
   // Merge forward header allowlist once.
-  const customHeaders = config.advanced?.forwardHeaders;
-  const forwardHeaders =
-    customHeaders && customHeaders.length > 0
-      ? Array.from(
-          new Set([
-            ...FORWARD_HEADER_ALLOWLIST,
-            ...customHeaders.map((h) => {
-              const normalized = h.trim().toLowerCase();
-              try {
-                const probe = new Headers([[normalized, ""]]);
-                void probe;
-              } catch {
-                throw new Error(
-                  `[config] invalid advanced.forwardHeaders entry: ${JSON.stringify(h)}`,
-                );
-              }
-              return normalized;
-            }),
-          ]),
-        )
-      : [...FORWARD_HEADER_ALLOWLIST];
+  const customHeaders = config.advanced?.forwardHeaders ?? [];
+  const forwardHeaders = new Set<string>(FORWARD_HEADER_ALLOWLIST);
+  for (const header of customHeaders) {
+    try {
+      void new Headers([[header, ""]]);
+    } catch {
+      logger.warn(
+        `[config] invalid advanced.forwardHeaders entry ignored: ${JSON.stringify(header)}`,
+      );
+      continue;
+    }
+    forwardHeaders.add(header.trim().toLowerCase());
+  }
 
   // Return parsed config.
   return {
@@ -153,7 +145,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     advanced: {
       timeouts: parsedTimeouts,
       maxBodySize,
-      forwardHeaders,
+      forwardHeaders: [...forwardHeaders],
     },
     telemetry: {
       ...config.telemetry,

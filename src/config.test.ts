@@ -1,8 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 
 import { MockProviderV3 } from "ai/test";
 
 import { parseConfig } from "./config";
+import type { Logger } from "./logger";
 import type { GatewayConfig } from "./types";
 import { FORWARD_HEADER_ALLOWLIST } from "./utils/request";
 
@@ -16,6 +17,14 @@ const minimalConfig: GatewayConfig = {
     },
   },
 };
+
+const createMockLogger = (): Logger => ({
+  trace: mock(() => {}),
+  debug: mock(() => {}),
+  info: mock(() => {}),
+  warn: mock(() => {}),
+  error: mock(() => {}),
+});
 
 describe("parseConfig", () => {
   test("uses built-in allowlist when forwardHeaders is omitted", () => {
@@ -59,23 +68,33 @@ describe("parseConfig", () => {
     expect(parsed.advanced.forwardHeaders.length).toBe(FORWARD_HEADER_ALLOWLIST.length + 1);
   });
 
-  test("trims whitespace from custom forward headers", () => {
+  test("ignores invalid header names and logs a warning", () => {
+    const logger = createMockLogger();
+
     const parsed = parseConfig({
       ...minimalConfig,
-      advanced: { forwardHeaders: ["  x-padded-header  "] },
+      logger,
+      advanced: { forwardHeaders: ["x invalid header", "x-valid-header"] },
     });
-    expect(parsed.advanced.forwardHeaders).toContain("x-padded-header");
+
+    expect(parsed.advanced.forwardHeaders).toEqual([...FORWARD_HEADER_ALLOWLIST, "x-valid-header"]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      `[config] invalid advanced.forwardHeaders entry ignored: ${JSON.stringify("x invalid header")}`,
+    );
   });
 
-  test("throws on invalid header names", () => {
-    expect(() =>
-      parseConfig({ ...minimalConfig, advanced: { forwardHeaders: ["x invalid header"] } }),
-    ).toThrow("[config] invalid advanced.forwardHeaders entry");
-  });
+  test("ignores empty header names and logs a warning", () => {
+    const logger = createMockLogger();
 
-  test("throws on empty header name", () => {
-    expect(() => parseConfig({ ...minimalConfig, advanced: { forwardHeaders: [""] } })).toThrow(
-      "[config] invalid advanced.forwardHeaders entry",
+    const parsed = parseConfig({
+      ...minimalConfig,
+      logger,
+      advanced: { forwardHeaders: [""] },
+    });
+
+    expect(parsed.advanced.forwardHeaders).toEqual([...FORWARD_HEADER_ALLOWLIST]);
+    expect(logger.warn).toHaveBeenCalledWith(
+      `[config] invalid advanced.forwardHeaders entry ignored: ${JSON.stringify("")}`,
     );
   });
 });
