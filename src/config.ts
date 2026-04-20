@@ -92,7 +92,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   let normal: number | undefined;
   let flex: number | undefined;
 
-  const t = config.timeouts;
+  const t = config.advanced?.timeouts;
   if (t === null) {
     normal = flex = undefined;
   } else if (typeof t === "number") {
@@ -111,7 +111,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   const parsedTimeouts = { normal, flex };
 
   // Body size limit
-  const rawMax = config.maxBodySize;
+  const rawMax = config.advanced?.maxBodySize;
   let maxBodySize: number;
   if (typeof rawMax === "number" && Number.isFinite(rawMax) && rawMax >= 0) {
     maxBodySize = rawMax;
@@ -125,17 +125,20 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   }
 
   // Merge forward header allowlist once.
+  const customHeaders = config.advanced?.forwardHeaders;
   const forwardHeaders =
-    config.forwardHeaders && config.forwardHeaders.length > 0
-      ? [...FORWARD_HEADER_ALLOWLIST, ...config.forwardHeaders.map((h) => h.toLowerCase())]
+    customHeaders && customHeaders.length > 0
+      ? [...FORWARD_HEADER_ALLOWLIST, ...customHeaders.map((h) => h.toLowerCase())]
       : [...FORWARD_HEADER_ALLOWLIST];
 
   // Return parsed config.
   return {
     ...config,
-    timeouts: parsedTimeouts,
-    maxBodySize,
-    forwardHeaders,
+    advanced: {
+      timeouts: parsedTimeouts,
+      maxBodySize,
+      forwardHeaders,
+    },
     telemetry: {
       ...config.telemetry,
       enabled: telemetryEnabled,

@@ -288,35 +288,42 @@ export type GatewayConfig = {
     };
   };
   /**
-   * Optional timeout for server responses.
-   * Supports a number in milliseconds, or tiered config.
+   * Advanced configuration for timeouts, body limits, and header forwarding.
    */
-  timeouts?: GatewayTimeout;
-  /**
-   * Maximum *decompressed* request body size in bytes for gzip/deflate-encoded requests.
-   * Plain (uncompressed) request body size limits should be configured at the
-   * framework or server level (e.g. Hono `bodyLimit` middleware, Bun `maxRequestBodySize`).
-   * Set to `0` to disable the decompressed size limit.
-   * Defaults to 10 MB (10,485,760 bytes).
-   */
-  maxBodySize?: number;
-  /**
-   * Additional headers to forward to upstream providers,
-   * merged with the built-in allowlist at startup.
-   * Header names are matched case-insensitively.
-   */
-  forwardHeaders?: string[];
+  advanced?: {
+    /**
+     * Optional timeout for server responses.
+     * Supports a number in milliseconds, or tiered config.
+     */
+    timeouts?: GatewayTimeout;
+    /**
+     * Maximum *decompressed* request body size in bytes for gzip/deflate-encoded requests.
+     * Plain (uncompressed) request body size limits should be configured at the
+     * framework or server level (e.g. Hono `bodyLimit` middleware, Bun `maxRequestBodySize`).
+     * Set to `0` to disable the decompressed size limit.
+     * Defaults to 10 MB (10,485,760 bytes).
+     */
+    maxBodySize?: number;
+    /**
+     * Additional headers to forward to upstream providers,
+     * merged with the built-in allowlist at startup.
+     * Header names are matched case-insensitively.
+     */
+    forwardHeaders?: string[];
+  };
 };
 
 export const kParsed = Symbol("hebo.gateway.parsed");
-export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "timeouts"> & {
+export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "advanced"> & {
   storage: ConversationStorage;
-  timeouts: {
-    normal?: number;
-    flex?: number;
+  advanced: {
+    timeouts: {
+      normal?: number;
+      flex?: number;
+    };
+    maxBodySize: number;
+    forwardHeaders: string[];
   };
-  maxBodySize: number;
-  forwardHeaders: string[];
   [kParsed]: true;
 };
 

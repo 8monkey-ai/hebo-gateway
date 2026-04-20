@@ -20,31 +20,31 @@ const minimalConfig: GatewayConfig = {
 describe("parseConfig", () => {
   test("uses built-in allowlist when forwardHeaders is omitted", () => {
     const parsed = parseConfig({ ...minimalConfig });
-    expect(parsed.forwardHeaders).toEqual([...FORWARD_HEADER_ALLOWLIST]);
+    expect(parsed.advanced.forwardHeaders).toEqual([...FORWARD_HEADER_ALLOWLIST]);
   });
 
   test("uses built-in allowlist when forwardHeaders is empty", () => {
-    const parsed = parseConfig({ ...minimalConfig, forwardHeaders: [] });
-    expect(parsed.forwardHeaders).toEqual([...FORWARD_HEADER_ALLOWLIST]);
+    const parsed = parseConfig({ ...minimalConfig, advanced: { forwardHeaders: [] } });
+    expect(parsed.advanced.forwardHeaders).toEqual([...FORWARD_HEADER_ALLOWLIST]);
   });
 
   test("merges custom headers with built-in allowlist", () => {
     const parsed = parseConfig({
       ...minimalConfig,
-      forwardHeaders: ["X-My-Custom-Header", "x-internal-team"],
+      advanced: { forwardHeaders: ["X-My-Custom-Header", "x-internal-team"] },
     });
 
-    expect(parsed.forwardHeaders).toContain("openai-beta");
-    expect(parsed.forwardHeaders).toContain("x-my-custom-header");
-    expect(parsed.forwardHeaders).toContain("x-internal-team");
-    expect(parsed.forwardHeaders.length).toBe(FORWARD_HEADER_ALLOWLIST.length + 2);
+    expect(parsed.advanced.forwardHeaders).toContain("openai-beta");
+    expect(parsed.advanced.forwardHeaders).toContain("x-my-custom-header");
+    expect(parsed.advanced.forwardHeaders).toContain("x-internal-team");
+    expect(parsed.advanced.forwardHeaders.length).toBe(FORWARD_HEADER_ALLOWLIST.length + 2);
   });
 
   test("lowercases custom forward headers", () => {
     const parsed = parseConfig({
       ...minimalConfig,
-      forwardHeaders: ["X-UPPER-CASE"],
+      advanced: { forwardHeaders: ["X-UPPER-CASE"] },
     });
-    expect(parsed.forwardHeaders).toContain("x-upper-case");
+    expect(parsed.advanced.forwardHeaders).toContain("x-upper-case");
   });
 });

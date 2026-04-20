@@ -50,7 +50,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     }
 
     // Parse + validate input (handles Content-Encoding decompression + body size limits).
-    ctx.body = (await parseRequestBody(ctx.request, cfg.maxBodySize)) as typeof ctx.body;
+    ctx.body = (await parseRequestBody(ctx.request, cfg.advanced.maxBodySize)) as typeof ctx.body;
     logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[responses] ResponsesBody");
     addSpanEvent("hebo.request.deserialized");
 
@@ -107,10 +107,13 @@ export const responses = (config: GatewayConfig): Endpoint => {
       let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
-        headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
+        headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
         abortSignal: ctx.request.signal,
         timeout: {
-          totalMs: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
+          totalMs:
+            ctx.body.service_tier === "flex"
+              ? cfg.advanced.timeouts.flex
+              : cfg.advanced.timeouts.normal,
         },
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
@@ -161,9 +164,12 @@ export const responses = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.ai-sdk.started");
     const result = await generateText({
       model: languageModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
+      headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
       abortSignal: ctx.request.signal,
-      timeout: ctx.body.service_tier === "flex" ? cfg.timeouts.flex : cfg.timeouts.normal,
+      timeout:
+        ctx.body.service_tier === "flex"
+          ? cfg.advanced.timeouts.flex
+          : cfg.advanced.timeouts.normal,
       experimental_include: {
         requestBody: false,
         responseBody: false,

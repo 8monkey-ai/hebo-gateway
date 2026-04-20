@@ -50,7 +50,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
     }
 
     // Parse + validate input (handles Content-Encoding decompression + body size limits).
-    ctx.body = (await parseRequestBody(ctx.request, cfg.maxBodySize)) as typeof ctx.body;
+    ctx.body = (await parseRequestBody(ctx.request, cfg.advanced.maxBodySize)) as typeof ctx.body;
     logger.trace({ requestId: ctx.requestId, body: ctx.body }, "[messages] MessagesBody");
     addSpanEvent("hebo.request.deserialized");
 
@@ -108,10 +108,10 @@ export const messages = (config: GatewayConfig): Endpoint => {
       let ttft = 0;
       const result = streamText({
         model: languageModelWithMiddleware,
-        headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
+        headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
         abortSignal: ctx.request.signal,
         timeout: {
-          totalMs: cfg.timeouts.normal,
+          totalMs: cfg.advanced.timeouts.normal,
         },
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
@@ -161,9 +161,9 @@ export const messages = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.ai-sdk.started");
     const result = await generateText({
       model: languageModelWithMiddleware,
-      headers: prepareForwardHeaders(ctx.request, cfg.forwardHeaders),
+      headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
       abortSignal: ctx.request.signal,
-      timeout: cfg.timeouts.normal,
+      timeout: cfg.advanced.timeouts.normal,
       experimental_include: {
         requestBody: false,
         responseBody: false,
