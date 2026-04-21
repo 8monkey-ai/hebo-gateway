@@ -18,6 +18,8 @@ const MAPPING = {
   "alibaba/qwen3.5-35b": "accounts/fireworks/models/qwen3p5-35b-a3b",
   "alibaba/qwen3.5-27b": "accounts/fireworks/models/qwen3p5-27b",
   "alibaba/qwen3.5-9b": "accounts/fireworks/models/qwen3p5-9b",
+  "zhipu/glm-5": "accounts/fireworks/models/glm-5",
+  "zhipu/glm-5.1": "accounts/fireworks/models/glm-5p1",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForFireworks = (
