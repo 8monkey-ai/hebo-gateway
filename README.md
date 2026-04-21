@@ -136,7 +136,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Zhipu`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
 
 Import the helper from the matching package path:
 
@@ -183,7 +183,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Zhipu GLM`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
 
 #### Model Presets
 
@@ -247,7 +247,7 @@ Out-of-the-box model presets:
 - **xAI** — `@hebo-ai/gateway/models/xai`  
   Grok: `grok` (`v4.1`, `v4.2`, `latest`, `all`)
 
-- **Zhipu** — `@hebo-ai/gateway/models/zhipu`  
+- **Z.ai** — `@hebo-ai/gateway/models/zai`  
   GLM: `glm` (`v5`, `v5.1`, `v5.x`, `latest`, `all`)
 
 #### User-defined Models

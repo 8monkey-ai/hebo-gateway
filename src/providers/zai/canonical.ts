@@ -9,7 +9,7 @@ const MAPPING = {
   "zhipu/glm-5.1": "glm-5.1-20260406",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
-export const withCanonicalIdsForZhipu = (
+export const withCanonicalIdsForZai = (
   provider: ZhipuProvider,
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>

@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 
 import { createZhipu } from "zhipu-ai-provider";
 
-import { withCanonicalIdsForZhipu } from "./canonical";
+import { withCanonicalIdsForZai } from "./canonical";
 
-const provider = withCanonicalIdsForZhipu(createZhipu({ apiKey: "test-key" }));
+const provider = withCanonicalIdsForZai(createZhipu({ apiKey: "test-key" }));
 
 const explicitMappings: [canonical: string, nativeId: string][] = [
   ["zhipu/glm-5", "glm-5-20260211"],
@@ -19,8 +19,8 @@ for (const [canonical, nativeId] of explicitMappings) {
   });
 }
 
-test("withCanonicalIdsForZhipu > supports extra mapping override", () => {
-  const customProvider = withCanonicalIdsForZhipu(createZhipu({ apiKey: "test-key" }), {
+test("withCanonicalIdsForZai > supports extra mapping override", () => {
+  const customProvider = withCanonicalIdsForZai(createZhipu({ apiKey: "test-key" }), {
     "zhipu/custom-model": "custom-native-id",
   });
 
