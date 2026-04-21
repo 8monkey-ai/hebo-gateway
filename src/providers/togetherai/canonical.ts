@@ -17,7 +17,6 @@ const MAPPING = {
   "alibaba/qwen3-32b": "Qwen/Qwen3-32B",
   "alibaba/qwen3.5-397b": "Qwen/Qwen3.5-397B-A17B",
   "alibaba/qwen3.5-9b": "Qwen/Qwen3.5-9B",
-  "deepseek/deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForTogetherAI = (

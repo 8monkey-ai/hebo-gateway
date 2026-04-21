@@ -13,7 +13,6 @@ const DEEPSEEK_BASE = {
     "alibaba",
     "deepinfra",
     "fireworks",
-    "togetherai",
     "chutes",
     "vertex",
   ] as const satisfies readonly CanonicalProviderId[],
