@@ -13,6 +13,10 @@ const MAPPING = {
   "meta/llama-4-maverick": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
   "minimax/m2.5": "MiniMax/MiniMax-M2.5",
   "minimax/m2.7": "MiniMax/MiniMax-M2.7",
+  "alibaba/qwen3-235b": "Qwen/Qwen3-235B-A22B",
+  "alibaba/qwen3-32b": "Qwen/Qwen3-32B",
+  "alibaba/qwen3.5-397b": "Qwen/Qwen3.5-397B-A17B",
+  "alibaba/qwen3.5-9b": "Qwen/Qwen3.5-9B",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForTogetherAI = (

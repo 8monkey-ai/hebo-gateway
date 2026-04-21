@@ -137,7 +137,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
 
 Import the helper from the matching package path:
 
@@ -184,7 +184,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
 
 #### Model Presets
 
@@ -211,6 +211,11 @@ const modelsFromFamily = defineModelCatalog(
   claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
 );
 ```
+
+Out-of-the-box model presets:
+
+- **Alibaba** — `@hebo-ai/gateway/models/alibaba`  
+  Qwen: `qwen` (`v3`, `v3.5`, `v3.6`, `v3.x`, `coder`, `vl`, `embedding`, `embeddings`, `latest`, `all`)
 
 - **Amazon** — `@hebo-ai/gateway/models/amazon`  
   Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)

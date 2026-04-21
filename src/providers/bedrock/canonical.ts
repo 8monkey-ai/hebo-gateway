@@ -46,6 +46,9 @@ const MAPPING = {
   "google/gemma-3-27b": "google.gemma-3-27b-it",
   "openai/gpt-oss-20b": "openai.gpt-oss-20b-1:0",
   "openai/gpt-oss-120b": "openai.gpt-oss-120b-1:0",
+  "alibaba/qwen3-235b": "qwen.qwen3-235b-a22b-2507-v1:0",
+  "alibaba/qwen3-32b": "qwen.qwen3-32b-v1:0",
+  "alibaba/qwen3-vl-235b": "qwen.qwen3-vl-235b-a22b",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export type BedrockInferenceProfileOptions = {

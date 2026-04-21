@@ -18,6 +18,20 @@ const MAPPING = {
   "meta/llama-4-scout": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
   "meta/llama-4-maverick": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
   "minimax/m2.5": "MiniMax/MiniMax-M2.5",
+  "alibaba/qwen3-235b": "Qwen/Qwen3-235B-A22B",
+  "alibaba/qwen3-32b": "Qwen/Qwen3-32B",
+  "alibaba/qwen3.5-397b": "Qwen/Qwen3.5-397B-A17B",
+  "alibaba/qwen3.5-122b": "Qwen/Qwen3.5-122B-A10B",
+  "alibaba/qwen3.5-35b": "Qwen/Qwen3.5-35B-A3B",
+  "alibaba/qwen3.5-27b": "Qwen/Qwen3.5-27B",
+  "alibaba/qwen3.5-9b": "Qwen/Qwen3.5-9B",
+  "alibaba/qwen3.5-4b": "Qwen/Qwen3.5-4B",
+  "alibaba/qwen3.5-2b": "Qwen/Qwen3.5-2B",
+  "alibaba/qwen3.5-0.8b": "Qwen/Qwen3.5-0.8B",
+  "alibaba/qwen3.6-flash": "Qwen/Qwen3.6-35B-A3B",
+  "alibaba/qwen3-embedding-0.6b": "Qwen/Qwen3-Embedding-0.6B",
+  "alibaba/qwen3-embedding-4b": "Qwen/Qwen3-Embedding-4B",
+  "alibaba/qwen3-embedding-8b": "Qwen/Qwen3-Embedding-8B",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForDeepInfra = (
