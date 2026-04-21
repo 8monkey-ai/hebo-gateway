@@ -15,6 +15,8 @@ test("qwenReasoningMiddleware > matching patterns", () => {
     "alibaba/qwen3.5-flash",
     "alibaba/qwen3.5-27b",
     "alibaba/qwen3.6-plus",
+    "alibaba/qwen3.6-flash",
+    "alibaba/qwen3.6-max-preview",
     "alibaba/qwen3-coder-next",
     "alibaba/qwen3-vl-235b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];

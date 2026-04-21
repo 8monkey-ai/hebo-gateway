@@ -28,7 +28,7 @@ const MAPPING = {
   "alibaba/qwen3.5-4b": "Qwen/Qwen3.5-4B",
   "alibaba/qwen3.5-2b": "Qwen/Qwen3.5-2B",
   "alibaba/qwen3.5-0.8b": "Qwen/Qwen3.5-0.8B",
-  "alibaba/qwen3.6-35b-a3b": "Qwen/Qwen3.6-35B-A3B",
+  "alibaba/qwen3.6-flash": "Qwen/Qwen3.6-35B-A3B",
   "alibaba/qwen3-embedding-0.6b": "Qwen/Qwen3-Embedding-0.6B",
   "alibaba/qwen3-embedding-4b": "Qwen/Qwen3-Embedding-4B",
   "alibaba/qwen3-embedding-8b": "Qwen/Qwen3-Embedding-8B",
