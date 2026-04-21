@@ -170,13 +170,13 @@
       "types": "./dist/providers/cohere/index.d.ts",
       "import": "./dist/providers/cohere/index.js"
     },
-    "./providers/deepseek": {
-      "types": "./dist/providers/deepseek/index.d.ts",
-      "import": "./dist/providers/deepseek/index.js"
-    },
     "./providers/deepinfra": {
       "types": "./dist/providers/deepinfra/index.d.ts",
       "import": "./dist/providers/deepinfra/index.js"
+    },
+    "./providers/deepseek": {
+      "types": "./dist/providers/deepseek/index.d.ts",
+      "import": "./dist/providers/deepseek/index.js"
     },
     "./providers/fireworks": {
       "types": "./dist/providers/fireworks/index.d.ts",
