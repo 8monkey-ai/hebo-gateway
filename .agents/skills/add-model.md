@@ -16,26 +16,59 @@ Invoke this skill when:
 
 Gather authoritative metadata from two sources:
 
-### models.dev (`https://models.dev/api.json`)
+### OpenRouter — per-model endpoint (preferred for provider info)
 
-Structure: nested by provider → model. Each model entry has:
+Use the **per-model endpoints endpoint** to look up a single model without downloading the entire catalog:
 
-- `release_date`, `knowledge` (cutoff date)
+```
+GET https://openrouter.ai/api/v1/models/{model_id}/endpoints
+```
+
+The `{model_id}` uses the OpenRouter model ID format (e.g., `anthropic/claude-sonnet-4.6`, `openai/gpt-4.1`, `meta-llama/llama-4-maverick`). If you don't know the exact ID, search the full list with grep:
+
+```bash
+curl -s 'https://openrouter.ai/api/v1/models' | grep -oi '"id":"[^"]*<SEARCH_TERM>[^"]*"'
+```
+
+Replace `<SEARCH_TERM>` with the model name you're looking for (e.g., `sonnet`, `gpt-4`, `llama`).
+
+Response structure (`data` object):
+
+- `id` — OpenRouter model ID (e.g., `anthropic/claude-sonnet-4.6`)
+- `name` — display name
+- `created` — Unix timestamp
+- `description` — model description
+- `architecture.input_modalities` / `output_modalities` — e.g., `["text", "image"]` / `["text"]`
+- `endpoints[]` — array of provider endpoints, each with:
+  - `provider_name` — e.g., `"Anthropic"`, `"Google"`, `"Amazon Bedrock"`, `"Azure"`
+  - `context_length`, `max_completion_tokens`
+  - `pricing.prompt`, `pricing.completion`, `pricing.input_cache_read`, `pricing.input_cache_write`
+  - `supported_parameters[]` — e.g., `["reasoning", "tools", "tool_choice", "structured_outputs"]`
+
+### models.dev — extract specific models with grep (preferred for dates/capabilities)
+
+The full `api.json` (~1.8 MB) is organized as `{ [provider]: { models: { [model_id]: {...} } } }`. Pipe through `grep` to extract what you need without loading everything into context:
+
+```bash
+# Find model IDs matching a pattern — replace <SEARCH_TERM> with the model name
+curl -s 'https://models.dev/api.json' | grep -oi '"id":"[^"]*<SEARCH_TERM>[^"]*"'
+
+# Extract a specific model entry (grab ~20 lines after the model ID)
+curl -s 'https://models.dev/api.json' | grep -A 20 '"<MODEL_ID>"'
+```
+
+Each model entry has:
+
+- `release_date` (YYYY-MM-DD), `knowledge` (cutoff date YYYY-MM-DD)
 - `limit.context` (context window), `limit.output` (max output tokens)
-- `reasoning` (boolean), `tool_call` (boolean), `structured_output` (boolean)
+- `reasoning` (boolean), `tool_call` (boolean)
 - `modalities.input` / `modalities.output`
-- `cost.input`, `cost.output`, `cost.cache_read`, `cost.cache_write`
+- `cost.input`, `cost.output`, `cost.cache_read`, `cost.cache_write` (per million tokens)
+- `family` — model family name
 
-### OpenRouter (`https://openrouter.ai/api/v1/models`)
+### Cross-reference strategy
 
-Structure: flat `data` array of model objects. Each entry has:
-
-- `id` — hierarchical format (e.g., `anthropic/claude-opus-4.6`)
-- `context_length`, `architecture.input_modalities` / `output_modalities`
-- `pricing.prompt`, `pricing.completion`, `pricing.input_cache_read`, `pricing.input_cache_write`
-- Provider details available via the `links.details` endpoint
-
-Cross-reference both sources. Prefer models.dev for dates and capabilities; use OpenRouter for provider availability.
+Prefer models.dev for `release_date`, `knowledge` cutoff, and capability booleans. Use OpenRouter's per-model endpoint for provider availability and supported parameters. If a model isn't found in models.dev, use WebSearch to find it on the provider's official docs.
 
 ## Step 2: Classify the Model
 
@@ -186,10 +219,9 @@ Checklist:
 
 For each model, determine which providers serve it:
 
-1. Check OpenRouter's model list for provider availability
-2. Check models.dev for provider-specific entries
-3. Check each provider's official documentation
-4. Order the `providers` array in the preset: primary/official provider first, then secondary providers
+1. Fetch `https://openrouter.ai/api/v1/models/{model_id}/endpoints` — the `endpoints[]` array lists every provider with their `provider_name` and `tag`
+2. Cross-check with models.dev provider entries and each provider's official documentation
+3. Order the `providers` array in the preset: primary/official provider first, then secondary providers
 
 ## Step 7: Add Provider Canonical Mappings
 
