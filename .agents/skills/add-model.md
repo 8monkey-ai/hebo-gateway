@@ -41,15 +41,12 @@ Cross-reference both sources. Prefer models.dev for dates and capabilities; use 
 
 Determine these attributes:
 
-| Attribute             | Values                                                                      | Notes                                                   |
-| --------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **Type**              | `text-generation` or `embedding`                                            | Determines output modality                              |
-| **Reasoning**         | yes/no                                                                      | Include `"reasoning"` in capabilities if yes            |
-| **Caching**           | yes/no                                                                      | Indicated by `cache_read`/`cache_write` pricing in APIs |
-| **Service tier**      | standard / pro                                                              | Reflected in model naming (e.g., `-pro` suffix)         |
-| **Input modalities**  | `text`, `image`, `file`, `audio`, `video`, `pdf`                            | What the model accepts                                  |
-| **Output modalities** | `text`, `image`, `audio`, `video`, `embedding`                              | What the model produces                                 |
-| **Capabilities**      | `attachments`, `reasoning`, `tool_call`, `structured_output`, `temperature` | Feature flags                                           |
+| Attribute             | Values                                                                      | Notes                      |
+| --------------------- | --------------------------------------------------------------------------- | -------------------------- |
+| **Type**              | `text-generation` or `embedding`                                            | Determines output modality |
+| **Input modalities**  | `text`, `image`, `file`, `audio`, `video`, `pdf`                            | What the model accepts     |
+| **Output modalities** | `text`, `image`, `audio`, `video`, `embedding`                              | What the model produces    |
+| **Capabilities**      | `attachments`, `reasoning`, `tool_call`, `structured_output`, `temperature` | Feature flags              |
 
 ## Step 3: Choose the Canonical ID
 
@@ -185,9 +182,29 @@ Checklist:
 - [ ] `all` automatically picks up new entries via `Object.values().flat()`
 - [ ] Specialty groups updated if applicable (`embeddings`, `preview`, `codex`, `chat`, `pro`, etc.)
 
-## Step 6: Provider Canonical Mappings
+## Step 6: Determine Provider Support
 
-Each provider has a `withCanonicalIdsFor*` function in `src/providers/<provider>/canonical.ts` that transforms canonical IDs to provider-native IDs.
+For each model, determine which providers serve it:
+
+1. Check OpenRouter's model list for provider availability
+2. Check models.dev for provider-specific entries
+3. Check each provider's official documentation
+4. Order the `providers` array in the preset: primary/official provider first, then secondary providers
+
+## Step 7: Add Provider Canonical Mappings
+
+**For every provider listed in the model's `providers` array**, open `src/providers/<provider>/canonical.ts` and determine whether the new model needs an explicit mapping entry.
+
+Each provider has a `withCanonicalIdsFor*` function that transforms canonical IDs to provider-native IDs using a default transformation pipeline and an explicit `MAPPING` override table.
+
+### Action for each provider
+
+1. Open `src/providers/<provider>/canonical.ts`.
+2. Simulate the default transformation for the new canonical ID using the provider's configuration (see table below).
+3. Look up the provider's actual native model ID in their official docs or API.
+4. **If the default transform produces the correct native ID** → no entry needed, but verify by checking how similar models in that family are handled.
+5. **If the default transform does NOT produce the correct native ID** → add an explicit entry to the `MAPPING` object.
+6. Add a test in `src/providers/<provider>/canonical.test.ts` verifying the mapping resolves correctly.
 
 ### Canonicalization options reference
 
@@ -205,35 +222,6 @@ type CanonicalIdsOptions = {
 };
 ```
 
-### Current provider configurations
-
-| Provider       | `stripNamespace` | `normalizeDelimiters` | `namespaceSeparator` | Explicit mappings | Notes                                                     |
-| -------------- | ---------------- | --------------------- | -------------------- | ----------------- | --------------------------------------------------------- |
-| **anthropic**  | `true`           | `true`                | `/`                  | None              | `anthropic/claude-opus-4.7` → `claude-opus-4-7`           |
-| **openai**     | `true`           | —                     | `/`                  | None              | `openai/gpt-5.4` → `gpt-5.4`                              |
-| **vertex**     | `true`           | `["anthropic"]`       | `/`                  | None              | Only normalizes delimiters for `anthropic/` models        |
-| **voyage**     | `true`           | —                     | `/`                  | None              | `voyage/voyage-4` → `voyage-4`                            |
-| **cohere**     | `true`           | —                     | `/`                  | 7 entries         | Version-suffixed native IDs (e.g., `command-a-03-2025`)   |
-| **xai**        | `true`           | `true`                | `/`                  | 4 entries         | Reasoning variants mapped explicitly                      |
-| **bedrock**    | `false`          | `true`                | `.`                  | ~45 entries       | Template `{ip}` for inference profiles, version postfixes |
-| **groq**       | `false`          | —                     | `/`                  | 3 entries         | Some models have unique native names                      |
-| **fireworks**  | `false`          | —                     | `/`                  | 8 entries         | Uses `accounts/fireworks/models/` path format             |
-| **deepinfra**  | `false`          | —                     | `/`                  | 14 entries        | Uses `org/Model-Name` format                              |
-| **togetherai** | `false`          | —                     | `/`                  | 9 entries         | Uses `org/Model-Name-Turbo` format                        |
-| **minimax**    | `false`          | —                     | `/`                  | 2 entries         | PascalCase native IDs                                     |
-| **chutes**     | `false`          | —                     | `/`                  | 1 entry           | Limited model support                                     |
-
-### When to add an explicit mapping
-
-Add a mapping entry when the default transformation (strip namespace → normalize delimiters → apply prefix/postfix) does **not** produce the correct provider-native model ID.
-
-Common reasons:
-
-- Provider uses a completely different naming scheme (e.g., Bedrock's `anthropic.claude-haiku-4-5-20251001-v1:0`)
-- Provider adds version dates or suffixes (e.g., Cohere's `command-a-03-2025`)
-- Provider uses org-prefixed paths (e.g., Fireworks' `accounts/fireworks/models/...`)
-- Provider uses different casing (e.g., DeepInfra's `meta-llama/Meta-Llama-3.1-8B-Instruct`)
-
 ### When default transformation is sufficient
 
 Skip the explicit mapping when `stripNamespace` + `normalizeDelimiters` produces the correct native ID. For example:
@@ -242,33 +230,54 @@ Skip the explicit mapping when `stripNamespace` + `normalizeDelimiters` produces
 - OpenAI: `openai/gpt-5.4` → strip → `gpt-5.4` ✓
 - Voyage: `voyage/voyage-4-lite` → strip → `voyage-4-lite` ✓
 
-## Step 7: Determine Provider Support
+### When an explicit mapping is required
 
-For each model, determine which providers serve it:
+Add a `MAPPING` entry when the default transformation does **not** produce the correct provider-native model ID. Common reasons:
 
-1. Check OpenRouter's model list for provider availability
-2. Check models.dev for provider-specific entries
-3. Check each provider's official documentation
-4. Order the `providers` array: primary/official provider first, then secondary providers
+- Provider uses a completely different naming scheme (e.g., Bedrock's `anthropic.claude-haiku-4-5-20251001-v1:0`)
+- Provider adds version dates or suffixes (e.g., Cohere's `command-a-03-2025`)
+- Provider uses org-prefixed paths (e.g., Fireworks' `accounts/fireworks/models/...`)
+- Provider uses different casing (e.g., DeepInfra's `meta-llama/Meta-Llama-3.1-8B-Instruct`)
 
-### Common provider patterns by family
+## Step 8: Check Whether Middlewares Are Needed
 
-| Family           | Primary     | Common secondary providers                                |
-| ---------------- | ----------- | --------------------------------------------------------- |
-| Anthropic Claude | `anthropic` | `bedrock`, `vertex`, `azure`                              |
-| OpenAI GPT       | `openai`    | —                                                         |
-| OpenAI GPT-OSS   | `openai`    | `fireworks`, `groq`, `bedrock`                            |
-| Google Gemini    | `vertex`    | —                                                         |
-| Google Gemma     | `vertex`    | `deepinfra`, `togetherai`, `groq`, `fireworks`, `bedrock` |
-| Meta Llama       | `groq`      | `bedrock`, `fireworks`, `deepinfra`, `togetherai`         |
-| Cohere Command   | `cohere`    | `bedrock`                                                 |
-| Cohere Embed     | `cohere`    | `bedrock`                                                 |
-| Amazon Nova      | `bedrock`   | —                                                         |
-| MiniMax          | `minimax`   | `deepinfra`, `togetherai`, `fireworks`, `chutes`          |
-| xAI Grok         | `xai`       | —                                                         |
-| Voyage           | `voyage`    | —                                                         |
+Middlewares bridge OpenAI-compatible request parameters to provider-native options. They exist at **two levels** — both must be checked:
 
-## Step 8: Write Tests
+### Model-level middlewares (`src/models/<family>/middleware.ts`)
+
+Registered via `modelMiddlewareMatcher.useForModel()` and matched by canonical model ID patterns. These handle model-family-specific parameter translation.
+
+| Category       | When needed                                                                                                    | Example                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Reasoning**  | Model supports extended thinking / chain-of-thought. Check if `"reasoning"` is in `capabilities`.              | `claudeReasoningMiddleware` maps `reasoning.effort` → Anthropic `thinking` / `effort` options   |
+| **Dimensions** | Embedding model supports variable output dimensions. Check if the provider uses a non-standard parameter name. | `voyageDimensionsMiddleware` maps `dimensions` → Voyage `outputDimension`                       |
+| **Caching**    | Model supports prompt caching. Check if `cache_read` / `cache_write` pricing exists in models.dev.             | `claudePromptCachingMiddleware` maps `cache_control` → Anthropic `cacheControl` provider option |
+
+For each applicable category:
+
+1. Check if an existing middleware in `src/models/<family>/middleware.ts` already covers the new model's ID pattern (wildcards like `anthropic/claude-*4*` may already match).
+2. If the existing glob patterns **do not** match the new model ID, update the `modelMiddlewareMatcher.useForModel()` call to include it.
+3. If no middleware exists for this family yet, create a new `middleware.ts` in `src/models/<family>/` following the established pattern.
+4. Add or update tests in `src/models/<family>/middleware.test.ts`.
+
+### Provider-level middlewares (`src/providers/<provider>/middleware.ts`)
+
+Registered via `modelMiddlewareMatcher.useForProvider()` and matched by provider ID. These handle provider-specific parameter translation that applies to **all models** served by that provider, regardless of family.
+
+| Category          | Providers with middleware   | What it does                                                                                                    |
+| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Service tiers** | `bedrock`, `vertex`, `groq` | Maps OpenAI `service_tier` values to provider-native equivalents (e.g., `"scale"` → Bedrock `"reserved"`)       |
+| **Reasoning**     | `bedrock`, `fireworks`      | Translates reasoning params into provider-native format (e.g., Bedrock `reasoningConfig`, Fireworks `thinking`) |
+| **Caching**       | `bedrock`                   | Maps `cache_control` → Bedrock `cachePoint` with provider-specific TTL handling                                 |
+
+When the new model is served by **multiple providers** (from the `providers` array set in Step 6), check each provider's `middleware.ts`:
+
+1. Verify the provider-level middleware already handles the new model correctly — some middlewares filter internally by model ID (e.g., `bedrockPromptCachingMiddleware` only applies to `nova` and `claude` models).
+2. If the middleware's internal filters exclude the new model, update them.
+3. If a provider has no middleware for a capability the new model needs, create one in `src/providers/<provider>/middleware.ts` and register it with `modelMiddlewareMatcher.useForProvider()`.
+4. Add or update tests in `src/providers/<provider>/middleware.test.ts`.
+
+## Step 9: Write Tests
 
 ### Canonical mapping tests (`src/providers/<provider>/canonical.test.ts`)
 
@@ -294,7 +303,7 @@ test("resolves vendor model through provider", () => {
 });
 ```
 
-## Step 9: Update README
+## Step 10: Update README
 
 Update `README.md` when:
 
@@ -315,9 +324,11 @@ The model presets section is at approximately line 189 in README.md. Each family
 - [ ] Preset defined in `src/models/<family>/presets.ts`
 - [ ] `created` and `knowledge` dates verified against models.dev
 - [ ] Grouped exports updated (atomic, range, latest, all)
-- [ ] Provider canonical mappings updated where native ID differs from default
 - [ ] `providers` array set correctly with proper ordering
-- [ ] Tests added/updated for preset, groups, and canonical mappings
+- [ ] Each provider's `canonical.ts` checked — explicit mapping added where default transform doesn't produce the correct native ID
+- [ ] Canonical mapping tests added for each provider
+- [ ] Middlewares checked: reasoning, dimensions, caching, and service tiers — existing patterns updated or new middleware created as needed
+- [ ] Tests added/updated for preset, groups, and middlewares
 - [ ] `bun run typecheck` passes
 - [ ] `bun run test` passes
 - [ ] README.md updated if new family or version group added
