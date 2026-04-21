@@ -20,6 +20,7 @@
     "llm-gateway",
     "llmops",
     "minimax",
+    "moonshot",
     "nextjs",
     "openai",
     "qwen",
@@ -137,6 +138,10 @@
       "types": "./dist/models/minimax/index.d.ts",
       "import": "./dist/models/minimax/index.js"
     },
+    "./models/moonshot": {
+      "types": "./dist/models/moonshot/index.d.ts",
+      "import": "./dist/models/moonshot/index.js"
+    },
     "./models/voyage": {
       "types": "./dist/models/voyage/index.d.ts",
       "import": "./dist/models/voyage/index.js"
@@ -180,6 +185,10 @@
     "./providers/minimax": {
       "types": "./dist/providers/minimax/index.d.ts",
       "import": "./dist/providers/minimax/index.js"
+    },
+    "./providers/moonshot": {
+      "types": "./dist/providers/moonshot/index.d.ts",
+      "import": "./dist/providers/moonshot/index.js"
     },
     "./providers/openai": {
       "types": "./dist/providers/openai/index.d.ts",
@@ -241,6 +250,7 @@
     "@ai-sdk/fireworks": "^2.0.46",
     "@ai-sdk/google-vertex": "^4.0.105",
     "@ai-sdk/groq": "^3.0.35",
+    "@ai-sdk/moonshotai": "^2.0.16",
     "@ai-sdk/openai": "^3.0.52",
     "@ai-sdk/togetherai": "^2.0.45",
     "@ai-sdk/xai": "^3.0.83",
@@ -288,6 +298,7 @@
     "@ai-sdk/deepinfra": "^2.0.45",
     "@ai-sdk/fireworks": "^2.0.46",
     "@ai-sdk/groq": "^3.0.29",
+    "@ai-sdk/moonshotai": "^2.0.16",
     "@ai-sdk/openai": "^3.0.41",
     "@ai-sdk/openai-compatible": "^2.0.41",
     "@ai-sdk/togetherai": "^2.0.45",
@@ -327,6 +338,9 @@
       "optional": true
     },
     "@ai-sdk/groq": {
+      "optional": true
+    },
+    "@ai-sdk/moonshotai": {
       "optional": true
     },
     "@ai-sdk/openai": {

@@ -11,6 +11,7 @@ export const CANONICAL_PROVIDER_IDS = [
   "fireworks",
   "groq",
   "minimax",
+  "moonshot",
   "openai",
   "togetherai",
   "vertex",

@@ -137,7 +137,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
 
 Import the helper from the matching package path:
 
@@ -184,7 +184,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
 
 #### Model Presets
 
@@ -236,6 +236,9 @@ Out-of-the-box model presets:
 
 - **MiniMax** — `@hebo-ai/gateway/models/minimax`  
   MiniMax: `minimax` (`v2`, `v2.x`, `latest`, `all`)
+
+- **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
+  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
   GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
