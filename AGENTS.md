@@ -77,27 +77,9 @@ If priorities conflict, apply this order:
 4. Run `bun run check` and `bun run test`.
 5. If formatting/linting is impacted, run `bun run format` and `bun run lint`.
 
-## Model Preset Changes
+## Model & Provider Changes
 
-When adding/updating a model preset:
-
-1. Add canonical ID in `src/models/types.ts` (`CANONICAL_MODEL_IDS`) if new.
-2. Add/update preset definition in provider family `src/models/<provider>/presets.ts`.
-3. Ensure `created` and `knowledge` match `https://models.dev/api.json`.
-4. Update grouped exports (`latest`, `all`, version groups) consistently.
-5. If provider-native model IDs differ, update mapping in `src/providers/<provider>/canonical.ts`.
-6. Add/update tests that cover model resolution and endpoint output where relevant.
-
-## Provider Mapping Changes
-
-When adjusting canonicalization:
-
-- Keep canonical IDs stable and provider-agnostic (`vendor/model-name`).
-- Use `https://openrouter.ai/provider/<provider-name>` as a reference for which provider supports which models. It is not complete, but better than nothing.
-- Only add models into the canonical mapping list of a provider if the default mapping can't cover them (i.e. the provider-native model ID differs from the canonical ID after applying `stripNamespace`/`prefix`/`postfix` options).
-- Ensure mapping rules stay compatible with provider-specific quirks (prefixes/templates/postfixes).
-- Verify both text-generation and embedding model resolution paths when applicable.
-- Add targeted tests in `src/providers/*.test.ts` or nearby endpoint tests.
+For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.claude/skills/add-model.md`). It covers research sources, classification, preset definitions, grouped exports, provider canonical mappings, and testing.
 
 ## Testing Expectations
 
@@ -112,12 +94,12 @@ When adjusting canonicalization:
 - Preserve OpenAI-compatible response contracts unless explicitly changing API behavior.
 - If public exports or API contracts change, update `README.md` and the related endpoint/provider tests in the same change.
 - Keep comments concise and only where intent is non-obvious.
-- Avoid speculative metadata; follow `Model Preset Changes`.
+- Avoid speculative metadata; follow the **add-model** skill when touching model presets.
 
 ## PR/Commit Checklist
 
 - [ ] Change is scoped to requested behavior.
 - [ ] Types compile (`bun run typecheck`).
 - [ ] Tests pass (`bun run test`) or failures are documented.
-- [ ] Model metadata (`created`, `knowledge`) follows `Model Preset Changes` when touched.
+- [ ] Model metadata (`created`, `knowledge`) follows the **add-model** skill when touched.
 - [ ] New canonical IDs are reflected in both model presets and provider mappings.
