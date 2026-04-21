@@ -10,6 +10,7 @@ const DEEPSEEK_BASE = {
   capabilities: ["reasoning", "tool_call", "structured_output", "temperature"] as const,
   providers: [
     "deepseek",
+    "alibaba",
     "deepinfra",
     "fireworks",
     "togetherai",
