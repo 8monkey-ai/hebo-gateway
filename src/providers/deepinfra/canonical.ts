@@ -32,6 +32,7 @@ const MAPPING = {
   "alibaba/qwen3-embedding-0.6b": "Qwen/Qwen3-Embedding-0.6B",
   "alibaba/qwen3-embedding-4b": "Qwen/Qwen3-Embedding-4B",
   "alibaba/qwen3-embedding-8b": "Qwen/Qwen3-Embedding-8B",
+  "deepseek/deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForDeepInfra = (

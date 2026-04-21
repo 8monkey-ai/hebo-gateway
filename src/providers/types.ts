@@ -7,6 +7,7 @@ export const CANONICAL_PROVIDER_IDS = [
   "bedrock",
   "chutes",
   "cohere",
+  "deepseek",
   "deepinfra",
   "fireworks",
   "groq",

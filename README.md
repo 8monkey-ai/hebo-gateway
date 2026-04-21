@@ -137,7 +137,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
 
 Import the helper from the matching package path:
 
@@ -184,7 +184,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
 
 #### Model Presets
 
@@ -226,6 +226,9 @@ Out-of-the-box model presets:
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
   Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
+
+- **DeepSeek** — `@hebo-ai/gateway/models/deepseek`  
+  DeepSeek: `deepseek` (`v3.2`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
   Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
