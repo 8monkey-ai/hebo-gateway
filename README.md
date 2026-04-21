@@ -229,6 +229,7 @@ Out-of-the-box model presets:
 
 - **Google** — `@hebo-ai/gateway/models/google`  
   Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
   Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
@@ -237,7 +238,7 @@ Out-of-the-box model presets:
   MiniMax: `minimax` (`v2`, `v2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
