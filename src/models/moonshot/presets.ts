@@ -19,6 +19,7 @@ export const kimiK25 = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Kimi K2.5",
     created: "2026-01-27",
     knowledge: "2025-06",
+    providers: ["moonshot", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
   } satisfies CatalogModel,
 );
 
