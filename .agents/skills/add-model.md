@@ -270,33 +270,6 @@ For each model, determine which providers serve it:
 
 ## Step 8: Write Tests
 
-### Preset tests (optional but recommended)
-
-```typescript
-test("modelName > should expose correct metadata", () => {
-  expect(modelName()).toEqual({
-    "vendor/model-id": {
-      name: "Model Name",
-      created: "YYYY-MM-DD",
-      // ...all fields
-    },
-  });
-});
-```
-
-### Group membership tests
-
-```typescript
-test("family.all > should include N presets", () => {
-  expect(family.all).toHaveLength(N);
-});
-
-test("family.latest > should include newest models", () => {
-  const ids = family.latest.map((p) => Object.keys(p())[0]);
-  expect(ids).toContain("vendor/latest-model");
-});
-```
-
 ### Canonical mapping tests (`src/providers/<provider>/canonical.test.ts`)
 
 ```typescript
