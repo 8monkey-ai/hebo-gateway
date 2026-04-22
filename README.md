@@ -23,7 +23,6 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
 
-
 ## 📦 Installation
 
 ```bash
@@ -75,10 +74,11 @@ export const gw = gateway({
     // Choose a pre-configured preset
     gptOss20b,
     // Or add a whole model family
-    gptOss["all"]
+    gptOss["all"],
   ),
 });
 ```
+
 > [!TIP]
 > Why `withCanonicalIdsForX`? In most cases you want your gateway to route using model IDs that are consistent across providers (e.g. `openai/gpt-oss-20b` rather than `openai.gpt-oss-20b-v1:0`). We call that `Canonical IDs` - they are what enable routing, fallbacks, and policy rules. Without this wrapper, providers only understands their native IDs, which would make cross-provider routing impossible.
 
@@ -104,7 +104,6 @@ console.log(`🐒 Hebo Gateway is running with Elysia at ${app.server?.url}`);
 ```
 
 See [Framework Support](#-framework-support) for all supported framework examples.
-
 
 ### Call the Gateway
 
@@ -137,7 +136,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, and `xAI`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
 
 Import the helper from the matching package path:
 
@@ -184,7 +183,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `MiniMax`, `OpenAI GPT/GPT-OSS`, `Voyage`, and `xAI Grok`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
 
 #### Model Presets
 
@@ -240,6 +239,9 @@ Out-of-the-box model presets:
 - **MiniMax** — `@hebo-ai/gateway/models/minimax`  
   MiniMax: `minimax` (`v2`, `v2.x`, `latest`, `all`)
 
+- **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
+  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.x`, `latest`, `all`)
+
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
   GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
@@ -250,6 +252,9 @@ Out-of-the-box model presets:
 
 - **xAI** — `@hebo-ai/gateway/models/xai`  
   Grok: `grok` (`v4.1`, `v4.2`, `latest`, `all`)
+
+- **Z.ai** — `@hebo-ai/gateway/models/zai`  
+  GLM: `glm` (`v5`, `v5.1`, `v5.x`, `latest`, `all`)
 
 #### User-defined Models
 

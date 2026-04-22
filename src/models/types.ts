@@ -92,6 +92,9 @@ export const CANONICAL_MODEL_IDS = [
   // MiniMax
   "minimax/m2.5",
   "minimax/m2.7",
+  // Moonshot
+  "moonshot/kimi-k2.5",
+  "moonshot/kimi-k2.6",
   // xAI
   "xai/grok-4.1-fast",
   "xai/grok-4.1-fast-reasoning",
@@ -132,6 +135,10 @@ export const CANONICAL_MODEL_IDS = [
   "alibaba/qwen3-embedding-0.6b",
   "alibaba/qwen3-embedding-4b",
   "alibaba/qwen3-embedding-8b",
+  // Z.ai (GLM)
+  "zhipu/glm-5",
+  "zhipu/glm-5-turbo",
+  "zhipu/glm-5.1",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];

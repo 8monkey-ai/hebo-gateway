@@ -19,11 +19,15 @@ const MAPPING = {
   "alibaba/qwen3.5-27b": "accounts/fireworks/models/qwen3p5-27b",
   "alibaba/qwen3.5-9b": "accounts/fireworks/models/qwen3p5-9b",
   "deepseek/deepseek-v3.2": "accounts/fireworks/models/deepseek-v3p2",
+  "moonshot/kimi-k2.5": "accounts/fireworks/models/kimi-k2p5",
+  "moonshot/kimi-k2.6": "accounts/fireworks/models/kimi-k2p6",
+  "zhipu/glm-5": "accounts/fireworks/models/glm-5",
+  "zhipu/glm-5.1": "accounts/fireworks/models/glm-5p1",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForFireworks = (
   provider: FireworksProvider,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
     mapping: { ...MAPPING, ...extraMapping },

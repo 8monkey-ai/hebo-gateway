@@ -8,6 +8,9 @@ const MAPPING = {
   "alibaba/qwen3-32b": "qwen/qwen3-32b",
   "alibaba/qwen3.5-397b": "qwen/qwen3.5-397b-a17b",
   "deepseek/deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2-TEE",
+  "moonshot/kimi-k2.5": "moonshotai/Kimi-K2.5",
+  "zhipu/glm-5": "zai-org/GLM-5",
+  "zhipu/glm-5.1": "zai-org/GLM-5.1",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForChutes = (

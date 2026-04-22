@@ -471,6 +471,42 @@ describe("Messages Converters", () => {
       expect(messages[0]!.role).toBe("user");
       expect(messages[1]!.role).toBe("tool");
     });
+
+    test("should preserve part order when tool_result precedes text", () => {
+      const messages = convertToModelMessages([
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Let me read those files." },
+            { type: "tool_use", id: "call_A", name: "Read", input: {} },
+            { type: "tool_use", id: "call_B", name: "Read", input: {} },
+          ],
+        },
+        {
+          role: "user",
+          content: [
+            { type: "tool_result", tool_use_id: "call_A", content: "file a" },
+            { type: "tool_result", tool_use_id: "call_B", content: "file b" },
+            { type: "text", text: "additional text" },
+          ],
+        },
+      ]);
+
+      // assistant + tool + user (tool results before text, matching input order)
+      expect(messages).toHaveLength(3);
+      expect(messages[0]!.role).toBe("assistant");
+      expect(messages[1]!.role).toBe("tool");
+      expect(messages[2]!.role).toBe("user");
+
+      const toolContent = (messages[1] as { content: { toolCallId: string }[] }).content;
+      expect(toolContent).toHaveLength(2);
+      expect(toolContent[0]!.toolCallId).toBe("call_A");
+      expect(toolContent[1]!.toolCallId).toBe("call_B");
+
+      const userContent = (messages[2] as { content: { type: string; text: string }[] }).content;
+      expect(userContent).toHaveLength(1);
+      expect(userContent[0]!.text).toBe("additional text");
+    });
   });
 
   describe("convertToToolSet", () => {
