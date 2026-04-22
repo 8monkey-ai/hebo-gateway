@@ -3,6 +3,9 @@ import type { LanguageModelMiddleware } from "ai";
 
 import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+
+const MOONSHOT_DEFAULT_MAX_OUTPUT_TOKENS = 16384;
 
 export const moonshotReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
@@ -20,11 +23,16 @@ export const moonshotReasoningMiddleware: LanguageModelMiddleware = {
     if (reasoning.enabled === false) {
       target.thinking = { type: "disabled" };
     } else {
-      const thinking: MoonshotAILanguageModelOptions["thinking"] = {
+      target.thinking = {
         type: "enabled",
-        budgetTokens: reasoning.max_tokens,
+        budgetTokens:
+          reasoning.max_tokens ??
+          calculateReasoningBudgetFromEffort(
+            reasoning.effort ?? "medium",
+            params.maxOutputTokens ?? MOONSHOT_DEFAULT_MAX_OUTPUT_TOKENS,
+            1024,
+          ),
       };
-      target.thinking = thinking;
     }
 
     delete unknown["reasoning"];

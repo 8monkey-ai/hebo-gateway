@@ -36,6 +36,29 @@ test("moonshotReasoningMiddleware > should map enabled:true with budget_tokens",
   expect(result.providerOptions!["unknown"]).toEqual({});
 });
 
+test("moonshotReasoningMiddleware > should map effort to budgetTokens when max_tokens is absent", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 16384,
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "high" },
+      },
+    },
+  };
+
+  const result = await moonshotReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "moonshot/kimi-k2.5" }),
+  });
+
+  expect(result.providerOptions!["moonshotai"]).toEqual({
+    thinking: { type: "enabled", budgetTokens: Math.floor(16384 * 0.8) },
+  });
+  expect(result.providerOptions!["unknown"]).toEqual({});
+});
+
 test("moonshotReasoningMiddleware > should map enabled:false to disabled thinking", async () => {
   const params = {
     prompt: [],
