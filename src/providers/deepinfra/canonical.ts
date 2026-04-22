@@ -32,6 +32,7 @@ const MAPPING = {
   "alibaba/qwen3-embedding-0.6b": "Qwen/Qwen3-Embedding-0.6B",
   "alibaba/qwen3-embedding-4b": "Qwen/Qwen3-Embedding-4B",
   "alibaba/qwen3-embedding-8b": "Qwen/Qwen3-Embedding-8B",
+  "deepseek/deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2",
   "moonshot/kimi-k2.5": "moonshotai/Kimi-K2.5",
   "zhipu/glm-5": "zai-org/GLM-5",
   "zhipu/glm-5.1": "zai-org/GLM-5.1",

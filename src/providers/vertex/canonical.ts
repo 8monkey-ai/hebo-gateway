@@ -5,6 +5,7 @@ import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
   "alibaba/qwen3-235b": "qwen3-235b-a22b-instruct-2507-maas",
+  "deepseek/deepseek-v3.2": "deepseek-v3.2-maas",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForVertex = (

@@ -10,6 +10,7 @@
     "bedrock",
     "chutes",
     "deepinfra",
+    "deepseek",
     "elysiajs",
     "fireworks",
     "gateway",
@@ -122,6 +123,10 @@
       "types": "./dist/models/cohere/index.d.ts",
       "import": "./dist/models/cohere/index.js"
     },
+    "./models/deepseek": {
+      "types": "./dist/models/deepseek/index.d.ts",
+      "import": "./dist/models/deepseek/index.js"
+    },
     "./models/google": {
       "types": "./dist/models/google/index.d.ts",
       "import": "./dist/models/google/index.js"
@@ -177,6 +182,10 @@
     "./providers/deepinfra": {
       "types": "./dist/providers/deepinfra/index.d.ts",
       "import": "./dist/providers/deepinfra/index.js"
+    },
+    "./providers/deepseek": {
+      "types": "./dist/providers/deepseek/index.d.ts",
+      "import": "./dist/providers/deepseek/index.js"
     },
     "./providers/fireworks": {
       "types": "./dist/providers/fireworks/index.d.ts",
@@ -255,6 +264,7 @@
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/cohere": "^3.0.30",
     "@ai-sdk/deepinfra": "^2.0.45",
+    "@ai-sdk/deepseek": "^2.0.29",
     "@ai-sdk/fireworks": "^2.0.46",
     "@ai-sdk/google-vertex": "^4.0.105",
     "@ai-sdk/groq": "^3.0.35",
@@ -303,6 +313,7 @@
     "@ai-sdk/anthropic": "^3.0.58",
     "@ai-sdk/cohere": "^3.0.25",
     "@ai-sdk/deepinfra": "^2.0.45",
+    "@ai-sdk/deepseek": "^2.0.29",
     "@ai-sdk/fireworks": "^2.0.46",
     "@ai-sdk/google": "^3.0.43",
     "@ai-sdk/google-vertex": "^4.0.80",
@@ -342,6 +353,9 @@
       "optional": true
     },
     "@ai-sdk/deepinfra": {
+      "optional": true
+    },
+    "@ai-sdk/deepseek": {
       "optional": true
     },
     "@ai-sdk/fireworks": {

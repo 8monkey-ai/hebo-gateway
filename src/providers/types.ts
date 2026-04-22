@@ -8,6 +8,7 @@ export const CANONICAL_PROVIDER_IDS = [
   "chutes",
   "cohere",
   "deepinfra",
+  "deepseek",
   "fireworks",
   "groq",
   "minimax",
