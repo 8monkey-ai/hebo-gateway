@@ -16,6 +16,7 @@ export const CANONICAL_PROVIDER_IDS = [
   "vertex",
   "voyage",
   "xai",
+  "zai",
 ] as const;
 
 export type CanonicalProviderId = (typeof CANONICAL_PROVIDER_IDS)[number];

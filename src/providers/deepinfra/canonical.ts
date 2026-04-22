@@ -32,6 +32,8 @@ const MAPPING = {
   "alibaba/qwen3-embedding-0.6b": "Qwen/Qwen3-Embedding-0.6B",
   "alibaba/qwen3-embedding-4b": "Qwen/Qwen3-Embedding-4B",
   "alibaba/qwen3-embedding-8b": "Qwen/Qwen3-Embedding-8B",
+  "zhipu/glm-5": "zai-org/GLM-5",
+  "zhipu/glm-5.1": "zai-org/GLM-5.1",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForDeepInfra = (
