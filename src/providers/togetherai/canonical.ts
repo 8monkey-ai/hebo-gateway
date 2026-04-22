@@ -18,6 +18,8 @@ const MAPPING = {
   "alibaba/qwen3.5-397b": "Qwen/Qwen3.5-397B-A17B",
   "alibaba/qwen3.5-9b": "Qwen/Qwen3.5-9B",
   "moonshot/kimi-k2.5": "moonshotai/Kimi-K2.5",
+  "zhipu/glm-5": "zai-org/GLM-5",
+  "zhipu/glm-5.1": "zai-org/GLM-5.1",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForTogetherAI = (
