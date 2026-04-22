@@ -502,6 +502,10 @@ describe("Messages Converters", () => {
       expect(toolContent).toHaveLength(2);
       expect(toolContent[0]!.toolCallId).toBe("call_A");
       expect(toolContent[1]!.toolCallId).toBe("call_B");
+
+      const userContent = (messages[2] as { content: { type: string; text: string }[] }).content;
+      expect(userContent).toHaveLength(1);
+      expect(userContent[0]!.text).toBe("additional text");
     });
   });
 
