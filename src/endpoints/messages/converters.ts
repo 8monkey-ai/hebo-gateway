@@ -4,7 +4,6 @@ import type {
   FinishReason,
   ToolSet,
   ModelMessage,
-  UserContent,
   AssistantContent,
   LanguageModelUsage,
   TextStreamPart,
@@ -215,39 +214,32 @@ function fromUserMessage(
   message: MessagesMessage & { role: "user" },
   toolNameMap: Map<string, string>,
 ): Array<UserModelMessage | ToolModelMessage> {
-  const result: Array<UserModelMessage | ToolModelMessage> = [];
-
   if (typeof message.content === "string") {
-    result.push({ role: "user", content: message.content });
-    return result;
+    return [{ role: "user", content: message.content }];
   }
 
-  const userParts: UserContent = [];
-  const toolResultParts: ToolResultPart[] = [];
+  const result: Array<UserModelMessage | ToolModelMessage> = [];
+  let currentParts: Array<TextPart | ImagePart | FilePart | ToolResultPart> = [];
+  let currentRole: string | undefined;
 
   for (const block of message.content) {
-    if (block.type === "tool_result") {
-      toolResultParts.push(fromToolResultBlock(block, toolNameMap));
+    const isToolResult = block.type === "tool_result";
+    const role = isToolResult ? "tool" : "user";
+    const part = isToolResult
+      ? fromToolResultBlock(block, toolNameMap)
+      : fromUserContentBlock(block);
+    if (!part) continue;
+
+    if (role === currentRole) {
+      currentParts.push(part);
     } else {
-      const part = fromUserContentBlock(block);
-      if (part) userParts.push(part);
+      currentParts = [part];
+      currentRole = role;
+      result.push({ role, content: currentParts } as UserModelMessage | ToolModelMessage);
     }
   }
 
-  if (userParts.length > 0) {
-    result.push({ role: "user", content: userParts });
-  }
-
-  if (toolResultParts.length > 0) {
-    result.push({ role: "tool", content: toolResultParts });
-  }
-
-  // If only tool results and no user parts, still valid
-  if (userParts.length === 0 && toolResultParts.length === 0) {
-    result.push({ role: "user", content: "" });
-  }
-
-  return result;
+  return result.length > 0 ? result : [{ role: "user" as const, content: "" }];
 }
 
 function fromUserContentBlock(
