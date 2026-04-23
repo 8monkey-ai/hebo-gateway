@@ -83,7 +83,7 @@ export type ChatCompletionsToolCall = z.infer<typeof ChatCompletionsToolCallSche
 
 export const ChatCompletionsSystemMessageSchema = z.object({
   role: z.literal("system"),
-  content: z.string(),
+  content: z.union([z.string(), z.array(ChatCompletionsContentPartTextSchema)]),
   name: z.string().optional(),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),

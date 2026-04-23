@@ -143,12 +143,16 @@ export function convertToModelMessages(messages: ChatCompletionsMessage[]): Mode
     if (message.role === "tool") continue;
 
     if (message.role === "system") {
+      const content = Array.isArray(message.content)
+        ? message.content.map((p) => p.text).join("")
+        : message.content;
+      const out: ModelMessage = { role: "system", content };
       if (message.cache_control) {
-        (message as ModelMessage).providerOptions = {
+        out.providerOptions = {
           unknown: { cache_control: message.cache_control },
         };
       }
-      modelMessages.push(message);
+      modelMessages.push(out);
       continue;
     }
 

@@ -685,6 +685,66 @@ describe("Chat Completions Converters", () => {
       });
     });
 
+    test("should normalize array content in system message to string", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "system",
+            content: [
+              { type: "text", text: "You are a helpful assistant." },
+            ],
+          },
+          { role: "user", content: "hi" },
+        ],
+      });
+
+      expect(result.messages[0]).toMatchObject({
+        role: "system",
+        content: "You are a helpful assistant.",
+      });
+    });
+
+    test("should concatenate multiple array content parts in system message", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "system",
+            content: [
+              { type: "text", text: "You are Brave Assistant, " },
+              { type: "text", text: "a helpful AI." },
+            ],
+          },
+          { role: "user", content: "hi" },
+        ],
+      });
+
+      expect(result.messages[0]).toMatchObject({
+        role: "system",
+        content: "You are Brave Assistant, a helpful AI.",
+      });
+    });
+
+    test("should preserve cache_control on system message with array content", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "system",
+            content: [{ type: "text", text: "Policy block" }],
+            cache_control: { type: "ephemeral", ttl: "1h" },
+          },
+        ],
+      });
+
+      expect(result.messages[0]).toMatchObject({
+        role: "system",
+        content: "Policy block",
+      });
+      expect(result.messages[0]!.providerOptions!["unknown"]!["cache_control"]).toEqual({
+        type: "ephemeral",
+        ttl: "1h",
+      });
+    });
+
     test("should map service_tier into providerOptions.unknown", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],
