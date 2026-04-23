@@ -56,7 +56,6 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-3.1-flash-lite-preview",
   "google/gemini-3.1-pro-preview",
   "google/gemini-embedding-2",
-  "google/gemini-embedding-2-preview",
   "google/embedding-001",
   "google/gemma-3-1b",
   "google/gemma-3-4b",
