@@ -60,7 +60,7 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
 
 test("geminiDimensionsMiddleware > matching patterns", () => {
   const matching = [
-    "google/gemini-embedding-2-preview",
+    "google/gemini-embedding-2",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
   const nonMatching = [
     "google/gemini-3-flash-preview",
