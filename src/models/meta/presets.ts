@@ -127,7 +127,7 @@ export const llama4Maverick = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Llama 4 Maverick",
     created: "2025-08-05",
     knowledge: "2024-06",
-    providers: [...LLAMA_4_BASE.providers, "togetherai", "deepinfra"],
+    providers: [...LLAMA_4_BASE.providers, "togetherai", "deepinfra", "nvidia"],
   } satisfies CatalogModel,
 );
 

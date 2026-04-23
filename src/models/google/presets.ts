@@ -165,7 +165,8 @@ export const gemma327b = presetFor<CanonicalModelId, CatalogModel>()(
     ...GEMMA3_BASE,
     name: "Gemma 3 27B",
     created: "2025-03-12",
-  } satisfies DeepPartial<CatalogModel>,
+    providers: [...GEMMA3_BASE.providers, "nvidia"],
+  } satisfies CatalogModel,
 );
 
 export const gemma4E2b = presetFor<CanonicalModelId, CatalogModel>()(
@@ -178,6 +179,7 @@ export const gemma4E2b = presetFor<CanonicalModelId, CatalogModel>()(
       input: ["text", "image", "audio"] as const,
       output: ["text"] as const,
     },
+    providers: [...GEMMA4_BASE.providers, "nvidia"],
   } satisfies CatalogModel,
 );
 
@@ -191,6 +193,7 @@ export const gemma4E4b = presetFor<CanonicalModelId, CatalogModel>()(
       input: ["text", "image", "audio"] as const,
       output: ["text"] as const,
     },
+    providers: [...GEMMA4_BASE.providers, "nvidia"],
   } satisfies CatalogModel,
 );
 
@@ -212,7 +215,11 @@ export const gemma431b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemma 4 31B",
     created: "2026-04-02",
     context: 262144,
-    providers: ["vertex", "deepinfra", "togetherai"] as const satisfies readonly CanonicalProviderId[],
+    providers: [
+      "vertex",
+      "deepinfra",
+      "togetherai",
+    ] as const satisfies readonly CanonicalProviderId[],
   } satisfies CatalogModel,
 );
 

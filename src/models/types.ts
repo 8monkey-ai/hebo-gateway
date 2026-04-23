@@ -101,6 +101,14 @@ export const CANONICAL_MODEL_IDS = [
   "xai/grok-4.2",
   "xai/grok-4.2-reasoning",
   "xai/grok-4.2-multi-agent",
+  // NVIDIA
+  "nvidia/mistral-nemotron",
+  "nvidia/mistral-large-3-675b",
+  "nvidia/devstral-2-123b",
+  "nvidia/qwen3-coder-480b",
+  "nvidia/deepseek-v3.1-terminus",
+  "nvidia/kimi-k2",
+  "nvidia/glm-4.7",
   // DeepSeek
   "deepseek/deepseek-v3.2",
   // Voyage

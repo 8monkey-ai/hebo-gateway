@@ -16,7 +16,13 @@ export const glm5 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5" as
   name: "GLM 5",
   created: "2026-02-11",
   context: 204800,
-  providers: ["zai", "deepinfra", "chutes", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+  providers: [
+    "zai",
+    "deepinfra",
+    "chutes",
+    "togetherai",
+    "fireworks",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies CatalogModel);
 
 export const glm5Turbo = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5-turbo" as const, {
@@ -30,7 +36,13 @@ export const glm51 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5.1"
   ...GLM_5_BASE,
   name: "GLM 5.1",
   created: "2026-03-27",
-  providers: ["zai", "deepinfra", "chutes", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+  providers: [
+    "zai",
+    "deepinfra",
+    "chutes",
+    "togetherai",
+    "fireworks",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies CatalogModel);
 
 const glmAtomic = {

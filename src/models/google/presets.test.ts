@@ -46,7 +46,7 @@ test("gemma4E4b > should expose audio+image input with vertex provider", () => {
       modalities: { input: ["text", "image", "audio"], output: ["text"] },
       capabilities: ["tool_call", "structured_output", "temperature"],
       context: 131072,
-      providers: ["vertex"],
+      providers: ["vertex", "nvidia"],
     },
   });
 });

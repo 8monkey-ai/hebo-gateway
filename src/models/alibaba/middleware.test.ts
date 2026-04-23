@@ -21,7 +21,11 @@ test("qwenReasoningMiddleware > matching patterns", () => {
     "alibaba/qwen3-vl-235b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
-  const nonMatching = ["openai/gpt-5", "anthropic/claude-opus-4.7", "google/gemini-3-flash-preview"];
+  const nonMatching = [
+    "openai/gpt-5",
+    "anthropic/claude-opus-4.7",
+    "google/gemini-3-flash-preview",
+  ];
 
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -253,4 +257,3 @@ test("qwenReasoningMiddleware > should skip when no reasoning config", async () 
 
   expect(result).toEqual(params);
 });
-

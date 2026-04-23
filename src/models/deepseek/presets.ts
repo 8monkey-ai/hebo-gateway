@@ -15,6 +15,7 @@ const DEEPSEEK_BASE = {
     "fireworks",
     "chutes",
     "vertex",
+    "nvidia",
   ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 

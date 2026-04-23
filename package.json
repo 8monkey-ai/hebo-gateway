@@ -147,6 +147,10 @@
       "types": "./dist/models/moonshot/index.d.ts",
       "import": "./dist/models/moonshot/index.js"
     },
+    "./models/nvidia": {
+      "types": "./dist/models/nvidia/index.d.ts",
+      "import": "./dist/models/nvidia/index.js"
+    },
     "./models/voyage": {
       "types": "./dist/models/voyage/index.d.ts",
       "import": "./dist/models/voyage/index.js"
@@ -202,6 +206,10 @@
     "./providers/moonshot": {
       "types": "./dist/providers/moonshot/index.d.ts",
       "import": "./dist/providers/moonshot/index.js"
+    },
+    "./providers/nvidia": {
+      "types": "./dist/providers/nvidia/index.d.ts",
+      "import": "./dist/providers/nvidia/index.js"
     },
     "./providers/openai": {
       "types": "./dist/providers/openai/index.d.ts",
