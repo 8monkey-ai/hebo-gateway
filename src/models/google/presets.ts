@@ -40,6 +40,10 @@ export const geminiEmbedding2 = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-embedding-2" as const,
   {
     ...GEMINI_EMBEDDINGS_BASE,
+    modalities: {
+      input: ["text", "image", "video", "audio", "pdf"] as const,
+      output: ["embedding"] as const,
+    },
     name: "Gemini Embedding 2",
     created: "2026-04-23",
     context: 8192,

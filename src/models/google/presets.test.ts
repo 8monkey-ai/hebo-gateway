@@ -2,14 +2,14 @@ import { expect, test } from "bun:test";
 
 import { geminiEmbedding2, gemma31b, gemma4E4b, gemma, gemini } from "./presets";
 
-test("geminiEmbedding2 > should expose GA embedding metadata", () => {
+test("geminiEmbedding2 > should expose GA embedding metadata with multimodal input", () => {
   expect(geminiEmbedding2()).toEqual({
     "google/gemini-embedding-2": {
       name: "Gemini Embedding 2",
       created: "2026-04-23",
       context: 8192,
       modalities: {
-        input: ["text"],
+        input: ["text", "image", "video", "audio", "pdf"],
         output: ["embedding"],
       },
       providers: ["vertex"],
