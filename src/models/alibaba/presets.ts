@@ -9,7 +9,15 @@ const QWEN3_BASE = {
   },
   capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
   context: 131072,
-  providers: ["alibaba", "azure", "bedrock", "vertex", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+  providers: [
+    "alibaba",
+    "azure",
+    "bedrock",
+    "vertex",
+    "deepinfra",
+    "togetherai",
+    "fireworks",
+  ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const QWEN3_VL_BASE = {
@@ -19,11 +27,7 @@ const QWEN3_VL_BASE = {
   },
   capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
   context: 262144,
-  providers: [
-    "alibaba",
-    "azure",
-    "bedrock",
-  ] as const satisfies readonly CanonicalProviderId[],
+  providers: ["alibaba", "azure", "bedrock"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 export const qwen3_235b = presetFor<CanonicalModelId, CatalogModel>()(
@@ -36,16 +40,23 @@ export const qwen3_235b = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
-export const qwen3_32b = presetFor<CanonicalModelId, CatalogModel>()(
-  "alibaba/qwen3-32b" as const,
-  {
-    ...QWEN3_BASE,
-    name: "Qwen3 32B",
-    providers: ["alibaba", "azure", "groq", "bedrock", "vertex", "chutes", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
-    created: "2025-04-29",
-    knowledge: "2025-04",
-  } satisfies CatalogModel,
-);
+export const qwen3_32b = presetFor<CanonicalModelId, CatalogModel>()("alibaba/qwen3-32b" as const, {
+  ...QWEN3_BASE,
+  name: "Qwen3 32B",
+  providers: [
+    "alibaba",
+    "azure",
+    "groq",
+    "bedrock",
+    "vertex",
+    "chutes",
+    "deepinfra",
+    "togetherai",
+    "fireworks",
+  ] as const satisfies readonly CanonicalProviderId[],
+  created: "2025-04-29",
+  knowledge: "2025-04",
+} satisfies CatalogModel);
 
 export const qwen35Plus = presetFor<CanonicalModelId, CatalogModel>()(
   "alibaba/qwen3.5-plus" as const,
@@ -87,7 +98,13 @@ export const qwen35_397b = presetFor<CanonicalModelId, CatalogModel>()(
       output: ["text"] as const,
     },
     capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    providers: ["alibaba", "chutes", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+    providers: [
+      "alibaba",
+      "chutes",
+      "deepinfra",
+      "togetherai",
+      "fireworks",
+    ] as const satisfies readonly CanonicalProviderId[],
     name: "Qwen3.5 397B",
     context: 262144,
     created: "2026-02-16",
@@ -119,7 +136,12 @@ export const qwen35_35b = presetFor<CanonicalModelId, CatalogModel>()(
       output: ["text"] as const,
     },
     capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    providers: ["alibaba", "azure", "deepinfra", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+    providers: [
+      "alibaba",
+      "azure",
+      "deepinfra",
+      "fireworks",
+    ] as const satisfies readonly CanonicalProviderId[],
     name: "Qwen3.5 35B",
     context: 262144,
     created: "2026-02-16",
@@ -135,7 +157,12 @@ export const qwen35_27b = presetFor<CanonicalModelId, CatalogModel>()(
       output: ["text"] as const,
     },
     capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    providers: ["alibaba", "azure", "deepinfra", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+    providers: [
+      "alibaba",
+      "azure",
+      "deepinfra",
+      "fireworks",
+    ] as const satisfies readonly CanonicalProviderId[],
     name: "Qwen3.5 27B",
     context: 262144,
     created: "2026-02-16",
@@ -151,7 +178,13 @@ export const qwen35_9b = presetFor<CanonicalModelId, CatalogModel>()(
       output: ["text"] as const,
     },
     capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    providers: ["alibaba", "azure", "deepinfra", "togetherai", "fireworks"] as const satisfies readonly CanonicalProviderId[],
+    providers: [
+      "alibaba",
+      "azure",
+      "deepinfra",
+      "togetherai",
+      "fireworks",
+    ] as const satisfies readonly CanonicalProviderId[],
     name: "Qwen3.5 9B",
     context: 262144,
     created: "2026-02-16",
@@ -320,7 +353,18 @@ export const qwen3Embedding8b = presetFor<CanonicalModelId, CatalogModel>()(
 
 const qwenAtomic = {
   v3: [qwen3_235b, qwen3_32b],
-  "v3.5": [qwen35Plus, qwen35Flash, qwen35_397b, qwen35_122b, qwen35_35b, qwen35_27b, qwen35_9b, qwen35_4b, qwen35_2b, qwen35_08b],
+  "v3.5": [
+    qwen35Plus,
+    qwen35Flash,
+    qwen35_397b,
+    qwen35_122b,
+    qwen35_35b,
+    qwen35_27b,
+    qwen35_9b,
+    qwen35_4b,
+    qwen35_2b,
+    qwen35_08b,
+  ],
   "v3.6": [qwen36Plus, qwen36Flash, qwen36MaxPreview],
   coder: [qwen3CoderNext],
   vl: [qwen3Vl235b],

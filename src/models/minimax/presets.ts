@@ -7,12 +7,7 @@ const MINIMAX_BASE = {
     input: ["text"] as const,
     output: ["text"] as const,
   },
-  capabilities: [
-    "reasoning",
-    "tool_call",
-    "structured_output",
-    "temperature",
-  ] as const,
+  capabilities: ["reasoning", "tool_call", "structured_output", "temperature"] as const,
   context: 204800,
 } satisfies DeepPartial<CatalogModel>;
 
@@ -36,6 +31,7 @@ export const minimaxM27 = presetFor<CanonicalModelId, CatalogModel>()("minimax/m
     "minimax",
     "togetherai",
     "fireworks",
+    "nvidia",
   ] as const satisfies readonly CanonicalProviderId[],
 } satisfies CatalogModel);
 

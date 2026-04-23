@@ -4,9 +4,7 @@ import { createAlibaba } from "@ai-sdk/alibaba";
 
 import { withCanonicalIdsForAlibaba } from "./canonical";
 
-const provider = withCanonicalIdsForAlibaba(
-  createAlibaba({ apiKey: "test-key" }),
-);
+const provider = withCanonicalIdsForAlibaba(createAlibaba({ apiKey: "test-key" }));
 
 const explicitMappings: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3-235b", "qwen3-235b-a22b"],

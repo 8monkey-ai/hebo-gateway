@@ -13,6 +13,7 @@ export const CANONICAL_PROVIDER_IDS = [
   "groq",
   "minimax",
   "moonshot",
+  "nvidia",
   "openai",
   "togetherai",
   "vertex",

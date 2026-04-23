@@ -136,7 +136,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `NVIDIA NIM`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
 
 Import the helper from the matching package path:
 
@@ -183,7 +183,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `NVIDIA NIM`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
 
 #### Model Presets
 
@@ -241,6 +241,9 @@ Out-of-the-box model presets:
 
 - **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
   Kimi: `kimi` (`k2.5`, `k2.6`, `k2.x`, `latest`, `all`)
+
+- **NVIDIA NIM** — `@hebo-ai/gateway/models/nvidia`  
+  NVIDIA: `nvidia` (`nemotron`, `mistral`, `community`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
   GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
