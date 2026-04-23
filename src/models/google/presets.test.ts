@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { geminiEmbedding2Preview, gemma31b, gemma4E4b, gemma, gemini } from "./presets";
+import { geminiEmbedding2, geminiEmbedding2Preview, gemma31b, gemma4E4b, gemma, gemini } from "./presets";
 
 test("geminiEmbedding2Preview > should expose text embedding metadata", () => {
   expect(geminiEmbedding2Preview()).toEqual({
@@ -17,8 +17,24 @@ test("geminiEmbedding2Preview > should expose text embedding metadata", () => {
   });
 });
 
-test("gemini.embeddings > should include Gemini Embedding 2 preview", () => {
+test("geminiEmbedding2 > should expose GA embedding metadata", () => {
+  expect(geminiEmbedding2()).toEqual({
+    "google/gemini-embedding-2": {
+      name: "Gemini Embedding 2",
+      created: "2026-04-23",
+      context: 8192,
+      modalities: {
+        input: ["text"],
+        output: ["embedding"],
+      },
+      providers: ["vertex"],
+    },
+  });
+});
+
+test("gemini.embeddings > should include Gemini Embedding 2 GA and preview", () => {
   const ids = gemini.embeddings.map((preset) => Object.keys(preset())[0]);
+  expect(ids).toContain("google/gemini-embedding-2");
   expect(ids).toContain("google/gemini-embedding-2-preview");
   expect(ids).toContain("google/embedding-001");
 });
