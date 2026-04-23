@@ -27,11 +27,9 @@ export function createParamsMapper(mappers: ((v: unknown) => unknown)[]) {
  * Normalizes an object (row) by applying a chain of atomic mappers.
  * Mappers are expected to mutate the object for performance and to avoid spreads.
  */
-export function createRowMapper<T>(
-  mappers: ((row: Record<string, unknown>) => Record<string, unknown>)[],
-) {
-  const p = pipe<Record<string, unknown>>(mappers);
-  return (row: Record<string, unknown>) => p(row) as unknown as T;
+export function createRowMapper<T>(mappers: ((row: T) => T)[]) {
+  const p = pipe<T>(mappers);
+  return (row: T) => p(row);
 }
 
 /**

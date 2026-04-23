@@ -11,7 +11,7 @@ import type {
   ConversationQueryOptions,
 } from "./types";
 
-const rowMapper = createRowMapper<ConversationEntity | ConversationItemEntity>([
+const rowMapper = createRowMapper<Record<string, unknown>>([
   parseJson("data"),
   parseJson("metadata"),
   toMilliseconds("created_at"),

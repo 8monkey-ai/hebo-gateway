@@ -108,7 +108,6 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       target.thinking = { type: "disabled" };
     } else if (reasoning.effort) {
       if (isClaude4(modelId)) {
-        // @ts-expect-error AI SDK type missing "xhigh" effort level (native on Opus 4.7+)
         target.effort = mapClaudeReasoningEffort(reasoning.effort, modelId);
       }
       if (isOpus47(modelId)) {

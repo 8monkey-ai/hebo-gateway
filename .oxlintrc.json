@@ -19,7 +19,8 @@
     "max-dependencies": "off",
     "no-inline-comments": "off",
     "no-unsafe-type-assertion": "off",
-    "strict-boolean-expressions": "off"
+    "strict-boolean-expressions": "off",
+    "prefer-readonly-parameter-types": "off"
   },
   "ignorePatterns": ["dist/**", "node_modules/**", "examples/**"]
 }

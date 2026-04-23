@@ -52,6 +52,7 @@ export type Preset<
   Base extends DeepPartial<T>,
 > = <O extends DeepPartial<T>>(override?: O) => Record<Id, Base & O>;
 
+// oxlint-disable-next-line no-unnecessary-type-parameters
 export function presetFor<Ids extends string, T extends Record<string, unknown>>() {
   return function preset<const Id extends Ids, const Base extends DeepPartial<T>>(
     id: Id,
