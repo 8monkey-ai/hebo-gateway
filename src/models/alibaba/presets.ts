@@ -239,6 +239,22 @@ export const qwen36Flash = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const qwen36_27b = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.6-27b" as const,
+  {
+    modalities: {
+      input: ["text", "image", "video", "file"] as const,
+      output: ["text"] as const,
+    },
+    capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    providers: ["alibaba"] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3.6 27B",
+    context: 262144,
+    created: "2026-04-21",
+    knowledge: "2025-04",
+  } satisfies CatalogModel,
+);
+
 export const qwen36MaxPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "alibaba/qwen3.6-max-preview" as const,
   {
@@ -321,7 +337,7 @@ export const qwen3Embedding8b = presetFor<CanonicalModelId, CatalogModel>()(
 const qwenAtomic = {
   v3: [qwen3_235b, qwen3_32b],
   "v3.5": [qwen35Plus, qwen35Flash, qwen35_397b, qwen35_122b, qwen35_35b, qwen35_27b, qwen35_9b, qwen35_4b, qwen35_2b, qwen35_08b],
-  "v3.6": [qwen36Plus, qwen36Flash, qwen36MaxPreview],
+  "v3.6": [qwen36Plus, qwen36Flash, qwen36_27b, qwen36MaxPreview],
   coder: [qwen3CoderNext],
   vl: [qwen3Vl235b],
   embedding: [qwen3Embedding06b, qwen3Embedding4b, qwen3Embedding8b],
