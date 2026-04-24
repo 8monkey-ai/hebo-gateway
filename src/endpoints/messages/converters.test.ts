@@ -1223,6 +1223,61 @@ describe("Messages Converters", () => {
       }
     });
 
+    test("should surface provider metadata from tool-input-start on the tool_use block", async () => {
+      // Gemini streams tool calls via tool-input-start, and carries its
+      // `thoughtSignature` on the providerMetadata of that part. We must
+      // forward it to the `content_block_start` as `extra_content` so that
+      // the next turn can echo it back to Vertex.
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "tool-input-start",
+            id: "call_gemini",
+            toolName: "WebSearch",
+            providerMetadata: { google: { thoughtSignature: "sig_abc" } },
+          });
+          controller.enqueue({
+            type: "tool-input-delta",
+            id: "call_gemini",
+            delta: '{"q":"hi"}',
+          });
+          controller.enqueue({
+            type: "tool-call",
+            toolCallId: "call_gemini",
+            toolName: "WebSearch",
+            input: { q: "hi" },
+            providerMetadata: { google: { thoughtSignature: "sig_abc" } },
+          });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "tool-calls",
+            rawFinishReason: "tool_calls",
+            totalUsage: mockUsage({ outputTokens: 5 }),
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
+      const { events } = await collectStreamEvents(transformed);
+
+      const toolStart = events.find(
+        (e) =>
+          e.event === "content_block_start" &&
+          "content_block" in e.data &&
+          e.data.content_block.type === "tool_use",
+      );
+      expect(toolStart).toBeDefined();
+      if (
+        toolStart?.event === "content_block_start" &&
+        toolStart.data.content_block.type === "tool_use"
+      ) {
+        expect(toolStart.data.content_block.extra_content).toEqual({
+          google: { thoughtSignature: "sig_abc" },
+        });
+      }
+    });
+
     test("should stream non-streaming tool call events", async () => {
       const stream = new ReadableStream<TextStreamPart<ToolSet>>({
         start(controller) {
