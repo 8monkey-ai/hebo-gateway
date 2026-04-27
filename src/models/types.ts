@@ -31,6 +31,8 @@ export const CANONICAL_MODEL_IDS = [
   "openai/gpt-5.4-mini",
   "openai/gpt-5.4-nano",
   "openai/gpt-5.4-pro",
+  "openai/gpt-5.5",
+  "openai/gpt-5.5-pro",
   "openai/gpt-5-mini",
   "openai/gpt-5-nano",
   "openai/gpt-5-codex",

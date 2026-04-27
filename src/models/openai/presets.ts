@@ -258,6 +258,22 @@ export const gpt54Pro = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-
   context: 1050000,
 } satisfies CatalogModel);
 
+export const gpt55 = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.5" as const, {
+  ...GPT_BASE,
+  name: "GPT-5.5",
+  created: "2026-04-22",
+  knowledge: "2025-08",
+  context: 1050000,
+} satisfies CatalogModel);
+
+export const gpt55Pro = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.5-pro" as const, {
+  ...GPT_PRO_BASE,
+  name: "GPT-5.5 Pro",
+  created: "2026-04-24",
+  knowledge: "2025-12",
+  context: 1050000,
+} satisfies CatalogModel);
+
 export const textEmbedding3Small = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/text-embedding-3-small" as const,
   {
@@ -312,6 +328,7 @@ const gptAtomic = {
   "v5.2": [gpt52, gpt52Chat, gpt52Pro, gpt52Codex],
   "v5.3": [gpt53Codex, gpt53CodexSpark, gpt53Chat],
   "v5.4": [gpt54, gpt54Mini, gpt54Nano, gpt54Pro],
+  "v5.5": [gpt55, gpt55Pro],
   codex: [
     gpt5Codex,
     gpt51Codex,
@@ -322,7 +339,7 @@ const gptAtomic = {
     gpt53CodexSpark,
   ],
   chat: [gpt51Chat, gpt52Chat, gpt53Chat],
-  pro: [gpt5Pro, gpt52Pro, gpt54Pro],
+  pro: [gpt5Pro, gpt52Pro, gpt54Pro, gpt55Pro],
 } as const;
 
 const gptGroups = {
@@ -332,6 +349,7 @@ const gptGroups = {
     ...gptAtomic["v5.2"],
     ...gptAtomic["v5.3"],
     ...gptAtomic["v5.4"],
+    ...gptAtomic["v5.5"],
   ],
 } as const;
 
@@ -353,7 +371,8 @@ export const gptOss = {
 export const gpt = {
   ...gptAtomic,
   ...gptGroups,
-  latest: [gpt54, gpt54Mini, gpt54Nano],
+  // 5.5 Mini/Nano not released yet; keep 5.4 small variants in `latest` until they ship.
+  latest: [gpt55, gpt55Pro, gpt54Mini, gpt54Nano],
   all: Object.values(gptAtomic).flat(),
 } as const;
 
