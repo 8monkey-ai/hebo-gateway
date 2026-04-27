@@ -62,6 +62,29 @@ describe("stream utils", () => {
     expect(body.endsWith("data: [DONE]\n\n")).toBe(true);
   });
 
+  test("forwards undefined reason to onDone when the consumer cancels", async () => {
+    const calls: Array<{ status: number; reason: unknown }> = [];
+
+    const stream = toSseStream(
+      new ReadableStream<SseFrame>({
+        start(controller) {
+          controller.enqueue({ data: { hello: "world" } });
+        },
+      }),
+      {
+        onDone: (status, reason) => {
+          calls.push({ status, reason });
+        },
+      },
+    );
+
+    const reader = stream.getReader();
+    await reader.read();
+    await reader.cancel();
+
+    expect(calls).toEqual([{ status: 499, reason: undefined }]);
+  });
+
   test("stringifies normalized stream errors", async () => {
     const response = new Response(
       toSseStream(

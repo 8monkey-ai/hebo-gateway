@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { context, trace } from "@opentelemetry/api";
+import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
-import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
+import {
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import { MockProviderV3 } from "ai/test";
 
 import { models } from "./endpoints/models/handler";
+import { winterCgHandler } from "./lifecycle";
+import type { SseFrame } from "./utils/stream";
 
 describe("winterCgHandler", () => {
   afterEach(() => {
@@ -100,5 +106,70 @@ describe("winterCgHandler", () => {
     expect(await response.text()).toBe("teapot");
     expect(onErrorTraceId).toBeDefined();
     expect(onResponseCalled).toBe(false);
+  });
+
+  test("records the abort reason as span status message when a streaming client disconnects", async () => {
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+
+    const exporter = new InMemorySpanExporter();
+    const provider = new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)],
+    });
+    const tracer = provider.getTracer("test");
+
+    const handler = winterCgHandler(
+      (ctx) => {
+        ctx.operation = "chat";
+        return Promise.resolve(
+          new ReadableStream<SseFrame>({
+            start(controller) {
+              controller.enqueue({ data: { hello: "world" } });
+              // leave the stream open so the client-side cancel triggers the cancel path
+            },
+          }),
+        );
+      },
+      {
+        providers: {
+          openai: new MockProviderV3(),
+        },
+        models: {
+          "openai/gpt-oss-20b": {
+            name: "GPT-OSS 20B",
+            modalities: { input: ["text"], output: ["text"] },
+            providers: ["openai"],
+          },
+        },
+        telemetry: {
+          enabled: true,
+          tracer,
+        },
+      },
+    );
+
+    const controller = new AbortController();
+    const abortReason = new Error("The connection was closed.");
+
+    const responsePromise = handler(
+      new Request("http://localhost/v1/chat/completions", {
+        method: "POST",
+        signal: controller.signal,
+      }),
+    );
+
+    const response = await responsePromise;
+    const reader = response.body!.getReader();
+    await reader.read(); // consume the first frame so the stream is actively piping
+    controller.abort(abortReason);
+    await reader.cancel(abortReason).catch(() => {});
+
+    await provider.forceFlush();
+
+    const finishedSpans = exporter.getFinishedSpans();
+    expect(finishedSpans.length).toBeGreaterThan(0);
+    const span = finishedSpans.at(-1)!;
+    expect(span.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span.status.message).toBe("The connection was closed.");
+    expect(span.status.message).not.toBe("undefined");
   });
 });

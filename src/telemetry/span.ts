@@ -8,6 +8,22 @@ const DEFAULT_TRACER_NAME = "@hebo/gateway";
 let spanTracer: Tracer | undefined;
 let spanEventsEnabled = false;
 
+const toErrorMessage = (error: unknown): string => {
+  if (error === null || error === undefined) return "Unknown error";
+  if (typeof error === "string") return error;
+  if (typeof error === "number" || typeof error === "boolean" || typeof error === "bigint") {
+    return String(error);
+  }
+  if (typeof error === "object" && typeof (error as { message?: unknown }).message === "string") {
+    return (error as { message: string }).message;
+  }
+  try {
+    return JSON.stringify(error) ?? "Unknown error";
+  } catch {
+    return "Unknown error";
+  }
+};
+
 const NOOP_SPAN = {
   runWithContext: <T>(fn: () => Promise<T> | T) => fn(),
   recordError: (_error: unknown, _setError: boolean) => {},
@@ -41,7 +57,7 @@ export const startSpan = (name: string, options?: SpanOptions) => {
     context.with(trace.setSpan(parentContext, span), fn);
 
   const recordError = (error: unknown, setError: boolean) => {
-    const err = error instanceof Error ? error : new Error(String(error));
+    const err = error instanceof Error ? error : new Error(toErrorMessage(error));
     span.recordException(err);
     if (setError) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
