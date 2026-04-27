@@ -371,7 +371,8 @@ export const gptOss = {
 export const gpt = {
   ...gptAtomic,
   ...gptGroups,
-  latest: [gpt55, gpt55Pro],
+  // 5.5 Mini/Nano not released yet; keep 5.4 small variants in `latest` until they ship.
+  latest: [gpt55, gpt55Pro, gpt54Mini, gpt54Nano],
   all: Object.values(gptAtomic).flat(),
 } as const;
 
