@@ -683,9 +683,6 @@ export class MessagesTransformStream extends TransformStream<
               name: normalizeToolName(part.toolName),
               input: {} as Record<string, never>,
             };
-            // Preserve provider metadata (e.g. Gemini `thoughtSignature`) so the
-            // client can echo it back on the next turn. Without this, Vertex
-            // rejects the follow-up request with a missing `thought_signature`.
             if (part.providerMetadata) contentBlock.extra_content = part.providerMetadata;
 
             controller.enqueue({
