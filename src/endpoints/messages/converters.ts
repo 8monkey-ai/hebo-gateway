@@ -674,17 +674,23 @@ export class MessagesTransformStream extends TransformStream<
           case "tool-input-start": {
             currentToolCallId = part.id;
 
+            const contentBlock: Extract<
+              ContentBlockStartEvent["data"]["content_block"],
+              { type: "tool_use" }
+            > = {
+              type: "tool_use",
+              id: part.id,
+              name: normalizeToolName(part.toolName),
+              input: {} as Record<string, never>,
+            };
+            if (part.providerMetadata) contentBlock.extra_content = part.providerMetadata;
+
             controller.enqueue({
               event: "content_block_start",
               data: {
                 type: "content_block_start",
                 index: blockIndex,
-                content_block: {
-                  type: "tool_use",
-                  id: part.id,
-                  name: normalizeToolName(part.toolName),
-                  input: {} as Record<string, never>,
-                },
+                content_block: contentBlock,
               },
             });
             break;
