@@ -1,4 +1,14 @@
-import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
+import { metrics, type Attributes, type Counter, type Histogram } from "@opentelemetry/api";
+import {
+  InvalidResponseDataError,
+  InvalidToolInputError,
+  JSONParseError,
+  MissingToolResultsError,
+  NoObjectGeneratedError,
+  NoSuchToolError,
+  ToolCallRepairError,
+  TypeValidationError,
+} from "ai";
 
 import { STATUS_TEXT } from "../errors/utils";
 import type { GatewayContext, TelemetrySignalLevel } from "../types";
@@ -9,6 +19,8 @@ let requestDurationHistogram: Histogram | undefined;
 let timePerOutputTokenHistogram: Histogram | undefined;
 let timeToFirstTokenHistogram: Histogram | undefined;
 let tokenUsageHistogram: Histogram | undefined;
+let toolCallCounter: Counter | undefined;
+let structuredOutputCounter: Counter | undefined;
 
 const getRequestDurationHistogram = () =>
   (requestDurationHistogram ??= getMeter().createHistogram("gen_ai.server.request.duration", {
@@ -51,6 +63,20 @@ const getTimePerOutputTokenHistogram = () =>
       },
     },
   ));
+
+const getToolCallCounter = () =>
+  (toolCallCounter ??= getMeter().createCounter("gen_ai.server.tool_call", {
+    description:
+      "Number of requests that exercised tool calling. error.type is set only on failure.",
+    unit: "{invocation}",
+  }));
+
+const getStructuredOutputCounter = () =>
+  (structuredOutputCounter ??= getMeter().createCounter("gen_ai.server.structured_output", {
+    description:
+      "Number of requests that exercised structured output. error.type is set only on failure.",
+    unit: "{invocation}",
+  }));
 
 const getTokenUsageHistogram = () =>
   (tokenUsageHistogram ??= getMeter().createHistogram("gen_ai.client.token.usage", {
@@ -162,4 +188,80 @@ export const recordTokenUsage = (
   // https://github.com/open-telemetry/semantic-conventions/issues/3341
   record(tokenAttrs["gen_ai.usage.cache_read.input_tokens"], "cached");
   record(tokenAttrs["gen_ai.usage.reasoning.output_tokens"], "reasoning");
+};
+
+export type FeatureErrorType =
+  | "invalid_input"
+  | "unknown_tool"
+  | "repair_failed"
+  | "missing_results"
+  | "invalid_json"
+  | "schema_mismatch"
+  | "no_output"
+  | "invalid_response";
+
+type FeatureKind = "tool_call" | "structured_output";
+
+const classifyAiSdkError = (
+  error: unknown,
+): { kind: FeatureKind; type: FeatureErrorType } | undefined => {
+  if (InvalidToolInputError.isInstance(error)) return { kind: "tool_call", type: "invalid_input" };
+  if (NoSuchToolError.isInstance(error)) return { kind: "tool_call", type: "unknown_tool" };
+  if (ToolCallRepairError.isInstance(error)) return { kind: "tool_call", type: "repair_failed" };
+  if (MissingToolResultsError.isInstance(error))
+    return { kind: "tool_call", type: "missing_results" };
+  if (NoObjectGeneratedError.isInstance(error))
+    return { kind: "structured_output", type: "no_output" };
+  if (TypeValidationError.isInstance(error))
+    return { kind: "structured_output", type: "schema_mismatch" };
+  if (JSONParseError.isInstance(error)) return { kind: "structured_output", type: "invalid_json" };
+  if (InvalidResponseDataError.isInstance(error))
+    return { kind: "structured_output", type: "invalid_response" };
+  return undefined;
+};
+
+const getFeatureCounter = (kind: FeatureKind) =>
+  kind === "tool_call" ? getToolCallCounter() : getStructuredOutputCounter();
+
+export const recordToolCallOutcome = (
+  metricAttrs: Attributes,
+  errorType: FeatureErrorType | undefined,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  const attrs = errorType
+    ? Object.assign({}, metricAttrs, { "error.type": errorType })
+    : metricAttrs;
+  getToolCallCounter().add(1, attrs);
+};
+
+export const recordStructuredOutputOutcome = (
+  metricAttrs: Attributes,
+  errorType: FeatureErrorType | undefined,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  const attrs = errorType
+    ? Object.assign({}, metricAttrs, { "error.type": errorType })
+    : metricAttrs;
+  getStructuredOutputCounter().add(1, attrs);
+};
+
+/**
+ * Classifies an error against known AI SDK error classes and emits a failure on
+ * the corresponding feature counter. No-op for unrelated errors (those are
+ * captured by `gen_ai.server.request.duration`).
+ */
+export const recordAiSdkFeatureError = (
+  error: unknown,
+  metricAttrs: Attributes,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  const classified = classifyAiSdkError(error);
+  if (!classified) return;
+  getFeatureCounter(classified.kind).add(
+    1,
+    Object.assign({}, metricAttrs, { "error.type": classified.type }),
+  );
 };
