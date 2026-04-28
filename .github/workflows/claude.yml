@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
+      PLAYWRIGHT_MCP_BROWSER: webkit
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -51,6 +52,11 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install Playwright CLI
+        run: |
+          npm install -g @playwright/cli@latest
+          playwright-cli install-browser webkit --with-deps
 
       - name: Run Claude
         uses: anthropics/claude-code-action@v1
