@@ -73,12 +73,13 @@ export const winterCgHandler = (
       else if (status === 200 && ctx.response?.status) realStatus = ctx.response.status;
 
       if (realStatus !== 200) {
+        const err: unknown = reason ?? ctx.request.signal.reason;
         logger[realStatus >= 500 ? "error" : "warn"]({
           requestId: ctx.requestId,
-          err: reason ?? ctx.request.signal.reason,
+          err,
         });
 
-        span.recordError(reason, true);
+        span.recordError(err, true);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 
