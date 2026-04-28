@@ -1,3 +1,8 @@
+---
+name: add-model
+description: Add or update model/provider metadata, presets, canonical IDs, provider mappings, grouped exports, and related tests for @hebo-ai/gateway.
+---
+
 # Add Model or Provider
 
 Comprehensive guide for adding new models or providers to the `@hebo-ai/gateway` model catalog.
