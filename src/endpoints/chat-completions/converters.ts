@@ -210,7 +210,16 @@ export function fromChatCompletionsAssistantMessage(
 
   if (reasoning_details?.length) {
     for (const detail of reasoning_details) {
-      if (detail.id && toolCallIds.has(detail.id)) {
+      // Only divert entries that match our Gemini thought-signature envelope
+      // (type=reasoning.encrypted, format=google-gemini-v1, with data). Looser
+      // id-only matching would drop unrelated reasoning entries on id collision.
+      if (
+        detail.id &&
+        toolCallIds.has(detail.id) &&
+        detail.type === "reasoning.encrypted" &&
+        detail.format === "google-gemini-v1" &&
+        typeof detail.data === "string"
+      ) {
         toolCallReasoningById.set(detail.id, detail);
         continue;
       }

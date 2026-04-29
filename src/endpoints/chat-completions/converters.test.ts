@@ -534,6 +534,44 @@ describe("Chat Completions Converters", () => {
       expect(content[0]!.type).toBe("tool-call");
     });
 
+    test("should emit reasoning part when id matches a tool call but format is not Gemini's envelope", () => {
+      // Guards the narrow correlation: only Gemini's thought-signature envelope
+      // (reasoning.encrypted + google-gemini-v1 + data) should be diverted into
+      // the tool call's providerOptions. Unrelated encrypted reasoning entries
+      // that happen to share an id with a tool call must still surface as a
+      // reasoning part.
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "web_search", arguments: "{}" },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "other-provider-blob",
+            format: "unknown",
+          },
+        ],
+      });
+
+      const content = message.content as unknown as Array<{
+        type: string;
+        providerOptions?: Record<string, unknown>;
+      }>;
+      expect(content).toHaveLength(2);
+      expect(content[0]!.type).toBe("reasoning");
+      expect(content[1]!.type).toBe("tool-call");
+      // The tool call must not pick up the non-Gemini envelope as a signature.
+      expect(content[1]!.providerOptions).toBeUndefined();
+    });
+
     test("should still emit standalone reasoning parts when id does not match any tool call", () => {
       const message = fromChatCompletionsAssistantMessage({
         role: "assistant",
