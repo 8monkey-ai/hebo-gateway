@@ -1,6 +1,7 @@
 import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
 
 import { STATUS_TEXT } from "../errors/utils";
+import { logger } from "../logger";
 import type { GatewayContext, TelemetrySignalLevel } from "../types";
 
 const getMeter = () => metrics.getMeter("@hebo/gateway");
@@ -139,6 +140,10 @@ export const recordTimePerOutputToken = (
   );
 };
 
+// Partitioning follows OTel semconv PR #3624:
+// https://github.com/open-telemetry/semantic-conventions/pull/3624
+// When a cache or reasoning breakdown is reported, partitioned data points sum
+// to the total and a bare {type} point MUST NOT be emitted alongside them.
 // FUTURE: record unsuccessful calls
 export const recordTokenUsage = (
   tokenAttrs: Attributes,
@@ -147,19 +152,59 @@ export const recordTokenUsage = (
 ) => {
   if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
 
-  const record = (value: unknown, tokenType: string) => {
-    if (typeof value !== "number") return;
-    getTokenUsageHistogram().record(
-      value,
-      Object.assign({}, metricAttrs, { "gen_ai.token.type": tokenType }),
-    );
+  const histogram = getTokenUsageHistogram();
+  const record = (value: number, extra: Attributes) => {
+    histogram.record(value, Object.assign({}, metricAttrs, extra));
   };
 
-  record(tokenAttrs["gen_ai.usage.input_tokens"], "input");
-  record(tokenAttrs["gen_ai.usage.output_tokens"], "output");
-  // FUTURE: "cached" and "reasoning" token types are not yet in the OTel standard — monitor:
-  // https://github.com/open-telemetry/semantic-conventions/issues/1959
-  // https://github.com/open-telemetry/semantic-conventions/issues/3341
-  record(tokenAttrs["gen_ai.usage.cache_read.input_tokens"], "cached");
-  record(tokenAttrs["gen_ai.usage.reasoning.output_tokens"], "reasoning");
+  const inputTokens = tokenAttrs["gen_ai.usage.input_tokens"];
+  if (typeof inputTokens === "number") {
+    const cacheRead = tokenAttrs["gen_ai.usage.cache_read.input_tokens"];
+    const cacheCreation = tokenAttrs["gen_ai.usage.cache_creation.input_tokens"];
+    const hasCacheRead = typeof cacheRead === "number";
+    const hasCacheCreation = typeof cacheCreation === "number";
+
+    if (hasCacheRead || hasCacheCreation) {
+      const read = hasCacheRead ? cacheRead : 0;
+      const creation = hasCacheCreation ? cacheCreation : 0;
+      let uncached = inputTokens - read - creation;
+      if (uncached < 0) {
+        logger.warn(
+          { inputTokens, cacheRead: read, cacheCreation: creation },
+          "[telemetry] input token cache partitions exceed total; clamping uncached to 0",
+        );
+        uncached = 0;
+      }
+      if (read > 0) record(read, { "gen_ai.token.type": "input", "gen_ai.token.cache": "read" });
+      if (creation > 0)
+        record(creation, { "gen_ai.token.type": "input", "gen_ai.token.cache": "creation" });
+      if (uncached > 0)
+        record(uncached, { "gen_ai.token.type": "input", "gen_ai.token.cache": "uncached" });
+    } else {
+      record(inputTokens, { "gen_ai.token.type": "input" });
+    }
+  }
+
+  const outputTokens = tokenAttrs["gen_ai.usage.output_tokens"];
+  if (typeof outputTokens === "number") {
+    const reasoning = tokenAttrs["gen_ai.usage.reasoning.output_tokens"];
+    if (typeof reasoning === "number") {
+      let reasoned = reasoning;
+      let nonReasoning = outputTokens - reasoning;
+      if (nonReasoning < 0) {
+        logger.warn(
+          { outputTokens, reasoningTokens: reasoning },
+          "[telemetry] reasoning tokens exceed output total; clamping non-reasoning to 0",
+        );
+        reasoned = outputTokens;
+        nonReasoning = 0;
+      }
+      if (reasoned > 0)
+        record(reasoned, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": true });
+      if (nonReasoning > 0)
+        record(nonReasoning, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": false });
+    } else {
+      record(outputTokens, { "gen_ai.token.type": "output" });
+    }
+  }
 };
