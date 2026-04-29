@@ -45,9 +45,21 @@ const normalizeApiCallError = (error: APICallError): GatewayError => {
   return new GatewayError(error, status, statusText, undefined, error.responseHeaders ?? undefined);
 };
 
+// `AbortError` / `TimeoutError` (raised by the AI SDK's internal `timeout` controller,
+// `AbortSignal.timeout`, or an aborted upstream `fetch`) reach us as plain DOMExceptions
+// that none of the AI SDK error classes match. Treat them as upstream gateway timeouts
+// so they surface as 504 with retry headers rather than defaulting to 500/502.
+// Inbound client disconnects are caught earlier in `lifecycle.ts` and overridden to 499.
+const isUpstreamAbortError = (error: unknown): boolean =>
+  error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
+
 export const normalizeAiSdkError = (error: unknown): GatewayError | undefined => {
   if (APICallError.isInstance(error)) {
     return normalizeApiCallError(error);
+  }
+
+  if (isUpstreamAbortError(error)) {
+    return new GatewayError(error, 504, `UPSTREAM_${STATUS_TEXT(504)}`);
   }
 
   if (RetryError.isInstance(error)) {
