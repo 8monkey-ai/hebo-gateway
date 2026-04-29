@@ -1,9 +1,4 @@
-import {
-  metrics,
-  type AttributeValue,
-  type Attributes,
-  type Histogram,
-} from "@opentelemetry/api";
+import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
 
 import { STATUS_TEXT } from "../errors/utils";
 import { logger } from "../logger";
@@ -145,9 +140,6 @@ export const recordTimePerOutputToken = (
   );
 };
 
-const asNum = (v: AttributeValue | undefined): number | undefined =>
-  typeof v === "number" ? v : undefined;
-
 // Partitioning follows OTel semconv PR #3624:
 // https://github.com/open-telemetry/semantic-conventions/pull/3624
 // When a cache or reasoning breakdown is reported, partitioned data points sum
@@ -172,11 +164,13 @@ export const recordTokenUsage = (
 type Emit = (value: number, extra: Attributes) => void;
 
 const emitInputTokens = (emit: Emit, tokenAttrs: Attributes) => {
-  const total = asNum(tokenAttrs["gen_ai.usage.input_tokens"]);
+  const total = tokenAttrs["gen_ai.usage.input_tokens"] as number | undefined;
   if (total === undefined) return;
 
-  const cacheRead = asNum(tokenAttrs["gen_ai.usage.cache_read.input_tokens"]);
-  const cacheCreation = asNum(tokenAttrs["gen_ai.usage.cache_creation.input_tokens"]);
+  const cacheRead = tokenAttrs["gen_ai.usage.cache_read.input_tokens"] as number | undefined;
+  const cacheCreation = tokenAttrs["gen_ai.usage.cache_creation.input_tokens"] as
+    | number
+    | undefined;
   if (cacheRead === undefined && cacheCreation === undefined) {
     emit(total, { "gen_ai.token.type": "input" });
     return;
@@ -198,10 +192,10 @@ const emitInputTokens = (emit: Emit, tokenAttrs: Attributes) => {
 };
 
 const emitOutputTokens = (emit: Emit, tokenAttrs: Attributes) => {
-  const total = asNum(tokenAttrs["gen_ai.usage.output_tokens"]);
+  const total = tokenAttrs["gen_ai.usage.output_tokens"] as number | undefined;
   if (total === undefined) return;
 
-  const reasoning = asNum(tokenAttrs["gen_ai.usage.reasoning.output_tokens"]);
+  const reasoning = tokenAttrs["gen_ai.usage.reasoning.output_tokens"] as number | undefined;
   if (reasoning === undefined) {
     emit(total, { "gen_ai.token.type": "output" });
     return;
