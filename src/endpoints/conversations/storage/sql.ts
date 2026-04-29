@@ -171,7 +171,7 @@ export class SqlStorage implements ConversationStorage {
       )} WHERE ${q("id")} = ${p(0)} ORDER BY ${q("created_at")} DESC LIMIT 1`,
       [id],
     );
-    return row ? (rowMapper(row) as ConversationEntity) : undefined;
+    return row ? (rowMapper(row) as unknown as ConversationEntity) : undefined;
   }
 
   async listConversations(params: ConversationQueryOptions): Promise<ConversationEntity[]> {

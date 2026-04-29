@@ -77,9 +77,14 @@ If priorities conflict, apply this order:
 4. Run `bun run check` and `bun run test`.
 5. If formatting/linting is impacted, run `bun run format` and `bun run lint`.
 
+## Webpage Inspection
+
+- Use the **playwright-cli** skill (`.agents/skills/playwright-cli/SKILL.md`) when browsing or testing webpages that rely on JavaScript rendering, client-side routing, hydration, or dynamic DOM updates.
+- Prefer Playwright snapshots/evaluation over raw HTML fetching for JavaScript-rendered pages so agents inspect the rendered DOM rather than the initial server response.
+
 ## Model & Provider Changes
 
-For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.claude/skills/add-model.md`). It covers research sources, classification, preset definitions, grouped exports, provider canonical mappings, and testing.
+For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.agents/skills/add-model/SKILL.md`). It covers research sources, classification, preset definitions, grouped exports, provider canonical mappings, and testing.
 
 ## Testing Expectations
 

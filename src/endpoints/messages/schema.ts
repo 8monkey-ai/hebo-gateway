@@ -342,7 +342,7 @@ export type MessageDeltaEvent = SseFrame<
   {
     type: "message_delta";
     delta: { stop_reason: MessagesStopReason; stop_sequence: string | null };
-    usage: { output_tokens: number; input_tokens?: number };
+    usage: MessagesUsage;
   },
   "message_delta"
 >;

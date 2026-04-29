@@ -79,16 +79,14 @@ export const winterCgHandler = (
       const traceLevel = ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai;
 
       if (realStatus !== 200) {
+        const err: unknown = reason ?? ctx.request.signal.reason;
         logger[realStatus >= 500 ? "error" : "warn"]({
           requestId: ctx.requestId,
-          err: reason ?? ctx.request.signal.reason,
+          err,
         });
 
-        span.recordError(reason, true);
-
-        if (reason !== undefined) {
-          recordAiSdkFeatureError(reason, getGenAiGeneralAttributes(ctx, traceLevel), traceLevel);
-        }
+        span.recordError(err, true);
+        recordAiSdkFeatureError(err, getGenAiGeneralAttributes(ctx, traceLevel), traceLevel);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 
