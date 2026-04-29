@@ -1129,7 +1129,7 @@ describe("Chat Completions Converters", () => {
       for await (const frame of transformed as AsyncIterable<
         SseFrame<ChatCompletionsChunk> | SseErrorFrame
       >) {
-        if (frame.data instanceof Error) continue;
+        if (frame.data instanceof Error) throw frame.data;
         chunks.push(frame.data);
       }
       return chunks;
@@ -1198,6 +1198,12 @@ describe("Chat Completions Converters", () => {
       const chunks = await collectChunks(source);
 
       const reasoningChunk = chunks.find((c) => c.choices[0]?.delta.reasoning_details);
+      const toolCallChunk = chunks.find((c) => c.choices[0]?.delta.tool_calls);
+      expect(toolCallChunk).toBeDefined();
+      expect(toolCallChunk!.choices[0]!.delta.tool_calls![0]).toMatchObject({
+        id: "call_1",
+        index: 0,
+      });
       expect(reasoningChunk).toBeUndefined();
     });
   });
