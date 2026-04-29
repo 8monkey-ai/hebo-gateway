@@ -19,8 +19,6 @@ let requestDurationHistogram: Histogram | undefined;
 let timePerOutputTokenHistogram: Histogram | undefined;
 let timeToFirstTokenHistogram: Histogram | undefined;
 let tokenUsageHistogram: Histogram | undefined;
-let toolCallCounter: Counter | undefined;
-let structuredOutputCounter: Counter | undefined;
 
 const getRequestDurationHistogram = () =>
   (requestDurationHistogram ??= getMeter().createHistogram("gen_ai.server.request.duration", {
@@ -63,20 +61,6 @@ const getTimePerOutputTokenHistogram = () =>
       },
     },
   ));
-
-const getToolCallCounter = () =>
-  (toolCallCounter ??= getMeter().createCounter("gen_ai.server.tool_call", {
-    description:
-      "Number of requests that exercised tool calling. error.type is set only on failure.",
-    unit: "{invocation}",
-  }));
-
-const getStructuredOutputCounter = () =>
-  (structuredOutputCounter ??= getMeter().createCounter("gen_ai.server.structured_output", {
-    description:
-      "Number of requests that exercised structured output. error.type is set only on failure.",
-    unit: "{invocation}",
-  }));
 
 const getTokenUsageHistogram = () =>
   (tokenUsageHistogram ??= getMeter().createHistogram("gen_ai.client.token.usage", {
@@ -202,6 +186,27 @@ export type FeatureErrorType =
 
 type FeatureKind = "tool_call" | "structured_output";
 
+const FEATURE_COUNTERS: Record<FeatureKind, { name: string; description: string }> = {
+  tool_call: {
+    name: "gen_ai.server.tool_call",
+    description:
+      "Number of requests that exercised tool calling. error.type is set only on failure.",
+  },
+  structured_output: {
+    name: "gen_ai.server.structured_output",
+    description:
+      "Number of requests that exercised structured output. error.type is set only on failure.",
+  },
+};
+
+const featureCounters: Partial<Record<FeatureKind, Counter>> = {};
+
+const getFeatureCounter = (kind: FeatureKind) =>
+  (featureCounters[kind] ??= getMeter().createCounter(FEATURE_COUNTERS[kind].name, {
+    description: FEATURE_COUNTERS[kind].description,
+    unit: "{invocation}",
+  }));
+
 const classifyAiSdkError = (
   error: unknown,
 ): { kind: FeatureKind; type: FeatureErrorType } | undefined => {
@@ -220,9 +225,6 @@ const classifyAiSdkError = (
   return undefined;
 };
 
-const getFeatureCounter = (kind: FeatureKind) =>
-  kind === "tool_call" ? getToolCallCounter() : getStructuredOutputCounter();
-
 export const recordFeatureOutcome = (
   kind: FeatureKind,
   metricAttrs: Attributes,
@@ -236,14 +238,17 @@ export const recordFeatureOutcome = (
   getFeatureCounter(kind).add(1, attrs);
 };
 
-export const recordFeatureSuccesses = (
-  flags: { hasTools: boolean; hasStructuredOutput: boolean },
+export const recordFeatureUsage = (
+  options: { tools?: unknown; output?: unknown },
   metricAttrs: Attributes,
   signalLevel?: TelemetrySignalLevel,
 ) => {
-  if (flags.hasTools) recordFeatureOutcome("tool_call", metricAttrs, undefined, signalLevel);
-  if (flags.hasStructuredOutput)
+  if (options.tools && Object.keys(options.tools as object).length > 0) {
+    recordFeatureOutcome("tool_call", metricAttrs, undefined, signalLevel);
+  }
+  if (options.output) {
     recordFeatureOutcome("structured_output", metricAttrs, undefined, signalLevel);
+  }
 };
 
 /**
@@ -256,11 +261,7 @@ export const recordAiSdkFeatureError = (
   metricAttrs: Attributes,
   signalLevel?: TelemetrySignalLevel,
 ) => {
-  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
   const classified = classifyAiSdkError(error);
   if (!classified) return;
-  getFeatureCounter(classified.kind).add(
-    1,
-    Object.assign({}, metricAttrs, { "error.type": classified.type }),
-  );
+  recordFeatureOutcome(classified.kind, metricAttrs, classified.type, signalLevel);
 };

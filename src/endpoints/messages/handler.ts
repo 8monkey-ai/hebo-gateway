@@ -16,7 +16,7 @@ import { resolveProvider } from "../../providers/registry";
 import {
   getGenAiGeneralAttributes,
   recordAiSdkFeatureError,
-  recordFeatureSuccesses,
+  recordFeatureUsage,
   recordTimePerOutputToken,
   recordTimeToFirstToken,
   recordTokenUsage,
@@ -105,9 +105,6 @@ export const messages = (config: GatewayConfig): Endpoint => {
       middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
-    const hasTools = !!textOptions.tools && Object.keys(textOptions.tools).length > 0;
-    const hasStructuredOutput = !!textOptions.output;
-
     if (stream) {
       addSpanEvent("hebo.ai-sdk.started");
       let ttft = 0;
@@ -147,7 +144,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
-          recordFeatureSuccesses({ hasTools, hasStructuredOutput }, genAiGeneralAttrs, ctx.trace);
+          recordFeatureUsage(textOptions, genAiGeneralAttrs, ctx.trace);
         },
         experimental_include: {
           requestBody: false,
@@ -194,7 +191,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
     );
     setSpanAttributes(genAiResponseAttrs);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
-    recordFeatureSuccesses({ hasTools, hasStructuredOutput }, genAiGeneralAttrs, ctx.trace);
+    recordFeatureUsage(textOptions, genAiGeneralAttrs, ctx.trace);
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;
