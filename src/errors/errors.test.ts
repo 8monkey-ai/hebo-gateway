@@ -88,6 +88,24 @@ describe("normalizeAiSdkError", () => {
     const normalized = normalizeAiSdkError(apiError);
     expect(normalized!.headers).toBeUndefined();
   });
+
+  test("maps AbortError (upstream timeout) to 504 gateway timeout", () => {
+    const abortError = new DOMException("The operation was aborted.", "AbortError");
+
+    const normalized = normalizeAiSdkError(abortError);
+    expect(normalized).toBeInstanceOf(GatewayError);
+    expect(normalized!.status).toBe(504);
+    expect(normalized!.statusText).toBe("UPSTREAM_GATEWAY_TIMEOUT");
+  });
+
+  test("maps TimeoutError (AbortSignal.timeout) to 504 gateway timeout", () => {
+    const timeoutError = new DOMException("Signal timed out.", "TimeoutError");
+
+    const normalized = normalizeAiSdkError(timeoutError);
+    expect(normalized).toBeInstanceOf(GatewayError);
+    expect(normalized!.status).toBe(504);
+    expect(normalized!.statusText).toBe("UPSTREAM_GATEWAY_TIMEOUT");
+  });
 });
 
 describe("getErrorMeta", () => {

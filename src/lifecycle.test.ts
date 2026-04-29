@@ -6,6 +6,7 @@ import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
 import { MockProviderV3 } from "ai/test";
 
 import { models } from "./endpoints/models/handler";
+import { winterCgHandler } from "./lifecycle";
 
 describe("winterCgHandler", () => {
   afterEach(() => {
@@ -55,6 +56,35 @@ describe("winterCgHandler", () => {
     expect(onRequestTraceId).toBeDefined();
     expect(onResponseTraceId).toBeDefined();
     expect(onResponseTraceId).toBe(onRequestTraceId);
+  });
+
+  test("returns 499 when the client aborts the request, even if the handler throws an AbortError", async () => {
+    const controller = new AbortController();
+    // eslint-disable-next-line require-await
+    const handler = winterCgHandler(async (ctx) => {
+      ctx.operation = "chat";
+      controller.abort();
+      // Simulate the AI SDK propagating the aborted signal as a DOMException AbortError.
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }, {
+      providers: { openai: new MockProviderV3() },
+      models: {
+        "openai/gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text"], output: ["text"] },
+          providers: ["openai"],
+        },
+      },
+    });
+
+    const response = await handler(
+      new Request("http://localhost/v1/chat/completions", {
+        method: "POST",
+        signal: controller.signal,
+      }),
+    );
+
+    expect(response.status).toBe(499);
   });
 
   test("runs onError with the active span context without running onResponse", async () => {
