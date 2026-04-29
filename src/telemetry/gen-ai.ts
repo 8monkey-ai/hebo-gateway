@@ -1,4 +1,9 @@
-import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
+import {
+  metrics,
+  type AttributeValue,
+  type Attributes,
+  type Histogram,
+} from "@opentelemetry/api";
 
 import { STATUS_TEXT } from "../errors/utils";
 import { logger } from "../logger";
@@ -140,6 +145,9 @@ export const recordTimePerOutputToken = (
   );
 };
 
+const asNum = (v: AttributeValue | undefined): number | undefined =>
+  typeof v === "number" ? v : undefined;
+
 // Partitioning follows OTel semconv PR #3624:
 // https://github.com/open-telemetry/semantic-conventions/pull/3624
 // When a cache or reasoning breakdown is reported, partitioned data points sum
@@ -150,61 +158,65 @@ export const recordTokenUsage = (
   metricAttrs: Attributes,
   signalLevel?: TelemetrySignalLevel,
 ) => {
-  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  if (signalLevel !== "recommended" && signalLevel !== "full") return;
 
   const histogram = getTokenUsageHistogram();
-  const record = (value: number, extra: Attributes) => {
-    histogram.record(value, Object.assign({}, metricAttrs, extra));
+  const emit = (value: number, extra: Attributes) => {
+    if (value > 0) histogram.record(value, { ...metricAttrs, ...extra });
   };
 
-  const inputTokens = tokenAttrs["gen_ai.usage.input_tokens"];
-  if (typeof inputTokens === "number") {
-    const cacheRead = tokenAttrs["gen_ai.usage.cache_read.input_tokens"];
-    const cacheCreation = tokenAttrs["gen_ai.usage.cache_creation.input_tokens"];
-    const hasCacheRead = typeof cacheRead === "number";
-    const hasCacheCreation = typeof cacheCreation === "number";
+  emitInputTokens(emit, tokenAttrs);
+  emitOutputTokens(emit, tokenAttrs);
+};
 
-    if (hasCacheRead || hasCacheCreation) {
-      const read = hasCacheRead ? cacheRead : 0;
-      const creation = hasCacheCreation ? cacheCreation : 0;
-      let uncached = inputTokens - read - creation;
-      if (uncached < 0) {
-        logger.warn(
-          { inputTokens, cacheRead: read, cacheCreation: creation },
-          "[telemetry] input token cache partitions exceed total; clamping uncached to 0",
-        );
-        uncached = 0;
-      }
-      if (read > 0) record(read, { "gen_ai.token.type": "input", "gen_ai.token.cache": "read" });
-      if (creation > 0)
-        record(creation, { "gen_ai.token.type": "input", "gen_ai.token.cache": "creation" });
-      if (uncached > 0)
-        record(uncached, { "gen_ai.token.type": "input", "gen_ai.token.cache": "uncached" });
-    } else {
-      record(inputTokens, { "gen_ai.token.type": "input" });
-    }
+type Emit = (value: number, extra: Attributes) => void;
+
+const emitInputTokens = (emit: Emit, tokenAttrs: Attributes) => {
+  const total = asNum(tokenAttrs["gen_ai.usage.input_tokens"]);
+  if (total === undefined) return;
+
+  const cacheRead = asNum(tokenAttrs["gen_ai.usage.cache_read.input_tokens"]);
+  const cacheCreation = asNum(tokenAttrs["gen_ai.usage.cache_creation.input_tokens"]);
+  if (cacheRead === undefined && cacheCreation === undefined) {
+    emit(total, { "gen_ai.token.type": "input" });
+    return;
   }
 
-  const outputTokens = tokenAttrs["gen_ai.usage.output_tokens"];
-  if (typeof outputTokens === "number") {
-    const reasoning = tokenAttrs["gen_ai.usage.reasoning.output_tokens"];
-    if (typeof reasoning === "number") {
-      let reasoned = reasoning;
-      let nonReasoning = outputTokens - reasoning;
-      if (nonReasoning < 0) {
-        logger.warn(
-          { outputTokens, reasoningTokens: reasoning },
-          "[telemetry] reasoning tokens exceed output total; clamping non-reasoning to 0",
-        );
-        reasoned = outputTokens;
-        nonReasoning = 0;
-      }
-      if (reasoned > 0)
-        record(reasoned, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": true });
-      if (nonReasoning > 0)
-        record(nonReasoning, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": false });
-    } else {
-      record(outputTokens, { "gen_ai.token.type": "output" });
-    }
+  const read = cacheRead ?? 0;
+  const creation = cacheCreation ?? 0;
+  let uncached = total - read - creation;
+  if (uncached < 0) {
+    logger.warn(
+      { inputTokens: total, cacheRead: read, cacheCreation: creation },
+      "[telemetry] input token cache partitions exceed total; clamping uncached to 0",
+    );
+    uncached = 0;
   }
+  emit(read, { "gen_ai.token.type": "input", "gen_ai.token.cache": "read" });
+  emit(creation, { "gen_ai.token.type": "input", "gen_ai.token.cache": "creation" });
+  emit(uncached, { "gen_ai.token.type": "input", "gen_ai.token.cache": "uncached" });
+};
+
+const emitOutputTokens = (emit: Emit, tokenAttrs: Attributes) => {
+  const total = asNum(tokenAttrs["gen_ai.usage.output_tokens"]);
+  if (total === undefined) return;
+
+  const reasoning = asNum(tokenAttrs["gen_ai.usage.reasoning.output_tokens"]);
+  if (reasoning === undefined) {
+    emit(total, { "gen_ai.token.type": "output" });
+    return;
+  }
+
+  let reasoned = reasoning;
+  let nonReasoning = total - reasoning;
+  if (nonReasoning < 0) {
+    logger.warn(
+      { outputTokens: total, reasoningTokens: reasoning },
+      "[telemetry] reasoning tokens exceed output total; clamping non-reasoning to 0",
+    );
+    reasoned = total;
+    nonReasoning = 0;
+  }
+  emit(reasoned, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": true });
+  emit(nonReasoning, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": false });
 };
