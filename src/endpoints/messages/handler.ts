@@ -15,7 +15,6 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import {
   getGenAiGeneralAttributes,
-  recordAiSdkFeatureError,
   recordFeatureUsage,
   recordTimePerOutputToken,
   recordTimeToFirstToken,
@@ -117,9 +116,6 @@ export const messages = (config: GatewayConfig): Endpoint => {
         },
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
-        },
-        onError: ({ error }) => {
-          recordAiSdkFeatureError(error, genAiGeneralAttrs, ctx.trace);
         },
         onChunk: () => {
           if (!ttft) {

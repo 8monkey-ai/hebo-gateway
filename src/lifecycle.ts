@@ -76,6 +76,8 @@ export const winterCgHandler = (
       if (ctx.request.signal.aborted) realStatus = 499;
       else if (status === 200 && ctx.response?.status) realStatus = ctx.response.status;
 
+      const traceLevel = ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai;
+
       if (realStatus !== 200) {
         logger[realStatus >= 500 ? "error" : "warn"]({
           requestId: ctx.requestId,
@@ -83,6 +85,10 @@ export const winterCgHandler = (
         });
 
         span.recordError(reason, true);
+
+        if (reason !== undefined) {
+          recordAiSdkFeatureError(reason, getGenAiGeneralAttributes(ctx, traceLevel), traceLevel);
+        }
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 
@@ -92,12 +98,7 @@ export const winterCgHandler = (
         ctx.operation === "messages" ||
         ctx.operation === "responses"
       ) {
-        recordRequestDuration(
-          performance.now() - start,
-          realStatus,
-          ctx,
-          ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai,
-        );
+        recordRequestDuration(performance.now() - start, realStatus, ctx, traceLevel);
       }
 
       span.finish();
@@ -141,9 +142,6 @@ export const winterCgHandler = (
           finalize((ctx.response as Response).status);
         }
       } catch (error) {
-        const traceLevel = ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai;
-        recordAiSdkFeatureError(error, getGenAiGeneralAttributes(ctx, traceLevel), traceLevel);
-
         if (parsedConfig.hooks?.onError) {
           try {
             ctx.error = error;
