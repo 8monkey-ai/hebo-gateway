@@ -323,6 +323,7 @@ describe("Chat Completions OTEL", () => {
         total_tokens: 30,
         prompt_tokens_details: {
           cached_tokens: 4,
+          cache_write_tokens: 5,
         },
         completion_tokens_details: {
           reasoning_tokens: 6,
@@ -336,6 +337,7 @@ describe("Chat Completions OTEL", () => {
     expect(attrs["gen_ai.usage.output_tokens"]).toBe(20);
     expect(attrs["gen_ai.usage.total_tokens"]).toBe(30);
     expect(attrs["gen_ai.usage.cache_read.input_tokens"]).toBe(4);
+    expect(attrs["gen_ai.usage.cache_creation.input_tokens"]).toBe(5);
     expect(attrs["gen_ai.usage.reasoning.output_tokens"]).toBe(6);
   });
 });
