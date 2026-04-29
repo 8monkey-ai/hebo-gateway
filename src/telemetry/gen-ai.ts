@@ -1,6 +1,7 @@
 import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
 
 import { STATUS_TEXT } from "../errors/utils";
+import { logger } from "../logger";
 import type { GatewayContext, TelemetrySignalLevel } from "../types";
 
 const getMeter = () => metrics.getMeter("@hebo/gateway");
@@ -139,27 +140,77 @@ export const recordTimePerOutputToken = (
   );
 };
 
+// Partitioning follows OTel semconv PR #3624:
+// https://github.com/open-telemetry/semantic-conventions/pull/3624
+// When a cache or reasoning breakdown is reported, partitioned data points sum
+// to the total and a bare {type} point MUST NOT be emitted alongside them.
 // FUTURE: record unsuccessful calls
 export const recordTokenUsage = (
   tokenAttrs: Attributes,
   metricAttrs: Attributes,
   signalLevel?: TelemetrySignalLevel,
 ) => {
-  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  if (signalLevel !== "recommended" && signalLevel !== "full") return;
 
-  const record = (value: unknown, tokenType: string) => {
-    if (typeof value !== "number") return;
-    getTokenUsageHistogram().record(
-      value,
-      Object.assign({}, metricAttrs, { "gen_ai.token.type": tokenType }),
-    );
+  const histogram = getTokenUsageHistogram();
+  const emit = (value: number, extra: Attributes) => {
+    if (value > 0) histogram.record(value, { ...metricAttrs, ...extra });
   };
 
-  record(tokenAttrs["gen_ai.usage.input_tokens"], "input");
-  record(tokenAttrs["gen_ai.usage.output_tokens"], "output");
-  // FUTURE: "cached" and "reasoning" token types are not yet in the OTel standard — monitor:
-  // https://github.com/open-telemetry/semantic-conventions/issues/1959
-  // https://github.com/open-telemetry/semantic-conventions/issues/3341
-  record(tokenAttrs["gen_ai.usage.cache_read.input_tokens"], "cached");
-  record(tokenAttrs["gen_ai.usage.reasoning.output_tokens"], "reasoning");
+  emitInputTokens(emit, tokenAttrs);
+  emitOutputTokens(emit, tokenAttrs);
+};
+
+type Emit = (value: number, extra: Attributes) => void;
+
+const emitInputTokens = (emit: Emit, tokenAttrs: Attributes) => {
+  const total = tokenAttrs["gen_ai.usage.input_tokens"] as number | undefined;
+  if (total === undefined) return;
+
+  const cacheRead = tokenAttrs["gen_ai.usage.cache_read.input_tokens"] as number | undefined;
+  const cacheCreation = tokenAttrs["gen_ai.usage.cache_creation.input_tokens"] as
+    | number
+    | undefined;
+  if (cacheRead === undefined && cacheCreation === undefined) {
+    emit(total, { "gen_ai.token.type": "input" });
+    return;
+  }
+
+  const read = cacheRead ?? 0;
+  const creation = cacheCreation ?? 0;
+  let uncached = total - read - creation;
+  if (uncached < 0) {
+    logger.warn(
+      { inputTokens: total, cacheRead: read, cacheCreation: creation },
+      "[telemetry] input token cache partitions exceed total; clamping uncached to 0",
+    );
+    uncached = 0;
+  }
+  emit(read, { "gen_ai.token.type": "input", "gen_ai.token.cache": "read" });
+  emit(creation, { "gen_ai.token.type": "input", "gen_ai.token.cache": "creation" });
+  emit(uncached, { "gen_ai.token.type": "input", "gen_ai.token.cache": "uncached" });
+};
+
+const emitOutputTokens = (emit: Emit, tokenAttrs: Attributes) => {
+  const total = tokenAttrs["gen_ai.usage.output_tokens"] as number | undefined;
+  if (total === undefined) return;
+
+  const reasoning = tokenAttrs["gen_ai.usage.reasoning.output_tokens"] as number | undefined;
+  if (reasoning === undefined) {
+    emit(total, { "gen_ai.token.type": "output" });
+    return;
+  }
+
+  let reasoned = reasoning;
+  let nonReasoning = total - reasoning;
+  if (nonReasoning < 0) {
+    logger.warn(
+      { outputTokens: total, reasoningTokens: reasoning },
+      "[telemetry] reasoning tokens exceed output total; clamping non-reasoning to 0",
+    );
+    reasoned = total;
+    nonReasoning = 0;
+  }
+  emit(reasoned, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": true });
+  emit(nonReasoning, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": false });
 };
