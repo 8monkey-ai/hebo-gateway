@@ -1150,6 +1150,43 @@ describe("Messages Converters", () => {
       expect(messageStop).toBeDefined();
     });
 
+    test("should include cache tokens in streaming message_delta usage", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({ type: "text-start", id: "1" });
+          controller.enqueue({ type: "text-delta", id: "1", text: "ok" });
+          controller.enqueue({ type: "text-end", id: "1" });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "stop",
+            rawFinishReason: "stop",
+            totalUsage: mockUsage({
+              inputTokens: 16816,
+              outputTokens: 1,
+              inputTokenDetails: {
+                cacheReadTokens: 0,
+                cacheWriteTokens: 16813,
+                noCacheTokens: undefined,
+              },
+            }),
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
+      const { events } = await collectStreamEvents(transformed);
+
+      const messageDelta = events.find((e) => e.event === "message_delta");
+      expect(messageDelta).toBeDefined();
+      if (messageDelta?.event === "message_delta") {
+        expect(messageDelta.data.usage.input_tokens).toBe(16816);
+        expect(messageDelta.data.usage.output_tokens).toBe(1);
+        expect(messageDelta.data.usage.cache_creation_input_tokens).toBe(16813);
+        expect(messageDelta.data.usage.cache_read_input_tokens).toBe(0);
+      }
+    });
+
     test("should stream tool call events correctly", async () => {
       const stream = new ReadableStream<TextStreamPart<ToolSet>>({
         start(controller) {
