@@ -767,15 +767,13 @@ export class MessagesTransformStream extends TransformStream<
 
           case "finish": {
             const stopReason = mapStopReason(part.finishReason);
-            const totalOutputTokens = part.totalUsage?.outputTokens ?? 0;
-            const totalInputTokens = part.totalUsage?.inputTokens ?? 0;
 
             controller.enqueue({
               event: "message_delta",
               data: {
                 type: "message_delta",
                 delta: { stop_reason: stopReason, stop_sequence: null },
-                usage: { output_tokens: totalOutputTokens, input_tokens: totalInputTokens },
+                usage: mapUsage(part.totalUsage),
               },
             });
 
