@@ -16,11 +16,10 @@ import { resolveProvider } from "../../providers/registry";
 import {
   getGenAiGeneralAttributes,
   recordAiSdkFeatureError,
-  recordStructuredOutputOutcome,
+  recordFeatureSuccesses,
   recordTimePerOutputToken,
   recordTimeToFirstToken,
   recordTokenUsage,
-  recordToolCallOutcome,
 } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
 import type {
@@ -148,9 +147,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
-          if (hasTools) recordToolCallOutcome(genAiGeneralAttrs, undefined, ctx.trace);
-          if (hasStructuredOutput)
-            recordStructuredOutputOutcome(genAiGeneralAttrs, undefined, ctx.trace);
+          recordFeatureSuccesses({ hasTools, hasStructuredOutput }, genAiGeneralAttrs, ctx.trace);
         },
         experimental_include: {
           requestBody: false,
@@ -170,23 +167,17 @@ export const messages = (config: GatewayConfig): Endpoint => {
     }
 
     addSpanEvent("hebo.ai-sdk.started");
-    let result: Awaited<ReturnType<typeof generateText>>;
-    try {
-      result = await generateText({
-        model: languageModelWithMiddleware,
-        headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
-        abortSignal: ctx.request.signal,
-        timeout: cfg.advanced.timeouts.normal,
-        experimental_include: {
-          requestBody: false,
-          responseBody: false,
-        },
-        ...textOptions,
-      });
-    } catch (error) {
-      recordAiSdkFeatureError(error, genAiGeneralAttrs, ctx.trace);
-      throw error;
-    }
+    const result = await generateText({
+      model: languageModelWithMiddleware,
+      headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
+      abortSignal: ctx.request.signal,
+      timeout: cfg.advanced.timeouts.normal,
+      experimental_include: {
+        requestBody: false,
+        responseBody: false,
+      },
+      ...textOptions,
+    });
     logger.trace({ requestId: ctx.requestId, result }, "[messages] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
     if (result.response.headers) ctx.response = { headers: result.response.headers };
@@ -203,8 +194,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
     );
     setSpanAttributes(genAiResponseAttrs);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
-    if (hasTools) recordToolCallOutcome(genAiGeneralAttrs, undefined, ctx.trace);
-    if (hasStructuredOutput) recordStructuredOutputOutcome(genAiGeneralAttrs, undefined, ctx.trace);
+    recordFeatureSuccesses({ hasTools, hasStructuredOutput }, genAiGeneralAttrs, ctx.trace);
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;

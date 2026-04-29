@@ -16,11 +16,7 @@ import {
   TypeValidationError,
 } from "ai";
 
-import {
-  recordAiSdkFeatureError,
-  recordStructuredOutputOutcome,
-  recordToolCallOutcome,
-} from "./gen-ai";
+import { recordAiSdkFeatureError, recordFeatureOutcome } from "./gen-ai";
 
 const exporter = new InMemoryMetricExporter(AggregationTemporality.DELTA);
 const reader = new PeriodicExportingMetricReader({
@@ -64,9 +60,9 @@ describe("telemetry/gen-ai feature counters", () => {
 
   test("no-ops when signal level is off or missing", async () => {
     const undef: "off" | undefined = undefined;
-    recordToolCallOutcome(baseAttrs, undefined, "off");
-    recordToolCallOutcome(baseAttrs, undefined, undef);
-    recordStructuredOutputOutcome(baseAttrs, undefined, "off");
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, "off");
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, undef);
+    recordFeatureOutcome("structured_output", baseAttrs, undefined, "off");
     recordAiSdkFeatureError(new NoSuchToolError({ toolName: "x" }), baseAttrs, "off");
 
     expect(await collectPoints("gen_ai.server.tool_call")).toHaveLength(0);
@@ -74,15 +70,15 @@ describe("telemetry/gen-ai feature counters", () => {
   });
 
   test("no-ops when signal level is 'required'", async () => {
-    recordToolCallOutcome(baseAttrs, undefined, "required");
-    recordStructuredOutputOutcome(baseAttrs, undefined, "required");
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, "required");
+    recordFeatureOutcome("structured_output", baseAttrs, undefined, "required");
 
     expect(await collectPoints("gen_ai.server.tool_call")).toHaveLength(0);
     expect(await collectPoints("gen_ai.server.structured_output")).toHaveLength(0);
   });
 
   test("records tool_call success with no error.type attribute", async () => {
-    recordToolCallOutcome(baseAttrs, undefined, "recommended");
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, "recommended");
 
     const points = await collectPoints("gen_ai.server.tool_call");
     expect(points).toHaveLength(1);
@@ -92,7 +88,7 @@ describe("telemetry/gen-ai feature counters", () => {
   });
 
   test("records structured_output success with no error.type attribute", async () => {
-    recordStructuredOutputOutcome(baseAttrs, undefined, "full");
+    recordFeatureOutcome("structured_output", baseAttrs, undefined, "full");
 
     const points = await collectPoints("gen_ai.server.structured_output");
     expect(points).toHaveLength(1);

@@ -6,7 +6,11 @@ import { getErrorMeta } from "./errors/utils";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
-import { recordRequestDuration } from "./telemetry/gen-ai";
+import {
+  getGenAiGeneralAttributes,
+  recordAiSdkFeatureError,
+  recordRequestDuration,
+} from "./telemetry/gen-ai";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { observeV8jsMemoryMetrics } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
@@ -137,6 +141,9 @@ export const winterCgHandler = (
           finalize((ctx.response as Response).status);
         }
       } catch (error) {
+        const traceLevel = ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai;
+        recordAiSdkFeatureError(error, getGenAiGeneralAttributes(ctx, traceLevel), traceLevel);
+
         if (parsedConfig.hooks?.onError) {
           try {
             ctx.error = error;

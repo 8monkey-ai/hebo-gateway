@@ -223,7 +223,8 @@ const classifyAiSdkError = (
 const getFeatureCounter = (kind: FeatureKind) =>
   kind === "tool_call" ? getToolCallCounter() : getStructuredOutputCounter();
 
-export const recordToolCallOutcome = (
+export const recordFeatureOutcome = (
+  kind: FeatureKind,
   metricAttrs: Attributes,
   errorType: FeatureErrorType | undefined,
   signalLevel?: TelemetrySignalLevel,
@@ -232,19 +233,17 @@ export const recordToolCallOutcome = (
   const attrs = errorType
     ? Object.assign({}, metricAttrs, { "error.type": errorType })
     : metricAttrs;
-  getToolCallCounter().add(1, attrs);
+  getFeatureCounter(kind).add(1, attrs);
 };
 
-export const recordStructuredOutputOutcome = (
+export const recordFeatureSuccesses = (
+  flags: { hasTools: boolean; hasStructuredOutput: boolean },
   metricAttrs: Attributes,
-  errorType: FeatureErrorType | undefined,
   signalLevel?: TelemetrySignalLevel,
 ) => {
-  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
-  const attrs = errorType
-    ? Object.assign({}, metricAttrs, { "error.type": errorType })
-    : metricAttrs;
-  getStructuredOutputCounter().add(1, attrs);
+  if (flags.hasTools) recordFeatureOutcome("tool_call", metricAttrs, undefined, signalLevel);
+  if (flags.hasStructuredOutput)
+    recordFeatureOutcome("structured_output", metricAttrs, undefined, signalLevel);
 };
 
 /**
