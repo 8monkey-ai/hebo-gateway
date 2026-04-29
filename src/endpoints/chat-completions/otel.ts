@@ -197,6 +197,8 @@ export const getChatResponseAttributes = (
       "gen_ai.usage.input_tokens": completions.usage?.prompt_tokens,
       "gen_ai.usage.cache_read.input_tokens":
         completions.usage?.prompt_tokens_details?.cached_tokens,
+      "gen_ai.usage.cache_creation.input_tokens":
+        completions.usage?.prompt_tokens_details?.cache_write_tokens,
       "gen_ai.usage.output_tokens": completions.usage?.completion_tokens,
       "gen_ai.usage.reasoning.output_tokens":
         completions.usage?.completion_tokens_details?.reasoning_tokens,
