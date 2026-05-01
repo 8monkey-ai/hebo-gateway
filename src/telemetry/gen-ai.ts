@@ -74,8 +74,7 @@ export const getGenAiGeneralAttributes = (
   if (!signalLevel || signalLevel === "off") return {};
 
   const requestModel = typeof ctx.body?.model === "string" ? ctx.body.model : ctx.modelId;
-  const serviceTier =
-    typeof ctx.body?.service_tier === "string" ? ctx.body.service_tier : undefined;
+  const serviceTier = typeof ctx.body?.service_tier === "string" ? ctx.body.service_tier : "auto";
 
   const attrs: Attributes = {
     "gen_ai.operation.name": ctx.operation,
@@ -84,7 +83,7 @@ export const getGenAiGeneralAttributes = (
     "gen_ai.provider.name": ctx.resolvedProviderId,
   };
 
-  if (signalLevel !== "required" && serviceTier !== undefined) {
+  if (signalLevel !== "required") {
     attrs["gen_ai.request.service_tier"] = serviceTier;
   }
 
