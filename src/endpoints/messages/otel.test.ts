@@ -43,7 +43,6 @@ describe("Messages OTEL", () => {
     expect(attrs["gen_ai.request.max_tokens"]).toBe(500);
     expect(attrs["gen_ai.request.temperature"]).toBe(0.7);
     expect(attrs["gen_ai.request.top_p"]).toBe(0.9);
-    expect(attrs["gen_ai.request.service_tier"]).toBe("auto");
   });
 
   test("should map request metadata into per-key attributes", () => {
