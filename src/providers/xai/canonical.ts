@@ -8,6 +8,7 @@ const MAPPING = {
   "xai/grok-4.2": "grok-4.20-0309-non-reasoning",
   "xai/grok-4.2-reasoning": "grok-4.20-0309-reasoning",
   "xai/grok-4.2-multi-agent": "grok-4.20-multi-agent-0309",
+  "xai/grok-4.3": "grok-4.3",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForXai = (

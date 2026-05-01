@@ -103,6 +103,7 @@ export const CANONICAL_MODEL_IDS = [
   "xai/grok-4.2",
   "xai/grok-4.2-reasoning",
   "xai/grok-4.2-multi-agent",
+  "xai/grok-4.3",
   // DeepSeek
   "deepseek/deepseek-v3.2",
   // Voyage

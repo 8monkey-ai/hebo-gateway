@@ -64,9 +64,17 @@ export const grok42MultiAgent = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const grok43 = presetFor<CanonicalModelId, CatalogModel>()("xai/grok-4.3" as const, {
+  ...GROK_REASONING_BASE,
+  name: "Grok 4.3",
+  created: "2026-05-01",
+  context: 1000000,
+} satisfies CatalogModel);
+
 const grokAtomic = {
   "v4.1": [grok41Fast, grok41FastReasoning],
   "v4.2": [grok42, grok42Reasoning, grok42MultiAgent],
+  "v4.3": [grok43],
 } as const;
 
 const grokGroups = {} as const;
@@ -74,6 +82,6 @@ const grokGroups = {} as const;
 export const grok = {
   ...grokAtomic,
   ...grokGroups,
-  latest: [grok42, grok42Reasoning, grok42MultiAgent],
+  latest: [grok43],
   all: Object.values(grokAtomic).flat(),
 } as const;
