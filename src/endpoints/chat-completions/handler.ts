@@ -136,6 +136,9 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
+        // Required: without an onError handler the AI SDK rethrows stream
+        // errors synchronously, which breaks downstream SSE handling.
+        onError: () => {},
         onChunk: () => {
           if (!ttft) {
             ttft = performance.now() - start;
@@ -160,11 +163,6 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordFeatureUsage(textOptions, genAiGeneralAttrs, ctx.trace);
         },
-        // Required: without an onError handler the AI SDK rethrows stream
-        // errors synchronously, which breaks downstream SSE handling. The
-        // error is already routed to finalize() via toSseStream, which records
-        // the feature-error counter centrally.
-        onError: () => {},
         experimental_include: {
           requestBody: false,
         },
