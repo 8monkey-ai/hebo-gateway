@@ -10,7 +10,8 @@ import {
   type HistogramMetricData,
 } from "@opentelemetry/sdk-metrics";
 
-import { recordTokenUsage } from "./gen-ai";
+import type { GatewayContext } from "../types";
+import { getGenAiGeneralAttributes, recordTokenUsage } from "./gen-ai";
 
 type Point = {
   value: number;
@@ -216,5 +217,39 @@ describe("recordTokenUsage", () => {
 
     const points = await collectTokenUsagePoints();
     expect(points).toHaveLength(0);
+  });
+});
+
+describe("getGenAiGeneralAttributes", () => {
+  const baseCtx = {
+    state: {},
+    otel: {},
+    providers: {} as GatewayContext["providers"],
+    models: {} as GatewayContext["models"],
+    request: new Request("https://example.test/"),
+    requestId: "req_1",
+    body: { model: "m" } as GatewayContext["body"],
+    operation: "chat" as GatewayContext["operation"],
+    resolvedModelId: "m",
+    resolvedProviderId: "p",
+  } satisfies GatewayContext;
+
+  test("defaults service_tier to 'auto' when the request body omits it", () => {
+    const attrs = getGenAiGeneralAttributes(baseCtx, "recommended");
+    expect(attrs["gen_ai.request.service_tier"]).toBe("auto");
+  });
+
+  test("emits the requested service_tier when the body provides one", () => {
+    const ctx: GatewayContext = {
+      ...baseCtx,
+      body: { ...baseCtx.body, service_tier: "priority" } as GatewayContext["body"],
+    };
+    const attrs = getGenAiGeneralAttributes(ctx, "recommended");
+    expect(attrs["gen_ai.request.service_tier"]).toBe("priority");
+  });
+
+  test("omits service_tier at 'required' signal level", () => {
+    const attrs = getGenAiGeneralAttributes(baseCtx, "required");
+    expect(attrs["gen_ai.request.service_tier"]).toBeUndefined();
   });
 });

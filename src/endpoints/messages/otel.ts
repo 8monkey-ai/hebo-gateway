@@ -123,7 +123,6 @@ export const getMessagesRequestAttributes = (
   if (signalLevel !== "required") {
     Object.assign(attrs, {
       "gen_ai.request.stream": body.stream,
-      "gen_ai.request.service_tier": body.service_tier,
       "gen_ai.request.max_tokens": body.max_tokens,
       "gen_ai.request.temperature": body.temperature,
       "gen_ai.request.top_p": body.top_p,
