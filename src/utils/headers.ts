@@ -3,7 +3,7 @@ export const RETRY_AFTER_HEADER = "retry-after";
 export const RETRY_AFTER_MS_HEADER = "retry-after-ms";
 export const X_SHOULD_RETRY_HEADER = "x-should-retry";
 
-const RESPONSE_HEADER_ALLOWLIST = [
+export const RESPONSE_HEADER_ALLOWLIST = [
   RETRY_AFTER_HEADER,
   RETRY_AFTER_MS_HEADER,
   X_SHOULD_RETRY_HEADER,
