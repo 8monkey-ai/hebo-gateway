@@ -226,7 +226,7 @@ export const MessagesBodySchema = z.object({
   stop_sequences: z.array(z.string()).optional(),
   tools: z.array(MessagesToolSchema).optional(),
   tool_choice: MessagesToolChoiceSchema.optional(),
-  thinking: MessagesThinkingConfigSchema.optional(),
+  thinking: MessagesThinkingConfigSchema.nullish(),
   metadata: z.object({ user_id: z.string().optional() }).optional(),
   service_tier: MessagesServiceTierSchema.optional(),
   cache_control: CacheControlSchema.optional(),

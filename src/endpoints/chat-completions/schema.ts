@@ -225,7 +225,7 @@ const ChatCompletionsInputsSchema = z.object({
   top_p: z.number().min(0).max(1.0).optional(),
   metadata: ChatCompletionsMetadataSchema.optional(),
   response_format: ChatCompletionsResponseFormatSchema.optional(),
-  reasoning_effort: ChatCompletionsReasoningEffortSchema.optional(),
+  reasoning_effort: ChatCompletionsReasoningEffortSchema.nullish(),
   service_tier: ChatCompletionsServiceTierSchema.optional(),
   prompt_cache_key: z.string().optional(),
   prompt_cache_retention: z.enum(["in-memory", "24h"]).optional(),
@@ -239,7 +239,7 @@ const ChatCompletionsInputsSchema = z.object({
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.optional().meta({ extension: true }),
   // Extension origin: OpenRouter
-  reasoning: ChatCompletionsReasoningConfigSchema.optional().meta({ extension: true }),
+  reasoning: ChatCompletionsReasoningConfigSchema.nullish().meta({ extension: true }),
   // Extension origin: Gemini extra_body
   // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview#extra_body
   extra_body: ChatCompletionsProviderMetadataSchema.optional().meta({ extension: true }),

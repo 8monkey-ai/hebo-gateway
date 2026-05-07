@@ -118,7 +118,7 @@ function convertToOutput(config: MessagesOutputConfig): Output.Output | undefine
 }
 
 export function convertThinkingToReasoning(
-  thinking?: MessagesThinkingConfig,
+  thinking?: MessagesThinkingConfig | null,
   outputConfig?: MessagesOutputConfig,
 ): { reasoning: ReasoningConfig; reasoning_effort?: ReasoningConfig["effort"] } | undefined {
   // Map Anthropic "max" effort → internal "xhigh"

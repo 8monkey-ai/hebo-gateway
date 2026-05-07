@@ -353,6 +353,18 @@ describe("Messages Handler", () => {
     expect(res.status).toBe(200);
   });
 
+  test("should accept null thinking", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      max_tokens: 100,
+      messages: [{ role: "user", content: "hi" }],
+      thinking: null,
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+  });
+
   test("should accept cache_control on request body", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
