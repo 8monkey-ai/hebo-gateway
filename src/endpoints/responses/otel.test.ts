@@ -246,10 +246,10 @@ describe("Responses OTEL", () => {
 
     expect(attrs["gen_ai.output.messages"]).toEqual([
       JSON.stringify({
+        role: "assistant",
         type: "message",
         status: "completed",
         parts: [{ type: "text", content: "Hi there" }],
-        role: "assistant",
       }),
     ]);
   });
@@ -278,6 +278,7 @@ describe("Responses OTEL", () => {
 
     expect(attrs["gen_ai.output.messages"]).toEqual([
       JSON.stringify({
+        role: "assistant",
         type: "reasoning",
         status: "completed",
         parts: [
@@ -285,6 +286,40 @@ describe("Responses OTEL", () => {
           { type: "reasoning", content: "Cats are feline." },
           { type: "reasoning", content: "[ENCRYPTED_REASONING]" },
         ],
+      }),
+    ]);
+  });
+
+  test("should include role on function_call output items in full mode", () => {
+    const response: Responses = {
+      id: "018e69ba-a82d-7fb4-9c5d-010b9a89c836",
+      object: "response",
+      status: "completed",
+      model: "openai/gpt-5",
+      output: [
+        {
+          type: "function_call",
+          call_id: "call_1",
+          name: "get_weather",
+          arguments: '{"location":"SF"}',
+          status: "completed",
+        },
+      ],
+      usage: null,
+      created_at: 1700000000,
+      completed_at: 1700000001,
+    };
+
+    const attrs = getResponsesResponseAttributes(response, "full");
+
+    expect(attrs["gen_ai.output.messages"]).toEqual([
+      JSON.stringify({
+        role: "assistant",
+        type: "function_call",
+        status: "completed",
+        parts: [],
+        name: "get_weather",
+        arguments: '{"location":"SF"}',
       }),
     ]);
   });
