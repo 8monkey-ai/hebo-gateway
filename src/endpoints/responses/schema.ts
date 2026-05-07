@@ -317,7 +317,7 @@ const ResponsesInputsSchema = z.object({
   frequency_penalty: z.number().min(-2.0).max(2.0).optional(),
   presence_penalty: z.number().min(-2.0).max(2.0).optional(),
   max_output_tokens: z.number().int().nonnegative().optional(),
-  reasoning: ResponsesReasoningConfigSchema.optional(),
+  reasoning: ResponsesReasoningConfigSchema.nullish(),
   prompt_cache_key: z.string().optional(),
   metadata: ResponsesMetadataSchema,
   service_tier: ResponsesServiceTierSchema.optional(),

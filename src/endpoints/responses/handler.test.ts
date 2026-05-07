@@ -338,6 +338,17 @@ describe("Responses Handler", () => {
     expect(res.status).toBe(200);
   });
 
+  test("should accept null reasoning", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "hi",
+      reasoning: null,
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+  });
+
   test('should accept text format "text"', async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",

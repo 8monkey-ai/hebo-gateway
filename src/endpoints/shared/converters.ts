@@ -84,8 +84,8 @@ export function parseImageInput(url: string): { image: string | URL; mediaType?:
 }
 
 export function parseReasoningOptions(
-  reasoning_effort?: ReasoningEffort,
-  reasoning?: ReasoningConfig,
+  reasoning_effort?: ReasoningEffort | null,
+  reasoning?: ReasoningConfig | null,
 ) {
   const effort = reasoning?.effort ?? reasoning_effort;
   const max_tokens = reasoning?.max_tokens;
