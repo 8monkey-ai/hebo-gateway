@@ -237,6 +237,40 @@ describe("Messages Handler", () => {
     expect((toolUse as { name: string }).name).toBe("get_current_weather");
   });
 
+  test("should accept requests with hosted server tools alongside custom tools", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      max_tokens: 100,
+      messages: [{ role: "user", content: "What is the weather in SF?" }],
+      tools: [
+        {
+          name: "get_current_weather",
+          description: "Get the current weather",
+          input_schema: {
+            type: "object",
+            properties: { location: { type: "string" } },
+          },
+        },
+        { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+      ],
+    });
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<Messages>(res);
+    expect(data!.stop_reason).toBe("tool_use");
+  });
+
+  test("should accept requests with only hosted server tools", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      max_tokens: 100,
+      messages: [{ role: "user", content: "Search recent news" }],
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    });
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+  });
+
   test("should accept tool_choice auto", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",

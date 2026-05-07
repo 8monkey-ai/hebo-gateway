@@ -36,6 +36,7 @@ import type {
   MessagesMessage,
   UserContentBlock,
   MessagesTool,
+  MessagesCustomTool,
   MessagesToolChoice,
   MessagesThinkingConfig,
   MessagesOutputConfig,
@@ -413,13 +414,17 @@ export function convertToToolSet(tools: MessagesTool[] | undefined): ToolSet | u
 
   const toolSet: ToolSet = {};
   for (const t of tools) {
-    toolSet[t.name] = tool({
-      description: t.description,
-      inputSchema: jsonSchema(t.input_schema),
-      strict: t.strict,
+    // Hosted/server tools (e.g. web_search_20250305) are accepted at the edge
+    // but not executed by the gateway; drop anything with a non-"custom" type.
+    if (t.type && t.type !== "custom") continue;
+    const fn = t as MessagesCustomTool;
+    toolSet[fn.name] = tool({
+      description: fn.description,
+      inputSchema: jsonSchema(fn.input_schema),
+      strict: fn.strict,
     });
   }
-  return toolSet;
+  return Object.keys(toolSet).length > 0 ? toolSet : undefined;
 }
 
 export function convertToToolChoiceOptions(

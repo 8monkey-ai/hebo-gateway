@@ -148,7 +148,7 @@ export const ChatCompletionsMessageSchema = z.discriminatedUnion("role", [
 ]);
 export type ChatCompletionsMessage = z.infer<typeof ChatCompletionsMessageSchema>;
 
-export const ChatCompletionsToolSchema = z.object({
+export const ChatCompletionsFunctionToolSchema = z.object({
   type: z.literal("function"),
   function: z.object({
     name: z.string(),
@@ -158,6 +158,25 @@ export const ChatCompletionsToolSchema = z.object({
   }),
   // FUTURE: cache_control support on tools
 });
+export type ChatCompletionsFunctionTool = z.infer<typeof ChatCompletionsFunctionToolSchema>;
+
+// Hosted/built-in tools (e.g. web_search, file_search, code_interpreter).
+// Accepted at the edge so clients like Codex can send their default payload,
+// but not executed by the gateway — they are dropped before the AI SDK call
+// unless the downstream handler explicitly opts them in.
+export const ChatCompletionsHostedToolSchema = z
+  .looseObject({
+    type: z.string(),
+  })
+  .refine((value) => value.type !== "function", {
+    message: 'Function tools must use the function tool schema (type: "function")',
+  });
+export type ChatCompletionsHostedTool = z.infer<typeof ChatCompletionsHostedToolSchema>;
+
+export const ChatCompletionsToolSchema = z.union([
+  ChatCompletionsFunctionToolSchema,
+  ChatCompletionsHostedToolSchema,
+]);
 export type ChatCompletionsTool = z.infer<typeof ChatCompletionsToolSchema>;
 
 const ChatCompletionsNamedFunctionToolChoiceSchema = z.object({
