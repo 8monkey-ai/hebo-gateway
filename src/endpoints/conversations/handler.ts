@@ -20,7 +20,16 @@ import {
   type ConversationItemList,
   type ConversationList,
 } from "./schema";
-import type { ConversationMetadata } from "./storage/types";
+import type { ConversationItemInput, ConversationMetadata } from "./storage/types";
+import type { ResponsesInputItem } from "../responses/schema";
+
+// Codex-shaped clients echo absent optional fields back as literal null; the
+// request schema accepts that, but the storage layer uses `id?: string`, so
+// normalize null → undefined at the boundary.
+const toStorageItem = (item: ResponsesInputItem): ConversationItemInput => ({
+  ...item,
+  id: item.id ?? undefined,
+});
 
 export const conversations = (config: GatewayConfig): Endpoint => {
   const parsedConfig = parseConfig(config);
@@ -83,7 +92,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
 
     const entity = await storage.createConversation({
       metadata: parsed.data.metadata as ConversationMetadata,
-      items: parsed.data.items,
+      items: parsed.data.items?.map(toStorageItem),
     });
 
     logger.debug(`[conversations] created conversation: ${entity.id}`);
@@ -220,7 +229,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     }
     addSpanEvent("hebo.request.parsed");
 
-    const entities = await storage.addItems(conversationId, parsed.data.items);
+    const entities = await storage.addItems(conversationId, parsed.data.items.map(toStorageItem));
 
     if (!entities) {
       throw new GatewayError("Conversation not found", 404);
