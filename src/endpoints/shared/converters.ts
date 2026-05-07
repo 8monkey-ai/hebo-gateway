@@ -93,7 +93,7 @@ export function parseReasoningOptions(
   if (reasoning?.enabled === false || effort === "none") {
     return { reasoning: { enabled: false, effort: "none" }, reasoning_effort: "none" };
   }
-  if (!reasoning && effort === undefined) return {};
+  if (!reasoning && (effort === undefined || effort === null)) return {};
 
   const out: {
     reasoning: ReasoningConfig;
