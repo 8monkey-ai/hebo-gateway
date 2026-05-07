@@ -7,7 +7,7 @@ export interface ConversationEntity {
 }
 
 export interface ConversationItemInput {
-  id?: string;
+  id?: string | null;
   type: string;
   [key: string]: unknown;
 }

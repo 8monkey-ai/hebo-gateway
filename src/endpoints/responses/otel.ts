@@ -255,7 +255,7 @@ export const getResponsesResponseAttributes = (
       "gen_ai.output.messages": responses.output?.map((item) => {
         const base: TelemetryMessageLog = {
           type: item.type,
-          status: item.status,
+          status: item.status ?? undefined,
           parts: [],
         };
 
