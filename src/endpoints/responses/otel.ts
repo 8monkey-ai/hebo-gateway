@@ -255,7 +255,8 @@ export const getResponsesResponseAttributes = (
       "gen_ai.output.messages": responses.output?.map((item) => {
         const base: TelemetryMessageLog = {
           type: item.type,
-          status: item.status,
+          // status is `| null` only because the shared schema is reused for input echo; output items always set it.
+          status: item.status ?? undefined,
           parts: [],
         };
 

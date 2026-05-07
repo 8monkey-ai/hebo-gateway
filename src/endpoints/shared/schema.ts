@@ -84,6 +84,6 @@ export const ContentPartAudioSchema = z.object({
   type: z.literal("input_audio"),
   input_audio: InputAudioSchema,
   // Extension origin: OpenRouter/Vercel/Anthropic
-  cache_control: CacheControlSchema.optional().meta({ extension: true }),
+  cache_control: CacheControlSchema.nullish().meta({ extension: true }),
 });
 export type ContentPartAudio = z.infer<typeof ContentPartAudioSchema>;

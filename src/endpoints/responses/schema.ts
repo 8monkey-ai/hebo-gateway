@@ -29,15 +29,15 @@ export type ResponsesInputText = z.infer<typeof ResponsesInputTextSchema>;
 const ResponsesInputImageURLSchema = z.object({
   type: z.literal("input_image"),
   image_url: z.string(),
-  file_id: z.string().optional(),
-  detail: ResponsesImageDetailSchema.optional(),
+  file_id: z.string().nullish(),
+  detail: ResponsesImageDetailSchema.nullish(),
 });
 
 const ResponsesInputImageIDSchema = z.object({
   type: z.literal("input_image"),
   file_id: z.string(),
-  image_url: z.string().optional(),
-  detail: ResponsesImageDetailSchema.optional(),
+  image_url: z.string().nullish(),
+  detail: ResponsesImageDetailSchema.nullish(),
 });
 
 export const ResponsesInputImageSchema = z.union([
@@ -49,25 +49,25 @@ export type ResponsesInputImage = z.infer<typeof ResponsesInputImageSchema>;
 const ResponsesInputFileDataSchema = z.object({
   type: z.literal("input_file"),
   file_data: z.string(),
-  file_id: z.string().optional(),
-  file_url: z.string().optional(),
-  filename: z.string().optional(),
+  file_id: z.string().nullish(),
+  file_url: z.string().nullish(),
+  filename: z.string().nullish(),
 });
 
 const ResponsesInputFileIDSchema = z.object({
   type: z.literal("input_file"),
   file_id: z.string(),
-  file_data: z.string().optional(),
-  file_url: z.string().optional(),
-  filename: z.string().optional(),
+  file_data: z.string().nullish(),
+  file_url: z.string().nullish(),
+  filename: z.string().nullish(),
 });
 
 const ResponsesInputFileURLSchema = z.object({
   type: z.literal("input_file"),
   file_url: z.string(),
-  file_data: z.string().optional(),
-  file_id: z.string().optional(),
-  filename: z.string().optional(),
+  file_data: z.string().nullish(),
+  file_id: z.string().nullish(),
+  filename: z.string().nullish(),
 });
 
 export const ResponsesInputFileSchema = z.union([
@@ -91,7 +91,7 @@ export type ResponsesInputContent = z.infer<typeof ResponsesInputContentSchema>;
 export const ResponsesOutputTextSchema = z.object({
   type: z.literal("output_text"),
   text: z.string(),
-  annotations: z.array(z.unknown()).optional(),
+  annotations: z.array(z.unknown()).nullish(),
 });
 export type ResponsesOutputText = z.infer<typeof ResponsesOutputTextSchema>;
 
@@ -99,12 +99,12 @@ export type ResponsesOutputText = z.infer<typeof ResponsesOutputTextSchema>;
 
 const ResponsesMessageItemBaseSchema = z.object({
   type: z.literal("message"),
-  id: z.string().optional(),
-  status: ResponsesItemStatusSchema.optional(),
+  id: z.string().nullish(),
+  status: ResponsesItemStatusSchema.nullish(),
   // Extension origin: Gemini
-  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.nullish().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter/Vercel
-  cache_control: ResponsesCacheControlSchema.optional().meta({ extension: true }),
+  cache_control: ResponsesCacheControlSchema.nullish().meta({ extension: true }),
 });
 
 const ResponsesUserMessageSchema = ResponsesMessageItemBaseSchema.extend({
@@ -141,28 +141,28 @@ export type ResponsesMessageItem = z.infer<typeof ResponsesMessageItemSchema>;
 
 export const ResponsesFunctionCallSchema = z.object({
   type: z.literal("function_call"),
-  id: z.string().optional(),
+  id: z.string().nullish(),
   call_id: z.string(),
   name: z.string(),
   arguments: z.string(),
-  status: ResponsesItemStatusSchema.optional(),
+  status: ResponsesItemStatusSchema.nullish(),
   // Extension origin: Gemini
-  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.nullish().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter/Vercel
-  cache_control: ResponsesCacheControlSchema.optional().meta({ extension: true }),
+  cache_control: ResponsesCacheControlSchema.nullish().meta({ extension: true }),
 });
 export type ResponsesFunctionCall = z.infer<typeof ResponsesFunctionCallSchema>;
 
 export const ResponsesFunctionCallOutputSchema = z.object({
   type: z.literal("function_call_output"),
-  id: z.string().optional(),
+  id: z.string().nullish(),
   call_id: z.string(),
   output: z.union([z.string(), z.array(ResponsesInputContentSchema)]),
-  status: ResponsesItemStatusSchema.optional(),
+  status: ResponsesItemStatusSchema.nullish(),
   // Extension origin: Gemini
-  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.nullish().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter/Vercel
-  cache_control: ResponsesCacheControlSchema.optional().meta({ extension: true }),
+  cache_control: ResponsesCacheControlSchema.nullish().meta({ extension: true }),
 });
 export type ResponsesFunctionCallOutput = z.infer<typeof ResponsesFunctionCallOutputSchema>;
 
@@ -184,15 +184,15 @@ export type ResponsesReasoningText = z.infer<typeof ResponsesReasoningTextSchema
 
 export const ResponsesReasoningItemSchema = z.object({
   type: z.literal("reasoning"),
-  id: z.string().optional(),
+  id: z.string().nullish(),
   summary: z.array(ResponsesSummaryTextSchema),
-  content: z.array(ResponsesReasoningTextSchema).optional(),
-  encrypted_content: z.string().optional(),
-  status: ResponsesItemStatusSchema.optional(),
+  content: z.array(ResponsesReasoningTextSchema).nullish(),
+  encrypted_content: z.string().nullish(),
+  status: ResponsesItemStatusSchema.nullish(),
   // Extension origin: Gemini
-  extra_content: ResponsesProviderMetadataSchema.optional().meta({ extension: true }),
+  extra_content: ResponsesProviderMetadataSchema.nullish().meta({ extension: true }),
   // Extension origin: Anthropic/OpenRouter
-  signature: z.string().optional().meta({ extension: true }),
+  signature: z.string().nullish().meta({ extension: true }),
 });
 export type ResponsesReasoningItem = z.infer<typeof ResponsesReasoningItemSchema>;
 

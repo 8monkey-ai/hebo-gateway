@@ -9,7 +9,7 @@ import type { ProviderMetadata } from "../shared/schema";
 const TextBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
-  cache_control: CacheControlSchema.optional(),
+  cache_control: CacheControlSchema.nullish(),
 });
 
 const ImageSourceBase64Schema = z.object({
@@ -26,7 +26,7 @@ const ImageSourceUrlSchema = z.object({
 const ImageBlockSchema = z.object({
   type: z.literal("image"),
   source: z.discriminatedUnion("type", [ImageSourceBase64Schema, ImageSourceUrlSchema]),
-  cache_control: CacheControlSchema.optional(),
+  cache_control: CacheControlSchema.nullish(),
 });
 
 const DocumentSourceBase64Schema = z.object({
@@ -54,9 +54,9 @@ const DocumentBlockSchema = z.object({
     DocumentSourceTextSchema,
   ]),
   // FUTURE: pass title/context through to provider (no AI SDK FilePart equivalent yet)
-  title: z.string().optional(),
-  context: z.string().optional(),
-  cache_control: CacheControlSchema.optional(),
+  title: z.string().nullish(),
+  context: z.string().nullish(),
+  cache_control: CacheControlSchema.nullish(),
 });
 
 const ToolUseBlockSchema = z.object({
@@ -65,9 +65,9 @@ const ToolUseBlockSchema = z.object({
   name: z.string(),
   input: z.any(),
   // FUTURE: pass caller through to provider (no AI SDK equivalent yet)
-  caller: z.string().optional(),
+  caller: z.string().nullish(),
   // Extension origin: Gemini — carries thought_signature and other provider metadata for multi-turn
-  extra_content: ProviderMetadataSchema.optional().meta({ extension: true }),
+  extra_content: ProviderMetadataSchema.nullish().meta({ extension: true }),
 });
 
 const ToolResultContentBlockSchema = z.union([
@@ -78,9 +78,9 @@ const ToolResultContentBlockSchema = z.union([
 const ToolResultBlockSchema = z.object({
   type: z.literal("tool_result"),
   tool_use_id: z.string(),
-  content: ToolResultContentBlockSchema.optional(),
-  is_error: z.boolean().optional(),
-  cache_control: CacheControlSchema.optional(),
+  content: ToolResultContentBlockSchema.nullish(),
+  is_error: z.boolean().nullish(),
+  cache_control: CacheControlSchema.nullish(),
 });
 
 const ThinkingBlockSchema = z.object({
@@ -134,7 +134,7 @@ export type MessagesMessage = z.infer<typeof MessagesMessageSchema>;
 const SystemBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
-  cache_control: CacheControlSchema.optional(),
+  cache_control: CacheControlSchema.nullish(),
 });
 
 // --- Tool Schemas ---

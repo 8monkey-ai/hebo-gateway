@@ -162,7 +162,7 @@ export function convertThinkingToReasoning(
 
 export function convertToModelMessages(
   messages: MessagesMessage[],
-  system?: string | Array<{ type: "text"; text: string; cache_control?: CacheControl }>,
+  system?: string | Array<{ type: "text"; text: string; cache_control?: CacheControl | null }>,
 ): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
 
@@ -316,7 +316,7 @@ function fromToolResultBlock(
 ): ToolResultPart {
   let output: ToolResultPart["output"];
 
-  if (block.content === undefined) {
+  if (block.content === undefined || block.content === null) {
     output = { type: "text", value: "" };
   } else if (typeof block.content === "string") {
     output = parseJsonOrText(block.content);
