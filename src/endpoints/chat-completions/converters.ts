@@ -310,13 +310,13 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
   return content.map((part) => {
     switch (part.type) {
       case "image_url":
-        return fromImageUrlPart(part.image_url.url, part.cache_control);
+        return fromImageUrlPart(part.image_url.url, part.cache_control ?? undefined);
       case "file":
         return fromFilePart(
           part.file.data,
           part.file.media_type,
-          part.file.filename,
-          part.cache_control,
+          part.file.filename ?? undefined,
+          part.cache_control ?? undefined,
         );
       case "input_audio":
         return fromFilePart(
