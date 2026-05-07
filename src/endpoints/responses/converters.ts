@@ -314,28 +314,28 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         result.push({ type: "text", text: part.text });
         break;
       case "input_image": {
-        if (part.image_url !== undefined) {
+        if (part.image_url !== undefined && part.image_url !== null) {
           result.push(fromImageInput(part.image_url));
-        } else if (part.file_id !== undefined) {
+        } else if (part.file_id !== undefined && part.file_id !== null) {
           result.push({ type: "image", image: part.file_id });
         }
         break;
       }
       case "input_file": {
-        if (part.file_data !== undefined) {
-          result.push(fromFileInput(part.file_data, part.filename));
-        } else if (part.file_url !== undefined) {
+        if (part.file_data !== undefined && part.file_data !== null) {
+          result.push(fromFileInput(part.file_data, part.filename ?? undefined));
+        } else if (part.file_url !== undefined && part.file_url !== null) {
           result.push({
             type: "file",
             data: parseUrl(part.file_url),
-            filename: part.filename,
+            filename: part.filename ?? undefined,
             mediaType: "application/octet-stream",
           });
-        } else if (part.file_id !== undefined) {
+        } else if (part.file_id !== undefined && part.file_id !== null) {
           result.push({
             type: "file",
             data: part.file_id,
-            filename: part.filename,
+            filename: part.filename ?? undefined,
             mediaType: "application/octet-stream",
           });
         }
@@ -429,7 +429,7 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
     }
 
     if (part.type === "input_image") {
-      if (part.image_url !== undefined) {
+      if (part.image_url !== undefined && part.image_url !== null) {
         const { image, mediaType } = parseImageInput(part.image_url);
         if (image instanceof URL) {
           value.push({ type: "image-url", url: image.toString() });
@@ -440,23 +440,23 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
             mediaType: mediaType!,
           });
         }
-      } else if (part.file_id !== undefined) {
+      } else if (part.file_id !== undefined && part.file_id !== null) {
         value.push({ type: "image-file-id", fileId: part.file_id });
       }
       continue;
     }
 
     if (part.type === "input_file") {
-      if (part.file_data !== undefined) {
+      if (part.file_data !== undefined && part.file_data !== null) {
         value.push({
           type: "file-data",
           data: part.file_data,
           mediaType: "application/octet-stream",
-          filename: part.filename,
+          filename: part.filename ?? undefined,
         });
-      } else if (part.file_url !== undefined) {
+      } else if (part.file_url !== undefined && part.file_url !== null) {
         value.push({ type: "file-url", url: part.file_url });
-      } else if (part.file_id !== undefined) {
+      } else if (part.file_id !== undefined && part.file_id !== null) {
         value.push({ type: "file-id", fileId: part.file_id });
       }
       continue;

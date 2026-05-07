@@ -323,7 +323,7 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
           part.input_audio.data,
           `audio/${part.input_audio.format}`,
           undefined,
-          part.cache_control,
+          part.cache_control ?? undefined,
         );
       case "text": {
         const out: TextPart = {

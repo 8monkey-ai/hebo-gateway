@@ -29,15 +29,15 @@ export type ResponsesInputText = z.infer<typeof ResponsesInputTextSchema>;
 const ResponsesInputImageURLSchema = z.object({
   type: z.literal("input_image"),
   image_url: z.string(),
-  file_id: z.string().optional(),
-  detail: ResponsesImageDetailSchema.optional(),
+  file_id: z.string().nullish(),
+  detail: ResponsesImageDetailSchema.nullish(),
 });
 
 const ResponsesInputImageIDSchema = z.object({
   type: z.literal("input_image"),
   file_id: z.string(),
-  image_url: z.string().optional(),
-  detail: ResponsesImageDetailSchema.optional(),
+  image_url: z.string().nullish(),
+  detail: ResponsesImageDetailSchema.nullish(),
 });
 
 export const ResponsesInputImageSchema = z.union([
@@ -49,25 +49,25 @@ export type ResponsesInputImage = z.infer<typeof ResponsesInputImageSchema>;
 const ResponsesInputFileDataSchema = z.object({
   type: z.literal("input_file"),
   file_data: z.string(),
-  file_id: z.string().optional(),
-  file_url: z.string().optional(),
-  filename: z.string().optional(),
+  file_id: z.string().nullish(),
+  file_url: z.string().nullish(),
+  filename: z.string().nullish(),
 });
 
 const ResponsesInputFileIDSchema = z.object({
   type: z.literal("input_file"),
   file_id: z.string(),
-  file_data: z.string().optional(),
-  file_url: z.string().optional(),
-  filename: z.string().optional(),
+  file_data: z.string().nullish(),
+  file_url: z.string().nullish(),
+  filename: z.string().nullish(),
 });
 
 const ResponsesInputFileURLSchema = z.object({
   type: z.literal("input_file"),
   file_url: z.string(),
-  file_data: z.string().optional(),
-  file_id: z.string().optional(),
-  filename: z.string().optional(),
+  file_data: z.string().nullish(),
+  file_id: z.string().nullish(),
+  filename: z.string().nullish(),
 });
 
 export const ResponsesInputFileSchema = z.union([
