@@ -576,6 +576,14 @@ describe("Messages Converters", () => {
       ]);
       expect(toolSet).toBeUndefined();
     });
+
+    test("should drop tools with empty-string type", () => {
+      // Empty string passes z.string() in the hosted schema and survives the
+      // refine (it's not "custom"), so validation accepts the tool. The
+      // converter must still drop it rather than mistake it for a custom tool.
+      const toolSet = convertToToolSet([{ type: "", name: "bogus" }]);
+      expect(toolSet).toBeUndefined();
+    });
   });
 
   describe("convertToToolChoiceOptions", () => {
