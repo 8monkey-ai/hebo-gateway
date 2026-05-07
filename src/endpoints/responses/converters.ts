@@ -57,6 +57,7 @@ import type {
   ResponsesStreamEvent,
   ResponsesToolChoice,
   ResponsesTool,
+  ResponsesFunctionTool,
   ResponsesTextConfig,
   ResponsesSummaryText,
   ResponsesReasoningText,
@@ -505,13 +506,17 @@ export const convertToToolSet = (tools: ResponsesTool[] | undefined): ToolSet | 
 
   const toolSet: ToolSet = {};
   for (const t of tools) {
-    toolSet[t.name] = tool({
-      description: t.description,
-      inputSchema: jsonSchema(t.parameters),
-      strict: t.strict,
+    // Hosted/built-in tools (e.g. web_search) are accepted at the edge but
+    // not executed by the gateway; drop anything that isn't a function tool.
+    if (t.type !== "function") continue;
+    const fn = t as ResponsesFunctionTool;
+    toolSet[fn.name] = tool({
+      description: fn.description,
+      inputSchema: jsonSchema(fn.parameters),
+      strict: fn.strict,
     });
   }
-  return toolSet;
+  return Object.keys(toolSet).length > 0 ? toolSet : undefined;
 };
 
 export const convertToToolChoiceOptions = (

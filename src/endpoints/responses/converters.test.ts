@@ -469,6 +469,34 @@ describe("Responses Converters", () => {
       expect(Object.keys(result.tools!)).toEqual(["get_weather"]);
     });
 
+    test("should drop hosted tools when mixed with function tools", () => {
+      const result = convertToTextCallOptions({
+        input: "hi",
+        tools: [
+          {
+            type: "function",
+            name: "get_weather",
+            description: "Get weather",
+            parameters: { type: "object", properties: {} },
+          },
+          { type: "web_search" },
+          { type: "file_search", vector_store_ids: ["vs_123"] },
+        ],
+      });
+
+      expect(result.tools).toBeDefined();
+      expect(Object.keys(result.tools!)).toEqual(["get_weather"]);
+    });
+
+    test("should leave tools undefined when only hosted tools are present", () => {
+      const result = convertToTextCallOptions({
+        input: "hi",
+        tools: [{ type: "web_search" }, { type: "code_interpreter" }],
+      });
+
+      expect(result.tools).toBeUndefined();
+    });
+
     test("should convert tool_choice auto/required/none", () => {
       expect(convertToTextCallOptions({ input: "hi", tool_choice: "auto" }).toolChoice).toBe(
         "auto",
