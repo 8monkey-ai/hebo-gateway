@@ -254,6 +254,7 @@ export const getResponsesResponseAttributes = (
     Object.assign(attrs, {
       "gen_ai.output.messages": responses.output?.map((item) => {
         const base: TelemetryMessageLog = {
+          role: "assistant",
           type: item.type,
           status: item.status,
           parts: [],
