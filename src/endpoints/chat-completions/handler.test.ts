@@ -334,6 +334,18 @@ describe("Chat Completions Handler", () => {
     expect(data.model).toBe("openai/gpt-oss-20b");
   });
 
+  test("should accept null reasoning and reasoning_effort", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "hi" }],
+      reasoning: null,
+      reasoning_effort: null,
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+  });
+
   test("should accept max_completion_tokens parameter", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",

@@ -95,6 +95,12 @@ describe("Shared Converters", () => {
     test("should handle undefined inputs", () => {
       expect(parseReasoningOptions()).toEqual({});
     });
+
+    test("should handle null inputs", () => {
+      expect(parseReasoningOptions(null, null)).toEqual({});
+      expect(parseReasoningOptions(null)).toEqual({});
+      expect(parseReasoningOptions(undefined, null)).toEqual({});
+    });
   });
 
   describe("parsePromptCachingOptions", () => {

@@ -84,8 +84,8 @@ export function parseImageInput(url: string): { image: string | URL; mediaType?:
 }
 
 export function parseReasoningOptions(
-  reasoning_effort?: ReasoningEffort,
-  reasoning?: ReasoningConfig,
+  reasoning_effort?: ReasoningEffort | null,
+  reasoning?: ReasoningConfig | null,
 ) {
   const effort = reasoning?.effort ?? reasoning_effort;
   const max_tokens = reasoning?.max_tokens;
@@ -93,7 +93,7 @@ export function parseReasoningOptions(
   if (reasoning?.enabled === false || effort === "none") {
     return { reasoning: { enabled: false, effort: "none" }, reasoning_effort: "none" };
   }
-  if (!reasoning && effort === undefined) return {};
+  if (!reasoning && (effort === undefined || effort === null)) return {};
 
   const out: {
     reasoning: ReasoningConfig;
