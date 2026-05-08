@@ -411,6 +411,7 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
   for (const t of tools) {
     // Hosted/built-in tools (e.g. web_search) are accepted at the edge but
     // not executed by the gateway; drop anything that isn't a function tool.
+    // FUTURE: log dropped hosted tools at debug level (once per request, batched)
     if (t.type !== "function") continue;
     const fn = t as ChatCompletionsFunctionTool;
     toolSet[fn.function.name] = tool({
