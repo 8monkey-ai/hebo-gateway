@@ -243,13 +243,32 @@ export {
  * --- Tools ---
  */
 
-export const ResponsesToolSchema = z.object({
+export const ResponsesFunctionToolSchema = z.object({
   type: z.literal("function"),
   name: z.string(),
   description: z.string().optional(),
   parameters: z.record(z.string(), z.unknown()),
   strict: z.boolean().optional(),
 });
+export type ResponsesFunctionTool = z.infer<typeof ResponsesFunctionToolSchema>;
+
+// Hosted/built-in tools (e.g. web_search, file_search, code_interpreter).
+// Accepted at the edge so clients like Codex can send their default payload,
+// but not executed by the gateway — they are dropped before the AI SDK call
+// unless the downstream handler explicitly opts them in.
+export const ResponsesHostedToolSchema = z
+  .looseObject({
+    type: z.string(),
+  })
+  .refine((value) => value.type !== "function", {
+    message: 'Function tools must use the function tool schema (type: "function")',
+  });
+export type ResponsesHostedTool = z.infer<typeof ResponsesHostedToolSchema>;
+
+export const ResponsesToolSchema = z.union([
+  ResponsesFunctionToolSchema,
+  ResponsesHostedToolSchema,
+]);
 export type ResponsesTool = z.infer<typeof ResponsesToolSchema>;
 
 const ResponsesNamedFunctionToolChoiceSchema = z.object({

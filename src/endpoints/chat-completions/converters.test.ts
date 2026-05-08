@@ -593,6 +593,36 @@ describe("Chat Completions Converters", () => {
       expect(Object.keys(result.tools!)).toEqual(["get_weather"]);
     });
 
+    test("should drop hosted tools when mixed with function tools", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "get_weather",
+              description: "Get weather",
+              parameters: { type: "object", properties: {} },
+            },
+          },
+          { type: "web_search" },
+          { type: "file_search", vector_store_ids: ["vs_123"] },
+        ],
+      });
+
+      expect(result.tools).toBeDefined();
+      expect(Object.keys(result.tools!)).toEqual(["get_weather"]);
+    });
+
+    test("should leave tools undefined when only hosted tools are present", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "hi" }],
+        tools: [{ type: "web_search" }, { type: "code_interpreter" }],
+      });
+
+      expect(result.tools).toBeUndefined();
+    });
+
     test("should map prompt cache options into providerOptions.unknown", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "system", content: "You are concise." }],

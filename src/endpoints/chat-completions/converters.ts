@@ -40,6 +40,7 @@ import {
 import type {
   ChatCompletionsToolCall,
   ChatCompletionsTool,
+  ChatCompletionsFunctionTool,
   ChatCompletionsToolChoice,
   ChatCompletionsStream,
   ChatCompletionsContentPart,
@@ -408,13 +409,18 @@ export const convertToToolSet = (tools: ChatCompletionsTool[] | undefined): Tool
 
   const toolSet: ToolSet = {};
   for (const t of tools) {
-    toolSet[t.function.name] = tool({
-      description: t.function.description,
-      inputSchema: jsonSchema(t.function.parameters),
-      strict: t.function.strict,
+    // Hosted/built-in tools (e.g. web_search) are accepted at the edge but
+    // not executed by the gateway; drop anything that isn't a function tool.
+    // FUTURE: log dropped hosted tools at warn level (once per request, batched)
+    if (t.type !== "function") continue;
+    const fn = t as ChatCompletionsFunctionTool;
+    toolSet[fn.function.name] = tool({
+      description: fn.function.description,
+      inputSchema: jsonSchema(fn.function.parameters),
+      strict: fn.function.strict,
     });
   }
-  return toolSet;
+  return Object.keys(toolSet).length > 0 ? toolSet : undefined;
 };
 
 export const convertToToolChoiceOptions = (

@@ -139,13 +139,30 @@ const SystemBlockSchema = z.object({
 
 // --- Tool Schemas ---
 
-const MessagesToolSchema = z.object({
+const MessagesCustomToolSchema = z.object({
+  type: z.literal("custom").optional(),
   name: z.string(),
   description: z.string().optional(),
   input_schema: z.any(),
   // FUTURE: cache_control support on tools
   strict: z.boolean().optional(),
 });
+export type MessagesCustomTool = z.infer<typeof MessagesCustomToolSchema>;
+
+// Hosted/server tools (e.g. web_search_20250305, computer_20250124).
+// Accepted at the edge so clients can send their default payload, but not
+// executed by the gateway — they are dropped before the AI SDK call unless the
+// downstream handler explicitly opts them in.
+const MessagesHostedToolSchema = z
+  .looseObject({
+    type: z.string(),
+  })
+  .refine((value) => value.type !== "custom", {
+    message: 'Custom tools must use the custom tool schema (omit "type" or use type: "custom")',
+  });
+export type MessagesHostedTool = z.infer<typeof MessagesHostedToolSchema>;
+
+const MessagesToolSchema = z.union([MessagesCustomToolSchema, MessagesHostedToolSchema]);
 export type MessagesTool = z.infer<typeof MessagesToolSchema>;
 
 const MessagesToolChoiceAutoSchema = z.object({

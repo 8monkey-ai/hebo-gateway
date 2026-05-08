@@ -554,6 +554,36 @@ describe("Messages Converters", () => {
       expect(toolSet).toBeDefined();
       expect(Object.keys(toolSet!)).toEqual(["strict_tool"]);
     });
+
+    test("should drop hosted server tools when mixed with custom tools", () => {
+      const toolSet = convertToToolSet([
+        {
+          name: "get_weather",
+          description: "Get weather",
+          input_schema: { type: "object", properties: {} },
+        },
+        { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+        { type: "computer_20250124", name: "computer" },
+      ]);
+      expect(toolSet).toBeDefined();
+      expect(Object.keys(toolSet!)).toEqual(["get_weather"]);
+    });
+
+    test("should return undefined when only hosted tools are present", () => {
+      const toolSet = convertToToolSet([
+        { type: "web_search_20250305", name: "web_search" },
+        { type: "bash_20250124", name: "bash" },
+      ]);
+      expect(toolSet).toBeUndefined();
+    });
+
+    test("should drop tools with empty-string type", () => {
+      // Empty string passes z.string() in the hosted schema and survives the
+      // refine (it's not "custom"), so validation accepts the tool. The
+      // converter must still drop it rather than mistake it for a custom tool.
+      const toolSet = convertToToolSet([{ type: "", name: "bogus" }]);
+      expect(toolSet).toBeUndefined();
+    });
   });
 
   describe("convertToToolChoiceOptions", () => {

@@ -261,6 +261,44 @@ describe("Responses Handler", () => {
     expect(fnCall).toBeDefined();
   });
 
+  test("should accept requests with hosted tools (e.g. web_search) alongside function tools", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "What is the weather in SF?",
+      tools: [
+        {
+          type: "function",
+          name: "get_current_weather",
+          description: "Get the current weather",
+          parameters: {
+            type: "object",
+            properties: { location: { type: "string" } },
+          },
+        },
+        { type: "web_search" },
+        { type: "file_search", vector_store_ids: ["vs_123"] },
+      ],
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<Responses>(res);
+    expect(data!.status).toBe("completed");
+  });
+
+  test("should accept requests with only hosted tools", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      input: "Search for recent news",
+      tools: [{ type: "web_search" }],
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<Responses>(res);
+    expect(data!.status).toBe("completed");
+  });
+
   test("should generate streaming response successfully", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",

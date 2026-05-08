@@ -293,6 +293,44 @@ describe("Chat Completions Handler", () => {
     } satisfies Partial<ChatCompletions>);
   });
 
+  test("should accept requests with hosted tools (e.g. web_search) alongside function tools", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "What is the weather in SF?" }],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "get_current_weather",
+            description: "Get the current weather",
+            parameters: {
+              type: "object",
+              properties: { location: { type: "string" } },
+            },
+          },
+        },
+        { type: "web_search" },
+        { type: "file_search", vector_store_ids: ["vs_123"] },
+      ],
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<ChatCompletions>(res);
+    expect(data!.choices[0]!.finish_reason).toBe("tool_calls");
+  });
+
+  test("should accept requests with only hosted tools", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "user", content: "Search for recent news" }],
+      tools: [{ type: "web_search" }],
+    });
+
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+  });
+
   test("should generate streaming completion successfully", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",
