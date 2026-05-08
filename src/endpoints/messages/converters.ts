@@ -416,7 +416,7 @@ export function convertToToolSet(tools: MessagesTool[] | undefined): ToolSet | u
   for (const t of tools) {
     // Hosted/server tools (e.g. web_search_20250305) are accepted at the edge
     // but not executed by the gateway; drop anything with a non-"custom" type.
-    // FUTURE: log dropped hosted tools at debug level (once per request, batched)
+    // FUTURE: log dropped hosted tools at warn level (once per request, batched)
     if (t.type !== undefined && t.type !== "custom") continue;
     const fn = t as MessagesCustomTool;
     toolSet[fn.name] = tool({
