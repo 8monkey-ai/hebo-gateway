@@ -61,6 +61,8 @@ export const winterCgHandler = (
         span.updateName(`${ctx.operation}${ctx.modelId ? ` ${ctx.modelId}` : ""}`);
       }
 
+      span.setAttributes(ctx.otel);
+
       if (!span.isExisting) {
         // FUTURE add http.server.request.duration
         span.setAttributes(
