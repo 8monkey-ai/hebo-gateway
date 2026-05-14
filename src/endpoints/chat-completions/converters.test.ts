@@ -8,9 +8,13 @@ import type {
   FilePart,
   LanguageModelUsage,
   AssistantModelMessage,
+  ToolCallPart,
 } from "ai";
 
+import type { TextStreamPart } from "ai";
+
 import {
+  ChatCompletionsTransformStream,
   convertToTextCallOptions,
   toChatCompletions,
   toChatCompletionsAssistantMessage,
@@ -19,7 +23,8 @@ import {
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
-import type { ChatCompletionsToolMessage } from "./schema";
+import type { ChatCompletionsChunk, ChatCompletionsToolMessage } from "./schema";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream";
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({
@@ -223,6 +228,59 @@ describe("Chat Completions Converters", () => {
       });
     });
 
+    test("should emit reasoning_details for tool calls carrying thought_signature", () => {
+      // OpenCode / @ai-sdk/openai-compatible strips our `extra_content`, so we
+      // also mirror Gemini's thought_signature onto the standard
+      // `reasoning_details` channel (keyed by tool_call.id) that these clients
+      // round-trip correctly — same approach as OpenRouter.
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+            providerMetadata: {
+              vertex: { thought_signature: "tool-sig" },
+            },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.tool_calls![0]!.extra_content).toEqual({
+        vertex: { thought_signature: "tool-sig" },
+      });
+      expect(message.reasoning_details).toHaveLength(1);
+      expect(message.reasoning_details![0]).toEqual({
+        id: "call_123",
+        index: 0,
+        type: "reasoning.encrypted",
+        data: "tool-sig",
+        format: "google-gemini-v1",
+      });
+    });
+
+    test("should not emit reasoning_details for tool calls without thought_signature", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.reasoning_details).toBeUndefined();
+    });
+
     test("should extract reasoning_details from reasoning parts", () => {
       const mockResult = mockGenerateTextResult({
         text: "Final answer.",
@@ -374,6 +432,165 @@ describe("Chat Completions Converters", () => {
         toolName: "my_tool",
         input: {},
       });
+    });
+
+    test("should reconstruct thought_signature from reasoning_details when extra_content is missing", () => {
+      // Clients like OpenCode / @ai-sdk/openai-compatible drop our custom
+      // extra_content field but round-trip reasoning_details. We rebuild the
+      // tool call's providerOptions from the paired reasoning entry (matched by
+      // id) so Vertex receives the signature Gemini requires on every turn.
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: {
+              name: "web_search",
+              arguments: '{"q":"hi"}',
+            },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "sig-abc",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      expect(Array.isArray(message.content)).toBe(true);
+      const content = message.content;
+      expect(content).toHaveLength(1);
+      expect(content[0]).toEqual({
+        type: "tool-call",
+        toolCallId: "call_1",
+        toolName: "web_search",
+        input: { q: "hi" },
+        providerOptions: { vertex: { thought_signature: "sig-abc" } },
+      });
+    });
+
+    test("should prefer extra_content over reasoning_details when both are present", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: {
+              name: "web_search",
+              arguments: "{}",
+            },
+            extra_content: { vertex: { thought_signature: "from-extra" } },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "from-reasoning",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content as unknown as ToolCallPart[];
+      expect(content[0]!.providerOptions).toEqual({
+        vertex: { thought_signature: "from-extra" },
+      });
+    });
+
+    test("should not duplicate tool-call-bound reasoning as standalone reasoning parts", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "web_search", arguments: "{}" },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "sig-abc",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content as unknown as Array<{ type: string }>;
+      expect(content).toHaveLength(1);
+      expect(content[0]!.type).toBe("tool-call");
+    });
+
+    test("should emit reasoning part when id matches a tool call but format is not Gemini's envelope", () => {
+      // Guards the narrow correlation: only Gemini's thought-signature envelope
+      // (reasoning.encrypted + google-gemini-v1 + data) should be diverted into
+      // the tool call's providerOptions. Unrelated encrypted reasoning entries
+      // that happen to share an id with a tool call must still surface as a
+      // reasoning part.
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "web_search", arguments: "{}" },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "other-provider-blob",
+            format: "unknown",
+          },
+        ],
+      });
+
+      const content = message.content as unknown as Array<{
+        type: string;
+        providerOptions?: Record<string, unknown>;
+      }>;
+      expect(content).toHaveLength(2);
+      expect(content[0]!.type).toBe("reasoning");
+      expect(content[1]!.type).toBe("tool-call");
+      // The tool call must not pick up the non-Gemini envelope as a signature.
+      expect(content[1]!.providerOptions).toBeUndefined();
+    });
+
+    test("should still emit standalone reasoning parts when id does not match any tool call", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "hi",
+        reasoning_details: [
+          {
+            id: "reasoning_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "thoughts",
+            format: "unknown",
+          },
+        ],
+      });
+
+      const content = message.content as unknown as Array<{ type: string }>;
+      expect(content).toHaveLength(2);
+      expect(content[0]!.type).toBe("reasoning");
+      expect(content[1]!.type).toBe("text");
     });
   });
 
@@ -929,6 +1146,95 @@ describe("Chat Completions Converters", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
       expect(call.function.name).toBe("a".repeat(128));
+    });
+  });
+
+  describe("ChatCompletionsTransformStream", () => {
+    const collectChunks = async (
+      source: ReadableStream<TextStreamPart<ToolSet>>,
+    ): Promise<ChatCompletionsChunk[]> => {
+      const transformed = source.pipeThrough(new ChatCompletionsTransformStream("test-model"));
+      const chunks: ChatCompletionsChunk[] = [];
+      // oxlint-disable-next-line no-await-in-loop
+      for await (const frame of transformed as AsyncIterable<
+        SseFrame<ChatCompletionsChunk> | SseErrorFrame
+      >) {
+        if (frame.data instanceof Error) throw frame.data;
+        chunks.push(frame.data);
+      }
+      return chunks;
+    };
+
+    test("should emit reasoning_details before tool_calls when Gemini thought_signature is present", async () => {
+      const source = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "tool-call",
+            toolCallId: "call_gemini",
+            toolName: "web_search",
+            input: { q: "hi" },
+            providerMetadata: { vertex: { thought_signature: "stream-sig" } },
+          });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "tool-calls",
+            rawFinishReason: "tool_calls",
+            totalUsage: mockUsage({ outputTokens: 5 }),
+          });
+          controller.close();
+        },
+      });
+
+      const chunks = await collectChunks(source);
+
+      const reasoningChunk = chunks.find((c) => c.choices[0]?.delta.reasoning_details);
+      const toolCallChunk = chunks.find((c) => c.choices[0]?.delta.tool_calls);
+
+      expect(reasoningChunk).toBeDefined();
+      expect(toolCallChunk).toBeDefined();
+      expect(chunks.indexOf(reasoningChunk!)).toBeLessThan(chunks.indexOf(toolCallChunk!));
+      expect(reasoningChunk!.choices[0]!.delta.reasoning_details![0]).toEqual({
+        id: "call_gemini",
+        index: 0,
+        type: "reasoning.encrypted",
+        data: "stream-sig",
+        format: "google-gemini-v1",
+      });
+      expect(toolCallChunk!.choices[0]!.delta.tool_calls![0]).toMatchObject({
+        id: "call_gemini",
+        index: 0,
+      });
+    });
+
+    test("should not emit reasoning_details chunk when tool call has no thought_signature", async () => {
+      const source = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "tool-call",
+            toolCallId: "call_1",
+            toolName: "web_search",
+            input: { q: "hi" },
+          });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "tool-calls",
+            rawFinishReason: "tool_calls",
+            totalUsage: mockUsage({ outputTokens: 5 }),
+          });
+          controller.close();
+        },
+      });
+
+      const chunks = await collectChunks(source);
+
+      const reasoningChunk = chunks.find((c) => c.choices[0]?.delta.reasoning_details);
+      const toolCallChunk = chunks.find((c) => c.choices[0]?.delta.tool_calls);
+      expect(toolCallChunk).toBeDefined();
+      expect(toolCallChunk!.choices[0]!.delta.tool_calls![0]).toMatchObject({
+        id: "call_1",
+        index: 0,
+      });
+      expect(reasoningChunk).toBeUndefined();
     });
   });
 });

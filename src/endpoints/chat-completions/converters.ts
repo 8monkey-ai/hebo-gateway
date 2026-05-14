@@ -34,6 +34,7 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  extractThoughtSignature,
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
@@ -202,8 +203,27 @@ export function fromChatCompletionsAssistantMessage(
 
   const parts: AssistantContent = [];
 
+  // Entries whose `id` matches a `tool_calls[i].id` are Gemini thought-signature
+  // envelopes — they bind to a tool call, not to chain-of-thought, so we hand
+  // them to the tool_calls loop instead of turning them into reasoning parts.
+  const toolCallIds = new Set(tool_calls?.map((tc) => tc.id) ?? []);
+  const toolCallReasoningById = new Map<string, ChatCompletionsReasoningDetail>();
+
   if (reasoning_details?.length) {
     for (const detail of reasoning_details) {
+      // Only divert entries that match our Gemini thought-signature envelope
+      // (type=reasoning.encrypted, format=google-gemini-v1, with data). Looser
+      // id-only matching would drop unrelated reasoning entries on id collision.
+      if (
+        detail.id &&
+        toolCallIds.has(detail.id) &&
+        detail.type === "reasoning.encrypted" &&
+        detail.format === "google-gemini-v1" &&
+        typeof detail.data === "string"
+      ) {
+        toolCallReasoningById.set(detail.id, detail);
+        continue;
+      }
       if (detail.text && detail.type === "reasoning.text") {
         parts.push({
           type: "reasoning",
@@ -263,6 +283,15 @@ export function fromChatCompletionsAssistantMessage(
       };
       if (extra_content) {
         out.providerOptions = extra_content;
+      } else {
+        // Fall back to the paired reasoning_details entry (OpenRouter/Vercel
+        // convention) when the client stripped our extra_content. Gemini needs
+        // every follow-up turn to echo `thought_signature` on each function-call
+        // part or Vertex rejects the request.
+        const reasoning = toolCallReasoningById.get(id);
+        if (reasoning?.type === "reasoning.encrypted" && reasoning.data) {
+          out.providerOptions = { vertex: { thought_signature: reasoning.data } };
+        }
       }
       parts.push(out);
     }
@@ -601,6 +630,19 @@ export class ChatCompletionsTransformStream extends TransformStream<
           }
 
           case "tool-call": {
+            const signature = extractThoughtSignature(part.providerMetadata);
+            if (signature) {
+              const index = reasoningIdToIndex.size;
+              reasoningIdToIndex.set(part.toolCallId, index);
+              controller.enqueue(
+                createChunk({
+                  reasoning_details: [
+                    toToolCallReasoningDetail(part.toolCallId, signature, index),
+                  ],
+                }),
+              );
+            }
+
             const toolCall = toChatCompletionsToolCall(
               part.toolCallId,
               part.toolName,
@@ -682,6 +724,17 @@ export const toChatCompletionsAssistantMessage = (
     }
   }
 
+  if (result.toolCalls) {
+    for (const toolCall of result.toolCalls) {
+      const signature = extractThoughtSignature(toolCall.providerMetadata);
+      if (signature) {
+        reasoningDetails.push(
+          toToolCallReasoningDetail(toolCall.toolCallId, signature, reasoningDetails.length),
+        );
+      }
+    }
+  }
+
   if (result.reasoningText) {
     message.reasoning = result.reasoningText;
   }
@@ -697,6 +750,25 @@ export const toChatCompletionsAssistantMessage = (
 
   return message;
 };
+
+// Mirrors OpenRouter's chat-completions convention for Gemini thought signatures:
+// emit an encrypted reasoning detail whose `id` matches the tool call's `id` so
+// OpenAI-compatible clients (e.g. @ai-sdk/openai-compatible) round-trip the
+// signature on the next turn via `reasoning_details[]` rather than the
+// non-standard `tool_calls[i].extra_content` field they tend to strip.
+export function toToolCallReasoningDetail(
+  toolCallId: string,
+  signature: string,
+  index: number,
+): ChatCompletionsReasoningDetail {
+  return {
+    id: toolCallId,
+    index,
+    type: "reasoning.encrypted",
+    data: signature,
+    format: "google-gemini-v1",
+  };
+}
 
 export function toReasoningDetail(
   reasoning: ReasoningOutput,
