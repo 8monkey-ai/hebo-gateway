@@ -61,8 +61,6 @@ export const winterCgHandler = (
         span.updateName(`${ctx.operation}${ctx.modelId ? ` ${ctx.modelId}` : ""}`);
       }
 
-      span.setAttributes(ctx.otel);
-
       if (!span.isExisting) {
         // FUTURE add http.server.request.duration
         span.setAttributes(
@@ -81,6 +79,8 @@ export const winterCgHandler = (
           err,
         });
 
+        // On error we may not reach the handler's own ctx.otel flush, so flush here.
+        span.setAttributes(ctx.otel);
         span.recordError(err, true);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
