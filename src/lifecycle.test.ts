@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { context, trace } from "@opentelemetry/api";
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
-import { BasicTracerProvider } from "@opentelemetry/sdk-trace-base";
+import {
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import { MockProviderV3 } from "ai/test";
 
 import { models } from "./endpoints/models/handler";
@@ -130,5 +134,43 @@ describe("winterCgHandler", () => {
     expect(await response.text()).toBe("teapot");
     expect(onErrorTraceId).toBeDefined();
     expect(onResponseCalled).toBe(false);
+  });
+
+  test("flushes ctx.otel attributes to the span when handler throws", async () => {
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+
+    const exporter = new InMemorySpanExporter();
+    const tracerProvider = new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)],
+    });
+
+    const handler = winterCgHandler(
+      async (ctx) => {
+        ctx.operation = "chat";
+        ctx.otel["custom.tenant"] = "tenant-123";
+        throw new Error("provider config missing");
+      },
+      {
+        providers: { openai: new MockProviderV3() },
+        models: {
+          "openai/gpt-oss-20b": {
+            name: "GPT-OSS 20B",
+            modalities: { input: ["text"], output: ["text"] },
+            providers: ["openai"],
+          },
+        },
+        telemetry: { enabled: true, tracer: tracerProvider.getTracer("test") },
+      },
+    );
+
+    const response = await handler(
+      new Request("http://localhost/v1/chat/completions", { method: "POST" }),
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+
+    const spans = exporter.getFinishedSpans();
+    expect(spans.length).toBe(1);
+    expect(spans[0]!.attributes["custom.tenant"]).toBe("tenant-123");
   });
 });

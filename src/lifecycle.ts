@@ -79,6 +79,8 @@ export const winterCgHandler = (
           err,
         });
 
+        // On error we may not reach the handler's own ctx.otel flush, so flush here.
+        span.setAttributes(ctx.otel);
         span.recordError(err, true);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
