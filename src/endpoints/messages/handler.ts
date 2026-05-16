@@ -15,6 +15,7 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { resolveProvider } from "../../providers/registry";
 import {
   getGenAiGeneralAttributes,
+  recordFeatureUsage,
   recordTimePerOutputToken,
   recordTimeToFirstToken,
   recordTokenUsage,
@@ -116,6 +117,8 @@ export const messages = (config: GatewayConfig): Endpoint => {
         onAbort: () => {
           throw new DOMException("The operation was aborted.", "AbortError");
         },
+        // Required: without an onError handler the AI SDK rethrows stream
+        // errors synchronously, which breaks downstream SSE handling.
         onError: () => {},
         onChunk: () => {
           if (!ttft) {
@@ -140,6 +143,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
           setSpanAttributes(genAiResponseAttrs);
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
+          recordFeatureUsage(textOptions, genAiGeneralAttrs, ctx.trace);
         },
         experimental_include: {
           requestBody: false,
@@ -186,6 +190,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
     );
     setSpanAttributes(genAiResponseAttrs);
     recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
+    recordFeatureUsage(textOptions, genAiGeneralAttrs, ctx.trace);
 
     if (hooks?.after) {
       ctx.result = (await hooks.after(ctx as AfterHookContext)) ?? ctx.result;

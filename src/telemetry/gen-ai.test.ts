@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 
-import { metrics } from "@opentelemetry/api";
+import { metrics, type Attributes } from "@opentelemetry/api";
 import {
   AggregationTemporality,
   DataPointType,
@@ -9,9 +9,22 @@ import {
   PeriodicExportingMetricReader,
   type HistogramMetricData,
 } from "@opentelemetry/sdk-metrics";
+import {
+  InvalidToolInputError,
+  JSONParseError,
+  NoObjectGeneratedError,
+  NoSuchToolError,
+  ToolCallRepairError,
+  TypeValidationError,
+} from "ai";
 
 import type { GatewayContext } from "../types";
-import { getGenAiGeneralAttributes, recordTokenUsage } from "./gen-ai";
+import {
+  getGenAiGeneralAttributes,
+  recordAiSdkFeatureError,
+  recordFeatureOutcome,
+  recordTokenUsage,
+} from "./gen-ai";
 
 type Point = {
   value: number;
@@ -44,27 +57,45 @@ const collectTokenUsagePoints = async (): Promise<Point[]> => {
   );
 };
 
+const collectCounterPoints = async (
+  metricName: string,
+): Promise<{ value: number; attributes: Attributes }[]> => {
+  await reader.forceFlush();
+  const points: { value: number; attributes: Attributes }[] = [];
+  for (const rm of exporter.getMetrics()) {
+    for (const sm of rm.scopeMetrics) {
+      for (const md of sm.metrics) {
+        if (md.descriptor.name !== metricName) continue;
+        for (const dp of md.dataPoints) {
+          points.push({ value: dp.value as number, attributes: dp.attributes });
+        }
+      }
+    }
+  }
+  return points;
+};
+
+beforeAll(() => {
+  exporter = new InMemoryMetricExporter(AggregationTemporality.DELTA);
+  reader = new PeriodicExportingMetricReader({
+    exporter,
+    exportIntervalMillis: 60_000,
+    exportTimeoutMillis: 10_000,
+  });
+  provider = new MeterProvider({ readers: [reader] });
+  metrics.setGlobalMeterProvider(provider);
+});
+
+afterAll(async () => {
+  await provider.shutdown();
+  metrics.disable();
+});
+
+afterEach(() => {
+  exporter.reset();
+});
+
 describe("recordTokenUsage", () => {
-  beforeAll(() => {
-    exporter = new InMemoryMetricExporter(AggregationTemporality.DELTA);
-    reader = new PeriodicExportingMetricReader({
-      exporter,
-      exportIntervalMillis: 60_000,
-      exportTimeoutMillis: 10_000,
-    });
-    provider = new MeterProvider({ readers: [reader] });
-    metrics.setGlobalMeterProvider(provider);
-  });
-
-  afterAll(async () => {
-    await provider.shutdown();
-    metrics.disable();
-  });
-
-  afterEach(() => {
-    exporter.reset();
-  });
-
   test("emits single {type} points when no breakdown is reported", async () => {
     recordTokenUsage(
       {
@@ -217,6 +248,124 @@ describe("recordTokenUsage", () => {
 
     const points = await collectTokenUsagePoints();
     expect(points).toHaveLength(0);
+  });
+});
+
+describe("telemetry/gen-ai feature counters", () => {
+  const baseAttrs: Attributes = {
+    "gen_ai.operation.name": "chat",
+    "gen_ai.provider.name": "groq",
+    "gen_ai.response.model": "openai/gpt-oss-20b",
+  };
+
+  test("no-ops when signal level is off or missing", async () => {
+    const undef: "off" | undefined = undefined;
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, "off");
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, undef);
+    recordFeatureOutcome("structured_output", baseAttrs, undefined, "off");
+    recordAiSdkFeatureError(new NoSuchToolError({ toolName: "x" }), baseAttrs, "off");
+
+    expect(await collectCounterPoints("gen_ai.server.tool_call")).toHaveLength(0);
+    expect(await collectCounterPoints("gen_ai.server.structured_output")).toHaveLength(0);
+  });
+
+  test("no-ops when signal level is 'required'", async () => {
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, "required");
+    recordFeatureOutcome("structured_output", baseAttrs, undefined, "required");
+
+    expect(await collectCounterPoints("gen_ai.server.tool_call")).toHaveLength(0);
+    expect(await collectCounterPoints("gen_ai.server.structured_output")).toHaveLength(0);
+  });
+
+  test("records tool_call success with no error.type attribute", async () => {
+    recordFeatureOutcome("tool_call", baseAttrs, undefined, "recommended");
+
+    const points = await collectCounterPoints("gen_ai.server.tool_call");
+    expect(points).toHaveLength(1);
+    expect(points[0]!.value).toBe(1);
+    expect(points[0]!.attributes["error.type"]).toBeUndefined();
+    expect(points[0]!.attributes["gen_ai.provider.name"]).toBe("groq");
+  });
+
+  test("records structured_output success with no error.type attribute", async () => {
+    recordFeatureOutcome("structured_output", baseAttrs, undefined, "full");
+
+    const points = await collectCounterPoints("gen_ai.server.structured_output");
+    expect(points).toHaveLength(1);
+    expect(points[0]!.attributes["error.type"]).toBeUndefined();
+  });
+
+  test("recordAiSdkFeatureError maps tool SDK errors to tool_call counter", async () => {
+    recordAiSdkFeatureError(
+      new InvalidToolInputError({ toolName: "x", toolInput: "{", cause: new Error("bad") }),
+      baseAttrs,
+      "recommended",
+    );
+    recordAiSdkFeatureError(new NoSuchToolError({ toolName: "y" }), baseAttrs, "recommended");
+    recordAiSdkFeatureError(
+      new ToolCallRepairError({
+        cause: new Error("oops"),
+        originalError: new NoSuchToolError({ toolName: "y" }),
+      }),
+      baseAttrs,
+      "recommended",
+    );
+
+    const points = await collectCounterPoints("gen_ai.server.tool_call");
+    const typeCounts = new Map<string, number>();
+    for (const p of points) {
+      const t = String(p.attributes["error.type"] ?? "<none>");
+      typeCounts.set(t, (typeCounts.get(t) ?? 0) + p.value);
+    }
+    expect(typeCounts.get("invalid_input")).toBe(1);
+    expect(typeCounts.get("unknown_tool")).toBe(1);
+    expect(typeCounts.get("repair_failed")).toBe(1);
+  });
+
+  test("recordAiSdkFeatureError maps output SDK errors to structured_output counter", async () => {
+    recordAiSdkFeatureError(
+      new JSONParseError({ text: "{", cause: new Error("parse") }),
+      baseAttrs,
+      "recommended",
+    );
+    recordAiSdkFeatureError(
+      new TypeValidationError({ value: {}, cause: new Error("schema") }),
+      baseAttrs,
+      "recommended",
+    );
+    recordAiSdkFeatureError(
+      new NoObjectGeneratedError({
+        message: "no output",
+        response: { id: "r", modelId: "m", timestamp: new Date() },
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          inputTokenDetails: {
+            noCacheTokens: undefined,
+            cacheReadTokens: undefined,
+            cacheWriteTokens: undefined,
+          },
+          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
+        },
+        finishReason: "stop",
+      }),
+      baseAttrs,
+      "recommended",
+    );
+
+    const points = await collectCounterPoints("gen_ai.server.structured_output");
+    const types = points.map((p) => p.attributes["error.type"]);
+    expect(types).toContain("invalid_json");
+    expect(types).toContain("schema_mismatch");
+    expect(types).toContain("no_output");
+  });
+
+  test("recordAiSdkFeatureError no-ops for unrelated errors", async () => {
+    recordAiSdkFeatureError(new Error("just a regular error"), baseAttrs, "recommended");
+
+    expect(await collectCounterPoints("gen_ai.server.tool_call")).toHaveLength(0);
+    expect(await collectCounterPoints("gen_ai.server.structured_output")).toHaveLength(0);
   });
 });
 
