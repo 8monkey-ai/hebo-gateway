@@ -8,6 +8,7 @@ import type {
   FilePart,
   LanguageModelUsage,
   AssistantModelMessage,
+  TextStreamPart,
 } from "ai";
 
 import {
@@ -18,6 +19,7 @@ import {
   toChatCompletionsUsage,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
+  ChatCompletionsTransformStream,
 } from "./converters";
 import type { ChatCompletionsToolMessage } from "./schema";
 
@@ -929,6 +931,94 @@ describe("Chat Completions Converters", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
       expect(call.function.name).toBe("a".repeat(128));
+    });
+  });
+
+  describe("ChatCompletionsTransformStream error handling", () => {
+    const collectErrorData = async (
+      stream: ReadableStream<TextStreamPart<ToolSet>>,
+    ): Promise<Error | undefined> => {
+      const transformed = stream.pipeThrough(new ChatCompletionsTransformStream("test-model"));
+      const reader = transformed.getReader();
+      while (true) {
+        // oxlint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) return undefined;
+        if (value && value.data instanceof Error) {
+          return value.data;
+        }
+      }
+    };
+
+    test("should preserve message from plain object error payloads", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: {
+              type: "invalid_request_error",
+              message:
+                "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+            },
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(
+        "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+      );
+    });
+
+    test("should fall back to JSON.stringify for opaque object errors", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: { code: 42, detail: "no message field" },
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(JSON.stringify({ code: 42, detail: "no message field" }));
+      expect(error!.message).not.toBe("[object Object]");
+    });
+
+    test("should handle string error payloads", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: "raw string error",
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe("raw string error");
+    });
+
+    test("should pass through Error instances unchanged", async () => {
+      const original = new Error("Something went wrong");
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: original,
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBe(original);
     });
   });
 });
