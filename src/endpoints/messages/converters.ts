@@ -559,6 +559,32 @@ function toMessagesServiceTier(tier?: ServiceTier): MessagesServiceTier | undefi
   return undefined; // flex, scale, priority don't have Anthropic equivalents
 }
 
+// Upstream stream errors arrive in three shapes: `Error` instances, raw strings,
+// or plain JSON payloads (e.g. Google's `{ type, message }` from a 4xx response).
+// Plain `String(obj)` collapses the last case to "[object Object]", losing both
+// the upstream `type` and the human-readable message.
+function extractStreamErrorFields(error: unknown): { type: string; message: string } {
+  if (error instanceof Error) {
+    return { type: "api_error", message: error.message };
+  }
+  if (typeof error === "string") {
+    return { type: "api_error", message: error };
+  }
+  if (error && typeof error === "object") {
+    const obj = error as { type?: unknown; message?: unknown };
+    const type = typeof obj.type === "string" ? obj.type : "api_error";
+    const message =
+      typeof obj.message === "string" && obj.message.length > 0
+        ? obj.message
+        : JSON.stringify(error);
+    return { type, message };
+  }
+  return {
+    type: "api_error",
+    message: error === null || error === undefined ? "unknown error" : JSON.stringify(error),
+  };
+}
+
 // --- Streaming ---
 
 export function toMessagesStream(
@@ -791,12 +817,12 @@ export class MessagesTransformStream extends TransformStream<
           }
 
           case "error": {
-            const message = part.error instanceof Error ? part.error.message : String(part.error);
+            const { type, message } = extractStreamErrorFields(part.error);
             controller.enqueue({
               event: "error",
               data: {
                 type: "error",
-                error: { type: "api_error", message },
+                error: { type, message },
               },
             });
             break;
