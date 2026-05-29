@@ -136,7 +136,7 @@ test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
   });
 });
 
-test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoningConfig", async () => {
+test("bedrockClaudeReasoningMiddleware > should pass adaptive thinking through with effort", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -161,7 +161,7 @@ test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoni
     providerOptions: {
       bedrock: {
         reasoningConfig: {
-          type: "enabled", // "adaptive" mapped to "enabled" — Converse API limitation
+          type: "adaptive",
           budgetTokens: 4096,
           maxReasoningEffort: "max",
         },
@@ -170,7 +170,7 @@ test("bedrockClaudeReasoningMiddleware > should map thinking/effort into reasoni
   });
 });
 
-test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens using medium effort when adaptive mapped to enabled", async () => {
+test("bedrockClaudeReasoningMiddleware > should pass adaptive thinking without budget", async () => {
   const params = {
     prompt: [],
     maxOutputTokens: 8192,
@@ -178,6 +178,106 @@ test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens us
       bedrock: {
         thinking: {
           type: "adaptive",
+        },
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 8192,
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "adaptive",
+        },
+      },
+    },
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should map effort with adaptive thinking", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "high",
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "adaptive",
+          maxReasoningEffort: "high",
+        },
+      },
+    },
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should pass max effort with adaptive thinking", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "max",
+      },
+    },
+  };
+
+  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 10000,
+    providerOptions: {
+      bedrock: {
+        reasoningConfig: {
+          type: "adaptive",
+          maxReasoningEffort: "max",
+        },
+      },
+    },
+  });
+});
+
+test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens using medium effort when type is enabled", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 8192,
+    providerOptions: {
+      bedrock: {
+        thinking: {
+          type: "enabled",
         },
       },
     },
@@ -204,117 +304,14 @@ test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens us
   });
 });
 
-test("bedrockClaudeReasoningMiddleware > should use effort for fallback budgetTokens when effort is available", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-        effort: "high",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  // high effort = 80% of maxOutputTokens
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 8000,
-          maxReasoningEffort: "high",
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should map max effort to xhigh for fallback budgetTokens", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-        effort: "max",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  // max → xhigh effort = 95% of maxOutputTokens
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 9500,
-          maxReasoningEffort: "max",
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should use default maxOutputTokens for fallback budgetTokens", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 32768, // medium effort (50%) of default 65536
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should enforce minimum budgetTokens of 1024", async () => {
+test("bedrockClaudeReasoningMiddleware > should enforce minimum budgetTokens of 1024 for enabled", async () => {
   const params = {
     prompt: [],
     maxOutputTokens: 100,
     providerOptions: {
       bedrock: {
         thinking: {
-          type: "adaptive",
+          type: "enabled",
         },
       },
     },
@@ -385,7 +382,7 @@ test("bedrock middlewares > matching provider resolves Claude middleware for Opu
   expect(middleware).toContain(bedrockServiceTierMiddleware);
 });
 
-test("bedrockClaudeReasoningMiddleware > should set maxReasoningEffort for Claude Opus 4.7", async () => {
+test("bedrockClaudeReasoningMiddleware > should set adaptive type and maxReasoningEffort for Claude Opus 4.7", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -409,8 +406,7 @@ test("bedrockClaudeReasoningMiddleware > should set maxReasoningEffort for Claud
     providerOptions: {
       bedrock: {
         reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 62259,
+          type: "adaptive",
           maxReasoningEffort: "xhigh",
         },
       },
