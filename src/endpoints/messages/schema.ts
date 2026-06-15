@@ -231,13 +231,10 @@ export type MessagesOutputConfig = z.infer<typeof MessagesOutputConfigSchema>;
 
 // --- Request Body Schema ---
 
-export const MessagesBodySchema = z.object({
-  model: z.string(),
+const MessagesInputsSchema = z.object({
   max_tokens: z.number().int().min(1),
   messages: z.array(MessagesMessageSchema),
   system: z.union([z.string(), z.array(SystemBlockSchema)]).optional(),
-  stream: z.boolean().optional(),
-  trace: TraceSchema,
   temperature: z.number().optional(),
   top_p: z.number().optional(),
   stop_sequences: z.array(z.string()).optional(),
@@ -248,9 +245,19 @@ export const MessagesBodySchema = z.object({
   service_tier: MessagesServiceTierSchema.optional(),
   cache_control: CacheControlSchema.optional(),
   output_config: MessagesOutputConfigSchema.optional(),
+  // Extension origin: Gemini extra_body
+  // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/migrate/openai/overview#extra_body
+  extra_body: ProviderMetadataSchema.optional().meta({ extension: true }),
+});
+export type MessagesInputs = z.infer<typeof MessagesInputsSchema>;
+
+export const MessagesBodySchema = z.looseObject({
+  model: z.string(),
+  stream: z.boolean().optional(),
+  trace: TraceSchema,
+  ...MessagesInputsSchema.shape,
 });
 export type MessagesBody = z.infer<typeof MessagesBodySchema>;
-export type MessagesInputs = Omit<MessagesBody, "model" | "stream">;
 
 // --- Response Schemas ---
 

@@ -53,58 +53,65 @@ import type {
 // --- Request Flow ---
 
 export function convertToTextCallOptions(inputs: MessagesInputs): TextCallOptions {
+  const {
+    messages,
+    system,
+    max_tokens,
+    temperature,
+    top_p,
+    stop_sequences,
+    tools,
+    tool_choice,
+    thinking,
+    metadata,
+    service_tier,
+    cache_control,
+    output_config,
+    extra_body,
+    ...rest
+  } = inputs;
+
+  Object.assign(rest, convertThinkingToReasoning(thinking, output_config));
+
+  if (cache_control) {
+    Object.assign(rest, parsePromptCachingOptions(undefined, undefined, cache_control));
+  }
+
+  if (metadata) {
+    Object.assign(rest, { metadata });
+  }
+
+  if (service_tier) {
+    Object.assign(rest, { service_tier: toInternalServiceTier(service_tier) });
+  }
+
+  if (extra_body) {
+    for (const v of Object.values(extra_body)) {
+      Object.assign(rest, v);
+    }
+  }
+
   const options: TextCallOptions = {
-    messages: convertToModelMessages(inputs.messages, inputs.system),
-    temperature: inputs.temperature,
-    maxOutputTokens: inputs.max_tokens,
-    topP: inputs.top_p,
-    stopSequences: inputs.stop_sequences,
-    providerOptions: {},
+    messages: convertToModelMessages(messages, system),
+    temperature,
+    maxOutputTokens: max_tokens,
+    topP: top_p,
+    stopSequences: stop_sequences,
+    providerOptions: {
+      unknown: rest,
+    },
   };
 
   // Tools
-  const toolSet = convertToToolSet(inputs.tools);
+  const toolSet = convertToToolSet(tools);
   if (toolSet) options.tools = toolSet;
 
-  const toolChoice = convertToToolChoiceOptions(inputs.tool_choice);
-  if (toolChoice) options.toolChoice = toolChoice;
-
-  // Build providerOptions.unknown in one pass — reasoning, cache control, metadata,
-  // and service tier all go into the same object for middleware consumption.
-  const unknown: Record<string, unknown> = {};
-
-  // Thinking/reasoning — convert to the shared `reasoning` config format so the
-  // model middleware (claudeReasoningMiddleware) and provider middleware
-  // (bedrockClaudeReasoningMiddleware) handle provider-specific conversion.
-  const reasoningResult = convertThinkingToReasoning(inputs.thinking, inputs.output_config);
-  if (reasoningResult) {
-    unknown["reasoning"] = reasoningResult.reasoning;
-    unknown["reasoning_effort"] = reasoningResult.reasoning_effort;
-  }
-
-  // Per-block cache control is handled in convertToModelMessages.
-  // Top-level automatic caching:
-  if (inputs.cache_control) {
-    Object.assign(unknown, parsePromptCachingOptions(undefined, undefined, inputs.cache_control));
-  }
-
-  // Metadata passthrough
-  if (inputs.metadata) {
-    unknown["metadata"] = inputs.metadata;
-  }
-
-  // Service tier — map Anthropic-native values to internal representation
-  if (inputs.service_tier) {
-    unknown["service_tier"] = toInternalServiceTier(inputs.service_tier);
-  }
-
-  if (Object.keys(unknown).length > 0) {
-    (options.providerOptions as Record<string, unknown>)["unknown"] = unknown;
-  }
+  const toolChoiceOpts = convertToToolChoiceOptions(tool_choice);
+  if (toolChoiceOpts) options.toolChoice = toolChoiceOpts;
 
   // Structured output
-  if (inputs.output_config) {
-    options.output = convertToOutput(inputs.output_config);
+  if (output_config) {
+    options.output = convertToOutput(output_config);
   }
 
   return options;
