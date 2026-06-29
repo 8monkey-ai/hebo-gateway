@@ -1099,6 +1099,19 @@ describe("Messages Converters", () => {
       });
     });
 
+    test("should pass arbitrary metadata labels in providerOptions", () => {
+      const result = convertToTextCallOptions({
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 1000,
+        metadata: { user_id: "u-123", cost_center: "abc", team: "core" },
+      });
+      expect((result.providerOptions["unknown"] as Record<string, unknown>)["metadata"]).toEqual({
+        user_id: "u-123",
+        cost_center: "abc",
+        team: "core",
+      });
+    });
+
     test("should map service_tier 'auto' to internal 'auto'", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "Hi" }],

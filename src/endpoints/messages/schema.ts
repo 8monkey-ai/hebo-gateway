@@ -244,7 +244,7 @@ export const MessagesBodySchema = z.object({
   tools: z.array(MessagesToolSchema).optional(),
   tool_choice: MessagesToolChoiceSchema.optional(),
   thinking: MessagesThinkingConfigSchema.nullish(),
-  metadata: z.object({ user_id: z.string().optional() }).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
   service_tier: MessagesServiceTierSchema.optional(),
   cache_control: CacheControlSchema.optional(),
   output_config: MessagesOutputConfigSchema.optional(),

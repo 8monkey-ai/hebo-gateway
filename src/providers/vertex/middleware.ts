@@ -55,6 +55,22 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
   },
 };
 
+export const vertexMetadataMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // eslint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const vertex = params.providerOptions?.["vertex"];
+    if (!vertex || typeof vertex !== "object") return params;
+
+    const metadata = vertex["metadata"];
+    if (!metadata) return params;
+
+    vertex["labels"] = { ...(vertex["labels"] as object), ...(metadata as object) };
+    delete vertex["metadata"];
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
-  language: [vertexServiceTierMiddleware],
+  language: [vertexServiceTierMiddleware, vertexMetadataMiddleware],
 });
