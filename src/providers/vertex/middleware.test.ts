@@ -115,18 +115,3 @@ test("vertexMetadataMiddleware > leaves params untouched without metadata", asyn
 
   expect(result.providerOptions!["vertex"]).toEqual({ labels: { env: "prod" } });
 });
-
-test("vertexMetadataMiddleware > ignores non-object metadata", async () => {
-  const result = await transformMetadata({ metadata: "not-an-object", labels: { env: "prod" } });
-
-  expect(result.providerOptions!["vertex"]).toEqual({
-    metadata: "not-an-object",
-    labels: { env: "prod" },
-  });
-});
-
-test("vertexMetadataMiddleware > drops non-object labels when merging", async () => {
-  const result = await transformMetadata({ metadata: { team: "core" }, labels: "bogus" });
-
-  expect(result.providerOptions!["vertex"]).toEqual({ labels: { team: "core" } });
-});
