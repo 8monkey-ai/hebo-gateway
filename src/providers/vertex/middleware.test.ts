@@ -86,23 +86,24 @@ test("vertexServiceTierMiddleware > should not override pre-set headers", async 
   expect(result.providerOptions!["vertex"]).toEqual({});
 });
 
-const transformMetadata = (vertex: Record<string, unknown>) =>
-  vertexMetadataMiddleware.transformParams!({
+test("vertexMetadataMiddleware > translates metadata into labels", async () => {
+  const result = await vertexMetadataMiddleware.transformParams!({
     type: "generate",
-    params: { prompt: [], providerOptions: { vertex } as never },
+    params: { prompt: [], providerOptions: { vertex: { metadata: { team: "core" } } } },
     model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
   });
-
-test("vertexMetadataMiddleware > translates metadata into labels", async () => {
-  const result = await transformMetadata({ metadata: { team: "core" } });
 
   expect(result.providerOptions!["vertex"]).toEqual({ labels: { team: "core" } });
 });
 
 test("vertexMetadataMiddleware > merges metadata over existing labels", async () => {
-  const result = await transformMetadata({
-    metadata: { team: "core" },
-    labels: { env: "prod" },
+  const result = await vertexMetadataMiddleware.transformParams!({
+    type: "generate",
+    params: {
+      prompt: [],
+      providerOptions: { vertex: { metadata: { team: "core" }, labels: { env: "prod" } } },
+    },
+    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
   });
 
   expect(result.providerOptions!["vertex"]).toEqual({
@@ -111,7 +112,11 @@ test("vertexMetadataMiddleware > merges metadata over existing labels", async ()
 });
 
 test("vertexMetadataMiddleware > leaves params untouched without metadata", async () => {
-  const result = await transformMetadata({ labels: { env: "prod" } });
+  const result = await vertexMetadataMiddleware.transformParams!({
+    type: "generate",
+    params: { prompt: [], providerOptions: { vertex: { labels: { env: "prod" } } } },
+    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
+  });
 
   expect(result.providerOptions!["vertex"]).toEqual({ labels: { env: "prod" } });
 });
