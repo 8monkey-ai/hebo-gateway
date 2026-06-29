@@ -14,6 +14,10 @@ function setHeaderIfMissing(
   headers[key] ??= value;
 }
 
+function isStringMap(v: unknown): v is Record<string, string> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/standard-paygo
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/priority-paygo
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/flex-paygo
@@ -63,10 +67,11 @@ export const vertexMetadataMiddleware: LanguageModelMiddleware = {
     if (!vertex || typeof vertex !== "object") return params;
 
     const metadata = vertex["metadata"];
-    if (!metadata) return params;
+    if (!isStringMap(metadata)) return params;
 
-    vertex["labels"] = { ...(vertex["labels"] as object), ...(metadata as object) };
-    delete vertex["metadata"];
+    const labels = vertex["labels"];
+    vertex["labels"] = { ...(isStringMap(labels) ? labels : {}), ...metadata };
+    vertex["metadata"] = undefined;
     return params;
   },
 };
