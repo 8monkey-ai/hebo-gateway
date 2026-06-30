@@ -12,6 +12,8 @@ import { withCanonicalIds } from "../registry";
 const MAPPING = {
   // Require Inference Profiles and can't be resolved from standard name mapping
   "anthropic/claude-haiku-4.5": "{ip}anthropic.claude-haiku-4-5-20251001-v1:0",
+  "anthropic/claude-fable-5": "{ip}anthropic.claude-5-fable-20260609-v1:0",
+  "anthropic/claude-opus-4.8": "{ip}anthropic.claude-opus-4-8-20260528-v1:0",
   "anthropic/claude-opus-4.7": "{ip}anthropic.claude-opus-4-7",
   "anthropic/claude-sonnet-4.6": "{ip}anthropic.claude-sonnet-4-6",
   "anthropic/claude-sonnet-4.5": "{ip}anthropic.claude-sonnet-4-5-20250929-v1:0",
