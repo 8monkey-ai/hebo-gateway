@@ -299,6 +299,7 @@ export const qwen37Max = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Qwen3.7 Max",
     context: 1_000_000,
     created: "2026-05-21",
+    knowledge: "2025-04",
   } satisfies CatalogModel,
 );
 

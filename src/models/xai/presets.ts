@@ -76,6 +76,7 @@ export const grok420 = presetFor<CanonicalModelId, CatalogModel>()("xai/grok-4.2
   ...GROK_REASONING_BASE,
   name: "Grok 4.20",
   created: "2026-03-09",
+  knowledge: "2024-11",
 } satisfies CatalogModel);
 
 export const grok420MultiAgent = presetFor<CanonicalModelId, CatalogModel>()(
@@ -84,6 +85,7 @@ export const grok420MultiAgent = presetFor<CanonicalModelId, CatalogModel>()(
     ...GROK_REASONING_BASE,
     name: "Grok 4.20 Multi-Agent",
     created: "2026-03-09",
+    knowledge: "2024-11",
   } satisfies CatalogModel,
 );
 
