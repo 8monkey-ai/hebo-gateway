@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage, TextStreamPart } from "ai";
 
+import { toAnthropicError } from "../../errors/anthropic";
+import { toSseStream } from "../../utils/stream";
 import {
   convertToTextCallOptions,
   convertToModelMessages,
@@ -1481,6 +1483,117 @@ describe("Messages Converters", () => {
         (errorEvent as { data: { type: string; error: { type: string; message: string } } }).data
           .error.message,
       ).toBe("Something went wrong");
+    });
+
+    test("should preserve message and type from plain object error payloads", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: {
+              type: "invalid_request_error",
+              message:
+                "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+            },
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
+      const { events } = await collectStreamEvents(transformed);
+
+      const errorEvent = events.find((e) => e.event === "error");
+      expect(errorEvent).toBeDefined();
+      const data = (
+        errorEvent as { data: { type: string; error: { type: string; message: string } } }
+      ).data;
+      expect(data.error.type).toBe("invalid_request_error");
+      expect(data.error.message).toBe(
+        "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+      );
+    });
+
+    test("should fall back to JSON.stringify for opaque object errors", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: { code: 42, detail: "no message field" },
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
+      const { events } = await collectStreamEvents(transformed);
+
+      const errorEvent = events.find((e) => e.event === "error");
+      expect(errorEvent).toBeDefined();
+      const data = (
+        errorEvent as { data: { type: string; error: { type: string; message: string } } }
+      ).data;
+      expect(data.error.type).toBe("api_error");
+      expect(data.error.message).toBe(JSON.stringify({ code: 42, detail: "no message field" }));
+      expect(data.error.message).not.toBe("[object Object]");
+    });
+
+    test("should handle string error payloads", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: "raw string error",
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
+      const { events } = await collectStreamEvents(transformed);
+
+      const errorEvent = events.find((e) => e.event === "error");
+      expect(errorEvent).toBeDefined();
+      const data = (
+        errorEvent as { data: { type: string; error: { type: string; message: string } } }
+      ).data;
+      expect(data.error.type).toBe("api_error");
+      expect(data.error.message).toBe("raw string error");
+    });
+
+    // Regression for #213: MessagesTransformStream preserved the upstream message
+    // correctly, but toAnthropicError (invoked by toSseStream's toError callback)
+    // then re-stringified the already-well-formed payload back to "[object Object]".
+    // This test drives the full pipeline the request handler wires up.
+    test("end-to-end: streamed plain-object upstream errors reach the wire intact", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: {
+              type: "invalid_request_error",
+              message:
+                "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+            },
+          });
+          controller.close();
+        },
+      });
+
+      const transformed = stream.pipeThrough(new MessagesTransformStream("test-model"));
+      const wire = await new Response(
+        toSseStream(transformed, {
+          toError: (e) => toAnthropicError(e, "req_test"),
+        }),
+      ).text();
+
+      expect(wire).toContain("event: error\n");
+      expect(wire).toContain('"type":"invalid_request_error"');
+      expect(wire).toContain(
+        '"message":"Unable to submit request because function call `check_availability` is missing a `thought_signature`."',
+      );
+      expect(wire).not.toContain("[object Object]");
+      expect(wire).not.toContain('"message":"[object Object]"');
     });
   });
 });

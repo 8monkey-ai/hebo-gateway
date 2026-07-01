@@ -50,7 +50,31 @@ const mapType = (status: number): string => {
   }
 };
 
+function isAnthropicErrorShape(
+  value: unknown,
+): value is { type: "error"; error: { type: string; message: string } } {
+  if (!value || typeof value !== "object") return false;
+  const v = value as { type?: unknown; error?: unknown };
+  if (v.type !== "error" || !v.error || typeof v.error !== "object") return false;
+  const inner = v.error as { type?: unknown; message?: unknown };
+  return typeof inner.type === "string" && typeof inner.message === "string";
+}
+
 export function toAnthropicError(error: unknown, requestId?: string): AnthropicError {
+  // Streaming Anthropic-shaped payloads (produced by MessagesTransformStream from
+  // upstream stream errors) already carry the correct wire format. Pass them
+  // through so we don't clobber `type` via mapType() or turn `message` into
+  // `[object Object]` via String().
+  if (isAnthropicErrorShape(error)) {
+    // `api_error` maps to 500; everything else (invalid_request_error, etc.) is a 4xx-shaped
+    // upstream error where the message is safe to expose. Only 5xx messages are masked.
+    const status = error.error.type === "api_error" ? 500 : 400;
+    return new AnthropicError(
+      maybeMaskMessage(error.error.message, status, requestId),
+      error.error.type,
+    );
+  }
+
   const meta = getErrorMeta(error);
 
   const anthropicError = new AnthropicError(

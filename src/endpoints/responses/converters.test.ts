@@ -8,6 +8,7 @@ import type {
   UserModelMessage,
   FilePart,
   ToolModelMessage,
+  TextStreamPart,
 } from "ai";
 
 import {
@@ -964,6 +965,92 @@ describe("Responses Converters", () => {
       expect(toolCallDoneEvent).toBeDefined();
       const item = toolCallDoneEvent!.data.item as ResponsesFunctionCall;
       expect(item.extra_content).toEqual({ test: { final: "metadata" } });
+    });
+
+    const collectErrorData = async (
+      stream: ReadableStream<TextStreamPart<ToolSet>>,
+    ): Promise<Error | undefined> => {
+      const transformed = stream.pipeThrough(new ResponsesTransformStream("test-model"));
+      const reader = transformed.getReader();
+      while (true) {
+        // oxlint-disable-next-line no-await-in-loop
+        const { done, value } = await reader.read();
+        if (done) return undefined;
+        if (value && (value as { data?: unknown }).data instanceof Error) {
+          return (value as { data: Error }).data;
+        }
+      }
+    };
+
+    test("should preserve message from plain object error payloads", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: {
+              type: "invalid_request_error",
+              message:
+                "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+            },
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(
+        "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+      );
+    });
+
+    test("should fall back to JSON.stringify for opaque object errors", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: { code: 42, detail: "no message field" },
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe(JSON.stringify({ code: 42, detail: "no message field" }));
+      expect(error!.message).not.toBe("[object Object]");
+    });
+
+    test("should handle string error payloads", async () => {
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: "raw string error",
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBeInstanceOf(Error);
+      expect(error!.message).toBe("raw string error");
+    });
+
+    test("should pass through Error instances unchanged", async () => {
+      const original = new Error("Something went wrong");
+      const stream = new ReadableStream<TextStreamPart<ToolSet>>({
+        start(controller) {
+          controller.enqueue({
+            type: "error",
+            error: original,
+          });
+          controller.close();
+        },
+      });
+
+      const error = await collectErrorData(stream);
+      expect(error).toBe(original);
     });
   });
 });

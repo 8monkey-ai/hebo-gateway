@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { APICallError, RetryError } from "ai";
 
 import { normalizeAiSdkError } from "./ai-sdk";
+import { toAnthropicError } from "./anthropic";
 import { GatewayError } from "./gateway";
 import { getErrorMeta } from "./utils";
 
@@ -140,5 +141,48 @@ describe("getErrorMeta", () => {
     const error = new GatewayError("Model not found", 422, "MODEL_NOT_FOUND");
     const meta = getErrorMeta(error);
     expect(meta.headers).toEqual({ "x-should-retry": "false" });
+  });
+});
+
+describe("toAnthropicError", () => {
+  test("passes through already-Anthropic-shaped payloads without clobbering type/message", () => {
+    // MessagesTransformStream emits this shape verbatim from upstream stream errors.
+    // toSseStream then feeds it back through toAnthropicError — regression for #213.
+    const streamPayload = {
+      type: "error" as const,
+      error: {
+        type: "invalid_request_error",
+        message:
+          "Unable to submit request because function call `check_availability` is missing a `thought_signature`.",
+      },
+    };
+
+    const result = toAnthropicError(streamPayload);
+    expect(result.error.type).toBe("invalid_request_error");
+    expect(result.error.message).toBe(streamPayload.error.message);
+    expect(result.error.message).not.toBe("[object Object]");
+  });
+
+  test("preserves api_error type from streaming payloads", () => {
+    const streamPayload = {
+      type: "error" as const,
+      error: { type: "api_error", message: "upstream failed" },
+    };
+
+    const result = toAnthropicError(streamPayload);
+    expect(result.error.type).toBe("api_error");
+    expect(result.error.message).toBe("upstream failed");
+  });
+
+  test("still handles regular Error instances via existing path", () => {
+    const result = toAnthropicError(new Error("boom"));
+    expect(result.error.type).toBe("api_error");
+    expect(result.error.message).toBe("boom");
+  });
+
+  test("still handles GatewayError with 4xx status via existing path", () => {
+    const result = toAnthropicError(new GatewayError("bad input", 400));
+    expect(result.error.type).toBe("invalid_request_error");
+    expect(result.error.message).toBe("bad input");
   });
 });
