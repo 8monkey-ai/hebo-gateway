@@ -10,6 +10,7 @@ const explicitMappings: [canonical: string, nativeId: string][] = [
   ["zhipu/glm-5", "glm-5-20260211"],
   ["zhipu/glm-5-turbo", "glm-5-turbo-20260315"],
   ["zhipu/glm-5.1", "glm-5.1-20260406"],
+  ["zhipu/glm-5.2", "glm-5.2-20260616"],
 ];
 
 for (const [canonical, nativeId] of explicitMappings) {

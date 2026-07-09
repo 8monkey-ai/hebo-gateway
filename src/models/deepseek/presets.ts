@@ -29,15 +29,40 @@ export const deepseekV32 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const deepseekV4Flash = presetFor<CanonicalModelId, CatalogModel>()(
+  "deepseek/deepseek-v4-flash" as const,
+  {
+    ...DEEPSEEK_BASE,
+    name: "DeepSeek V4 Flash",
+    created: "2026-04-23",
+    knowledge: "2025-05",
+    context: 1_000_000,
+  } satisfies CatalogModel,
+);
+
+export const deepseekV4Pro = presetFor<CanonicalModelId, CatalogModel>()(
+  "deepseek/deepseek-v4-pro" as const,
+  {
+    ...DEEPSEEK_BASE,
+    name: "DeepSeek V4 Pro",
+    created: "2026-04-23",
+    knowledge: "2025-05",
+    context: 1_000_000,
+  } satisfies CatalogModel,
+);
+
 const deepseekAtomic = {
   "v3.2": [deepseekV32],
+  v4: [deepseekV4Flash, deepseekV4Pro],
 } as const;
 
-const deepseekGroups = {} as const;
+const deepseekGroups = {
+  "v4.x": [...deepseekAtomic["v4"]],
+} as const;
 
 export const deepseek = {
   ...deepseekAtomic,
   ...deepseekGroups,
-  latest: [...deepseekAtomic["v3.2"]],
+  latest: [...deepseekAtomic["v4"]],
   all: Object.values(deepseekAtomic).flat(),
 } as const;

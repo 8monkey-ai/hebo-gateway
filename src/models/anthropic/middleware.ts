@@ -17,7 +17,10 @@ const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
 };
 
 const isClaude4 = (modelId: string) => modelId.includes("claude-") && modelId.includes("-4");
+const isFable5 = (modelId: string) => modelId.includes("claude-fable-5");
+const isClaude4OrFable = (modelId: string) => isClaude4(modelId) || isFable5(modelId);
 
+const isOpus48 = isClaude("opus", "4.8");
 const isOpus47 = isClaude("opus", "4.7");
 const isOpus46 = isClaude("opus", "4.6");
 const isOpus45 = isClaude("opus", "4.5");
@@ -28,7 +31,7 @@ export function mapClaudeReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
   modelId: string,
 ): "low" | "medium" | "high" | "xhigh" | "max" | undefined {
-  if (isOpus47(modelId)) {
+  if (isOpus48(modelId) || isOpus47(modelId) || isFable5(modelId)) {
     switch (effort) {
       case "none":
       case "minimal":
@@ -78,6 +81,8 @@ export function mapClaudeReasoningEffort(
 }
 
 function getMaxOutputTokens(modelId: string): number {
+  if (isOpus48(modelId)) return 128_000;
+  if (isFable5(modelId)) return 128_000;
   if (isOpus47(modelId)) return 128_000;
   if (isOpus46(modelId)) return 128_000;
   if (isOpus45(modelId)) return 64_000;
@@ -107,10 +112,10 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
     if (!reasoning.enabled) {
       target.thinking = { type: "disabled" };
     } else if (reasoning.effort) {
-      if (isClaude4(modelId)) {
+      if (isClaude4OrFable(modelId)) {
         target.effort = mapClaudeReasoningEffort(reasoning.effort, modelId);
       }
-      if (isOpus47(modelId)) {
+      if (isOpus48(modelId) || isOpus47(modelId) || isFable5(modelId)) {
         target.thinking = { type: "adaptive" };
       } else if (isOpus46(modelId)) {
         target.thinking = clampedMaxTokens
@@ -176,6 +181,9 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel(["anthropic/claude-*3*7*", "anthropic/claude-*4*"], {
-  language: [claudeReasoningMiddleware, claudePromptCachingMiddleware],
-});
+modelMiddlewareMatcher.useForModel(
+  ["anthropic/claude-*3*7*", "anthropic/claude-*4*", "anthropic/claude-fable-*"],
+  {
+    language: [claudeReasoningMiddleware, claudePromptCachingMiddleware],
+  },
+);

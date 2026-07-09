@@ -2,6 +2,8 @@ import type { ProviderId } from "../providers/types";
 
 export const CANONICAL_MODEL_IDS = [
   // Anthropic
+  "anthropic/claude-fable-5",
+  "anthropic/claude-opus-4.8",
   "anthropic/claude-opus-4.7",
   "anthropic/claude-opus-4.6",
   "anthropic/claude-sonnet-4.6",
@@ -57,6 +59,7 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-3-flash-preview",
   "google/gemini-3.1-flash-lite-preview",
   "google/gemini-3.1-pro-preview",
+  "google/gemini-3.5-flash",
   "google/gemini-embedding-2",
   "google/embedding-001",
   "google/gemma-3-1b",
@@ -94,9 +97,11 @@ export const CANONICAL_MODEL_IDS = [
   // MiniMax
   "minimax/m2.5",
   "minimax/m2.7",
+  "minimax/m3",
   // Moonshot
   "moonshot/kimi-k2.5",
   "moonshot/kimi-k2.6",
+  "moonshot/kimi-k2.7-code",
   // xAI
   "xai/grok-4.1-fast",
   "xai/grok-4.1-fast-reasoning",
@@ -104,8 +109,12 @@ export const CANONICAL_MODEL_IDS = [
   "xai/grok-4.2-reasoning",
   "xai/grok-4.2-multi-agent",
   "xai/grok-4.3",
+  "xai/grok-4.20",
+  "xai/grok-4.20-multi-agent",
   // DeepSeek
   "deepseek/deepseek-v3.2",
+  "deepseek/deepseek-v4-flash",
+  "deepseek/deepseek-v4-pro",
   // Voyage
   "voyage/voyage-2-code",
   "voyage/voyage-2-law",
@@ -134,6 +143,8 @@ export const CANONICAL_MODEL_IDS = [
   "alibaba/qwen3.6-flash",
   "alibaba/qwen3.6-27b",
   "alibaba/qwen3.6-max-preview",
+  "alibaba/qwen3.7-plus",
+  "alibaba/qwen3.7-max",
   "alibaba/qwen3-coder-next",
   "alibaba/qwen3-vl-235b",
   "alibaba/qwen3-embedding-0.6b",
@@ -143,6 +154,7 @@ export const CANONICAL_MODEL_IDS = [
   "zhipu/glm-5",
   "zhipu/glm-5-turbo",
   "zhipu/glm-5.1",
+  "zhipu/glm-5.2",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];

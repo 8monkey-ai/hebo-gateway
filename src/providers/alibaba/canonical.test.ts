@@ -36,6 +36,8 @@ const stripNamespaceFallbacks: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3.6-plus", "qwen3.6-plus"],
   ["alibaba/qwen3.6-27b", "qwen3.6-27b"],
   ["alibaba/qwen3.6-max-preview", "qwen3.6-max-preview"],
+  ["alibaba/qwen3.7-plus", "qwen3.7-plus"],
+  ["alibaba/qwen3.7-max", "qwen3.7-max"],
   ["alibaba/qwen3-coder-next", "qwen3-coder-next"],
   ["alibaba/qwen3-embedding-0.6b", "qwen3-embedding-0.6b"],
   ["alibaba/qwen3-embedding-4b", "qwen3-embedding-4b"],

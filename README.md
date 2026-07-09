@@ -214,33 +214,33 @@ const modelsFromFamily = defineModelCatalog(
 Out-of-the-box model presets:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`  
-  Qwen: `qwen` (`v3`, `v3.5`, `v3.6`, `v3.x`, `coder`, `vl`, `embedding`, `embeddings`, `latest`, `all`)
+  Qwen: `qwen` (`v3`, `v3.5`, `v3.6`, `v3.7`, `v3.x`, `coder`, `vl`, `embedding`, `embeddings`, `latest`, `all`)
 
 - **Amazon** — `@hebo-ai/gateway/models/amazon`  
   Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
 - **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v4.7`, `v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+  Claude: `claude` (`v4.8`, `v4.7`, `v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
   Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
 
 - **DeepSeek** — `@hebo-ai/gateway/models/deepseek`  
-  DeepSeek: `deepseek` (`v3.2`, `latest`, `all`)
+  DeepSeek: `deepseek` (`v3.2`, `v4`, `v4.x`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v2.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v2.5`, `v3.5`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
   Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **MiniMax** — `@hebo-ai/gateway/models/minimax`  
-  MiniMax: `minimax` (`v2`, `v2.x`, `latest`, `all`)
+  MiniMax: `minimax` (`v2`, `v3`, `v2.x`, `v3.x`, `latest`, `all`)
 
 - **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
-  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.x`, `latest`, `all`)
+  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
   GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
@@ -251,10 +251,10 @@ Out-of-the-box model presets:
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.1`, `v4.2`, `v4.3`, `latest`, `all`)
+  Grok: `grok` (`v4.1`, `v4.2`, `v4.3`, `v4.20`, `latest`, `all`)
 
 - **Z.ai** — `@hebo-ai/gateway/models/zai`  
-  GLM: `glm` (`v5`, `v5.1`, `v5.x`, `latest`, `all`)
+  GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.x`, `latest`, `all`)
 
 #### User-defined Models
 
