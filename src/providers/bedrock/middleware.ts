@@ -86,20 +86,16 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
     const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
 
     if (thinking && typeof thinking === "object") {
-      // Bedrock's InvokeModel (Messages) API supports "adaptive" thinking natively,
-      // but @ai-sdk/amazon-bedrock only uses the Converse API which rejects "adaptive"
-      // in additionalModelRequestFields — it only accepts "enabled" / "disabled".
-      // Map "adaptive" → "enabled" until the SDK adds InvokeModel support.
-      // See: https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
-      // SDK tracking issue: https://github.com/vercel/ai/issues/8513
-      target.type = thinking.type === "adaptive" ? "enabled" : thinking.type;
+      // Bedrock Converse API supports "adaptive" natively for Claude Opus 4.6/4.7
+      // and Sonnet 4.6 via additionalModelRequestFields. Opus 4.7 *only* supports
+      // adaptive — "enabled" returns a 400.
+      // https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
+      target.type = thinking.type;
       if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
         target.budgetTokens = thinking.budgetTokens;
       } else if (target.type === "enabled") {
-        // Bedrock requires budgetTokens when type is "enabled". When mapping from
-        // "adaptive" (which doesn't require budgetTokens), compute a fallback using
-        // the same effort-based logic as other model cases, defaulting to "medium".
-        // Note: Bedrock Converse API doesn't support "adaptive" natively — see vercel/ai#8513
+        // Bedrock requires budgetTokens when type is "enabled" — compute a fallback
+        // from effort, defaulting to "medium".
         const mappedEffort: ChatCompletionsReasoningEffort =
           effort === "max" ? "xhigh" : ((effort as ChatCompletionsReasoningEffort) ?? "medium");
         target.budgetTokens = calculateReasoningBudgetFromEffort(
