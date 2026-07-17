@@ -34,6 +34,8 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  extractThoughtSignature,
+  GEMINI_REASONING_FORMAT,
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
@@ -202,8 +204,17 @@ export function fromChatCompletionsAssistantMessage(
 
   const parts: AssistantContent = [];
 
+  // Gemini thought signatures ride in reasoning_details keyed by tool call id
+  // (format "google-gemini-v1"). Collect them so they can be reattached to the
+  // matching tool call below, and skip them as standalone reasoning parts.
+  const toolCallSignatures = new Map<string, string>();
+
   if (reasoning_details?.length) {
     for (const detail of reasoning_details) {
+      if (detail.format === GEMINI_REASONING_FORMAT && detail.id && detail.signature) {
+        toolCallSignatures.set(detail.id, detail.signature);
+        continue;
+      }
       if (detail.text && detail.type === "reasoning.text") {
         parts.push({
           type: "reasoning",
@@ -261,8 +272,15 @@ export function fromChatCompletionsAssistantMessage(
         toolName: fn.name,
         input: parseJsonOrText(fn.arguments).value,
       };
+      // Prefer the Vertex-specific extra_content when present; otherwise fall back
+      // to the thought signature carried via reasoning_details (OpenRouter convention).
       if (extra_content) {
         out.providerOptions = extra_content;
+      } else {
+        const signature = toolCallSignatures.get(id);
+        if (signature) {
+          out.providerOptions = { unknown: { thoughtSignature: signature } };
+        }
       }
       parts.push(out);
     }
@@ -608,11 +626,18 @@ export class ChatCompletionsTransformStream extends TransformStream<
               part.providerMetadata,
             ) as ChatCompletionsToolCallDelta;
             toolCall.index = toolCallIndexCounter++;
-            controller.enqueue(
-              createChunk({
-                tool_calls: [toolCall],
-              }),
+            const delta: ChatCompletionsAssistantMessageDelta = {
+              tool_calls: [toolCall],
+            };
+            // Mirror the tool call's Gemini thought signature into reasoning_details
+            // (keyed by tool call id) so OpenAI-compatible clients preserve it.
+            const reasoningDetail = toToolCallReasoningDetail(
+              part.toolCallId,
+              part.providerMetadata,
+              toolCall.index,
             );
+            if (reasoningDetail) delta.reasoning_details = [reasoningDetail];
+            controller.enqueue(createChunk(delta));
             break;
           }
 
@@ -652,6 +677,8 @@ export const toChatCompletionsAssistantMessage = (
     content: null,
   };
 
+  const reasoningDetails: ChatCompletionsReasoningDetail[] = [];
+
   if (result.toolCalls && result.toolCalls.length > 0) {
     message.tool_calls = result.toolCalls.map((toolCall) =>
       toChatCompletionsToolCall(
@@ -661,9 +688,18 @@ export const toChatCompletionsAssistantMessage = (
         toolCall.providerMetadata,
       ),
     );
+    // Gemini attaches its thought signature to the tool call. Expose it via the
+    // OpenRouter reasoning_details convention (keyed by tool call id) so
+    // OpenAI-compatible clients preserve it across turns, not just via extra_content.
+    for (const toolCall of result.toolCalls) {
+      const detail = toToolCallReasoningDetail(
+        toolCall.toolCallId,
+        toolCall.providerMetadata,
+        reasoningDetails.length,
+      );
+      if (detail) reasoningDetails.push(detail);
+    }
   }
-
-  const reasoningDetails: ChatCompletionsReasoningDetail[] = [];
 
   for (const part of result.content) {
     if (part.type === "text") {
@@ -722,6 +758,30 @@ export function toReasoningDetail(
     text: reasoning.text,
     signature,
     format: "unknown",
+  };
+}
+
+/**
+ * Builds a `reasoning_details` entry that carries a Gemini/Vertex thought
+ * signature for a tool call. The detail's `id` matches the tool call id so the
+ * signature can be reattached to the right call on the next turn. Returns
+ * `undefined` when the tool call has no thought signature.
+ */
+export function toToolCallReasoningDetail(
+  toolCallId: string,
+  providerMetadata: SharedV3ProviderMetadata | undefined,
+  index: number,
+): ChatCompletionsReasoningDetail | undefined {
+  const signature = extractThoughtSignature(providerMetadata);
+  if (!signature) return undefined;
+
+  return {
+    id: toolCallId,
+    index,
+    type: "reasoning.text",
+    text: "",
+    signature,
+    format: GEMINI_REASONING_FORMAT,
   };
 }
 

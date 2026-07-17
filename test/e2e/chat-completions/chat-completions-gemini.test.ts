@@ -109,6 +109,79 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
   );
 
   // =========================================================================
+  // thought_signature pass: roundtrip using ONLY reasoning_details (OpenRouter
+  // convention) — no extra_content. This is what OpenAI-compatible clients that
+  // already preserve reasoning_details send back without any changes.
+  // =========================================================================
+  test(
+    "thought_signature: reasoning_details is present and echoed back correctly",
+    async () => {
+      const turn1 = (await client.chat.completions.create({
+        model: VERTEX_MODEL,
+        max_completion_tokens: 1024,
+        messages: [{ role: "user", content: "What's the weather in Madrid?" }],
+        tools: [WEATHER_TOOL],
+        // @ts-expect-error — gateway extension
+        reasoning: { enabled: true, max_tokens: 2048 },
+      })) as OpenAI.Chat.Completions.ChatCompletion & {
+        choices: {
+          message: {
+            tool_calls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[];
+            reasoning_details?: {
+              id?: string;
+              type: string;
+              signature?: string;
+              format?: string;
+            }[];
+          };
+        }[];
+      };
+
+      expect(turn1.choices[0]!.finish_reason).toBe("tool_calls");
+      const toolCall = turn1.choices[0]!.message.tool_calls?.[0];
+      expect(toolCall).toBeDefined();
+
+      // The thought signature is normalized to the OpenRouter reasoning_details
+      // convention, keyed by the tool call id.
+      const reasoningDetails = turn1.choices[0]!.message.reasoning_details;
+      expect(reasoningDetails).toBeDefined();
+      const signatureDetail = reasoningDetails!.find(
+        (d) => d.format === "google-gemini-v1" && d.id === toolCall!.id,
+      );
+      expect(signatureDetail).toBeDefined();
+      expect(signatureDetail?.signature).toBeDefined();
+
+      // Turn 2: send back the tool call WITH reasoning_details only (no extra_content).
+      const assistantMsg = {
+        role: "assistant" as const,
+        tool_calls: turn1.choices[0]!.message.tool_calls,
+        reasoning_details: turn1.choices[0]!.message.reasoning_details,
+      };
+
+      const turn2 = await client.chat.completions.create({
+        model: VERTEX_MODEL,
+        max_completion_tokens: 256,
+        messages: [
+          { role: "user", content: "What's the weather in Madrid?" },
+          assistantMsg as unknown as OpenAI.Chat.Completions.ChatCompletionMessageParam,
+          {
+            role: "tool",
+            tool_call_id: toolCall!.id,
+            content: "Madrid: 25°C, sunny",
+          },
+        ],
+        tools: [WEATHER_TOOL],
+        // @ts-expect-error — gateway extension
+        reasoning: { enabled: true, max_tokens: 2048 },
+      });
+
+      expect(turn2.choices[0]!.finish_reason).toBe("stop");
+      expect(turn2.choices[0]!.message.content!.toLowerCase()).toContain("madrid");
+    },
+    { timeout: 120_000 },
+  );
+
+  // =========================================================================
   // thought_signature fail: corrupted thought_signature causes provider error
   // =========================================================================
   test(

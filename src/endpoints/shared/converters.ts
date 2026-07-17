@@ -228,6 +228,32 @@ export function stripEmptyKeys(obj: unknown) {
   return obj;
 }
 
+/**
+ * OpenRouter `reasoning_details` format tag for Gemini/Vertex thought signatures.
+ * https://openrouter.ai/docs/use-cases/reasoning-tokens
+ */
+export const GEMINI_REASONING_FORMAT = "google-gemini-v1";
+
+/**
+ * Scans provider metadata namespaces for a Gemini/Vertex thought signature.
+ * Handles both the snake_case (`thought_signature`, post-middleware response)
+ * and camelCase (`thoughtSignature`, raw AI SDK) spellings.
+ */
+export function extractThoughtSignature(
+  providerMetadata?: SharedV3ProviderMetadata,
+): string | undefined {
+  if (!providerMetadata) return undefined;
+
+  for (const metadata of Object.values(providerMetadata)) {
+    if (metadata && typeof metadata === "object") {
+      const sig = metadata["thought_signature"] ?? metadata["thoughtSignature"];
+      if (typeof sig === "string") return sig;
+    }
+  }
+
+  return undefined;
+}
+
 export function extractReasoningMetadata(providerMetadata?: SharedV3ProviderMetadata): {
   redactedData?: string;
   signature?: string;

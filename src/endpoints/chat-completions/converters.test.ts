@@ -8,6 +8,7 @@ import type {
   FilePart,
   LanguageModelUsage,
   AssistantModelMessage,
+  TextStreamPart,
 } from "ai";
 
 import {
@@ -18,8 +19,27 @@ import {
   toChatCompletionsUsage,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
+  ChatCompletionsTransformStream,
 } from "./converters";
-import type { ChatCompletionsToolMessage } from "./schema";
+import type { ChatCompletionsChunk, ChatCompletionsToolMessage } from "./schema";
+
+async function collectStreamChunks(
+  parts: TextStreamPart<ToolSet>[],
+): Promise<ChatCompletionsChunk[]> {
+  const readable = new ReadableStream<TextStreamPart<ToolSet>>({
+    start(controller) {
+      for (const part of parts) controller.enqueue(part);
+      controller.close();
+    },
+  });
+
+  const chunks: ChatCompletionsChunk[] = [];
+  const stream = readable.pipeThrough(new ChatCompletionsTransformStream("mock-model"));
+  for await (const frame of stream) {
+    if (!(frame.data instanceof Error)) chunks.push(frame.data);
+  }
+  return chunks;
+}
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({
@@ -223,6 +243,58 @@ describe("Chat Completions Converters", () => {
       });
     });
 
+    test("should mirror tool call thought signature into reasoning_details", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+            providerMetadata: {
+              vertex: { thought_signature: "tool-signature" },
+            },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      // Still exposed via the Vertex-specific field for backward compatibility
+      expect(message.tool_calls![0]!.extra_content).toEqual({
+        vertex: { thought_signature: "tool-signature" },
+      });
+      // And normalized to the OpenRouter reasoning_details convention, keyed by tool call id
+      expect(message.reasoning_details).toHaveLength(1);
+      expect(message.reasoning_details![0]).toEqual({
+        id: "call_123",
+        index: 0,
+        type: "reasoning.text",
+        text: "",
+        signature: "tool-signature",
+        format: "google-gemini-v1",
+      });
+    });
+
+    test("should not add reasoning_details when tool call has no thought signature", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.reasoning_details).toBeUndefined();
+    });
+
     test("should extract reasoning_details from reasoning parts", () => {
       const mockResult = mockGenerateTextResult({
         text: "Final answer.",
@@ -373,6 +445,79 @@ describe("Chat Completions Converters", () => {
         toolCallId: "call_1",
         toolName: "my_tool",
         input: {},
+      });
+    });
+
+    test("should reattach Gemini thought signature from reasoning_details to the matching tool call", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "bash", arguments: '{"command":"ls"}' },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.text",
+            text: "",
+            signature: "AY89a18IwQsQ8in",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content;
+      expect(Array.isArray(content)).toBe(true);
+      // The signature-only reasoning detail should not become a standalone reasoning part
+      expect((content as unknown[]).some((p) => (p as { type: string }).type === "reasoning")).toBe(
+        false,
+      );
+      const toolCall = (content as unknown[]).find(
+        (p) => (p as { type: string }).type === "tool-call",
+      );
+      expect(toolCall).toEqual({
+        type: "tool-call",
+        toolCallId: "call_1",
+        toolName: "bash",
+        input: { command: "ls" },
+        providerOptions: { unknown: { thoughtSignature: "AY89a18IwQsQ8in" } },
+      });
+    });
+
+    test("should prefer extra_content over reasoning_details signature on a tool call", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "bash", arguments: "{}" },
+            extra_content: { vertex: { thought_signature: "from-extra-content" } },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.text",
+            text: "",
+            signature: "from-reasoning-details",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const toolCall = (message.content as unknown[]).find(
+        (p) => (p as { type: string }).type === "tool-call",
+      );
+      expect((toolCall as { providerOptions: unknown }).providerOptions).toEqual({
+        vertex: { thought_signature: "from-extra-content" },
       });
     });
   });
@@ -720,9 +865,7 @@ describe("Chat Completions Converters", () => {
         messages: [
           {
             role: "system",
-            content: [
-              { type: "text", text: "You are a helpful assistant." },
-            ],
+            content: [{ type: "text", text: "You are a helpful assistant." }],
           },
           { role: "user", content: "hi" },
         ],
@@ -929,6 +1072,52 @@ describe("Chat Completions Converters", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
       expect(call.function.name).toBe("a".repeat(128));
+    });
+  });
+
+  describe("ChatCompletionsTransformStream", () => {
+    test("should emit tool call thought signature via reasoning_details", async () => {
+      const chunks = await collectStreamChunks([
+        {
+          type: "tool-call",
+          toolCallId: "call_123",
+          toolName: "bash",
+          input: { command: "ls" },
+          providerMetadata: { vertex: { thought_signature: "stream-signature" } },
+        } as unknown as TextStreamPart<ToolSet>,
+      ]);
+
+      const toolCallChunk = chunks.find((c) => c.choices[0]!.delta.tool_calls);
+      expect(toolCallChunk).toBeDefined();
+      const delta = toolCallChunk!.choices[0]!.delta;
+      expect(delta.tool_calls![0]!.extra_content).toEqual({
+        vertex: { thought_signature: "stream-signature" },
+      });
+      expect(delta.reasoning_details).toEqual([
+        {
+          id: "call_123",
+          index: 0,
+          type: "reasoning.text",
+          text: "",
+          signature: "stream-signature",
+          format: "google-gemini-v1",
+        },
+      ]);
+    });
+
+    test("should not emit reasoning_details when tool call has no thought signature", async () => {
+      const chunks = await collectStreamChunks([
+        {
+          type: "tool-call",
+          toolCallId: "call_123",
+          toolName: "bash",
+          input: { command: "ls" },
+        } as unknown as TextStreamPart<ToolSet>,
+      ]);
+
+      const toolCallChunk = chunks.find((c) => c.choices[0]!.delta.tool_calls);
+      expect(toolCallChunk).toBeDefined();
+      expect(toolCallChunk!.choices[0]!.delta.reasoning_details).toBeUndefined();
     });
   });
 });
