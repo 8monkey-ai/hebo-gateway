@@ -214,6 +214,7 @@ export const gemma426bA4b = presetFor<CanonicalModelId, CatalogModel>()(
     ...GEMMA4_BASE,
     name: "Gemma 4 26B-A4B",
     created: "2026-04-02",
+    capabilities: ["reasoning", "tool_call", "structured_output", "temperature"] as const,
     context: 262144,
     providers: ["vertex", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
   } satisfies CatalogModel,
@@ -226,7 +227,11 @@ export const gemma431b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemma 4 31B",
     created: "2026-04-02",
     context: 262144,
-    providers: ["vertex", "deepinfra", "togetherai"] as const satisfies readonly CanonicalProviderId[],
+    providers: [
+      "vertex",
+      "deepinfra",
+      "togetherai",
+    ] as const satisfies readonly CanonicalProviderId[],
   } satisfies CatalogModel,
 );
 

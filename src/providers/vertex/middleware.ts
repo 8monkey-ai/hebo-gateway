@@ -1,6 +1,9 @@
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions";
+import type {
+  ChatCompletionsReasoningConfig,
+  ChatCompletionsServiceTier,
+} from "../../endpoints/chat-completions";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 const VERTEX_REQUEST_TYPE_HEADER = "x-vertex-ai-llm-request-type";
@@ -57,4 +60,35 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
 
 modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
   language: [vertexServiceTierMiddleware],
+});
+
+// https://docs.cloud.google.com/vertex-ai/generative-ai/docs/maas/capabilities/thinking
+// Gemma thinking on the MaaS OpenAI-compatible endpoint is binary:
+// any effort enables it, `none` / `enabled: false` disables it.
+// Gemma-only: other MaaS models control thinking differently
+// (gpt-oss uses reasoning_effort; the *-thinking variants are always on).
+export const vertexGemmaThinkingMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    if (!model.modelId.includes("gemma")) return params;
+
+    const vertex = params.providerOptions?.["vertex"];
+    if (!vertex || typeof vertex !== "object") return params;
+
+    const reasoning = vertex["reasoning"] as ChatCompletionsReasoningConfig | undefined;
+    if (!reasoning) return params;
+
+    // Normalization drops `enabled: true` when no effort/budget is set,
+    // so treat any reasoning object without an explicit disable as enabled.
+    vertex["chat_template_kwargs"] = { enable_thinking: reasoning.enabled !== false };
+    delete vertex["reasoning"];
+    delete vertex["reasoningEffort"];
+
+    return params;
+  },
+};
+
+modelMiddlewareMatcher.useForProvider(["vertex.maas.*"], {
+  language: [vertexGemmaThinkingMiddleware],
 });

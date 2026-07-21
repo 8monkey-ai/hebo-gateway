@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV3 } from "ai/test";
 
-import { vertexServiceTierMiddleware } from "./middleware";
+import { vertexGemmaThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware";
 
 const vertexServiceTierCases = [
   {
@@ -84,4 +84,46 @@ test("vertexServiceTierMiddleware > should not override pre-set headers", async 
     "x-vertex-ai-llm-shared-request-type": "priority",
   });
   expect(result.providerOptions!["vertex"]).toEqual({});
+});
+
+const vertexGemmaThinkingCases = [
+  {
+    name: "enabled reasoning maps to enable_thinking: true",
+    vertex: { reasoning: { enabled: true, effort: "medium" }, reasoningEffort: "medium" },
+    expected: { chat_template_kwargs: { enable_thinking: true } },
+  },
+  {
+    name: "disabled reasoning maps to enable_thinking: false",
+    vertex: { reasoning: { enabled: false, effort: "none" }, reasoningEffort: "none" },
+    expected: { chat_template_kwargs: { enable_thinking: false } },
+  },
+  {
+    name: "no reasoning leaves params untouched",
+    vertex: { temperature: 0.5 },
+    expected: { temperature: 0.5 },
+  },
+] as const;
+
+for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
+  test(`vertexGemmaThinkingMiddleware > ${name}`, async () => {
+    const result = await vertexGemmaThinkingMiddleware.transformParams!({
+      type: "generate",
+      params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
+      model: new MockLanguageModelV3({ modelId: "google/gemma-4-26b-a4b-it-maas" }),
+    });
+
+    expect(result.providerOptions!["vertex"]).toEqual(expected);
+  });
+}
+
+test("vertexGemmaThinkingMiddleware > should not touch non-gemma models", async () => {
+  const vertex = { reasoning: { enabled: true, effort: "medium" }, reasoningEffort: "medium" };
+
+  const result = await vertexGemmaThinkingMiddleware.transformParams!({
+    type: "generate",
+    params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
+    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-120b-maas" }),
+  });
+
+  expect(result.providerOptions!["vertex"]).toEqual(vertex);
 });
