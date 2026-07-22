@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 
+import type { LanguageModelV3CallOptions } from "@ai-sdk/provider";
 import { MockLanguageModelV3 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
@@ -127,4 +128,26 @@ test("vertexGemma4ThinkingMiddleware > is registered only for gemma-4", () => {
   expect(modelMiddlewareMatcher.for("google/gemma-3-27b", "vertex.maas")).not.toContain(
     vertexGemma4ThinkingMiddleware,
   );
+});
+
+test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", async () => {
+  const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat");
+  const model = new MockLanguageModelV3({ modelId: "google/gemma-4-26b-a4b-it-maas" });
+
+  const params = await chain.reduce(
+    async (acc, { transformParams }) => {
+      const current = await acc;
+      return transformParams
+        ? transformParams({ type: "generate", params: current, model })
+        : current;
+    },
+    Promise.resolve({
+      prompt: [],
+      providerOptions: { unknown: { reasoning: { enabled: true } } },
+    } as LanguageModelV3CallOptions),
+  );
+
+  expect(params.providerOptions).toEqual({
+    vertex: { chat_template_kwargs: { enable_thinking: true } },
+  });
 });
