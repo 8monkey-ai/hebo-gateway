@@ -1,5 +1,5 @@
 import type { GoogleVertexProvider } from "@ai-sdk/google-vertex";
-import type { GoogleVertexMaasProvider } from "@ai-sdk/google-vertex/maas";
+import { createVertexMaas } from "@ai-sdk/google-vertex/maas";
 import { customProvider } from "ai";
 
 import type { CanonicalModelId, ModelId } from "../../models/types";
@@ -14,8 +14,11 @@ const MAPPING = {
 export const withCanonicalIdsForVertex = (
   provider: GoogleVertexProvider,
   extraMapping?: Record<ModelId, string>,
-  maas?: GoogleVertexMaasProvider,
 ) => {
+  // Gemma thinking is not exposed via generateContent, so it routes through the
+  // MaaS endpoint, which serves Gemma only from the global endpoint.
+  const maas = createVertexMaas({ location: "global" });
+
   const base = withCanonicalIds(provider, {
     mapping: { ...MAPPING, ...extraMapping },
     options: {
@@ -24,11 +27,6 @@ export const withCanonicalIdsForVertex = (
     },
   });
 
-  if (!maas) return base;
-
-  // Routed through the OpenAI-compatible MaaS endpoint when a MaaS provider
-  // is supplied (Gemma thinking is not exposed via generateContent).
-  // Getter so the MaaS provider settings are only resolved once called.
   return customProvider({
     languageModels: {
       get "google/gemma-4-26b-a4b"() {

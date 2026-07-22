@@ -1,6 +1,5 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createVertex } from "@ai-sdk/google-vertex";
-import { createVertexMaas } from "@ai-sdk/google-vertex/maas";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 import { type ModelCatalog, defineModelCatalog, gateway } from "../../../src";
@@ -87,18 +86,11 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
     location: GOOGLE_VERTEX_LOCATION,
   });
 
-  // MaaS only accepts OAuth (ADC / service account) and serves Gemma from
-  // the global endpoint; express API keys are rejected by the endpoint itself.
-  const maas = createVertexMaas({
-    project: GOOGLE_VERTEX_PROJECT!,
-    location: "global",
-  });
-
   const gw = gateway({
     basePath: "/v1",
     logger: { level: "warn" },
     providers: {
-      vertex: withCanonicalIdsForVertex(vertex, undefined, maas),
+      vertex: withCanonicalIdsForVertex(vertex),
     },
     models: defineModelCatalog(...presets),
     advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
