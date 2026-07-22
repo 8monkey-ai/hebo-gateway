@@ -67,12 +67,10 @@ modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
 // any effort enables it, `none` / `enabled: false` disables it.
 // Gemma-only: other MaaS models control thinking differently
 // (gpt-oss uses reasoning_effort; the *-thinking variants are always on).
-export const vertexGemmaThinkingMiddleware: LanguageModelMiddleware = {
+export const vertexGemma4ThinkingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
-    if (!model.modelId.includes("gemma")) return params;
-
+  transformParams: async ({ params }) => {
     const vertex = params.providerOptions?.["vertex"];
     if (!vertex || typeof vertex !== "object") return params;
 
@@ -89,6 +87,6 @@ export const vertexGemmaThinkingMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForProvider(["vertex.maas.*"], {
-  language: [vertexGemmaThinkingMiddleware],
+modelMiddlewareMatcher.useForModel(["google/gemma-4-*"], {
+  language: [vertexGemma4ThinkingMiddleware],
 });

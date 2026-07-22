@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV3 } from "ai/test";
 
-import { vertexGemmaThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { vertexGemma4ThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware";
 
 const vertexServiceTierCases = [
   {
@@ -105,8 +106,8 @@ const vertexGemmaThinkingCases = [
 ] as const;
 
 for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
-  test(`vertexGemmaThinkingMiddleware > ${name}`, async () => {
-    const result = await vertexGemmaThinkingMiddleware.transformParams!({
+  test(`vertexGemma4ThinkingMiddleware > ${name}`, async () => {
+    const result = await vertexGemma4ThinkingMiddleware.transformParams!({
       type: "generate",
       params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
       model: new MockLanguageModelV3({ modelId: "google/gemma-4-26b-a4b-it-maas" }),
@@ -116,14 +117,14 @@ for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
   });
 }
 
-test("vertexGemmaThinkingMiddleware > should not touch non-gemma models", async () => {
-  const vertex = { reasoning: { enabled: true, effort: "medium" }, reasoningEffort: "medium" };
-
-  const result = await vertexGemmaThinkingMiddleware.transformParams!({
-    type: "generate",
-    params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-120b-maas" }),
-  });
-
-  expect(result.providerOptions!["vertex"]).toEqual(vertex);
+test("vertexGemma4ThinkingMiddleware > is registered only for gemma-4", () => {
+  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas")).toContain(
+    vertexGemma4ThinkingMiddleware,
+  );
+  expect(modelMiddlewareMatcher.for("openai/gpt-oss-120b-maas", "vertex.maas")).not.toContain(
+    vertexGemma4ThinkingMiddleware,
+  );
+  expect(modelMiddlewareMatcher.for("google/gemma-3-27b", "vertex.maas")).not.toContain(
+    vertexGemma4ThinkingMiddleware,
+  );
 });
