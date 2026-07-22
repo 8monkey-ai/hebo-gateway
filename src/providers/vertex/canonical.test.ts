@@ -1,10 +1,18 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 
 import { createVertex } from "@ai-sdk/google-vertex";
 
 import { withCanonicalIdsForVertex } from "./canonical";
 
+// The MaaS provider built inside withCanonicalIdsForVertex resolves its project
+// from GOOGLE_VERTEX_PROJECT; restore the prior value so we don't leak into other suites.
+const prevProject = process.env["GOOGLE_VERTEX_PROJECT"];
 process.env["GOOGLE_VERTEX_PROJECT"] = "test-project";
+
+afterAll(() => {
+  if (prevProject === undefined) delete process.env["GOOGLE_VERTEX_PROJECT"];
+  else process.env["GOOGLE_VERTEX_PROJECT"] = prevProject;
+});
 
 const vertex = createVertex({
   apiKey: "test-key",
