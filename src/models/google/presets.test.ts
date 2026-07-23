@@ -1,6 +1,59 @@
 import { expect, test } from "bun:test";
 
-import { geminiEmbedding2, gemma31b, gemma4E4b, gemma, gemini } from "./presets";
+import {
+  gemini35FlashLite,
+  gemini36Flash,
+  geminiEmbedding2,
+  gemma31b,
+  gemma4E4b,
+  gemma,
+  gemini,
+} from "./presets";
+
+test("gemini36Flash > should expose Gemini 3.6 Flash metadata", () => {
+  expect(gemini36Flash()).toEqual({
+    "google/gemini-3.6-flash": {
+      name: "Gemini 3.6 Flash",
+      created: "2026-07-21",
+      knowledge: "2026-03",
+      modalities: {
+        input: ["text", "image", "pdf", "file", "audio", "video"],
+        output: ["text"],
+      },
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+      context: 1048576,
+      providers: ["vertex"],
+    },
+  });
+});
+
+test("gemini35FlashLite > should expose Gemini 3.5 Flash-Lite metadata", () => {
+  expect(gemini35FlashLite()).toEqual({
+    "google/gemini-3.5-flash-lite": {
+      name: "Gemini 3.5 Flash-Lite",
+      created: "2026-07-21",
+      knowledge: "2026-03",
+      modalities: {
+        input: ["text", "image", "pdf", "file", "audio", "video"],
+        output: ["text"],
+      },
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+      context: 1048576,
+      providers: ["vertex"],
+    },
+  });
+});
+
+test("gemini.latest > should point to Gemini 3.6 Flash", () => {
+  const ids = gemini.latest.map((preset) => Object.keys(preset())[0]);
+  expect(ids).toEqual(["google/gemini-3.6-flash"]);
+});
+
+test("gemini.v3.x > should include the new 3.5 Flash-Lite and 3.6 Flash models", () => {
+  const ids = gemini["v3.x"].map((preset) => Object.keys(preset())[0]);
+  expect(ids).toContain("google/gemini-3.5-flash-lite");
+  expect(ids).toContain("google/gemini-3.6-flash");
+});
 
 test("geminiEmbedding2 > should expose GA embedding metadata with multimodal input", () => {
   expect(geminiEmbedding2()).toEqual({

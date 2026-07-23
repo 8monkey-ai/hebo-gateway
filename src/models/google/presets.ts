@@ -80,6 +80,26 @@ export const gemini31ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
+export const gemini36Flash = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-3.6-flash" as const,
+  {
+    ...GEMINI_BASE,
+    name: "Gemini 3.6 Flash",
+    created: "2026-07-21",
+    knowledge: "2026-03",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemini35FlashLite = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-3.5-flash-lite" as const,
+  {
+    ...GEMINI_BASE,
+    name: "Gemini 3.5 Flash-Lite",
+    created: "2026-07-21",
+    knowledge: "2026-03",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
 export const gemini35Flash = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.5-flash" as const,
   {
@@ -253,20 +273,21 @@ export const gemma = {
 
 const geminiAtomic = {
   "v2.5": [gemini25FlashLite, gemini25Flash, gemini25Pro],
-  "v3.5": [gemini35Flash],
+  "v3.5": [gemini35FlashLite, gemini35Flash],
+  "v3.6": [gemini36Flash],
   "v3-preview": [gemini3FlashPreview, gemini31FlashLitePreview, gemini31ProPreview],
   embeddings: [geminiEmbedding001, geminiEmbedding2],
 } as const;
 
 const geminiGroups = {
   "v2.x": [...geminiAtomic["v2.5"]],
-  "v3.x": [...geminiAtomic["v3-preview"], ...geminiAtomic["v3.5"]],
+  "v3.x": [...geminiAtomic["v3-preview"], ...geminiAtomic["v3.5"], ...geminiAtomic["v3.6"]],
 } as const;
 
 export const gemini = {
   ...geminiAtomic,
   ...geminiGroups,
-  latest: [...geminiAtomic["v3.5"]],
+  latest: [...geminiAtomic["v3.6"]],
   preview: [...geminiAtomic["v3-preview"]],
   embeddings: [...geminiAtomic["embeddings"]],
   all: Object.values(geminiAtomic).flat(),
