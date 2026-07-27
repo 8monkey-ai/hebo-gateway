@@ -228,6 +228,21 @@ export function stripEmptyKeys(obj: unknown) {
   return obj;
 }
 
+export function extractThoughtSignature(
+  providerMetadata?: SharedV3ProviderMetadata,
+): string | undefined {
+  if (!providerMetadata) return undefined;
+
+  for (const metadata of Object.values(providerMetadata)) {
+    if (metadata && typeof metadata === "object") {
+      const value = (metadata as Record<string, unknown>)["thought_signature"];
+      if (typeof value === "string") return value;
+    }
+  }
+
+  return undefined;
+}
+
 export function extractReasoningMetadata(providerMetadata?: SharedV3ProviderMetadata): {
   redactedData?: string;
   signature?: string;
