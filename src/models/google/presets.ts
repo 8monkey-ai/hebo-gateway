@@ -18,6 +18,13 @@ const GEMINI_BASE = {
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
+// Gemini 3.x models manage sampling internally on Vertex; custom temperature,
+// top-K, and top-P values are ignored, so we drop the `temperature` capability.
+const GEMINI_3X_BASE = {
+  ...GEMINI_BASE,
+  capabilities: ["attachments", "reasoning", "tool_call", "structured_output"] as const,
+} satisfies DeepPartial<CatalogModel>;
+
 const GEMINI_EMBEDDINGS_BASE = {
   modalities: {
     input: ["text"] as const,
@@ -53,7 +60,7 @@ export const geminiEmbedding2 = presetFor<CanonicalModelId, CatalogModel>()(
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3-flash-preview" as const,
   {
-    ...GEMINI_BASE,
+    ...GEMINI_3X_BASE,
     name: "Gemini 3 Flash (Preview)",
     created: "2025-12-17",
     knowledge: "2025-01",
@@ -63,7 +70,7 @@ export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
 export const gemini31FlashLitePreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.1-flash-lite-preview" as const,
   {
-    ...GEMINI_BASE,
+    ...GEMINI_3X_BASE,
     name: "Gemini 3.1 Flash-Lite (Preview)",
     created: "2026-03-03",
     knowledge: "2025-01",
@@ -73,7 +80,7 @@ export const gemini31FlashLitePreview = presetFor<CanonicalModelId, CatalogModel
 export const gemini31ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.1-pro-preview" as const,
   {
-    ...GEMINI_BASE,
+    ...GEMINI_3X_BASE,
     name: "Gemini 3.1 Pro (Preview)",
     created: "2026-02-19",
     knowledge: "2025-01",
@@ -83,7 +90,7 @@ export const gemini31ProPreview = presetFor<CanonicalModelId, CatalogModel>()(
 export const gemini36Flash = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.6-flash" as const,
   {
-    ...GEMINI_BASE,
+    ...GEMINI_3X_BASE,
     name: "Gemini 3.6 Flash",
     created: "2026-07-21",
     knowledge: "2026-03",
@@ -93,7 +100,7 @@ export const gemini36Flash = presetFor<CanonicalModelId, CatalogModel>()(
 export const gemini35FlashLite = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.5-flash-lite" as const,
   {
-    ...GEMINI_BASE,
+    ...GEMINI_3X_BASE,
     name: "Gemini 3.5 Flash-Lite",
     created: "2026-07-21",
     knowledge: "2026-03",
@@ -103,7 +110,7 @@ export const gemini35FlashLite = presetFor<CanonicalModelId, CatalogModel>()(
 export const gemini35Flash = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3.5-flash" as const,
   {
-    ...GEMINI_BASE,
+    ...GEMINI_3X_BASE,
     name: "Gemini 3.5 Flash",
     created: "2026-05-19",
     knowledge: "2025-01",
