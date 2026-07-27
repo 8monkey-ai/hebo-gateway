@@ -9,6 +9,7 @@ import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./midd
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
     "anthropic/claude-opus-5",
+    "anthropic/claude-sonnet-5",
     "anthropic/claude-opus-4.8",
     "anthropic/claude-opus-4.7",
     "anthropic/claude-opus-4.6",
@@ -430,6 +431,74 @@ test("claudeReasoningMiddleware > should use adaptive thinking without budget fo
     type: "generate",
     params,
     model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-5" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "medium",
+      },
+      unknown: {},
+    },
+  });
+  expect(result.providerOptions!["anthropic"]!["thinking"]).not.toHaveProperty("budgetTokens");
+});
+
+test("claudeReasoningMiddleware > should map xhigh effort to native xhigh for Claude Sonnet 5", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "xhigh",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-5" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "xhigh",
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("claudeReasoningMiddleware > should use adaptive thinking without budget for Claude Sonnet 5", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "medium",
+          max_tokens: 200000,
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-5" }),
   });
 
   expect(result).toEqual({

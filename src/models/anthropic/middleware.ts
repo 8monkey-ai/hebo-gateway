@@ -19,8 +19,9 @@ const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
 const isClaude4 = (modelId: string) => modelId.includes("claude-") && modelId.includes("-4");
 const isFable5 = (modelId: string) => modelId.includes("claude-fable-5");
 const isOpus5 = (modelId: string) => modelId.includes("claude-opus-5");
+const isSonnet5 = (modelId: string) => modelId.includes("claude-sonnet-5");
 const isClaude4OrFable = (modelId: string) =>
-  isClaude4(modelId) || isFable5(modelId) || isOpus5(modelId);
+  isClaude4(modelId) || isFable5(modelId) || isOpus5(modelId) || isSonnet5(modelId);
 
 const isOpus48 = isClaude("opus", "4.8");
 const isOpus47 = isClaude("opus", "4.7");
@@ -29,11 +30,19 @@ const isOpus45 = isClaude("opus", "4.5");
 const isOpus4 = isClaude("opus", "4");
 const isSonnet46 = isClaude("sonnet", "4.6");
 
+// Models with native effort levels (low–max) and adaptive extended thinking.
+const isNativeEffortClaude = (modelId: string) =>
+  isOpus5(modelId) ||
+  isSonnet5(modelId) ||
+  isFable5(modelId) ||
+  isOpus48(modelId) ||
+  isOpus47(modelId);
+
 export function mapClaudeReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
   modelId: string,
 ): "low" | "medium" | "high" | "xhigh" | "max" | undefined {
-  if (isOpus5(modelId) || isOpus48(modelId) || isOpus47(modelId) || isFable5(modelId)) {
+  if (isNativeEffortClaude(modelId)) {
     switch (effort) {
       case "none":
       case "minimal":
@@ -83,11 +92,7 @@ export function mapClaudeReasoningEffort(
 }
 
 function getMaxOutputTokens(modelId: string): number {
-  if (isOpus5(modelId)) return 128_000;
-  if (isOpus48(modelId)) return 128_000;
-  if (isFable5(modelId)) return 128_000;
-  if (isOpus47(modelId)) return 128_000;
-  if (isOpus46(modelId)) return 128_000;
+  if (isNativeEffortClaude(modelId) || isOpus46(modelId)) return 128_000;
   if (isOpus45(modelId)) return 64_000;
   if (isOpus4(modelId)) return 32_000;
   return 64_000;
@@ -118,7 +123,7 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
       if (isClaude4OrFable(modelId)) {
         target.effort = mapClaudeReasoningEffort(reasoning.effort, modelId);
       }
-      if (isOpus5(modelId) || isOpus48(modelId) || isOpus47(modelId) || isFable5(modelId)) {
+      if (isNativeEffortClaude(modelId)) {
         target.thinking = { type: "adaptive" };
       } else if (isOpus46(modelId)) {
         target.thinking = clampedMaxTokens
@@ -189,6 +194,7 @@ modelMiddlewareMatcher.useForModel(
     "anthropic/claude-*3*7*",
     "anthropic/claude-*4*",
     "anthropic/claude-opus-5*",
+    "anthropic/claude-sonnet-5*",
     "anthropic/claude-fable-*",
   ],
   {
