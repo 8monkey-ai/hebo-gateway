@@ -220,7 +220,7 @@ Out-of-the-box model presets:
   Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
 - **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v4.8`, `v4.7`, `v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v4.x`, `v3.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+  Claude: `claude` (`v5`, `v4.8`, `v4.7`, `v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v5.x`, `v4.x`, `v3.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
   Command: `command` (`A`, `R`, `latest`, `all`)
