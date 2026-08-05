@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { MockProviderV3 } from "ai/test";
+import { MockProviderV4 } from "ai/test";
 
 import { parseResponse } from "../../../test/helpers/http";
 import { models } from "./handler";
@@ -10,8 +10,8 @@ const baseUrl = "http://localhost/models";
 describe("Models Handler", () => {
   const endpoint = models({
     providers: {
-      anthropic: new MockProviderV3(),
-      google: new MockProviderV3(),
+      anthropic: new MockProviderV4(),
+      google: new MockProviderV4(),
     },
     models: {
       "anthropic/claude-opus-4.5": {

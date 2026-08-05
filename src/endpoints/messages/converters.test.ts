@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage, TextStreamPart } from "ai";
 
+import type { RuntimeContext } from "../shared/converters";
 import {
   convertToTextCallOptions,
   convertToModelMessages,
@@ -44,9 +45,9 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
   }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
-  overrides: Partial<GenerateTextResult<ToolSet, Output.Output>>,
-): GenerateTextResult<ToolSet, Output.Output> =>
-  ({
+  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>>,
+): GenerateTextResult<ToolSet, RuntimeContext, Output.Output> => {
+  const result = {
     text: "",
     toolCalls: [],
     staticToolCalls: [],
@@ -71,12 +72,20 @@ const mockGenerateTextResult = (
       timestamp: new Date(),
       messages: [],
     },
+    responseMessages: [],
     providerMetadata: undefined,
     steps: [],
-    experimental_output: undefined,
     output: undefined,
     ...overrides,
-  }) satisfies GenerateTextResult<ToolSet, Output.Output>;
+  };
+
+  // AI SDK v7 reads final-step values off `finalStep`; mirror the top-level
+  // fields so tests can keep declaring them in one place.
+  return {
+    ...result,
+    finalStep: { ...result, stepNumber: 0 },
+  } as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>;
+};
 
 describe("Messages Converters", () => {
   describe("convertToModelMessages", () => {
@@ -174,7 +183,7 @@ describe("Messages Converters", () => {
       const content = (messages[0] as { content: unknown[] }).content;
       expect(content).toHaveLength(1);
       const part = content[0] as { type: string; mediaType: string };
-      expect(part.type).toBe("image");
+      expect(part.type).toBe("file");
       expect(part.mediaType).toBe("image/png");
     });
 
@@ -193,8 +202,9 @@ describe("Messages Converters", () => {
       expect(messages).toHaveLength(1);
       const content = (messages[0] as { content: unknown[] }).content;
       expect(content).toHaveLength(1);
-      const part = content[0] as { type: string };
-      expect(part.type).toBe("image");
+      const part = content[0] as { type: string; mediaType: string };
+      expect(part.type).toBe("file");
+      expect(part.mediaType).toBe("image");
     });
 
     test("should convert document block with base64 source", () => {

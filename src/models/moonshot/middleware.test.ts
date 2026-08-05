@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { moonshotReasoningMiddleware } from "./middleware";
@@ -27,7 +27,7 @@ test("moonshotReasoningMiddleware > should map enabled:true with budget_tokens",
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "moonshot/kimi-k2.5" }),
+    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.5" }),
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
@@ -50,7 +50,7 @@ test("moonshotReasoningMiddleware > should map effort to budgetTokens when max_t
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "moonshot/kimi-k2.5" }),
+    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.5" }),
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
@@ -72,7 +72,7 @@ test("moonshotReasoningMiddleware > should map enabled:false to disabled thinkin
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "moonshot/kimi-k2.6" }),
+    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.6" }),
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
@@ -94,7 +94,7 @@ test("moonshotReasoningMiddleware > should pass through when no reasoning", asyn
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "moonshot/kimi-k2.5" }),
+    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.5" }),
   });
 
   expect(result.providerOptions!["unknown"]).toEqual({

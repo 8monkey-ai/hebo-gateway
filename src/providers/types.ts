@@ -1,4 +1,11 @@
-import { type ProviderV3 } from "@ai-sdk/provider";
+import { type ProviderV3, type ProviderV4 } from "@ai-sdk/provider";
+
+/**
+ * Provider instance accepted by the gateway.
+ * Both the current (`v4`) and previous (`v3`) provider specifications are
+ * supported, since community providers may still target `v3`.
+ */
+export type GatewayProvider = ProviderV3 | ProviderV4;
 
 export const CANONICAL_PROVIDER_IDS = [
   "alibaba",
@@ -26,5 +33,5 @@ export type CanonicalProviderId = (typeof CANONICAL_PROVIDER_IDS)[number];
 export type ProviderId = CanonicalProviderId | (string & {});
 
 export type ProviderRegistry = {
-  [K in ProviderId]?: ProviderV3;
+  [K in ProviderId]?: GatewayProvider;
 };

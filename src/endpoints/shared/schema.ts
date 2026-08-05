@@ -1,4 +1,4 @@
-import type { SharedV3ProviderMetadata } from "@ai-sdk/provider";
+import type { SharedV4ProviderMetadata } from "@ai-sdk/provider";
 import * as z from "zod";
 
 /**
@@ -19,8 +19,8 @@ export type CacheControl = z.infer<typeof CacheControlSchema>;
 export const ProviderMetadataSchema = z.record(
   z.string(),
   z.record(z.string(), z.any()),
-) as z.ZodType<SharedV3ProviderMetadata>;
-export type ProviderMetadata = SharedV3ProviderMetadata;
+) as z.ZodType<SharedV4ProviderMetadata>;
+export type ProviderMetadata = SharedV4ProviderMetadata;
 
 export const ReasoningEffortSchema = z.enum([
   "none",

@@ -1,4 +1,4 @@
-import type { ProviderV3 } from "@ai-sdk/provider";
+import type { ProviderV4 } from "@ai-sdk/provider";
 
 import type { CanonicalModelId, ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
@@ -9,7 +9,7 @@ const MAPPING = {
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForMinimax = (
-  provider: ProviderV3,
+  provider: ProviderV4,
   extraMapping?: Record<ModelId, string>,
 ) =>
   withCanonicalIds(provider, {

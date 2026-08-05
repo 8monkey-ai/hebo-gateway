@@ -32,6 +32,7 @@ import type {
 } from "../../types";
 import { parseRequestBody } from "../../utils/body";
 import { prepareForwardHeaders } from "../../utils/request";
+import type { RuntimeContext } from "../shared/converters";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
 import {
@@ -145,7 +146,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
-            res as unknown as GenerateTextResult<ToolSet, Output.Output>,
+            res as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
             ctx.resolvedModelId!,
           );
           logger.trace(
@@ -159,10 +160,13 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
         },
-        experimental_include: {
+        include: {
           requestBody: false,
+          rawChunks: false,
         },
-        includeRawChunks: false,
+        // The gateway forwards system messages exactly as the client sent them
+        // (OpenAI / Anthropic both allow them inside the message array).
+        allowSystemInMessages: true,
         ...textOptions,
       });
 
@@ -185,15 +189,19 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
         ctx.body.service_tier === "flex"
           ? cfg.advanced.timeouts.flex
           : cfg.advanced.timeouts.normal,
-      experimental_include: {
+      include: {
         requestBody: false,
         responseBody: false,
       },
+      // The gateway forwards system messages exactly as the client sent them
+      // (OpenAI / Anthropic both allow them inside the message array).
+      allowSystemInMessages: true,
       ...textOptions,
     });
     logger.trace({ requestId: ctx.requestId, result }, "[chat] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
-    if (result.response.headers) ctx.response = { headers: result.response.headers };
+    if (result.finalStep.response.headers)
+      ctx.response = { headers: result.finalStep.response.headers };
     recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, ctx.trace);
 
     // Transform result.

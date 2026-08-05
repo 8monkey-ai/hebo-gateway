@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { minimaxReasoningMiddleware } from "./middleware";
@@ -38,7 +38,7 @@ for (const { effort, expected } of reasoningEffortCases) {
     const result = await minimaxReasoningMiddleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "minimax/m2.7" }),
+      model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
     });
 
     expect(result.providerOptions!["unknown"]).toEqual({
@@ -60,7 +60,7 @@ test("minimaxReasoningMiddleware > should map enabled:false to effort none", asy
   const result = await minimaxReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "minimax/m2.7" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
   });
 
   expect(result.providerOptions!["unknown"]).toEqual({
@@ -81,7 +81,7 @@ test("minimaxReasoningMiddleware > should pass through when no reasoning", async
   const result = await minimaxReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "minimax/m2.5" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/m2.5" }),
   });
 
   expect(result.providerOptions!["unknown"]).toEqual({

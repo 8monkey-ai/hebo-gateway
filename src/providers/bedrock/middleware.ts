@@ -1,7 +1,7 @@
 import type { BedrockProviderOptions } from "@ai-sdk/amazon-bedrock";
 import type { AnthropicLanguageModelOptions } from "@ai-sdk/anthropic";
 import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
-import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type { SharedV4ProviderOptions } from "@ai-sdk/provider";
 import type { LanguageModelMiddleware } from "ai";
 
 import type {
@@ -137,7 +137,7 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
     let hasExplicitCacheControl = false;
     let lastCacheableBlock;
 
-    const processCacheControl = (providerOptions?: SharedV3ProviderOptions) => {
+    const processCacheControl = (providerOptions?: SharedV4ProviderOptions) => {
       if (!providerOptions) return;
 
       const entryBedrock = providerOptions["bedrock"];

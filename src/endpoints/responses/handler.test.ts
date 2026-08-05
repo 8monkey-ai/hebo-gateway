@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { simulateReadableStream } from "ai";
-import { MockLanguageModelV3, MockProviderV3 } from "ai/test";
+import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
@@ -16,7 +16,7 @@ import {
 const baseUrl = "http://localhost/responses";
 
 describe("Responses Handler", () => {
-  const mockLanguageModel = new MockLanguageModelV3({
+  const mockLanguageModel = new MockLanguageModelV4({
     doGenerate: (options) => {
       const isToolCall = options.tools && options.tools.length > 0;
 
@@ -79,7 +79,7 @@ describe("Responses Handler", () => {
 
   const endpoint = responses({
     providers: {
-      groq: new MockProviderV3({
+      groq: new MockProviderV4({
         languageModels: {
           "openai/gpt-oss-20b": mockLanguageModel,
         },
@@ -430,7 +430,7 @@ describe("Responses Handler", () => {
   test("should return resolved model ID if routed to a different model", async () => {
     const endpointWithHook = responses({
       providers: {
-        groq: new MockProviderV3({
+        groq: new MockProviderV4({
           languageModels: {
             "openai/gpt-oss-20b": mockLanguageModel,
           },

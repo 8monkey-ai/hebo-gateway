@@ -32,6 +32,7 @@ import type {
 } from "../../types";
 import { parseRequestBody } from "../../utils/body";
 import { prepareForwardHeaders } from "../../utils/request";
+import type { RuntimeContext } from "../shared/converters";
 import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
 import { ResponsesBodySchema, type ResponsesBody, type ResponsesInputs } from "./schema";
@@ -128,7 +129,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
         onFinish: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toResponses(
-            res as unknown as GenerateTextResult<ToolSet, Output.Output>,
+            res as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
             ctx.resolvedModelId!,
             (ctx.body as ResponsesBody).metadata,
           );
@@ -144,10 +145,13 @@ export const responses = (config: GatewayConfig): Endpoint => {
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
         },
-        experimental_include: {
+        include: {
           requestBody: false,
+          rawChunks: false,
         },
-        includeRawChunks: false,
+        // The gateway forwards system messages exactly as the client sent them
+        // (OpenAI / Anthropic both allow them inside the message array).
+        allowSystemInMessages: true,
         ...textOptions,
       });
 
@@ -170,15 +174,19 @@ export const responses = (config: GatewayConfig): Endpoint => {
         ctx.body.service_tier === "flex"
           ? cfg.advanced.timeouts.flex
           : cfg.advanced.timeouts.normal,
-      experimental_include: {
+      include: {
         requestBody: false,
         responseBody: false,
       },
+      // The gateway forwards system messages exactly as the client sent them
+      // (OpenAI / Anthropic both allow them inside the message array).
+      allowSystemInMessages: true,
       ...textOptions,
     });
     logger.trace({ requestId: ctx.requestId, result }, "[responses] AI SDK result");
     addSpanEvent("hebo.ai-sdk.completed");
-    if (result.response.headers) ctx.response = { headers: result.response.headers };
+    if (result.finalStep.response.headers)
+      ctx.response = { headers: result.finalStep.response.headers };
     recordTimeToFirstToken(performance.now() - start, genAiGeneralAttrs, ctx.trace);
 
     ctx.result = toResponses(result, ctx.resolvedModelId, ctx.body.metadata);

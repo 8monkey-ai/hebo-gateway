@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
@@ -48,7 +48,7 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
   const result = await geminiPromptCachingMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-flash" }),
   });
 
   expect(result.providerOptions).toEqual({
@@ -59,9 +59,7 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
 });
 
 test("geminiDimensionsMiddleware > matching patterns", () => {
-  const matching = [
-    "google/gemini-embedding-2",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const matching = ["google/gemini-embedding-2"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
   const nonMatching = [
     "google/gemini-3-flash-preview",
     "google/embedding-001",
@@ -92,7 +90,7 @@ test("geminiReasoningMiddleware > should enable thinking for Gemini 3 Flash effo
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
   });
 
   expect(result).toEqual({
@@ -123,7 +121,7 @@ test("geminiReasoningMiddleware > should map medium effort for Gemini 3.1 Pro", 
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3.1-pro-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-pro-preview" }),
   });
 
   expect(result).toEqual({
@@ -153,7 +151,7 @@ test("geminiReasoningMiddleware > should normalize none effort for Gemini 3.1 Fl
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3.1-flash-lite-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-flash-lite-preview" }),
   });
 
   expect(result).toEqual({
@@ -183,7 +181,7 @@ test("geminiReasoningMiddleware > should use budget for Gemini 2", async () => {
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-flash" }),
   });
 
   expect(result).toEqual({
@@ -213,7 +211,7 @@ test("geminiReasoningMiddleware > should handle disabled reasoning", async () =>
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
   });
 
   expect(result).toEqual({
@@ -243,7 +241,7 @@ test("geminiReasoningMiddleware > should default reasoning effort for Gemini 3 F
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
   });
 
   expect(result).toEqual({
@@ -272,7 +270,7 @@ test("geminiReasoningMiddleware > Gemini 2.5 Pro should have minimum budget even
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-pro" }),
   });
 
   expect(result).toEqual({
@@ -302,7 +300,7 @@ test("geminiReasoningMiddleware > Gemini 2.0 Flash should NOT have forced minimu
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-2.0-flash" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-2.0-flash" }),
   });
 
   expect(result).toEqual({
