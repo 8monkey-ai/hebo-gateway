@@ -319,7 +319,8 @@ function fromInputContent(content: string | ResponsesInputContent[]): UserConten
         if (part.image_url !== undefined && part.image_url !== null) {
           result.push(fromImageInput(part.image_url));
         } else if (part.file_id !== undefined && part.file_id !== null) {
-          result.push({ type: "image", image: part.file_id });
+          // Media type is unknown for a bare file ID; fall back to the top-level type.
+          result.push({ type: "file", data: part.file_id, mediaType: "image" });
         }
         break;
       }

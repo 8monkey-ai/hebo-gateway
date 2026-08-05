@@ -1,3 +1,4 @@
+import type { ProviderV4 } from "@ai-sdk/provider";
 import type { Attributes, Tracer } from "@opentelemetry/api";
 
 import type {
@@ -12,7 +13,7 @@ import type { Model, ModelList } from "./endpoints/models";
 import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema";
 import type { Logger, LoggerConfig } from "./logger";
 import type { ModelCatalog, ModelId } from "./models/types";
-import type { GatewayProvider, ProviderId, ProviderRegistry } from "./providers/types";
+import type { ProviderId, ProviderRegistry } from "./providers/types";
 
 export type GatewayOperation =
   | "chat"
@@ -70,7 +71,7 @@ export type GatewayContext = {
   /**
    * Resolved provider instance.
    */
-  provider?: GatewayProvider;
+  provider?: ProviderV4;
   /**
    * Resolved provider ID.
    */
@@ -167,11 +168,11 @@ export type GatewayHooks = {
   resolveModelId?: (ctx: ResolveModelHookContext) => ModelId | void | Promise<ModelId | void>;
   /**
    * Picks a provider instance for the request.
-   * @returns GatewayProvider to override, or undefined to use default.
+   * @returns ProviderV4 to override, or undefined to use default.
    */
   resolveProvider?: (
     ctx: ResolveProviderHookContext,
-  ) => GatewayProvider | void | Promise<GatewayProvider | void>;
+  ) => ProviderV4 | void | Promise<ProviderV4 | void>;
   /**
    * Runs after the endpoint handler.
    * @returns Result to replace, or undefined to keep original.

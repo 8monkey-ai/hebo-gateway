@@ -1,16 +1,17 @@
+import type { ProviderV3, ProviderV4 } from "@ai-sdk/provider";
 import { customProvider, type EmbeddingModel, type LanguageModel } from "ai";
 
 import { GatewayError } from "../errors/gateway";
 import { logger } from "../logger";
 import type { ModelCatalog, ModelId } from "../models/types";
-import type { GatewayProvider, ProviderRegistry } from "./types";
+import type { ProviderRegistry } from "./types";
 
 export const resolveProvider = (args: {
   providers: ProviderRegistry;
   models: ModelCatalog;
   modelId: ModelId;
   operation: "chat" | "embeddings" | "messages" | "responses";
-}): GatewayProvider => {
+}): ProviderV4 => {
   const { providers, models, modelId, operation } = args;
 
   const catalogModel = models[modelId];
@@ -62,10 +63,15 @@ export type CanonicalIdsOptions = {
   };
 };
 
+/**
+ * `provider` also accepts the previous (`v3`) specification because some
+ * community providers still target it (voyage, zhipu). The returned provider is
+ * always `v4`: `customProvider` normalizes the fallback for us.
+ */
 export const withCanonicalIds = (
-  provider: GatewayProvider,
+  provider: ProviderV3 | ProviderV4,
   config: CanonicalIdsOptions = {},
-): GatewayProvider => {
+): ProviderV4 => {
   const {
     mapping,
     options: {
@@ -133,7 +139,7 @@ export const withCanonicalIds = (
           logger.debug(`[canonical] mapped ${id} to ${mapped}`);
           return embeddingModel(mapped);
         },
-      } as GatewayProvider)
+      } as ProviderV3 | ProviderV4)
     : provider;
 
   const mapModels = <T>(fn?: (id: string) => T) => {

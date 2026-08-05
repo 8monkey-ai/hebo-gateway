@@ -349,7 +349,7 @@ const gw = gateway({
      * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.resolvedModelId Resolved model ID.
      * @param ctx.operation Operation type ("chat" | "embeddings").
-     * @returns GatewayProvider to override, or undefined to use default.
+     * @returns ProviderV4 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
       providers: ProviderRegistry;
@@ -357,7 +357,7 @@ const gw = gateway({
       body: ChatCompletionsBody | EmbeddingsBody;
       resolvedModelId: ModelId;
       operation: "chat" | "embeddings";
-    }): Promise<GatewayProvider | void> => {
+    }): Promise<ProviderV4 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
       // - Bring-your-own-key authentication

@@ -142,10 +142,6 @@ export const messages = (config: GatewayConfig): Endpoint => {
           recordTokenUsage(genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
           recordTimePerOutputToken(start, ttft, genAiResponseAttrs, genAiGeneralAttrs, ctx.trace);
         },
-        include: {
-          requestBody: false,
-          rawChunks: false,
-        },
         // The gateway forwards system messages exactly as the client sent them
         // (OpenAI / Anthropic both allow them inside the message array).
         allowSystemInMessages: true,
@@ -168,10 +164,6 @@ export const messages = (config: GatewayConfig): Endpoint => {
       headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
       abortSignal: ctx.request.signal,
       timeout: cfg.advanced.timeouts.normal,
-      include: {
-        requestBody: false,
-        responseBody: false,
-      },
       // The gateway forwards system messages exactly as the client sent them
       // (OpenAI / Anthropic both allow them inside the message array).
       allowSystemInMessages: true,
