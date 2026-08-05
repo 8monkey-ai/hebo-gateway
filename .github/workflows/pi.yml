@@ -1,14 +1,11 @@
 name: Pi AI Agent
 
 on:
-  workflow_call:
-    inputs:
-      prompt:
-        type: string
-        required: false
-      allowed_actor:
-        type: string
-        required: false
+  issue_comment:
+    types: [created]
+
+  pull_request_review:
+    types: [submitted]
 
 permissions:
   contents: write
@@ -16,23 +13,38 @@ permissions:
   pull-requests: write
   id-token: write
 
+concurrency:
+  group: pi-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   pi-agent:
-    if: |
-      (startsWith(github.event.comment.body, '/pi ') || startsWith(github.event.review.body, '/pi ')) &&
-      (inputs.allowed_actor == '' || github.actor == inputs.allowed_actor)
+    if: >-
+      (
+          github.event_name == 'issue_comment' &&
+          startsWith(github.event.comment.body, '/pi ') &&
+          (
+          github.event.comment.author_association == 'OWNER' ||
+          github.event.comment.author_association == 'MEMBER' ||
+          github.event.comment.author_association == 'COLLABORATOR'
+          )
+      ) ||
+      (
+          github.event_name == 'pull_request_review' &&
+          startsWith(github.event.review.body, '/pi ') &&
+          (
+          github.event.review.author_association == 'OWNER' ||
+          github.event.review.author_association == 'MEMBER' ||
+          github.event.review.author_association == 'COLLABORATOR'
+          )
+      )
 
     runs-on: ubuntu-latest
 
-    env:
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-
     steps:
+      # Checkout the trusted default branch rather than untrusted PR code.
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || '' }}
-          fetch-depth: 0
 
       - name: Generate GitHub App token
         id: app-token
@@ -41,33 +53,31 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - uses: actions/setup-node@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
       - name: Run Pi agent
         id: pi
-        uses: shaftoe/pi-coding-agent-action@develop
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.BEDROCK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.BEDROCK_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.BEDROCK_REGION }}
+        uses: shaftoe/pi-coding-agent-action@v2.27.0
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           provider: amazon-bedrock
           model: us.anthropic.claude-opus-5
           thinking_level: high
-          prompt: ${{ inputs.prompt }}
+          export_session_html: true
           diff_ignore_patterns: "dist/ pnpm-lock.yaml node_modules/"
 
-      - uses: actions/upload-artifact@v7
+      - name: Upload Pi session HTML
+        uses: actions/upload-artifact@v7
         if: ${{ steps.pi.outputs.session_html_path }}
         with:
-          name: pi-session-html-${{ github.event.issue.number || github.event.pull_request.number || github.run_number }}
+          name: pi-session-html-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
           path: ${{ steps.pi.outputs.session_html_path }}
