@@ -60,7 +60,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
@@ -70,8 +70,8 @@ jobs:
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           provider: amazon-bedrock
-          model: us.anthropic.claude-opus-5
-          thinking_level: high
+          model: ${{ vars.AGENT_MODEL }}
+          thinking_level: ${{ vars.AGENT_THINKING }}
           export_session_html: true
           diff_ignore_patterns: "dist/ pnpm-lock.yaml node_modules/"
 
