@@ -1,7 +1,7 @@
 import type {
   JSONObject,
-  SharedV3ProviderMetadata,
-  SharedV3ProviderOptions,
+  SharedV4ProviderMetadata,
+  SharedV4ProviderOptions,
 } from "@ai-sdk/provider";
 import {
   type JSONValue,
@@ -16,6 +16,13 @@ import { z } from "zod";
 import { GatewayError } from "../../errors/gateway";
 import { parseDataUrl } from "../../utils/url";
 import type { ReasoningConfig, ReasoningEffort, CacheControl, ServiceTier } from "./schema";
+
+/**
+ * Runtime context type parameter for the AI SDK result types.
+ * The gateway does not use runtime context, and `ai` does not re-export its
+ * own `Context` alias, so mirror it here.
+ */
+export type RuntimeContext = Record<string, unknown>;
 
 export type ToolChoiceOptions = {
   toolChoice?: ToolChoice<ToolSet>;
@@ -36,7 +43,7 @@ export type TextCallOptions = {
   topP?: number;
   stopSequences?: string[];
   stopWhen?: StopCondition<ToolSet> | Array<StopCondition<ToolSet>>;
-  providerOptions: SharedV3ProviderOptions;
+  providerOptions: SharedV4ProviderOptions;
 };
 
 export function parseJsonOrText(
@@ -55,6 +62,23 @@ export function parseBase64(base64: string): Uint8Array {
   } catch (error) {
     throw new GatewayError("Invalid base64 data", 400, undefined, error);
   }
+}
+
+/**
+ * Parses arbitrary file input, which OpenAI clients send either as a data URL
+ * (`data:application/pdf;base64,...`) or as bare base64. Returns the base64
+ * payload plus the declared media type when the data URL carried one.
+ */
+export function parseFileInput(data: string): { data: string; mediaType?: string } {
+  if (data.startsWith("data:")) {
+    const { mimeType, dataStart } = parseDataUrl(data);
+    if (!mimeType || dataStart <= 5 || dataStart >= data.length) {
+      throw new GatewayError("Invalid data URL", 400);
+    }
+    return { data: data.slice(dataStart), mediaType: mimeType };
+  }
+
+  return { data };
 }
 
 export function parseImageInput(url: string): { image: string | URL; mediaType?: string } {
@@ -144,7 +168,7 @@ export function parsePromptCachingOptions(
 }
 
 export function resolveResponseServiceTier(
-  providerMetadata?: SharedV3ProviderMetadata,
+  providerMetadata?: SharedV4ProviderMetadata,
 ): ServiceTier | undefined {
   if (!providerMetadata) return undefined;
 
@@ -228,7 +252,7 @@ export function stripEmptyKeys(obj: unknown) {
   return obj;
 }
 
-export function extractReasoningMetadata(providerMetadata?: SharedV3ProviderMetadata): {
+export function extractReasoningMetadata(providerMetadata?: SharedV4ProviderMetadata): {
   redactedData?: string;
   signature?: string;
 } {

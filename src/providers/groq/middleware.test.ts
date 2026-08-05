@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { groqServiceTierMiddleware } from "./middleware";
@@ -36,7 +36,7 @@ for (const { tier, expected } of groqServiceTierCases) {
     const result = await groqServiceTierMiddleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+      model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
     });
 
     expect(result.providerOptions!["groq"]).toEqual({

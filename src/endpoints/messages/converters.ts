@@ -10,7 +10,6 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
-  ImagePart,
   FilePart,
   TextPart,
   ToolCallPart,
@@ -28,6 +27,7 @@ import {
   resolveResponseServiceTier,
   extractReasoningMetadata,
   parseJsonOrText,
+  type RuntimeContext,
   type TextCallOptions,
 } from "../shared/converters";
 import type { ReasoningConfig, ServiceTier, CacheControl } from "../shared/schema";
@@ -220,7 +220,7 @@ function fromUserMessage(
   }
 
   const result: Array<UserModelMessage | ToolModelMessage> = [];
-  let currentParts: Array<TextPart | ImagePart | FilePart | ToolResultPart> = [];
+  let currentParts: Array<TextPart | FilePart | ToolResultPart> = [];
   let currentRole: string | undefined;
 
   for (const block of message.content) {
@@ -243,9 +243,7 @@ function fromUserMessage(
   return result.length > 0 ? result : [{ role: "user" as const, content: "" }];
 }
 
-function fromUserContentBlock(
-  block: UserContentBlock,
-): TextPart | ImagePart | FilePart | undefined {
+function fromUserContentBlock(block: UserContentBlock): TextPart | FilePart | undefined {
   // tool_result blocks are handled separately in fromUserMessage
   // oxlint-disable-next-line switch-exhaustiveness-check
   switch (block.type) {
@@ -258,9 +256,9 @@ function fromUserContentBlock(
     }
     case "image": {
       if (block.source.type === "base64") {
-        const part: ImagePart = {
-          type: "image",
-          image: parseBase64(block.source.data),
+        const part: FilePart = {
+          type: "file",
+          data: parseBase64(block.source.data),
           mediaType: block.source.media_type,
         };
         if (block.cache_control) {
@@ -268,9 +266,9 @@ function fromUserContentBlock(
         }
         return part;
       }
-      // URL source
+      // URL source; media type is unknown, fall back to the top-level type.
       const { image, mediaType } = parseImageInput(block.source.url);
-      const part: ImagePart = { type: "image", image, mediaType };
+      const part: FilePart = { type: "file", data: image, mediaType: mediaType ?? "image" };
       if (block.cache_control) {
         part.providerOptions = { unknown: { cache_control: block.cache_control } };
       }
@@ -450,7 +448,7 @@ export function convertToToolChoiceOptions(
 // --- Response Flow ---
 
 export function toMessages(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
   modelId: string,
 ): Messages {
   const content: MessagesResponseContentBlock[] = [];
@@ -491,8 +489,10 @@ export function toMessages(
     model: modelId,
     stop_reason: mapStopReason(result.finishReason),
     stop_sequence: null,
-    usage: mapUsage(result.totalUsage),
-    service_tier: toMessagesServiceTier(resolveResponseServiceTier(result.providerMetadata)),
+    usage: mapUsage(result.usage),
+    service_tier: toMessagesServiceTier(
+      resolveResponseServiceTier(result.finalStep.providerMetadata),
+    ),
   };
 }
 
@@ -562,10 +562,10 @@ function toMessagesServiceTier(tier?: ServiceTier): MessagesServiceTier | undefi
 // --- Streaming ---
 
 export function toMessagesStream(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, RuntimeContext, Output.Output>,
   modelId: string,
 ): MessagesStream {
-  return result.fullStream.pipeThrough(new MessagesTransformStream(modelId));
+  return result.stream.pipeThrough(new MessagesTransformStream(modelId));
 }
 
 export class MessagesTransformStream extends TransformStream<

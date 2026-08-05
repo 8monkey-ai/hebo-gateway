@@ -1,4 +1,4 @@
-import type { SharedV3ProviderMetadata } from "@ai-sdk/provider";
+import type { SharedV4ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -16,7 +16,6 @@ import type {
   ToolModelMessage,
   UserModelMessage,
   TextPart,
-  ImagePart,
   FilePart,
 } from "ai";
 import { Output, jsonSchema, tool } from "ai";
@@ -34,6 +33,7 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  type RuntimeContext,
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
@@ -351,9 +351,11 @@ function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheContro
   const { image, mediaType } = parseImageInput(url);
 
   if (image instanceof URL) {
-    const out: ImagePart = {
-      type: "image" as const,
-      image,
+    // Media type is unknown for remote URLs; fall back to the top-level type.
+    const out: FilePart = {
+      type: "file" as const,
+      data: image,
+      mediaType: mediaType ?? "image",
     };
     if (cacheControl) {
       out.providerOptions = {
@@ -372,25 +374,9 @@ function fromFilePart(
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
-  const data = parseBase64(base64Data);
-
-  if (mediaType.startsWith("image/")) {
-    const out: ImagePart = {
-      type: "image" as const,
-      image: data,
-      mediaType,
-    };
-    if (cacheControl) {
-      out.providerOptions = {
-        unknown: { cache_control: cacheControl },
-      };
-    }
-    return out;
-  }
-
   const out: FilePart = {
     type: "file" as const,
-    data: data,
+    data: parseBase64(base64Data),
     filename,
     mediaType,
   };
@@ -474,7 +460,7 @@ function parseToolResult(
 // --- Response Flow ---
 
 export function toChatCompletions(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
 ): ChatCompletions {
   return {
@@ -489,14 +475,14 @@ export function toChatCompletions(
         finish_reason: toChatCompletionsFinishReason(result.finishReason),
       } satisfies ChatCompletionsChoice,
     ],
-    usage: result.totalUsage ? toChatCompletionsUsage(result.totalUsage) : null,
-    provider_metadata: result.providerMetadata,
-    service_tier: resolveResponseServiceTier(result.providerMetadata),
+    usage: result.usage ? toChatCompletionsUsage(result.usage) : null,
+    provider_metadata: result.finalStep.providerMetadata,
+    service_tier: resolveResponseServiceTier(result.finalStep.providerMetadata),
   };
 }
 
 export function toChatCompletionsResponse(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
   responseInit?: ResponseInit,
 ): Response {
@@ -504,14 +490,14 @@ export function toChatCompletionsResponse(
 }
 
 export function toChatCompletionsStream(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
 ): ChatCompletionsStream {
-  return result.fullStream.pipeThrough(new ChatCompletionsTransformStream(model));
+  return result.stream.pipeThrough(new ChatCompletionsTransformStream(model));
 }
 
 export function toChatCompletionsStreamResponse(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
   responseInit?: ResponseInit,
 ): Response {
@@ -527,11 +513,11 @@ export class ChatCompletionsTransformStream extends TransformStream<
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
     const reasoningIdToIndex = new Map<string, number>();
-    let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
+    let finishProviderMetadata: SharedV4ProviderMetadata | undefined;
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
-      provider_metadata?: SharedV3ProviderMetadata,
+      provider_metadata?: SharedV4ProviderMetadata,
       finish_reason?: ChatCompletionsFinishReason,
       usage?: ChatCompletionsUsage,
     ): SseFrame<ChatCompletionsChunk> => {
@@ -645,7 +631,7 @@ export class ChatCompletionsTransformStream extends TransformStream<
 }
 
 export const toChatCompletionsAssistantMessage = (
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
 ): ChatCompletionsAssistantMessage => {
   const message: ChatCompletionsAssistantMessage = {
     role: "assistant",
@@ -682,8 +668,8 @@ export const toChatCompletionsAssistantMessage = (
     }
   }
 
-  if (result.reasoningText) {
-    message.reasoning = result.reasoningText;
+  if (result.finalStep.reasoningText) {
+    message.reasoning = result.finalStep.reasoningText;
   }
 
   if (reasoningDetails.length > 0) {
@@ -760,7 +746,7 @@ export function toChatCompletionsToolCall(
   id: string,
   name: string,
   args: unknown,
-  providerMetadata?: SharedV3ProviderMetadata,
+  providerMetadata?: SharedV4ProviderMetadata,
 ): ChatCompletionsToolCall {
   const out: ChatCompletionsToolCall = {
     id,

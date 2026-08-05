@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
@@ -43,7 +43,7 @@ test("xaiReasoningMiddleware > should map low effort to low", async () => {
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -68,7 +68,7 @@ test("xaiReasoningMiddleware > should map high effort to high", async () => {
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -93,7 +93,7 @@ test("xaiReasoningMiddleware > should map medium effort to high", async () => {
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -118,7 +118,7 @@ test("xaiReasoningMiddleware > should map minimal effort to low", async () => {
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -143,7 +143,7 @@ test("xaiReasoningMiddleware > should map xhigh effort to high", async () => {
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -168,7 +168,7 @@ test("xaiReasoningMiddleware > should map max effort to high", async () => {
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -194,7 +194,7 @@ test("xaiReasoningMiddleware > should clear reasoning when disabled", async () =
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -219,7 +219,7 @@ test("xaiReasoningMiddleware > should map none effort to undefined", async () =>
   const result = await xaiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
-import { type LanguageModelV3CallOptions, type LanguageModelV3TextPart } from "@ai-sdk/provider";
-import { MockLanguageModelV3 } from "ai/test";
+import { type LanguageModelV4CallOptions, type LanguageModelV4TextPart } from "@ai-sdk/provider";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import {
@@ -55,7 +55,7 @@ for (const { tier, expected } of bedrockServiceTierCases) {
     const result = await bedrockServiceTierMiddleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+      model: new MockLanguageModelV4({ modelId: "amazon/nova-2-lite" }),
     });
 
     expect(result.providerOptions!["bedrock"]).toEqual(expected);
@@ -95,7 +95,7 @@ test("bedrockGptReasoningMiddleware > should map reasoningEffort into reasoningC
   const result = await bedrockGptReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
   });
 
   expect(result).toEqual({
@@ -123,7 +123,7 @@ test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
   const result = await bedrockGptReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
   });
 
   expect(result).toEqual({
@@ -153,7 +153,7 @@ test("bedrockClaudeReasoningMiddleware > should pass adaptive thinking through w
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -186,7 +186,7 @@ test("bedrockClaudeReasoningMiddleware > should pass adaptive thinking without b
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -219,7 +219,7 @@ test("bedrockClaudeReasoningMiddleware > should map effort with adaptive thinkin
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -253,7 +253,7 @@ test("bedrockClaudeReasoningMiddleware > should pass max effort with adaptive th
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -286,7 +286,7 @@ test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens us
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   // medium effort = 50% of maxOutputTokens
@@ -320,7 +320,7 @@ test("bedrockClaudeReasoningMiddleware > should enforce minimum budgetTokens of 
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -354,7 +354,7 @@ test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async (
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
   });
 
   expect(result).toEqual({
@@ -398,7 +398,7 @@ test("bedrockClaudeReasoningMiddleware > should set adaptive type and maxReasoni
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4-7" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-7" }),
   });
 
   expect(result).toEqual({
@@ -431,7 +431,7 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-sonnet-3.7" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-3.7" }),
   });
 
   expect(result).toEqual({
@@ -464,7 +464,7 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.5" }),
   });
 
   expect(result).toEqual({
@@ -481,7 +481,7 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
 });
 
 test("bedrockPromptCachingMiddleware > should map message and part cacheControl to cachePoint", async () => {
-  const params: LanguageModelV3CallOptions = {
+  const params: LanguageModelV4CallOptions = {
     prompt: [
       {
         role: "user",
@@ -511,7 +511,7 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
   const result = await bedrockPromptCachingMiddleware.transformParams!({
     type: "generate",
     params: params,
-    model: new MockLanguageModelV3({ modelId: "amazon/nova-2-lite" }),
+    model: new MockLanguageModelV4({ modelId: "amazon/nova-2-lite" }),
   });
 
   expect(result).toEqual({
@@ -527,7 +527,7 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
                 cachePoint: { type: "default" },
               },
             },
-          } satisfies LanguageModelV3TextPart,
+          } satisfies LanguageModelV4TextPart,
         ],
         providerOptions: {
           bedrock: {
@@ -543,7 +543,7 @@ test("bedrockPromptCachingMiddleware > should map message and part cacheControl 
 });
 
 test("bedrockPromptCachingMiddleware > should fallback from top-level cacheControl", async () => {
-  const params: LanguageModelV3CallOptions = {
+  const params: LanguageModelV4CallOptions = {
     prompt: [
       {
         role: "system",
@@ -569,7 +569,7 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
   const result = await bedrockPromptCachingMiddleware.transformParams!({
     type: "generate",
     params: params,
-    model: new MockLanguageModelV3({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
   });
 
   expect(result).toEqual({
@@ -584,7 +584,7 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
           {
             type: "text",
             text: "Question",
-          } satisfies LanguageModelV3TextPart,
+          } satisfies LanguageModelV4TextPart,
         ],
         providerOptions: {
           bedrock: {
@@ -600,7 +600,7 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
 });
 
 test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", async () => {
-  const params: LanguageModelV3CallOptions = {
+  const params: LanguageModelV4CallOptions = {
     prompt: [{ role: "system", content: "Hello" }],
     providerOptions: {
       bedrock: {
@@ -612,7 +612,7 @@ test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", 
   const result = await bedrockPromptCachingMiddleware.transformParams!({
     type: "generate",
     params: params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
   });
 
   expect(result).toEqual({

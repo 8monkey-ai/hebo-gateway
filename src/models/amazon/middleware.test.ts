@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
@@ -58,7 +58,7 @@ test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", 
   const result = await novaReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -88,7 +88,7 @@ test("novaReasoningMiddleware > should disable reasoning when requested", async 
   const result = await novaReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -117,7 +117,7 @@ test("novaReasoningMiddleware > should default reasoning effort when enabled wit
   const result = await novaReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({

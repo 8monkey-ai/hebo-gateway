@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import type { CANONICAL_MODEL_IDS } from "../../models/types";
@@ -30,7 +30,7 @@ test("deepseekReasoningMiddleware > should enable thinking when reasoning enable
   const result = await deepseekReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -55,7 +55,7 @@ test("deepseekReasoningMiddleware > should enable thinking with effort", async (
   const result = await deepseekReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -80,7 +80,7 @@ test("deepseekReasoningMiddleware > should disable thinking when reasoning disab
   const result = await deepseekReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -105,7 +105,7 @@ test("deepseekReasoningMiddleware > should disable thinking with none effort", a
   const result = await deepseekReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -128,7 +128,7 @@ test("deepseekReasoningMiddleware > should pass through when no reasoning config
   const result = await deepseekReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -148,7 +148,7 @@ test("deepseekReasoningMiddleware > should pass through when no unknown namespac
   const result = await deepseekReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({

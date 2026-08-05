@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { MockEmbeddingModelV3, MockProviderV3 } from "ai/test";
+import { MockEmbeddingModelV4, MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { embeddings } from "./handler";
@@ -29,9 +29,9 @@ const expectedEmbeddingResponse = (count: number) => ({
 describe("Embeddings Handler", () => {
   const endpoint = embeddings({
     providers: {
-      openai: new MockProviderV3({
+      openai: new MockProviderV4({
         embeddingModels: {
-          "text-embedding-3-small": new MockEmbeddingModelV3({
+          "text-embedding-3-small": new MockEmbeddingModelV4({
             doEmbed: (options) =>
               Promise.resolve({
                 embeddings: options.values.map(() => [0.1, 0.2, 0.3]),

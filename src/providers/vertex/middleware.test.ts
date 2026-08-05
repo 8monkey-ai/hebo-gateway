@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
-import type { LanguageModelV3CallOptions } from "@ai-sdk/provider";
-import { MockLanguageModelV3 } from "ai/test";
+import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { vertexGemma4ThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware";
@@ -53,7 +53,7 @@ for (const { tier, expectedHeaders } of vertexServiceTierCases) {
     const result = await vertexServiceTierMiddleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-pro" }),
+      model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-pro" }),
     });
 
     expect(result.headers).toEqual(expectedHeaders);
@@ -78,7 +78,7 @@ test("vertexServiceTierMiddleware > should not override pre-set headers", async 
   const result = await vertexServiceTierMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "google/gemini-3-flash-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
   });
 
   expect(result.headers).toEqual({
@@ -111,7 +111,7 @@ for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
     const result = await vertexGemma4ThinkingMiddleware.transformParams!({
       type: "generate",
       params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
-      model: new MockLanguageModelV3({ modelId: "google/gemma-4-26b-a4b-it-maas" }),
+      model: new MockLanguageModelV4({ modelId: "google/gemma-4-26b-a4b-it-maas" }),
     });
 
     expect(result.providerOptions!["vertex"]).toEqual(expected);
@@ -132,7 +132,7 @@ test("vertexGemma4ThinkingMiddleware > is registered only for gemma-4", () => {
 
 test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", async () => {
   const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat");
-  const model = new MockLanguageModelV3({ modelId: "google/gemma-4-26b-a4b-it-maas" });
+  const model = new MockLanguageModelV4({ modelId: "google/gemma-4-26b-a4b-it-maas" });
 
   const params = await chain.reduce(
     async (acc, { transformParams }) => {
@@ -144,7 +144,7 @@ test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", as
     Promise.resolve({
       prompt: [],
       providerOptions: { unknown: { reasoning: { enabled: true } } },
-    } as LanguageModelV3CallOptions),
+    } as LanguageModelV4CallOptions),
   );
 
   expect(params.providerOptions).toEqual({

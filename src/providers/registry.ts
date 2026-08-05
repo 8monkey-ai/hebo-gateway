@@ -1,5 +1,5 @@
-import type { ProviderV3 } from "@ai-sdk/provider";
-import { customProvider } from "ai";
+import type { ProviderV3, ProviderV4 } from "@ai-sdk/provider";
+import { customProvider, type EmbeddingModel, type LanguageModel } from "ai";
 
 import { GatewayError } from "../errors/gateway";
 import { logger } from "../logger";
@@ -11,7 +11,7 @@ export const resolveProvider = (args: {
   models: ModelCatalog;
   modelId: ModelId;
   operation: "chat" | "embeddings" | "messages" | "responses";
-}): ProviderV3 => {
+}): ProviderV4 => {
   const { providers, models, modelId, operation } = args;
 
   const catalogModel = models[modelId];
@@ -63,10 +63,15 @@ export type CanonicalIdsOptions = {
   };
 };
 
+/**
+ * `provider` also accepts the previous (`v3`) specification because some
+ * community providers still target it (voyage, zhipu). The returned provider is
+ * always `v4`: `customProvider` normalizes the fallback for us.
+ */
 export const withCanonicalIds = (
-  provider: ProviderV3,
+  provider: ProviderV3 | ProviderV4,
   config: CanonicalIdsOptions = {},
-): ProviderV3 => {
+): ProviderV4 => {
   const {
     mapping,
     options: {
@@ -113,16 +118,17 @@ export const withCanonicalIds = (
   const needsFallbackWrap =
     stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
 
-  // FUTURE: use embeddingModel instead of textEmbeddingModel once voyage supports it
-  // oxlint-disable-next-line unbound-method
-  const languageModel = provider.languageModel;
-  // oxlint-disable-next-line unbound-method, no-deprecated
-  const embeddingModel = provider.textEmbeddingModel!;
+  const languageModel: (id: string) => LanguageModel = (id) => provider.languageModel(id);
+  const embeddingModel: (id: string) => EmbeddingModel = (id) => provider.embeddingModel(id);
 
   const fallbackProvider = needsFallbackWrap
     ? ({
         ...provider,
-        specificationVersion: "v3",
+        // Community providers may omit `specificationVersion`. Anything that is
+        // not explicitly `v4` must report `v3`, otherwise the AI SDK adapts it
+        // through its v2 shim, which reads the deprecated `textEmbeddingModel`
+        // and would bypass the overrides below.
+        specificationVersion: provider.specificationVersion === "v4" ? "v4" : "v3",
         languageModel: (id: string) => {
           const mapped = applyFallbackAffixes(normalizeId(id));
           logger.debug(`[canonical] mapped ${id} to ${mapped}`);
@@ -131,10 +137,9 @@ export const withCanonicalIds = (
         embeddingModel: (id: string) => {
           const mapped = applyFallbackAffixes(normalizeId(id));
           logger.debug(`[canonical] mapped ${id} to ${mapped}`);
-          // oxlint-disable-next-line no-deprecated
           return embeddingModel(mapped);
         },
-      } satisfies ProviderV3)
+      } as ProviderV3 | ProviderV4)
     : provider;
 
   const mapModels = <T>(fn?: (id: string) => T) => {

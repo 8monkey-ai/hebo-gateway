@@ -471,6 +471,41 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
   );
 
   // =========================================================================
+  // 14b. File input — input_file.file_data as a data URL
+  // =========================================================================
+  test(
+    "file input: accepts input_file.file_data sent as a data URL",
+    async () => {
+      // OpenAI clients send file_data as a data URL, so the media type has to be
+      // read off the prefix rather than assumed to be application/octet-stream.
+      const PDF_BASE64 =
+        "JVBERi0xLjQKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA2MTIgMjAwXS9SZXNvdXJjZXM8PC9Gb250PDwvRjEgNCAwIFI+Pj4+L0NvbnRlbnRzIDUgMCBSPj4KZW5kb2JqCjQgMCBvYmoKPDwvVHlwZS9Gb250L1N1YnR5cGUvVHlwZTEvQmFzZUZvbnQvSGVsdmV0aWNhPj4KZW5kb2JqCjUgMCBvYmoKPDwvTGVuZ3RoIDQzPj4Kc3RyZWFtCkJUCi9GMSAyNCBUZgo0MCAxMDAgVGQKKFBVUlBMRSBGSVNIKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU0IDAwMDAwIG4gCjAwMDAwMDAxMDUgMDAwMDAgbiAKMDAwMDAwMDIxNyAwMDAwMCBuIAowMDAwMDAwMjgwIDAwMDAwIG4gCnRyYWlsZXIKPDwvU2l6ZSA2L1Jvb3QgMSAwIFI+PgpzdGFydHhyZWYKMzcwCiUlRU9GCg==";
+
+      const response = await client.responses.create({
+        model: MODEL,
+        max_output_tokens: 1024,
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_file",
+                file_data: `data:application/pdf;base64,${PDF_BASE64}`,
+                filename: "note.pdf",
+              },
+              { type: "input_text", text: "Repeat the two words in this document verbatim." },
+            ],
+          },
+        ],
+      });
+
+      expect(getOutputText(response).toUpperCase()).toContain("PURPLE FISH");
+    },
+    { timeout: 60_000 },
+  );
+
+  // =========================================================================
   // 15. Cache token usage
   // =========================================================================
   test(

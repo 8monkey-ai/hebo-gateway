@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
@@ -21,7 +21,11 @@ test("qwenReasoningMiddleware > matching patterns", () => {
     "alibaba/qwen3-vl-235b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
-  const nonMatching = ["openai/gpt-5", "anthropic/claude-opus-4.7", "google/gemini-3-flash-preview"];
+  const nonMatching = [
+    "openai/gpt-5",
+    "anthropic/claude-opus-4.7",
+    "google/gemini-3-flash-preview",
+  ];
 
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -48,7 +52,7 @@ test("qwenReasoningMiddleware > should enable thinking with medium effort", asyn
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
   });
 
   expect(result).toEqual({
@@ -79,7 +83,7 @@ test("qwenReasoningMiddleware > should disable thinking with none effort", async
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3.5-plus" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-plus" }),
   });
 
   expect(result).toEqual({
@@ -110,7 +114,7 @@ test("qwenReasoningMiddleware > should use explicit max_tokens", async () => {
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-coder-next" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-coder-next" }),
   });
 
   expect(result).toEqual({
@@ -141,7 +145,7 @@ test("qwenReasoningMiddleware > should use default max tokens when not specified
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
   });
 
   expect(result).toEqual({
@@ -184,7 +188,7 @@ test("qwenReasoningMiddleware > should map all effort levels to correct budgets"
       const result = await qwenReasoningMiddleware.transformParams!({
         type: "generate",
         params,
-        model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+        model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
       });
 
       expect(result).toEqual({
@@ -220,7 +224,7 @@ test("qwenReasoningMiddleware > should clear pre-existing enableThinking when di
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
   });
 
   expect(result).toEqual({
@@ -248,9 +252,8 @@ test("qwenReasoningMiddleware > should skip when no reasoning config", async () 
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
   });
 
   expect(result).toEqual(params);
 });
-

@@ -10,6 +10,7 @@ import type {
   ToolModelMessage,
 } from "ai";
 
+import type { RuntimeContext } from "../shared/converters";
 import {
   convertToTextCallOptions,
   convertToModelMessages,
@@ -50,9 +51,9 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
   }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
-  overrides: Partial<GenerateTextResult<ToolSet, Output.Output>>,
-): GenerateTextResult<ToolSet, Output.Output> =>
-  ({
+  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>>,
+): GenerateTextResult<ToolSet, RuntimeContext, Output.Output> => {
+  const result = {
     text: "",
     toolCalls: [],
     staticToolCalls: [],
@@ -77,12 +78,20 @@ const mockGenerateTextResult = (
       timestamp: new Date(),
       messages: [],
     },
+    responseMessages: [],
     providerMetadata: undefined,
     steps: [],
-    experimental_output: undefined,
     output: undefined,
     ...overrides,
-  }) satisfies GenerateTextResult<ToolSet, Output.Output>;
+  };
+
+  // AI SDK v7 reads final-step values off `finalStep`; mirror the top-level
+  // fields so tests can keep declaring them in one place.
+  return {
+    ...result,
+    finalStep: { ...result, stepNumber: 0 },
+  } as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>;
+};
 
 describe("Responses Converters", () => {
   describe("convertToModelMessages", () => {
@@ -357,6 +366,43 @@ describe("Responses Converters", () => {
         },
       });
     });
+
+    test("should take the media type from a function_call_output file_data data URL", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "function_call",
+          call_id: "call_1",
+          name: "get_file",
+          arguments: "{}",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output: [
+            {
+              type: "input_file",
+              file_data: "data:application/pdf;base64,aGVsbG8=",
+              filename: "report.pdf",
+            },
+          ],
+        },
+      ] satisfies ResponsesInputItem[]);
+
+      const toolMessage = messages[1] as ToolModelMessage;
+      expect(toolMessage.content[0]).toMatchObject({
+        output: {
+          type: "content",
+          value: [
+            {
+              type: "file-data",
+              data: "aGVsbG8=",
+              mediaType: "application/pdf",
+              filename: "report.pdf",
+            },
+          ],
+        },
+      });
+    });
   });
 
   describe("convertToTextCallOptions", () => {
@@ -393,7 +439,7 @@ describe("Responses Converters", () => {
         input: "hi",
         max_tool_calls: 3,
       });
-      // The function stepCountIs returns a function, we just check if it's defined
+      // The function isStepCount returns a function, we just check if it's defined
       expect(result.stopWhen).toBeDefined();
       expect(typeof result.stopWhen).toBe("function");
     });

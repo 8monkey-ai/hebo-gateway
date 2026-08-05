@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { extractProviderNamespace, forwardParamsMiddleware } from "./common";
 
@@ -43,7 +43,7 @@ describe("extractProviderNamespace", () => {
 describe("forwardParamsMiddleware", () => {
   test("should snakize providerMetadata in generate output", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       modelId: "google/gemini-2.5-flash",
       // oxlint-disable-next-line require-await
       doGenerate: async () => ({
@@ -90,7 +90,7 @@ describe("forwardParamsMiddleware", () => {
 
   test("should snakize providerMetadata in generate output content parts", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       modelId: "google/gemini-2.5-flash",
       // oxlint-disable-next-line require-await
       doGenerate: async () => ({
@@ -138,7 +138,7 @@ describe("forwardParamsMiddleware", () => {
 
   test("should snakize providerMetadata in stream parts", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
-    const model = new MockLanguageModelV3({
+    const model = new MockLanguageModelV4({
       modelId: "google/gemini-2.5-flash",
       // oxlint-disable-next-line require-await
       doStream: async () => ({
@@ -203,7 +203,7 @@ describe("forwardParamsMiddleware", () => {
     const result = await middleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "google/gemini-2.5-flash" }),
+      model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-flash" }),
     });
 
     expect(result.providerOptions).toEqual({
@@ -223,7 +223,7 @@ describe("forwardParamsMiddleware", () => {
     const result = await middleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+      model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
     });
 
     expect(result.providerOptions).toEqual({
@@ -246,7 +246,7 @@ describe("forwardParamsMiddleware", () => {
     const result = await middleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV3({ modelId: "anthropic/claude-3-5-sonnet" }),
+      model: new MockLanguageModelV4({ modelId: "anthropic/claude-3-5-sonnet" }),
     });
 
     expect(result.providerOptions).toEqual({

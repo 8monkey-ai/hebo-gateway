@@ -1,4 +1,4 @@
-import { type ProviderV3 } from "@ai-sdk/provider";
+import { type ProviderV4 } from "@ai-sdk/provider";
 
 export const CANONICAL_PROVIDER_IDS = [
   "alibaba",
@@ -26,5 +26,5 @@ export type CanonicalProviderId = (typeof CANONICAL_PROVIDER_IDS)[number];
 export type ProviderId = CanonicalProviderId | (string & {});
 
 export type ProviderRegistry = {
-  [K in ProviderId]?: ProviderV3;
+  [K in ProviderId]?: ProviderV4;
 };

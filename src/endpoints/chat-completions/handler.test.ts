@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { simulateReadableStream } from "ai";
-import { MockLanguageModelV3, MockProviderV3 } from "ai/test";
+import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
@@ -11,7 +11,7 @@ import { type ChatCompletions } from "./schema";
 const baseUrl = "http://localhost/chat/completions";
 
 describe("Chat Completions Handler", () => {
-  const mockLanguageModel = new MockLanguageModelV3({
+  const mockLanguageModel = new MockLanguageModelV4({
     doGenerate: (options) => {
       const isStructuredOutput = options.responseFormat?.type === "json";
       const isToolCall = options.tools && options.tools.length > 0;
@@ -93,7 +93,7 @@ describe("Chat Completions Handler", () => {
 
   const endpoint = chatCompletions({
     providers: {
-      groq: new MockProviderV3({
+      groq: new MockProviderV4({
         languageModels: {
           "openai/gpt-oss-20b": mockLanguageModel,
         },
@@ -443,7 +443,7 @@ describe("Chat Completions Handler", () => {
   test("should return resolved model ID if routed to a different model", async () => {
     const endpointWithHook = chatCompletions({
       providers: {
-        groq: new MockProviderV3({
+        groq: new MockProviderV4({
           languageModels: {
             "openai/gpt-oss-20b": mockLanguageModel,
           },

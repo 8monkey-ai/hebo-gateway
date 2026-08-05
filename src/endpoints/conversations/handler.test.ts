@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
-import { MockProviderV3 } from "ai/test";
+import { MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
 import { defineModelCatalog } from "../../models/catalog";
@@ -21,7 +21,7 @@ describe("Conversations Handler", () => {
   beforeEach(() => {
     config = {
       providers: {
-        groq: new MockProviderV3(),
+        groq: new MockProviderV4(),
       },
       models: defineModelCatalog({
         "openai/gpt-oss-20b": {

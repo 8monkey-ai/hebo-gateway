@@ -1,4 +1,4 @@
-import type { SharedV3ProviderOptions } from "@ai-sdk/provider";
+import type { SharedV4ProviderOptions } from "@ai-sdk/provider";
 import type { EmbedManyResult } from "ai";
 
 import { toResponse } from "../../utils/response";
@@ -6,7 +6,7 @@ import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } fr
 
 export type EmbedCallOptions = {
   values: string[];
-  providerOptions: SharedV3ProviderOptions;
+  providerOptions: SharedV4ProviderOptions;
 };
 
 export function convertToEmbedCallOptions(params: EmbeddingsInputs): EmbedCallOptions {
