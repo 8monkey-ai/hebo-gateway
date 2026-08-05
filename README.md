@@ -136,7 +136,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Azure`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
 
 Import the helper from the matching package path:
 
@@ -147,7 +147,19 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
-For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
+Azure resolves models by [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) _deployment_ name, so `withCanonicalIdsForAzure` assumes deployments are named after the Azure model ID (e.g. `gpt-5.6-sol`, `claude-sonnet-4-5`). Pass an `extraMapping` if your deployment names differ:
+
+```ts
+import { createAzure } from "@ai-sdk/azure";
+import { withCanonicalIdsForAzure } from "@hebo-ai/gateway/providers/azure";
+
+const azure = withCanonicalIdsForAzure(
+  createAzure({ resourceName: process.env["AZURE_RESOURCE_NAME"] }),
+  { "openai/gpt-5.6-sol": "my-gpt-56-sol-deployment" },
+);
+```
+
+Note that GPT-5.5 and GPT-5.6 on Bedrock are only served from the `bedrock-mantle` endpoint (`https://bedrock-mantle.{region}.api.aws/openai/v1`), which speaks the OpenAI Responses API rather than Converse. The canonical mapping in `withCanonicalIdsForBedrock` produces the right native IDs (e.g. `openai.gpt-5.6-sol`), but sending traffic to them requires an OpenAI-compatible provider pointed at that base URL instead of `@ai-sdk/amazon-bedrock`.
 
 For custom provider setups, wrap the provider instance with `withCanonicalIds` and define your own canonicalization mapping and rules:
 
@@ -243,7 +255,7 @@ Out-of-the-box model presets:
   Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 

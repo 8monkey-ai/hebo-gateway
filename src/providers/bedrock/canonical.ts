@@ -50,6 +50,14 @@ const MAPPING = {
   "google/gemma-3-27b": "google.gemma-3-27b-it",
   "openai/gpt-oss-20b": "openai.gpt-oss-20b-1:0",
   "openai/gpt-oss-120b": "openai.gpt-oss-120b-1:0",
+  // GPT-5.x keeps its dotted version and carries no `-v1:0` suffix. These are served
+  // only from the `bedrock-mantle` endpoint (Responses API), so reaching them needs an
+  // OpenAI-compatible provider pointed at https://bedrock-mantle.{region}.api.aws/openai/v1
+  // rather than the Converse-based `@ai-sdk/amazon-bedrock` transport.
+  "openai/gpt-5.5": "openai.gpt-5.5",
+  "openai/gpt-5.6-sol": "openai.gpt-5.6-sol",
+  "openai/gpt-5.6-terra": "openai.gpt-5.6-terra",
+  "openai/gpt-5.6-luna": "openai.gpt-5.6-luna",
   "alibaba/qwen3-235b": "qwen.qwen3-235b-a22b-2507-v1:0",
   "alibaba/qwen3-32b": "qwen.qwen3-32b-v1:0",
   "alibaba/qwen3-vl-235b": "qwen.qwen3-vl-235b-a22b",

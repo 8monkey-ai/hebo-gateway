@@ -7,6 +7,7 @@
     "ai-gateway",
     "alibaba",
     "anthropic",
+    "azure",
     "bedrock",
     "chutes",
     "deepinfra",
@@ -167,6 +168,10 @@
       "types": "./dist/providers/anthropic/index.d.ts",
       "import": "./dist/providers/anthropic/index.js"
     },
+    "./providers/azure": {
+      "types": "./dist/providers/azure/index.d.ts",
+      "import": "./dist/providers/azure/index.js"
+    },
     "./providers/bedrock": {
       "types": "./dist/providers/bedrock/index.d.ts",
       "import": "./dist/providers/bedrock/index.js"
@@ -262,6 +267,7 @@
     "@ai-sdk/alibaba": "^1.0.41",
     "@ai-sdk/amazon-bedrock": "^4.0.146",
     "@ai-sdk/anthropic": "^3.0.105",
+    "@ai-sdk/azure": "^3.0.95",
     "@ai-sdk/cohere": "^3.0.50",
     "@ai-sdk/deepinfra": "^2.0.67",
     "@ai-sdk/deepseek": "^2.0.51",
@@ -311,6 +317,7 @@
     "@ai-sdk/alibaba": "^1.0.23",
     "@ai-sdk/amazon-bedrock": "^4.0.103",
     "@ai-sdk/anthropic": "^3.0.76",
+    "@ai-sdk/azure": "^3.0.95",
     "@ai-sdk/cohere": "^3.0.35",
     "@ai-sdk/deepinfra": "^2.0.51",
     "@ai-sdk/deepseek": "^2.0.34",
@@ -339,6 +346,9 @@
       "optional": true
     },
     "@ai-sdk/anthropic": {
+      "optional": true
+    },
+    "@ai-sdk/azure": {
       "optional": true
     },
     "@ai-sdk/cohere": {
