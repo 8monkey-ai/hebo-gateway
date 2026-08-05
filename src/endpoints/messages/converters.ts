@@ -27,6 +27,7 @@ import {
   stripEmptyKeys,
   resolveResponseServiceTier,
   extractReasoningMetadata,
+  extractStreamErrorFields,
   parseJsonOrText,
   type TextCallOptions,
 } from "../shared/converters";
@@ -791,12 +792,12 @@ export class MessagesTransformStream extends TransformStream<
           }
 
           case "error": {
-            const message = part.error instanceof Error ? part.error.message : String(part.error);
+            const { type, message } = extractStreamErrorFields(part.error);
             controller.enqueue({
               event: "error",
               data: {
                 type: "error",
-                error: { type: "api_error", message },
+                error: { type, message },
               },
             });
             break;

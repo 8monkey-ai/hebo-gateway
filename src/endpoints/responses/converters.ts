@@ -34,6 +34,7 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  extractStreamErrorFields,
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
@@ -1366,9 +1367,11 @@ export class ResponsesTransformStream extends TransformStream<
           }
 
           case "error": {
-            controller.enqueue({
-              data: part.error instanceof Error ? part.error : new Error(String(part.error)),
-            });
+            const data =
+              part.error instanceof Error
+                ? part.error
+                : new Error(extractStreamErrorFields(part.error).message);
+            controller.enqueue({ data });
             break;
           }
         }
