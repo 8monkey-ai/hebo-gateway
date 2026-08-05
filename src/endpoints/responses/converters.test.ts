@@ -366,6 +366,43 @@ describe("Responses Converters", () => {
         },
       });
     });
+
+    test("should take the media type from a function_call_output file_data data URL", () => {
+      const messages = convertToModelMessages([
+        {
+          type: "function_call",
+          call_id: "call_1",
+          name: "get_file",
+          arguments: "{}",
+        },
+        {
+          type: "function_call_output",
+          call_id: "call_1",
+          output: [
+            {
+              type: "input_file",
+              file_data: "data:application/pdf;base64,aGVsbG8=",
+              filename: "report.pdf",
+            },
+          ],
+        },
+      ] satisfies ResponsesInputItem[]);
+
+      const toolMessage = messages[1] as ToolModelMessage;
+      expect(toolMessage.content[0]).toMatchObject({
+        output: {
+          type: "content",
+          value: [
+            {
+              type: "file-data",
+              data: "aGVsbG8=",
+              mediaType: "application/pdf",
+              filename: "report.pdf",
+            },
+          ],
+        },
+      });
+    });
   });
 
   describe("convertToTextCallOptions", () => {

@@ -4,6 +4,7 @@ import { GatewayError } from "../../errors/gateway";
 import {
   parseJsonOrText,
   parseBase64,
+  parseFileInput,
   parseImageInput,
   parseReasoningOptions,
   parsePromptCachingOptions,
@@ -66,6 +67,31 @@ describe("Shared Converters", () => {
 
     test("should throw for invalid URL", () => {
       expect(() => parseImageInput("not-a-url")).toThrow(GatewayError);
+    });
+  });
+
+  describe("parseFileInput", () => {
+    test("should take the media type from a data URL", () => {
+      expect(parseFileInput("data:application/pdf;base64,SGVsbG8=")).toEqual({
+        data: "SGVsbG8=",
+        mediaType: "application/pdf",
+      });
+    });
+
+    test("should accept any media type, unlike parseImageInput", () => {
+      expect(parseFileInput("data:text/csv;base64,SGVsbG8=").mediaType).toBe("text/csv");
+    });
+
+    test("should leave bare base64 untouched with no media type", () => {
+      expect(parseFileInput("SGVsbG8=")).toEqual({ data: "SGVsbG8=" });
+    });
+
+    test("should throw for a data URL with no payload", () => {
+      expect(() => parseFileInput("data:application/pdf;base64,")).toThrow(GatewayError);
+    });
+
+    test("should throw for a data URL with no media type", () => {
+      expect(() => parseFileInput("data:,SGVsbG8=")).toThrow(GatewayError);
     });
   });
 

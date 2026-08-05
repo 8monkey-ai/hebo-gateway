@@ -64,6 +64,23 @@ export function parseBase64(base64: string): Uint8Array {
   }
 }
 
+/**
+ * Parses arbitrary file input, which OpenAI clients send either as a data URL
+ * (`data:application/pdf;base64,...`) or as bare base64. Returns the base64
+ * payload plus the declared media type when the data URL carried one.
+ */
+export function parseFileInput(data: string): { data: string; mediaType?: string } {
+  if (data.slice(0, 5).toLowerCase() === "data:") {
+    const { mimeType, dataStart } = parseDataUrl(data);
+    if (!mimeType || dataStart <= 5 || dataStart >= data.length) {
+      throw new GatewayError("Invalid data URL", 400);
+    }
+    return { data: data.slice(dataStart), mediaType: mimeType };
+  }
+
+  return { data };
+}
+
 export function parseImageInput(url: string): { image: string | URL; mediaType?: string } {
   const dataPrefix = "data:";
   if (url.startsWith(dataPrefix)) {

@@ -31,6 +31,7 @@ import {
   normalizeToolName,
   stripEmptyKeys,
   parseBase64,
+  parseFileInput,
   parseImageInput,
   extractReasoningMetadata,
   type RuntimeContext,
@@ -291,12 +292,15 @@ function fromImageInput(url: string): FilePart {
   };
 }
 
-function fromFileInput(data: string, filename?: string): FilePart {
+function fromFileInput(fileData: string, filename?: string): FilePart {
+  // OpenAI clients send file_data as a data URL, which carries the real media
+  // type; bare base64 is also accepted and falls back to a generic binary type.
+  const { data, mediaType } = parseFileInput(fileData);
   return {
     type: "file",
     data: parseBase64(data),
     filename,
-    mediaType: "application/octet-stream",
+    mediaType: mediaType ?? "application/octet-stream",
   };
 }
 
@@ -451,10 +455,11 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
 
     if (part.type === "input_file") {
       if (part.file_data !== undefined && part.file_data !== null) {
+        const { data, mediaType } = parseFileInput(part.file_data);
         value.push({
           type: "file-data",
-          data: part.file_data,
-          mediaType: "application/octet-stream",
+          data,
+          mediaType: mediaType ?? "application/octet-stream",
           filename: part.filename ?? undefined,
         });
       } else if (part.file_url !== undefined && part.file_url !== null) {

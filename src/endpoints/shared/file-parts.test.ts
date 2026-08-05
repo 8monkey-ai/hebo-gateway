@@ -76,7 +76,9 @@ function createRecordingEndpoint(factory: typeof chatCompletions) {
     return (user.content as LanguageModelV4FilePart[]).filter((p) => p.type === "file");
   };
 
-  return { fileParts };
+  const rawPost = (url: string, body: unknown) => endpoint.handler(postJson(url, body));
+
+  return { fileParts, rawPost };
 }
 
 describe("FilePart conversion (v7 image/file unification)", () => {
@@ -326,6 +328,60 @@ describe("FilePart conversion (v7 image/file unification)", () => {
       expect(parts).toHaveLength(1);
       expect(parts[0]!.filename).toBe("report.pdf");
       expect(parts[0]!.data).toMatchObject({ type: "data" });
+    });
+
+    // OpenAI clients send input_file.file_data as a data URL. Passing that
+    // straight to a base64 decoder both throws and loses the media type.
+    test.each([
+      ["application/pdf", HELLO_BASE64],
+      ["text/plain", HELLO_BASE64],
+      ["text/csv", HELLO_BASE64],
+      ["audio/wav", HELLO_BASE64],
+      ["image/png", RED_PIXEL_PNG],
+    ])("input_file data URL keeps the %s media type", async (mediaType, data) => {
+      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const parts = await fileParts(
+        url,
+        send([
+          {
+            type: "input_file",
+            file_data: `data:${mediaType};base64,${data}`,
+            filename: "doc",
+          },
+        ]),
+      );
+
+      expect(parts).toHaveLength(1);
+      expect(parts[0]!.mediaType).toBe(mediaType);
+      expect(parts[0]!.filename).toBe("doc");
+      expect(parts[0]!.data).toMatchObject({ type: "data" });
+    });
+
+    test("input_file data URL decodes to the underlying bytes", async () => {
+      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const parts = await fileParts(
+        url,
+        send([{ type: "input_file", file_data: `data:text/plain;base64,${HELLO_BASE64}` }]),
+      );
+
+      const data = parts[0]!.data as { type: "data"; data: Uint8Array };
+      expect([...data.data]).toEqual(HELLO_BYTES);
+    });
+
+    test("input_file bare base64 still falls back to a generic binary media type", async () => {
+      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const parts = await fileParts(url, send([{ type: "input_file", file_data: HELLO_BASE64 }]));
+
+      expect(parts[0]!.mediaType).toBe("application/octet-stream");
+      const data = parts[0]!.data as { type: "data"; data: Uint8Array };
+      expect([...data.data]).toEqual(HELLO_BYTES);
+    });
+
+    test("input_file malformed data URL returns a 400", async () => {
+      const { rawPost } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const res = await rawPost(url, send([{ type: "input_file", file_data: "data:,notbase64" }]));
+
+      expect(res.status).toBe(400);
     });
 
     test("input_image and input_file coexist and keep their order", async () => {

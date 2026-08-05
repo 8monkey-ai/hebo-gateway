@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
-import { claudeHaiku45, claudeSonnet4 } from "../../../src/models/anthropic";
+import { claudeHaiku45, claudeSonnet46 } from "../../../src/models/anthropic";
 import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server";
 import { createBedrockTestServer, type TestServer } from "../shared/server";
 import {
@@ -17,7 +17,9 @@ import {
 // hasCredentials is true when explicit env vars are set OR when ~/.aws credentials may be present
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
 const MODEL = "anthropic/claude-haiku-4.5";
-const THINKING_MODEL = "anthropic/claude-sonnet-4";
+// Bedrock retires older models ("marked by provider as Legacy"), so keep this
+// pointed at a currently active reasoning-capable model.
+const THINKING_MODEL = "anthropic/claude-sonnet-4.6";
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
@@ -33,7 +35,7 @@ let baseUrl: string;
 
 describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   beforeAll(() => {
-    testServer = createBedrockTestServer(claudeHaiku45(), claudeSonnet4());
+    testServer = createBedrockTestServer(claudeHaiku45(), claudeSonnet46());
     baseUrl = testServer.baseUrl;
     client = new Anthropic({
       apiKey: "not-needed",
