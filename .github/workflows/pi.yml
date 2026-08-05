@@ -66,7 +66,7 @@ jobs:
 
       - name: Run Pi agent
         id: pi
-        uses: shaftoe/pi-coding-agent-action@v2.26.0
+        uses: shaftoe/pi-coding-agent-action@develop
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           provider: amazon-bedrock
