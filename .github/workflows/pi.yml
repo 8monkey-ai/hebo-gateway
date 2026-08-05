@@ -66,11 +66,11 @@ jobs:
 
       - name: Run Pi agent
         id: pi
-        uses: shaftoe/pi-coding-agent-action@develop
+        uses: shaftoe/pi-coding-agent-action@v2.26.0
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           provider: amazon-bedrock
-          model: us.anthropic.claude-opus-5
+          model: us.anthropic.claude-opus-4-8
           thinking_level: high
           export_session_html: true
           diff_ignore_patterns: "dist/ pnpm-lock.yaml node_modules/"
