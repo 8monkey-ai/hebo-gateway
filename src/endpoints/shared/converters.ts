@@ -70,7 +70,7 @@ export function parseBase64(base64: string): Uint8Array {
  * payload plus the declared media type when the data URL carried one.
  */
 export function parseFileInput(data: string): { data: string; mediaType?: string } {
-  if (data.slice(0, 5).toLowerCase() === "data:") {
+  if (data.startsWith("data:")) {
     const { mimeType, dataStart } = parseDataUrl(data);
     if (!mimeType || dataStart <= 5 || dataStart >= data.length) {
       throw new GatewayError("Invalid data URL", 400);
