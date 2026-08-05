@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
@@ -60,7 +60,7 @@ test("cohereReasoningMiddleware > should map effort to thinking budget", async (
   const result = await cohereReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -91,7 +91,7 @@ test("cohereReasoningMiddleware > should disable reasoning when requested", asyn
   const result = await cohereReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({
@@ -121,7 +121,7 @@ test("cohereReasoningMiddleware > should default reasoning budget when enabled w
   const result = await cohereReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3(),
+    model: new MockLanguageModelV4(),
   });
 
   expect(result).toEqual({

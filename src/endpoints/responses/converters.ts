@@ -1,4 +1,4 @@
-import type { SharedV3ProviderOptions, SharedV3ProviderMetadata } from "@ai-sdk/provider";
+import type { SharedV4ProviderOptions, SharedV4ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -15,10 +15,9 @@ import type {
   AssistantModelMessage,
   ToolModelMessage,
   UserModelMessage,
-  ImagePart,
   FilePart,
 } from "ai";
-import { Output, jsonSchema, stepCountIs, tool } from "ai";
+import { Output, isStepCount, jsonSchema, tool } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
 import { GatewayError } from "../../errors/gateway";
@@ -34,6 +33,7 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  type RuntimeContext,
   type TextCallOptions,
   type ToolChoiceOptions,
 } from "../shared/converters";
@@ -115,7 +115,7 @@ export function convertToTextCallOptions(params: ResponsesInputs): TextCallOptio
     output: convertToOutput(text),
     temperature,
     maxOutputTokens: max_output_tokens,
-    stopWhen: max_tool_calls === undefined ? undefined : stepCountIs(max_tool_calls),
+    stopWhen: max_tool_calls === undefined ? undefined : isStepCount(max_tool_calls),
     frequencyPenalty: frequency_penalty,
     presencePenalty: presence_penalty,
     topP: top_p,
@@ -196,7 +196,7 @@ function fromReasoningItem(item: ResponsesReasoningItem): AssistantModelMessage 
     return { role: "assistant", content: parts };
   }
 
-  let providerOptions: SharedV3ProviderOptions | undefined;
+  let providerOptions: SharedV4ProviderOptions | undefined;
   if (item.extra_content || item.encrypted_content || item.signature) {
     providerOptions = item.extra_content ? { ...item.extra_content } : { unknown: {} };
     const existing = (providerOptions["unknown"] ?? {}) as Record<string, string>;
@@ -281,12 +281,13 @@ function fromUserMessageItem(item: ResponsesMessageItem & { role: "user" }): Use
   return out;
 }
 
-function fromImageInput(url: string): ImagePart | FilePart {
+function fromImageInput(url: string): FilePart {
   const { image, mediaType } = parseImageInput(url);
   return {
-    type: "image",
-    image,
-    mediaType,
+    type: "file",
+    data: image,
+    // Media type is unknown for remote URLs; fall back to the top-level type.
+    mediaType: mediaType ?? "image",
   };
 }
 
@@ -301,7 +302,7 @@ function fromFileInput(data: string, filename?: string): FilePart {
 
 /**
  * Converts input content (string or multimodal parts) into UserContent for messages.
- * Uses unified ImagePart/FilePart schemas for the array case.
+ * Uses the unified FilePart schema for the array case.
  */
 function fromInputContent(content: string | ResponsesInputContent[]): UserContent {
   if (typeof content === "string") {
@@ -555,7 +556,7 @@ export const convertToToolChoiceOptions = (
 // --- Response Flow ---
 
 export function toResponses(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
   metadata?: Record<string, string> | null,
 ): Responses {
@@ -569,19 +570,19 @@ export function toResponses(
     status,
     model,
     output,
-    usage: result.totalUsage ? toResponsesUsage(result.totalUsage) : null,
+    usage: result.usage ? toResponsesUsage(result.usage) : null,
     incomplete_details:
       status === "incomplete" ? { reason: toIncompleteReason(result.finishReason) } : null,
     created_at: now,
     completed_at: status === "completed" ? now : null,
-    service_tier: resolveResponseServiceTier(result.providerMetadata),
+    service_tier: resolveResponseServiceTier(result.finalStep.providerMetadata),
     metadata,
-    provider_metadata: result.providerMetadata,
+    provider_metadata: result.finalStep.providerMetadata,
   };
 }
 
 export function toResponsesResponse(
-  result: GenerateTextResult<ToolSet, Output.Output>,
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
   metadata?: Record<string, string> | null,
   responseInit?: ResponseInit,
@@ -590,15 +591,15 @@ export function toResponsesResponse(
 }
 
 export function toResponsesStream(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
   metadata?: Record<string, string> | null,
 ): ResponsesStream {
-  return result.fullStream.pipeThrough(new ResponsesTransformStream(model, metadata));
+  return result.stream.pipeThrough(new ResponsesTransformStream(model, metadata));
 }
 
 export function toResponsesStreamResponse(
-  result: StreamTextResult<ToolSet, Output.Output>,
+  result: StreamTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
   metadata?: Record<string, string> | null,
   responseInit?: ResponseInit,
@@ -606,7 +607,9 @@ export function toResponsesStreamResponse(
   return toResponse(toResponsesStream(result, model, metadata), responseInit);
 }
 
-function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): ResponsesOutputItem[] {
+function toOutputItems(
+  result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
+): ResponsesOutputItem[] {
   const output: ResponsesOutputItem[] = [];
 
   // Add reasoning items
@@ -644,8 +647,8 @@ function toOutputItems(result: GenerateTextResult<ToolSet, Output.Output>): Resp
       content:
         textParts.length > 0 ? textParts : [{ type: "output_text", text: "", annotations: [] }],
     };
-    if (result.providerMetadata) {
-      msgItem.extra_content = result.providerMetadata;
+    if (result.finalStep.providerMetadata) {
+      msgItem.extra_content = result.finalStep.providerMetadata;
     }
     output.push(msgItem);
   }
@@ -684,7 +687,7 @@ function toFunctionCallItem(
   toolCallId: string,
   toolName: string,
   input: unknown,
-  providerMetadata?: SharedV3ProviderMetadata,
+  providerMetadata?: SharedV4ProviderMetadata,
   status: ResponsesItemStatus = "completed",
 ): ResponsesFunctionCall {
   const item: ResponsesFunctionCall = {
@@ -776,7 +779,7 @@ export class ResponsesTransformStream extends TransformStream<
     let reasoningOutputIndex = -1;
     let summaryIndex = 0;
     let reasoningContentIndex = 0;
-    let finishProviderMetadata: SharedV3ProviderMetadata | undefined;
+    let finishProviderMetadata: SharedV4ProviderMetadata | undefined;
     const outputItems: ResponsesOutputItem[] = [];
     const inProgressToolCalls = new Map<
       string,
@@ -789,7 +792,7 @@ export class ResponsesTransformStream extends TransformStream<
       completedAt: number | null,
       incompleteDetails?: Responses["incomplete_details"],
       serviceTier?: Responses["service_tier"],
-      providerMetadata?: SharedV3ProviderMetadata,
+      providerMetadata?: SharedV4ProviderMetadata,
     ): Responses => ({
       id: responseId,
       object: "response",
@@ -852,7 +855,7 @@ export class ResponsesTransformStream extends TransformStream<
 
     const initMessageItem = (
       controller: TransformStreamDefaultController<ResponsesStreamEvent | SseErrorFrame>,
-      providerMetadata?: SharedV3ProviderMetadata,
+      providerMetadata?: SharedV4ProviderMetadata,
     ) => {
       if (messageItem) return;
 

@@ -10,6 +10,7 @@ import type {
   AssistantModelMessage,
 } from "ai";
 
+import type { RuntimeContext } from "../shared/converters";
 import {
   convertToTextCallOptions,
   toChatCompletions,
@@ -39,9 +40,9 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
   }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
-  overrides: Partial<GenerateTextResult<ToolSet, Output.Output>>,
-): GenerateTextResult<ToolSet, Output.Output> =>
-  ({
+  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>>,
+): GenerateTextResult<ToolSet, RuntimeContext, Output.Output> => {
+  const result = {
     text: "",
     toolCalls: [],
     staticToolCalls: [],
@@ -66,12 +67,20 @@ const mockGenerateTextResult = (
       timestamp: new Date(),
       messages: [],
     },
+    responseMessages: [],
     providerMetadata: undefined,
     steps: [],
-    experimental_output: undefined,
     output: undefined,
     ...overrides,
-  }) satisfies GenerateTextResult<ToolSet, Output.Output>;
+  };
+
+  // AI SDK v7 reads final-step values off `finalStep`; mirror the top-level
+  // fields so tests can keep declaring them in one place.
+  return {
+    ...result,
+    finalStep: { ...result, stepNumber: 0 },
+  } as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>;
+};
 
 describe("Chat Completions Converters", () => {
   describe("fromChatCompletionsToolResultMessage", () => {
@@ -720,9 +729,7 @@ describe("Chat Completions Converters", () => {
         messages: [
           {
             role: "system",
-            content: [
-              { type: "text", text: "You are a helpful assistant." },
-            ],
+            content: [{ type: "text", text: "You are a helpful assistant." }],
           },
           { role: "user", content: "hi" },
         ],

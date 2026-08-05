@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { MockLanguageModelV3 } from "ai/test";
+import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
@@ -72,7 +72,7 @@ test("openAIPromptCachingMiddleware > should map key and retention", async () =>
   const result = await openAIPromptCachingMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
   });
 
   expect(result.providerOptions).toEqual({
@@ -97,7 +97,7 @@ test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
   });
 
   expect(result).toEqual({
@@ -124,7 +124,7 @@ test("openAIReasoningMiddleware > should disable reasoning when requested (stand
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
   });
 
   expect(result).toEqual({
@@ -162,7 +162,7 @@ test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", asyn
       const result = await openAIReasoningMiddleware.transformParams!({
         type: "generate",
         params,
-        model: new MockLanguageModelV3({ modelId: "openai/gpt-oss-20b" }),
+        model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
       });
 
       expect(result).toEqual({
@@ -189,7 +189,7 @@ test("openAIReasoningMiddleware > should default reasoning effort when enabled w
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV3({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
   });
 
   expect(result).toEqual({
