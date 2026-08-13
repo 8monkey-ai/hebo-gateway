@@ -33,6 +33,12 @@ const GPT_BASE = {
   providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
+// GPT-5.5 onwards is also served by Bedrock, from its OpenAI-compatible Mantle endpoint.
+const GPT_MULTI_CLOUD_BASE = {
+  ...GPT_BASE,
+  providers: ["openai", "azure", "bedrock"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
 const GPT_PRO_BASE = {
   modalities: {
     input: ["text", "image"] as const,
@@ -259,10 +265,10 @@ export const gpt54Pro = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-
 } satisfies CatalogModel);
 
 export const gpt55 = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.5" as const, {
-  ...GPT_BASE,
+  ...GPT_MULTI_CLOUD_BASE,
   name: "GPT-5.5",
   created: "2026-04-22",
-  knowledge: "2025-08",
+  knowledge: "2025-12",
   context: 1050000,
 } satisfies CatalogModel);
 
@@ -273,6 +279,36 @@ export const gpt55Pro = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-
   knowledge: "2025-12",
   context: 1050000,
 } satisfies CatalogModel);
+
+export const gpt56Sol = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.6-sol" as const, {
+  ...GPT_MULTI_CLOUD_BASE,
+  name: "GPT-5.6 Sol",
+  created: "2026-07-09",
+  knowledge: "2026-02",
+  context: 1050000,
+} satisfies CatalogModel);
+
+export const gpt56Terra = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.6-terra" as const,
+  {
+    ...GPT_MULTI_CLOUD_BASE,
+    name: "GPT-5.6 Terra",
+    created: "2026-07-09",
+    knowledge: "2026-02",
+    context: 1050000,
+  } satisfies CatalogModel,
+);
+
+export const gpt56Luna = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-5.6-luna" as const,
+  {
+    ...GPT_MULTI_CLOUD_BASE,
+    name: "GPT-5.6 Luna",
+    created: "2026-07-09",
+    knowledge: "2026-02",
+    context: 1050000,
+  } satisfies CatalogModel,
+);
 
 export const textEmbedding3Small = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/text-embedding-3-small" as const,
@@ -329,6 +365,7 @@ const gptAtomic = {
   "v5.3": [gpt53Codex, gpt53CodexSpark, gpt53Chat],
   "v5.4": [gpt54, gpt54Mini, gpt54Nano, gpt54Pro],
   "v5.5": [gpt55, gpt55Pro],
+  "v5.6": [gpt56Sol, gpt56Terra, gpt56Luna],
   codex: [
     gpt5Codex,
     gpt51Codex,
@@ -350,6 +387,7 @@ const gptGroups = {
     ...gptAtomic["v5.3"],
     ...gptAtomic["v5.4"],
     ...gptAtomic["v5.5"],
+    ...gptAtomic["v5.6"],
   ],
 } as const;
 
@@ -371,8 +409,8 @@ export const gptOss = {
 export const gpt = {
   ...gptAtomic,
   ...gptGroups,
-  // 5.5 Mini/Nano not released yet; keep 5.4 small variants in `latest` until they ship.
-  latest: [gpt55, gpt55Pro, gpt54Mini, gpt54Nano],
+  // 5.6 Sol/Terra/Luna span the frontier/balanced/cheap tiers; 5.5 Pro is still the newest Pro.
+  latest: [gpt56Sol, gpt56Terra, gpt56Luna, gpt55Pro],
   all: Object.values(gptAtomic).flat(),
 } as const;
 
