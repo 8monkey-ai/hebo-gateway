@@ -17,7 +17,7 @@ test("geminiReasoningMiddleware > matching patterns", () => {
     "google/gemini-2.5-flash",
     "google/gemini-2.5-pro",
     "google/gemini-3-flash-preview",
-    "google/gemini-3.1-flash-lite-preview",
+    "google/gemini-3.1-flash-lite",
     "google/gemini-3.1-pro-preview",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
@@ -151,7 +151,7 @@ test("geminiReasoningMiddleware > should normalize none effort for Gemini 3.1 Fl
   const result = await geminiReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-flash-lite-preview" }),
+    model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-flash-lite" }),
   });
 
   expect(result).toEqual({

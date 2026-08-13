@@ -230,7 +230,7 @@ Out-of-the-box model presets:
   DeepSeek: `deepseek` (`v3.2`, `v4`, `v4.x`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v2.5`, `v3.5`, `v3.6`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v2.5`, `v3.1`, `v3.5`, `v3.6`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
