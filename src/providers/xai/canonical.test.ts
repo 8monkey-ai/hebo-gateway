@@ -60,6 +60,20 @@ test("withCanonicalIdsForXai > maps grok-4.20-multi-agent via explicit mapping",
   expect(model.modelId).toBe("grok-4.20-multi-agent-0309");
 });
 
+test("withCanonicalIdsForXai > maps grok-4.5 via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.5");
+  expect(model.modelId).toBe("grok-4.5");
+});
+
+test("withCanonicalIdsForXai > maps grok-4.6 via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.6");
+  expect(model.modelId).toBe("grok-4.6");
+});
+
 test("withCanonicalIdsForXai > supports extra mapping override", () => {
   const provider = withCanonicalIdsForXai(xai, {
     "xai/custom-model": "custom-native-id",

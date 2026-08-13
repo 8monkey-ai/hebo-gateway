@@ -28,6 +28,8 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
           target.reasoningEffort = "low";
           break;
         case "medium":
+          target.reasoningEffort = "medium";
+          break;
         case "high":
         case "xhigh":
         case "max":
@@ -48,6 +50,8 @@ modelMiddlewareMatcher.useForModel(
     "xai/grok-4.2-reasoning",
     "xai/grok-4.2-multi-agent",
     "xai/grok-4.3",
+    "xai/grok-4.5",
+    "xai/grok-4.6",
   ],
   { language: [xaiReasoningMiddleware] },
 );

@@ -12,6 +12,8 @@ test("xai middleware > matching patterns", () => {
     "xai/grok-4.2-reasoning",
     "xai/grok-4.2-multi-agent",
     "xai/grok-4.3",
+    "xai/grok-4.5",
+    "xai/grok-4.6",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const languageNonMatching = [
@@ -80,7 +82,7 @@ test("xaiReasoningMiddleware > should map high effort to high", async () => {
   });
 });
 
-test("xaiReasoningMiddleware > should map medium effort to high", async () => {
+test("xaiReasoningMiddleware > should map medium effort to medium", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -99,7 +101,7 @@ test("xaiReasoningMiddleware > should map medium effort to high", async () => {
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      xai: { reasoningEffort: "high" },
+      xai: { reasoningEffort: "medium" },
       unknown: {},
     },
   });
