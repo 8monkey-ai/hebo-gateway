@@ -33,6 +33,8 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  extractThoughtSignature,
+  GEMINI_REASONING_FORMAT,
   type RuntimeContext,
   type TextCallOptions,
   type ToolChoiceOptions,
@@ -195,6 +197,18 @@ export function fromChatCompletionsUserMessage(
   return out;
 }
 
+/**
+ * Returns the Gemini thought signature a `reasoning_details` entry carries, if any.
+ * The canonical shape (OpenRouter, Vercel AI Gateway, and this gateway's responses) is
+ * `reasoning.encrypted` with the signature in `data`; `signature` on a text-less
+ * `reasoning.text` entry is also accepted for clients that normalize it that way.
+ * Entries carrying reasoning text are never signatures, whatever the format tag says.
+ */
+function extractDetailThoughtSignature(detail: ChatCompletionsReasoningDetail): string | undefined {
+  if (detail.format !== GEMINI_REASONING_FORMAT || detail.text) return undefined;
+  return detail.data ?? detail.signature ?? undefined;
+}
+
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
 ): AssistantModelMessage {
@@ -202,8 +216,21 @@ export function fromChatCompletionsAssistantMessage(
 
   const parts: AssistantContent = [];
 
+  // Gemini thought signatures ride in reasoning_details tagged `google-gemini-v1`.
+  // OpenRouter keys them by tool call id; Vercel AI Gateway omits the id and emits
+  // them in tool call order, so keep both a keyed and a positional view. They are
+  // signatures, not reasoning content, so they never become reasoning parts.
+  const signaturesById = new Map<string, string>();
+  const signaturesInOrder: string[] = [];
+
   if (reasoning_details?.length) {
     for (const detail of reasoning_details) {
+      const thoughtSignature = extractDetailThoughtSignature(detail);
+      if (thoughtSignature) {
+        if (detail.id) signaturesById.set(detail.id, thoughtSignature);
+        else signaturesInOrder.push(thoughtSignature);
+        continue;
+      }
       if (detail.text && detail.type === "reasoning.text") {
         parts.push({
           type: "reasoning",
@@ -252,6 +279,7 @@ export function fromChatCompletionsAssistantMessage(
   }
 
   if (tool_calls?.length) {
+    let toolCallIndex = 0;
     for (const tc of tool_calls) {
       // oxlint-disable-next-line no-shadow
       const { id, function: fn, extra_content } = tc;
@@ -261,9 +289,18 @@ export function fromChatCompletionsAssistantMessage(
         toolName: fn.name,
         input: parseJsonOrText(fn.arguments).value,
       };
+      // The Vertex-specific extra_content wins when present; otherwise fall back to the
+      // thought signature carried via reasoning_details. The params middleware moves it
+      // into the provider's namespace, so `unknown` reaches Vertex as thoughtSignature.
       if (extra_content) {
         out.providerOptions = extra_content;
+      } else {
+        const signature = signaturesById.get(id) ?? signaturesInOrder[toolCallIndex];
+        if (signature) {
+          out.providerOptions = { unknown: { thoughtSignature: signature } };
+        }
       }
+      toolCallIndex++;
       parts.push(out);
     }
   }
@@ -594,11 +631,18 @@ export class ChatCompletionsTransformStream extends TransformStream<
               part.providerMetadata,
             ) as ChatCompletionsToolCallDelta;
             toolCall.index = toolCallIndexCounter++;
-            controller.enqueue(
-              createChunk({
-                tool_calls: [toolCall],
-              }),
-            );
+
+            const delta: ChatCompletionsAssistantMessageDelta = { tool_calls: [toolCall] };
+            // Mirror the tool call's Gemini thought signature into reasoning_details,
+            // sharing the reasoning index space with the reasoning deltas above.
+            const index = reasoningIdToIndex.size;
+            const detail = toThoughtSignatureDetail(part.toolCallId, part.providerMetadata, index);
+            if (detail) {
+              reasoningIdToIndex.set(part.toolCallId, index);
+              delta.reasoning_details = [detail];
+            }
+
+            controller.enqueue(createChunk(delta));
             break;
           }
 
@@ -668,6 +712,16 @@ export const toChatCompletionsAssistantMessage = (
     }
   }
 
+  // Appended after the reasoning parts so the details stay in generation order.
+  for (const toolCall of result.toolCalls ?? []) {
+    const detail = toThoughtSignatureDetail(
+      toolCall.toolCallId,
+      toolCall.providerMetadata,
+      reasoningDetails.length,
+    );
+    if (detail) reasoningDetails.push(detail);
+  }
+
   if (result.finalStep.reasoningText) {
     message.reasoning = result.finalStep.reasoningText;
   }
@@ -683,6 +737,30 @@ export const toChatCompletionsAssistantMessage = (
 
   return message;
 };
+
+/**
+ * Gemini carries its thought signature on the tool call's provider metadata. Mirror it
+ * into a `reasoning_details` entry so OpenAI-compatible clients round-trip it: both
+ * OpenRouter and Vercel AI Gateway use `reasoning.encrypted` with the signature in
+ * `data` and `format: "google-gemini-v1"`. `id` is set to the tool call it belongs to
+ * (as OpenRouter does) so it can be reattached to the right call on the next turn.
+ */
+export function toThoughtSignatureDetail(
+  toolCallId: string,
+  providerMetadata: SharedV4ProviderMetadata | undefined,
+  index: number,
+): ChatCompletionsReasoningDetail | undefined {
+  const signature = extractThoughtSignature(providerMetadata);
+  if (!signature) return undefined;
+
+  return {
+    id: toolCallId,
+    index,
+    type: "reasoning.encrypted",
+    data: signature,
+    format: GEMINI_REASONING_FORMAT,
+  };
+}
 
 export function toReasoningDetail(
   reasoning: ReasoningOutput,

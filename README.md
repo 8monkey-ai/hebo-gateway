@@ -783,7 +783,33 @@ Advanced models (like Anthropic Claude 3.7 or Gemini 3) surface structured reaso
 - **reasoning_details**: Standardized array of reasoning steps and generic signatures.
 - **extra_content**: Provider-specific extensions, such as **Google's thought signatures** on Vertex AI.
 
-For **Gemini 3** models, returning the thought signature via `extra_content` is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance.
+For **Gemini 3** models, returning the thought signature is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance. On `/chat/completions` the gateway exposes each tool call's thought signature in **two interchangeable ways**, and you only need to echo back one of them:
+
+- **`reasoning_details`** (the convention used by OpenRouter and Vercel AI Gateway): a `reasoning.encrypted` entry whose `data` holds the signature, tagged `format: "google-gemini-v1"`, with `id` set to the `tool_calls[].id` it belongs to. Most OpenAI-compatible clients already round-trip `reasoning_details` on the assistant message, so Gemini tool calling works without client-side changes.
+
+  ```json
+  {
+    "role": "assistant",
+    "tool_calls": [
+      { "id": "call_abc", "type": "function", "function": { "name": "bash", "arguments": "{}" } }
+    ],
+    "reasoning_details": [
+      {
+        "id": "call_abc",
+        "index": 0,
+        "type": "reasoning.encrypted",
+        "data": "AY89a18IwQsQ8in...",
+        "format": "google-gemini-v1"
+      }
+    ]
+  }
+  ```
+
+  Entries sent back without an `id` are matched to tool calls in order, so payloads produced by gateways that omit it are accepted too.
+
+- **`extra_content`** (Vertex-specific): the signature is also attached to the tool call as `extra_content.vertex.thought_signature`. Echo it back on the tool call to preserve the signature.
+
+When both are present on the next turn, `extra_content` takes precedence.
 
 ### Service Tier
 

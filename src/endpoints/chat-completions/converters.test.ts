@@ -8,6 +8,7 @@ import type {
   FilePart,
   LanguageModelUsage,
   AssistantModelMessage,
+  TextStreamPart,
 } from "ai";
 
 import type { RuntimeContext } from "../shared/converters";
@@ -19,8 +20,24 @@ import {
   toChatCompletionsUsage,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
+  ChatCompletionsTransformStream,
 } from "./converters";
-import type { ChatCompletionsToolMessage } from "./schema";
+import type { ChatCompletionsChunk, ChatCompletionsToolMessage } from "./schema";
+
+async function collectChunks(parts: TextStreamPart<ToolSet>[]): Promise<ChatCompletionsChunk[]> {
+  const source = new ReadableStream<TextStreamPart<ToolSet>>({
+    start(controller) {
+      for (const part of parts) controller.enqueue(part);
+      controller.close();
+    },
+  });
+
+  const chunks: ChatCompletionsChunk[] = [];
+  for await (const frame of source.pipeThrough(new ChatCompletionsTransformStream("mock-model"))) {
+    if (!(frame.data instanceof Error)) chunks.push(frame.data);
+  }
+  return chunks;
+}
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({
@@ -232,6 +249,78 @@ describe("Chat Completions Converters", () => {
       });
     });
 
+    test("should mirror a tool call thought signature into reasoning_details", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+            providerMetadata: {
+              vertex: { thought_signature: "tool-signature" },
+            },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      // Same shape OpenRouter uses: encrypted detail keyed by the tool call id.
+      expect(message.reasoning_details).toEqual([
+        {
+          id: "call_123",
+          index: 0,
+          type: "reasoning.encrypted",
+          data: "tool-signature",
+          format: "google-gemini-v1",
+        },
+      ]);
+    });
+
+    test("should order thought signature details after reasoning details", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        content: [{ type: "reasoning", text: "Thinking..." }],
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+            providerMetadata: { vertex: { thought_signature: "tool-signature" } },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.reasoning_details).toHaveLength(2);
+      expect(message.reasoning_details![0]).toMatchObject({ index: 0, type: "reasoning.text" });
+      expect(message.reasoning_details![1]).toMatchObject({
+        index: 1,
+        type: "reasoning.encrypted",
+        data: "tool-signature",
+      });
+    });
+
+    test("should not add reasoning_details when a tool call has no thought signature", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+          },
+        ],
+      });
+
+      expect(toChatCompletionsAssistantMessage(mockResult).reasoning_details).toBeUndefined();
+    });
+
     test("should extract reasoning_details from reasoning parts", () => {
       const mockResult = mockGenerateTextResult({
         text: "Final answer.",
@@ -382,6 +471,137 @@ describe("Chat Completions Converters", () => {
         toolCallId: "call_1",
         toolName: "my_tool",
         input: {},
+      });
+    });
+
+    test("should reattach a Gemini thought signature keyed by tool call id", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "bash", arguments: '{"command":"ls"}' },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "AY89a18IwQsQ8in",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content as unknown[];
+      // A thought signature is not reasoning content, so it must not become a part.
+      expect(content).toEqual([
+        {
+          type: "tool-call",
+          toolCallId: "call_1",
+          toolName: "bash",
+          input: { command: "ls" },
+          providerOptions: { unknown: { thoughtSignature: "AY89a18IwQsQ8in" } },
+        },
+      ]);
+    });
+
+    test("should reattach id-less Gemini thought signatures in tool call order", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          { id: "call_1", type: "function", function: { name: "bash", arguments: "{}" } },
+          { id: "call_2", type: "function", function: { name: "edit", arguments: "{}" } },
+        ],
+        // Vercel AI Gateway emits the encrypted details without an id.
+        reasoning_details: [
+          { index: 0, type: "reasoning.encrypted", data: "sig-1", format: "google-gemini-v1" },
+          { index: 1, type: "reasoning.encrypted", data: "sig-2", format: "google-gemini-v1" },
+        ],
+      });
+
+      const content = message.content as { providerOptions?: unknown }[];
+      expect(content).toHaveLength(2);
+      expect(content[0]!.providerOptions).toEqual({ unknown: { thoughtSignature: "sig-1" } });
+      expect(content[1]!.providerOptions).toEqual({ unknown: { thoughtSignature: "sig-2" } });
+    });
+
+    test("should reattach a Gemini thought signature sent via the signature field", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          { id: "call_1", type: "function", function: { name: "bash", arguments: "{}" } },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.text",
+            text: "",
+            signature: "sig-1",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content as { providerOptions?: unknown }[];
+      expect(content).toHaveLength(1);
+      expect(content[0]!.providerOptions).toEqual({ unknown: { thoughtSignature: "sig-1" } });
+    });
+
+    test("should prefer extra_content over a reasoning_details thought signature", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "bash", arguments: "{}" },
+            extra_content: { vertex: { thought_signature: "from-extra-content" } },
+          },
+        ],
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "from-reasoning-details",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content as { providerOptions?: unknown }[];
+      expect(content[0]!.providerOptions).toEqual({
+        vertex: { thought_signature: "from-extra-content" },
+      });
+    });
+
+    test("should keep Gemini reasoning text as a reasoning part", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "Done.",
+        reasoning_details: [
+          {
+            index: 0,
+            type: "reasoning.text",
+            text: "Weather check for Paris...",
+            format: "google-gemini-v1",
+          },
+        ],
+      });
+
+      const content = message.content as unknown[];
+      expect(content[0]).toEqual({
+        type: "reasoning",
+        text: "Weather check for Paris...",
+        providerOptions: undefined,
       });
     });
   });
@@ -936,6 +1156,48 @@ describe("Chat Completions Converters", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
       expect(call.function.name).toBe("a".repeat(128));
+    });
+  });
+
+  describe("ChatCompletionsTransformStream", () => {
+    test("should emit a tool call thought signature via reasoning_details", async () => {
+      const chunks = await collectChunks([
+        {
+          type: "tool-call",
+          toolCallId: "call_123",
+          toolName: "bash",
+          input: { command: "ls" },
+          providerMetadata: { vertex: { thought_signature: "stream-signature" } },
+        } as unknown as TextStreamPart<ToolSet>,
+      ]);
+
+      const delta = chunks.find((c) => c.choices[0]!.delta.tool_calls)!.choices[0]!.delta;
+      expect(delta.tool_calls![0]!.extra_content).toEqual({
+        vertex: { thought_signature: "stream-signature" },
+      });
+      expect(delta.reasoning_details).toEqual([
+        {
+          id: "call_123",
+          index: 0,
+          type: "reasoning.encrypted",
+          data: "stream-signature",
+          format: "google-gemini-v1",
+        },
+      ]);
+    });
+
+    test("should not emit reasoning_details when a tool call has no thought signature", async () => {
+      const chunks = await collectChunks([
+        {
+          type: "tool-call",
+          toolCallId: "call_123",
+          toolName: "bash",
+          input: { command: "ls" },
+        } as unknown as TextStreamPart<ToolSet>,
+      ]);
+
+      const delta = chunks.find((c) => c.choices[0]!.delta.tool_calls)!.choices[0]!.delta;
+      expect(delta.reasoning_details).toBeUndefined();
     });
   });
 });

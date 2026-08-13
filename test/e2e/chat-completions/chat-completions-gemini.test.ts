@@ -109,6 +109,77 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
   );
 
   // =========================================================================
+  // thought_signature pass: roundtrip via reasoning_details only (no extra_content),
+  // which is what OpenAI-compatible clients echo back on their own.
+  // =========================================================================
+  test(
+    "thought_signature: reasoning_details alone is enough to resume the tool call",
+    async () => {
+      const turn1 = (await client.chat.completions.create({
+        model: VERTEX_MODEL,
+        max_completion_tokens: 1024,
+        messages: [{ role: "user", content: "What's the weather in Madrid?" }],
+        tools: [WEATHER_TOOL],
+        // @ts-expect-error — gateway extension
+        reasoning: { enabled: true, max_tokens: 2048 },
+      })) as OpenAI.Chat.Completions.ChatCompletion & {
+        choices: {
+          message: {
+            tool_calls?: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[];
+            reasoning_details?: {
+              id?: string;
+              type: string;
+              data?: string;
+              format?: string;
+              index: number;
+            }[];
+          };
+        }[];
+      };
+
+      expect(turn1.choices[0]!.finish_reason).toBe("tool_calls");
+      const message = turn1.choices[0]!.message;
+      const toolCall = message.tool_calls?.[0] as ChatCompletionMessageFunctionToolCall;
+      expect(toolCall).toBeDefined();
+
+      // The signature is normalized into reasoning_details, keyed by tool call id
+      const signatureDetail = message.reasoning_details?.find(
+        (detail) => detail.format === "google-gemini-v1" && detail.type === "reasoning.encrypted",
+      );
+      expect(signatureDetail?.data).toBeDefined();
+      expect(signatureDetail?.id).toBe(toolCall.id);
+
+      // Turn 2: echo back reasoning_details only — the tool call carries no extra_content
+      const assistantMsg = {
+        role: "assistant" as const,
+        tool_calls: [{ id: toolCall.id, type: "function" as const, function: toolCall.function }],
+        reasoning_details: message.reasoning_details,
+      };
+
+      const turn2 = await client.chat.completions.create({
+        model: VERTEX_MODEL,
+        max_completion_tokens: 256,
+        messages: [
+          { role: "user", content: "What's the weather in Madrid?" },
+          assistantMsg as unknown as OpenAI.Chat.Completions.ChatCompletionMessageParam,
+          {
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: "Madrid: 27°C, sunny",
+          },
+        ],
+        tools: [WEATHER_TOOL],
+        // @ts-expect-error — gateway extension
+        reasoning: { enabled: true, max_tokens: 2048 },
+      });
+
+      expect(turn2.choices[0]!.finish_reason).toBe("stop");
+      expect(turn2.choices[0]!.message.content!.toLowerCase()).toContain("madrid");
+    },
+    { timeout: 120_000 },
+  );
+
+  // =========================================================================
   // thought_signature fail: corrupted thought_signature causes provider error
   // =========================================================================
   test(
