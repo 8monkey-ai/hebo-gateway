@@ -100,11 +100,13 @@ const resolveMantle = (
   let region: string | undefined;
   let headers: Record<string, string | undefined> | undefined;
   try {
+    // Headers first: they resolve unconditionally, while the base URL throws on a missing
+    // region, and losing the region is no reason to drop the inherited headers too.
+    headers = config.headers();
     const parsed = REGION_FROM_BASE_URL.exec(config.baseUrl())?.[1];
     // A custom base URL can hold anything in that label, and a wrong region would only
     // surface as a DNS failure. Keep it only when it looks like a region.
     region = parsed && AWS_REGION.test(parsed) ? parsed : undefined;
-    headers = config.headers();
   } catch {
     // Region is unresolvable (neither `region` nor `AWS_REGION` is set). Let Mantle load
     // its own settings so the error surfaces from there instead.

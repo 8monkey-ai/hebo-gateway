@@ -141,6 +141,23 @@ test("Mantle ignores a base URL label that is not a region", async () => {
   }
 });
 
+test("Mantle keeps the inherited headers when the region is unresolvable", async () => {
+  const previous = process.env["AWS_REGION"];
+  delete process.env["AWS_REGION"];
+  try {
+    // Without a region the wrapped base URL throws, which must not cost the headers.
+    const { url, headers } = await fromInstance(
+      { region: undefined, headers: { "x-custom": "yes" } },
+      { mantle: { region: "us-east-1" } },
+    );
+
+    expect(url).toBe("https://bedrock-mantle.us-east-1.api.aws/v1/responses");
+    expect(headers.get("x-custom")).toBe("yes");
+  } finally {
+    process.env["AWS_REGION"] = previous;
+  }
+});
+
 test("withCanonicalIdsForBedrock > reuses the Mantle model instance across lookups", () => {
   const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
     mantle: { apiKey: "mantle-key" },
