@@ -28,6 +28,8 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
           target.reasoningEffort = "low";
           break;
         case "medium":
+          target.reasoningEffort = "medium";
+          break;
         case "high":
         case "xhigh":
         case "max":

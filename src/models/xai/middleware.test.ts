@@ -82,7 +82,7 @@ test("xaiReasoningMiddleware > should map high effort to high", async () => {
   });
 });
 
-test("xaiReasoningMiddleware > should map medium effort to high", async () => {
+test("xaiReasoningMiddleware > should map medium effort to medium", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -101,7 +101,7 @@ test("xaiReasoningMiddleware > should map medium effort to high", async () => {
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      xai: { reasoningEffort: "high" },
+      xai: { reasoningEffort: "medium" },
       unknown: {},
     },
   });
