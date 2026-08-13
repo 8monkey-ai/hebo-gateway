@@ -1,6 +1,9 @@
 import type { BedrockProviderOptions } from "@ai-sdk/amazon-bedrock";
 import type { AnthropicLanguageModelOptions } from "@ai-sdk/anthropic";
-import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
+import type {
+  OpenAIChatLanguageModelOptions,
+  OpenAILanguageModelResponsesOptions,
+} from "@ai-sdk/openai";
 import type { SharedV4ProviderOptions } from "@ai-sdk/provider";
 import type { LanguageModelMiddleware } from "ai";
 
@@ -172,6 +175,26 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
   },
 };
 
+// Mantle keeps the Bedrock namespace in the model ID (`openai.gpt-5.5`), which the OpenAI
+// model cannot recognize as a GPT-5 reasoning model: it would send `max_tokens` plus
+// `temperature` and drop `reasoning` entirely. `gpt-oss` genuinely is not one of those.
+const isMantleReasoningModel = (modelId: string) =>
+  modelId.startsWith("openai.gpt-") && !modelId.startsWith("openai.gpt-oss");
+
+export const bedrockMantleReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    if (!isMantleReasoningModel(model.modelId)) return params;
+
+    const openai = ((params.providerOptions ??= {})["openai"] ??=
+      {}) as OpenAILanguageModelResponsesOptions;
+    openai.forceReasoning = true;
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   language: [
     bedrockServiceTierMiddleware,
@@ -179,4 +202,10 @@ modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
     bedrockClaudeReasoningMiddleware,
     bedrockPromptCachingMiddleware,
   ],
+});
+
+// The nested Mantle provider is OpenAI-shaped, so none of the Converse translations above
+// apply to it: `bedrock-mantle.chat` / `bedrock-mantle.responses` never match `amazon-bedrock`.
+modelMiddlewareMatcher.useForProvider("bedrock-mantle*", {
+  language: [bedrockMantleReasoningMiddleware],
 });
