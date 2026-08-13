@@ -1,5 +1,12 @@
 import { type AmazonBedrockProvider } from "@ai-sdk/amazon-bedrock";
+import {
+  type BedrockMantleProvider,
+  type BedrockMantleProviderSettings,
+  createBedrockMantle,
+} from "@ai-sdk/amazon-bedrock/mantle";
+import { customProvider, type LanguageModel } from "ai";
 
+import { logger } from "../../logger";
 import type { CanonicalModelId, ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
 
@@ -55,6 +62,62 @@ const MAPPING = {
   "alibaba/qwen3-vl-235b": "qwen.qwen3-vl-235b-a22b",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
+// Served only from the OpenAI-compatible Mantle endpoint, never from Converse/Invoke on
+// `bedrock-runtime`. Their IDs keep the dotted version, take no inference profile prefix
+// and no `-v1:0` postfix, so they bypass the mapping above entirely.
+//   https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html
+const MANTLE_MAPPING = {
+  "openai/gpt-5.5": "openai.gpt-5.5",
+  "openai/gpt-5.6-sol": "openai.gpt-5.6-sol",
+  "openai/gpt-5.6-terra": "openai.gpt-5.6-terra",
+  "openai/gpt-5.6-luna": "openai.gpt-5.6-luna",
+} as const satisfies Partial<Record<CanonicalModelId, string>>;
+
+/**
+ * `createAmazonBedrock` keeps `region` and its credentials in a closure, so the resolved
+ * base URL is only reachable through the config the AI SDK attaches to a model instance.
+ */
+type BedrockModelConfig = {
+  baseUrl: () => string;
+  headers: () => Record<string, string | undefined>;
+};
+
+/** `https://bedrock-runtime.us-east-1.amazonaws.com` -> `us-east-1` */
+const REGION_FROM_BASE_URL = /^https?:\/\/[^./]+\.([^./]+)\./u;
+
+const resolveMantle = (
+  provider: AmazonBedrockProvider,
+  settings: BedrockMantleProviderSettings = {},
+): BedrockMantleProvider => {
+  // Any model id works: constructing a model issues no request, it only resolves settings.
+  const { config } = provider.languageModel("amazon.nova-lite-v1:0") as unknown as {
+    config: BedrockModelConfig;
+  };
+
+  let region: string | undefined;
+  let headers: Record<string, string | undefined> | undefined;
+  try {
+    region = REGION_FROM_BASE_URL.exec(config.baseUrl())?.[1];
+    headers = config.headers();
+  } catch {
+    // Region is unresolvable (neither `region` nor `AWS_REGION` is set). Let Mantle load
+    // its own settings so the error surfaces from there instead.
+    logger.debug("[canonical] could not resolve the bedrock region for mantle");
+  }
+
+  // Credentials are not readable back off a provider instance: they never leave the
+  // `createAmazonBedrock` closure, and its SigV4 fetch cannot be borrowed either because it
+  // signs for the `bedrock` service while Mantle requires `bedrock-mantle`. Mantle therefore
+  // loads its own, exactly like the Vertex adapter falls back to ambient credentials in
+  // express mode: `AWS_BEARER_TOKEN_BEDROCK` / `AWS_ACCESS_KEY_ID` cover both endpoints, and
+  // `config.mantle` is the explicit override.
+  return createBedrockMantle({
+    ...settings,
+    region: settings.region ?? region,
+    headers: settings.headers ?? headers,
+  });
+};
+
 export type BedrockInferenceProfileOptions = {
   /** @default "preferred" */
   mode?: "preferred" | "avoid";
@@ -70,13 +133,19 @@ const resolveInferenceProfile = ({ geo = "us", arn }: BedrockInferenceProfileOpt
 export type BedrockCanonicalConfig = {
   inferenceProfile?: BedrockInferenceProfileOptions;
   extraMapping?: Record<ModelId, string>;
+  /**
+   * Settings for the nested Mantle provider, which serves the GPT-5.x models. `region` and
+   * custom headers are inherited from the wrapped provider; credentials are not, so set them
+   * here unless the ambient AWS environment already carries them.
+   */
+  mantle?: BedrockMantleProviderSettings;
 };
 
 export const withCanonicalIdsForBedrock = (
   provider: AmazonBedrockProvider,
   config: BedrockCanonicalConfig = {},
-) =>
-  withCanonicalIds(provider, {
+) => {
+  const base = withCanonicalIds(provider, {
     mapping: {
       ...MAPPING,
       ...config.extraMapping,
@@ -95,3 +164,23 @@ export const withCanonicalIdsForBedrock = (
       postfix: config.inferenceProfile?.mode === "avoid" ? "" : "-v1:0",
     },
   });
+
+  // Deferred so incomplete settings surface at model construction, not at wrap time.
+  let mantle: BedrockMantleProvider | undefined;
+  const mantleModel = (canonicalId: string, mantleId: string) => {
+    logger.debug(`[canonical] mapped ${canonicalId} to ${mantleId} (mantle)`);
+    mantle ??= resolveMantle(provider, config.mantle);
+    // These models expect the Responses API; Chat Completions is the Mantle default.
+    return mantle.responses(mantleId);
+  };
+
+  const languageModels = {} as Record<string, LanguageModel>;
+  for (const [canonicalId, mantleId] of Object.entries(MANTLE_MAPPING)) {
+    // Lazy, so the nested provider is only created once one of its models is requested.
+    Object.defineProperty(languageModels, canonicalId, {
+      get: () => mantleModel(canonicalId, mantleId),
+    });
+  }
+
+  return customProvider({ languageModels, fallbackProvider: base });
+};

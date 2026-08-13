@@ -150,6 +150,8 @@ export function forwardEmbeddingParams(providerName: ProviderId): EmbeddingModel
 export function extractProviderNamespace(id: string): string {
   if (id === "amazon-bedrock") return "bedrock";
   const [first, second] = id.split(".");
+  // Bedrock Mantle models are OpenAI models, and those only read `openai` provider options.
+  if (first === "bedrock-mantle") return "openai";
   // FUTURE: map vertex to google once AI SDK support per-message level provider options
   if (first === "vertex" || second === "vertex") return "vertex";
   return first!;
