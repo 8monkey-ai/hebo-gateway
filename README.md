@@ -251,7 +251,7 @@ Out-of-the-box model presets:
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.1`, `v4.2`, `v4.3`, `v4.20`, `latest`, `all`)
+  Grok: `grok` (`v4.1`, `v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `latest`, `all`)
 
 - **Z.ai** — `@hebo-ai/gateway/models/zai`  
   GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.x`, `latest`, `all`)

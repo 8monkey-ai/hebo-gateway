@@ -115,6 +115,8 @@ export const CANONICAL_MODEL_IDS = [
   "xai/grok-4.3",
   "xai/grok-4.20",
   "xai/grok-4.20-multi-agent",
+  "xai/grok-4.5",
+  "xai/grok-4.6",
   // DeepSeek
   "deepseek/deepseek-v3.2",
   "deepseek/deepseek-v4-flash",

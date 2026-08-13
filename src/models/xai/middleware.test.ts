@@ -12,6 +12,8 @@ test("xai middleware > matching patterns", () => {
     "xai/grok-4.2-reasoning",
     "xai/grok-4.2-multi-agent",
     "xai/grok-4.3",
+    "xai/grok-4.5",
+    "xai/grok-4.6",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const languageNonMatching = [
