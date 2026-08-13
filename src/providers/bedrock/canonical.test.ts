@@ -126,3 +126,27 @@ test("Mantle settings take precedence over the inherited ones", async () => {
 
   expect(url).toBe("https://bedrock-mantle.us-gov-west-1.api.aws/v1/responses");
 });
+
+test("Mantle ignores a base URL label that is not a region", async () => {
+  const previous = process.env["AWS_REGION"];
+  process.env["AWS_REGION"] = "us-east-2";
+  try {
+    // `internal` is not a region, so inheriting it would point Mantle at a host that
+    // does not resolve. Its own settings have to win instead.
+    const { url } = await fromInstance({ baseURL: "https://bedrock.internal.example.com" });
+
+    expect(url).toBe("https://bedrock-mantle.us-east-2.api.aws/v1/responses");
+  } finally {
+    process.env["AWS_REGION"] = previous;
+  }
+});
+
+test("withCanonicalIdsForBedrock > reuses the Mantle model instance across lookups", () => {
+  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
+    mantle: { apiKey: "mantle-key" },
+  });
+
+  expect(provider.languageModel("openai/gpt-5.6-sol")).toBe(
+    provider.languageModel("openai/gpt-5.6-sol"),
+  );
+});

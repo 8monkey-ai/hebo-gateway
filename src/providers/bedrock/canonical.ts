@@ -85,6 +85,9 @@ type BedrockModelConfig = {
 /** `https://bedrock-runtime.us-east-1.amazonaws.com` -> `us-east-1` */
 const REGION_FROM_BASE_URL = /^https?:\/\/[^./]+\.([^./]+)\./u;
 
+/** A custom base URL need not carry a region in that label: `us-east-1`, `us-gov-west-1` */
+const AWS_REGION = /^[a-z]{2}(?:-[a-z]+)+-\d+$/u;
+
 const resolveMantle = (
   provider: AmazonBedrockProvider,
   settings: BedrockMantleProviderSettings = {},
@@ -97,7 +100,10 @@ const resolveMantle = (
   let region: string | undefined;
   let headers: Record<string, string | undefined> | undefined;
   try {
-    region = REGION_FROM_BASE_URL.exec(config.baseUrl())?.[1];
+    const parsed = REGION_FROM_BASE_URL.exec(config.baseUrl())?.[1];
+    // A custom base URL can hold anything in that label, and a wrong region would only
+    // surface as a DNS failure. Keep it only when it looks like a region.
+    region = parsed && AWS_REGION.test(parsed) ? parsed : undefined;
     headers = config.headers();
   } catch {
     // Region is unresolvable (neither `region` nor `AWS_REGION` is set). Let Mantle load
@@ -167,17 +173,24 @@ export const withCanonicalIdsForBedrock = (
 
   // Deferred so incomplete settings surface at model construction, not at wrap time.
   let mantle: BedrockMantleProvider | undefined;
+  const models = new Map<string, LanguageModel>();
   const mantleModel = (canonicalId: string, mantleId: string) => {
+    let model = models.get(canonicalId);
+    if (model) return model;
+
     logger.debug(`[canonical] mapped ${canonicalId} to ${mantleId} (mantle)`);
     mantle ??= resolveMantle(provider, config.mantle);
     // These models expect the Responses API; Chat Completions is the Mantle default.
-    return mantle.responses(mantleId);
+    model = mantle.responses(mantleId);
+    models.set(canonicalId, model);
+    return model;
   };
 
   const languageModels = {} as Record<string, LanguageModel>;
   for (const [canonicalId, mantleId] of Object.entries(MANTLE_MAPPING)) {
     // Lazy, so the nested provider is only created once one of its models is requested.
     Object.defineProperty(languageModels, canonicalId, {
+      enumerable: true,
       get: () => mantleModel(canonicalId, mantleId),
     });
   }
