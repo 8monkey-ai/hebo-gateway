@@ -1,12 +1,18 @@
 import { expect, test } from "bun:test";
 
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { type LanguageModelV4CallOptions, type LanguageModelV4TextPart } from "@ai-sdk/provider";
+import { wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+// Also registers the model-level GPT middlewares the full chain below relies on.
+import { openAIReasoningMiddleware } from "../../models/openai/middleware";
+import { withCanonicalIdsForBedrock } from "./canonical";
 import {
   bedrockClaudeReasoningMiddleware,
   bedrockGptReasoningMiddleware,
+  bedrockMantleReasoningMiddleware,
   bedrockPromptCachingMiddleware,
   bedrockServiceTierMiddleware,
 } from "./middleware";
@@ -623,4 +629,93 @@ test("bedrockPromptCachingMiddleware > should skip non-claude non-nova models", 
       },
     },
   });
+});
+
+test("bedrock middlewares > Mantle provider resolves only the Mantle middleware", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "openai/gpt-5.6-sol",
+    providerId: "bedrock-mantle.responses",
+  });
+
+  expect(middleware).toContain(bedrockMantleReasoningMiddleware);
+  // The Converse translations must not touch OpenAI-shaped requests.
+  expect(middleware).not.toContain(bedrockGptReasoningMiddleware);
+  expect(middleware).not.toContain(bedrockServiceTierMiddleware);
+});
+
+test("bedrock middlewares > native provider does not resolve the Mantle middleware", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "openai/gpt-oss-20b",
+    providerId: "amazon-bedrock",
+  });
+
+  expect(middleware).not.toContain(bedrockMantleReasoningMiddleware);
+});
+
+test("bedrockMantleReasoningMiddleware > forces the reasoning shape for namespaced GPT-5.x", async () => {
+  const result = await bedrockMantleReasoningMiddleware.transformParams!({
+    type: "generate",
+    params: { prompt: [], providerOptions: { openai: { reasoningEffort: "high" } } },
+    model: new MockLanguageModelV4({ modelId: "openai.gpt-5.6-sol" }),
+  });
+
+  expect(result.providerOptions!["openai"]).toEqual({
+    reasoningEffort: "high",
+    forceReasoning: true,
+  });
+});
+
+test("bedrockMantleReasoningMiddleware > skips GPT-OSS, which is not a reasoning-shaped model", async () => {
+  const result = await bedrockMantleReasoningMiddleware.transformParams!({
+    type: "generate",
+    params: { prompt: [], providerOptions: { openai: { reasoningEffort: "low" } } },
+    model: new MockLanguageModelV4({ modelId: "openai.gpt-oss-120b" }),
+  });
+
+  expect(result.providerOptions!["openai"]).toEqual({ reasoningEffort: "low" });
+});
+
+test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full chain", async () => {
+  let body: Record<string, unknown> | undefined;
+
+  const provider = withCanonicalIdsForBedrock(
+    createAmazonBedrock({ region: "us-east-1", apiKey: "provider-key" }),
+    {
+      mantle: {
+        apiKey: "mantle-key",
+        fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
+          body = JSON.parse(init!.body as string) as Record<string, unknown>;
+          throw new Error("captured");
+        }) as unknown as typeof fetch,
+      },
+    },
+  );
+
+  const modelId = "openai/gpt-5.6-sol";
+  const model = provider.languageModel(modelId);
+  const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
+  const wrapped = wrapLanguageModel({ model, middleware });
+
+  // The canonical ID still matches `openai/gpt-*`, so the GPT reasoning translation applies.
+  expect(middleware).toContain(openAIReasoningMiddleware);
+  expect(middleware).toContain(bedrockMantleReasoningMiddleware);
+
+  try {
+    await wrapped.doGenerate({
+      prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      temperature: 0.7,
+      providerOptions: { unknown: { reasoning: { effort: "xhigh" } } },
+    });
+  } catch {
+    // The capturing fetch always throws, so only the request body is asserted on.
+  }
+
+  expect(body).toMatchObject({
+    model: "openai.gpt-5.6-sol",
+    reasoning: { effort: "xhigh" },
+  });
+  // Reasoning models reject `temperature`.
+  expect(body).not.toHaveProperty("temperature");
 });

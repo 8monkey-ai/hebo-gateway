@@ -23,6 +23,11 @@ describe("extractProviderNamespace", () => {
     expect(extractProviderNamespace("amazon-bedrock")).toBe("bedrock");
   });
 
+  test("should handle Bedrock Mantle (bedrock-mantle -> openai)", () => {
+    expect(extractProviderNamespace("bedrock-mantle.chat")).toBe("openai");
+    expect(extractProviderNamespace("bedrock-mantle.responses")).toBe("openai");
+  });
+
   test("should handle OpenAI (default to first component)", () => {
     expect(extractProviderNamespace("openai.chat")).toBe("openai");
     expect(extractProviderNamespace("openai.embedding")).toBe("openai");

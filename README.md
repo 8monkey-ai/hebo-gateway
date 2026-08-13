@@ -147,6 +147,19 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
+`withCanonicalIdsForBedrock` additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so GPT-5.x models resolve through it while everything else keeps using Converse. It inherits the wrapped provider’s `region` and custom headers, but not its credentials — those stay inside the `createAmazonBedrock` closure — so Mantle falls back to the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`). Pass them explicitly when they are not in the environment:
+
+```ts
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
+
+const bedrock = withCanonicalIdsForBedrock(
+  createAmazonBedrock({ region: "us-east-1", apiKey: process.env["BEDROCK_API_KEY"] }),
+  // Only needed when the Mantle credentials differ from the ambient AWS environment.
+  { mantle: { apiKey: process.env["BEDROCK_API_KEY"] } },
+);
+```
+
 For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
 
 For custom provider setups, wrap the provider instance with `withCanonicalIds` and define your own canonicalization mapping and rules:
@@ -243,7 +256,7 @@ Out-of-the-box model presets:
   Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
