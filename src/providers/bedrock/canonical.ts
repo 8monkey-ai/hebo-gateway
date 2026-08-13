@@ -1,4 +1,8 @@
-import { type AmazonBedrockProvider } from "@ai-sdk/amazon-bedrock";
+import {
+  type AmazonBedrockProvider,
+  type AmazonBedrockProviderSettings,
+  createAmazonBedrock,
+} from "@ai-sdk/amazon-bedrock";
 import {
   type BedrockMantleProvider,
   type BedrockMantleProviderSettings,
@@ -105,11 +109,26 @@ const resolveMantle = (
     logger.debug("[canonical] could not resolve the bedrock region for mantle");
   }
 
-  // Credentials are not inheritable: they never leave the provider closure, and its SigV4
-  // fetch signs for the `bedrock` service while Mantle requires `bedrock-mantle`. Without
-  // explicit `settings`, Mantle falls back to the ambient AWS environment.
-  return createBedrockMantle({ region, headers, ...settings });
+  // Credentials are not readable back off a provider instance: they never leave the
+  // `createAmazonBedrock` closure, and its SigV4 fetch signs for the `bedrock` service while
+  // Mantle requires `bedrock-mantle`. Pass settings instead of an instance to share them.
+  return createBedrockMantle({
+    ...settings,
+    region: settings.region ?? region,
+    headers: settings.headers ?? headers,
+  });
 };
+
+/**
+ * Converse-only settings: `baseURL` addresses `bedrock-runtime` and `generateId` has no
+ * Mantle counterpart. Region, credentials, headers and `fetch` apply to both endpoints
+ * unchanged, so one settings object configures both.
+ */
+const toMantleSettings = ({
+  baseURL: _baseURL,
+  generateId: _generateId,
+  ...shared
+}: AmazonBedrockProviderSettings): BedrockMantleProviderSettings => shared;
 
 export type BedrockInferenceProfileOptions = {
   /** @default "preferred" */
@@ -127,22 +146,30 @@ export type BedrockCanonicalConfig = {
   inferenceProfile?: BedrockInferenceProfileOptions;
   extraMapping?: Record<ModelId, string>;
   /**
-   * Settings for the nested Mantle provider that serves the GPT-5.x models.
-   *
-   * `region` and custom `headers` are inherited from the wrapped provider. Credentials are
-   * not — they stay in the `createAmazonBedrock` closure — so Mantle defaults to the ambient
-   * AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` /
-   * `AWS_SECRET_ACCESS_KEY`). Pass `apiKey`, `credentialProvider`, or explicit keys here when
-   * the wrapped provider was configured with credentials that are not in the environment.
+   * Mantle-only overrides, for the rare case where the two endpoints must differ (a separate
+   * `baseURL`, region, or credentials). Everything the Mantle provider needs already comes
+   * from the settings passed to `withCanonicalIdsForBedrock`, so this is normally unused.
    */
   mantle?: BedrockMantleProviderSettings;
 };
 
+/**
+ * Prefer passing `AmazonBedrockProviderSettings` over a provider instance: GPT-5.x is served
+ * only by Bedrock's Mantle endpoint, and settings are the one thing both endpoints can share
+ * — credentials cannot be read back off an instance, so `createAmazonBedrock(...)` forces
+ * Mantle to source its own (ambient AWS environment, or `config.mantle`).
+ */
 export const withCanonicalIdsForBedrock = (
-  provider: AmazonBedrockProvider,
+  provider: AmazonBedrockProvider | AmazonBedrockProviderSettings,
   config: BedrockCanonicalConfig = {},
 ) => {
-  const base = withCanonicalIds(provider, {
+  const bedrock = typeof provider === "function" ? provider : createAmazonBedrock(provider);
+  const mantleSettings: BedrockMantleProviderSettings = {
+    ...(typeof provider === "function" ? undefined : toMantleSettings(provider)),
+    ...config.mantle,
+  };
+
+  const base = withCanonicalIds(bedrock, {
     mapping: {
       ...MAPPING,
       ...config.extraMapping,
@@ -166,7 +193,7 @@ export const withCanonicalIdsForBedrock = (
   let mantle: BedrockMantleProvider | undefined;
   const mantleModel = (canonicalId: string, mantleId: string) => {
     logger.debug(`[canonical] mapped ${canonicalId} to ${mantleId} (mantle)`);
-    mantle ??= resolveMantle(provider, config.mantle);
+    mantle ??= resolveMantle(bedrock, mantleSettings);
     // These models expect the Responses API; Chat Completions is the Mantle default.
     return mantle.responses(mantleId);
   };

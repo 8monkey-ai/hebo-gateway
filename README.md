@@ -147,18 +147,18 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
-`withCanonicalIdsForBedrock` additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so GPT-5.x models resolve through it while everything else keeps using Converse. It inherits the wrapped provider’s `region` and custom headers, but not its credentials — those stay inside the `createAmazonBedrock` closure — so Mantle falls back to the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`). Pass them explicitly when they are not in the environment:
+`withCanonicalIdsForBedrock` additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so GPT-5.x models resolve through it while everything else keeps using Converse. Because two endpoints are involved, it also accepts the Bedrock **settings** in place of a provider instance and configures both from them — region, credentials, headers and `fetch` are declared once:
 
 ```ts
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
 
-const bedrock = withCanonicalIdsForBedrock(
-  createAmazonBedrock({ region: "us-east-1", apiKey: process.env["BEDROCK_API_KEY"] }),
-  // Only needed when the Mantle credentials differ from the ambient AWS environment.
-  { mantle: { apiKey: process.env["BEDROCK_API_KEY"] } },
-);
+const bedrock = withCanonicalIdsForBedrock({
+  region: "us-east-1",
+  apiKey: process.env["BEDROCK_API_KEY"],
+});
 ```
+
+Passing `createAmazonBedrock(...)` keeps working, but its credentials stay inside that closure and cannot be shared, so Mantle then falls back to the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) unless a `mantle` override supplies them.
 
 For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
 

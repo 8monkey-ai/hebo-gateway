@@ -57,34 +57,26 @@ test("withCanonicalIdsForBedrock > keeps GPT-OSS on the native Converse provider
 });
 
 // ---------------------------------------------------------------------------
-// The Mantle override inherits the provider's region and headers
+// Settings are shared with the nested Mantle provider
 // ---------------------------------------------------------------------------
+
+type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
+type CanonicalConfig = Parameters<typeof withCanonicalIdsForBedrock>[1] & object;
+type CapturedRequest = { url: string; headers: Headers };
 
 /** Captures the request the Mantle model would send, without hitting the network. */
 async function captureMantleRequest(
-  settings: Parameters<typeof createAmazonBedrock>[0] = {},
-  config: Parameters<typeof withCanonicalIdsForBedrock>[1] = {},
-): Promise<{ url: string; headers: Headers }> {
-  let captured: { url: string; headers: Headers } | undefined;
+  build: (fetch: typeof globalThis.fetch) => ReturnType<typeof withCanonicalIdsForBedrock>,
+): Promise<CapturedRequest> {
+  let captured: CapturedRequest | undefined;
 
-  const provider = withCanonicalIdsForBedrock(
-    // The API key keeps Mantle off SigV4, so no ambient credentials are consulted.
-    createAmazonBedrock({ region: "eu-west-1", apiKey: "provider-key", ...settings }),
-    {
-      ...config,
-      mantle: {
-        apiKey: "mantle-key",
-        ...config.mantle,
-        fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
-          captured = {
-            url: input instanceof Request ? input.url : String(input),
-            headers: new Headers(init?.headers),
-          };
-          throw new Error("captured");
-        }) as unknown as typeof fetch,
-      },
-    },
-  );
+  const provider = build(((input: RequestInfo | URL, init?: RequestInit) => {
+    captured = {
+      url: input instanceof Request ? input.url : String(input),
+      headers: new Headers(init?.headers),
+    };
+    throw new Error("captured");
+  }) as unknown as typeof globalThis.fetch);
 
   // The capturing fetch always throws, so only the request itself is asserted on.
   try {
@@ -98,21 +90,70 @@ async function captureMantleRequest(
   return captured!;
 }
 
+/** Settings instead of an instance: one object configures Converse and Mantle alike. */
+const fromSettings = (settings: BedrockSettings = {}, config: CanonicalConfig = {}) =>
+  captureMantleRequest((fetch) =>
+    // The API key keeps Mantle off SigV4, so no ambient credentials are consulted.
+    withCanonicalIdsForBedrock(
+      { region: "eu-west-1", apiKey: "shared-key", fetch, ...settings },
+      config,
+    ),
+  );
+
+/** An instance hides its credentials, so Mantle needs its own. */
+const fromInstance = (settings: BedrockSettings = {}, config: CanonicalConfig = {}) =>
+  captureMantleRequest((fetch) =>
+    withCanonicalIdsForBedrock(
+      createAmazonBedrock({ region: "eu-west-1", apiKey: "provider-key", ...settings }),
+      { ...config, mantle: { apiKey: "mantle-key", fetch, ...config.mantle } },
+    ),
+  );
+
+test("Mantle shares the credentials of the settings it was built from", async () => {
+  const { headers } = await fromSettings();
+
+  expect(headers.get("authorization")).toBe("Bearer shared-key");
+});
+
+test("Mantle uses the region from the shared settings", async () => {
+  const { url } = await fromSettings({ region: "ap-southeast-2" });
+
+  expect(url).toBe("https://bedrock-mantle.ap-southeast-2.api.aws/v1/responses");
+});
+
+test("Mantle forwards the custom headers from the shared settings", async () => {
+  const { headers } = await fromSettings({ headers: { "x-custom": "yes" } });
+
+  expect(headers.get("x-custom")).toBe("yes");
+});
+
+test("Mantle keeps its own base URL when the settings override the Converse one", async () => {
+  const { url } = await fromSettings({ baseURL: "https://bedrock-runtime.internal.example" });
+
+  expect(url).toBe("https://bedrock-mantle.eu-west-1.api.aws/v1/responses");
+});
+
+test("Mantle overrides take precedence over the shared settings", async () => {
+  const { url } = await fromSettings({}, { mantle: { region: "us-gov-west-1" } });
+
+  expect(url).toBe("https://bedrock-mantle.us-gov-west-1.api.aws/v1/responses");
+});
+
 test("Mantle override uses the region resolved by the wrapped provider", async () => {
-  const { url } = await captureMantleRequest({ region: "ap-southeast-2" });
+  const { url } = await fromInstance({ region: "ap-southeast-2" });
 
   expect(url).toBe("https://bedrock-mantle.ap-southeast-2.api.aws/v1/responses");
 });
 
 test("Mantle override forwards the provider's custom headers", async () => {
-  const { headers } = await captureMantleRequest({ headers: { "x-custom": "yes" } });
+  const { headers } = await fromInstance({ headers: { "x-custom": "yes" } });
 
   expect(headers.get("x-custom")).toBe("yes");
   expect(headers.get("authorization")).toBe("Bearer mantle-key");
 });
 
 test("Mantle settings take precedence over the inherited ones", async () => {
-  const { url } = await captureMantleRequest({}, { mantle: { region: "us-gov-west-1" } });
+  const { url } = await fromInstance({}, { mantle: { region: "us-gov-west-1" } });
 
   expect(url).toBe("https://bedrock-mantle.us-gov-west-1.api.aws/v1/responses");
 });
