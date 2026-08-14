@@ -212,15 +212,36 @@ describe("Shared Converters", () => {
       const metadata = {
         provider: { redactedData: "data", signature: "sig" },
       };
-      expect(extractReasoningMetadata(metadata)).toEqual({
+      expect(extractReasoningMetadata(metadata)).toMatchObject({
         redactedData: "data",
         signature: "sig",
+        format: "unknown",
       });
     });
 
-    test("should return empty object if not found", () => {
-      expect(extractReasoningMetadata({})).toEqual({});
-      expect(extractReasoningMetadata()).toEqual({});
+    test("should read the snakized spellings the params middleware produces", () => {
+      const metadata = {
+        vertex: { thought_signature: "sig" },
+        anthropic: { redacted_data: "data" },
+      };
+      expect(extractReasoningMetadata(metadata)).toMatchObject({
+        thoughtSignature: "sig",
+        format: "google-gemini-v1",
+      });
+    });
+
+    test("should tag the format from the provider namespace", () => {
+      expect(extractReasoningMetadata({ anthropic: { signature: "sig" } }).format).toBe(
+        "anthropic-claude-v1",
+      );
+      expect(
+        extractReasoningMetadata({ openai: { reasoningEncryptedContent: "blob" } }),
+      ).toMatchObject({ encryptedContent: "blob", format: "openai-responses-v1" });
+    });
+
+    test("should return only the format if not found", () => {
+      expect(extractReasoningMetadata({})).toEqual({ format: "unknown" });
+      expect(extractReasoningMetadata()).toEqual({ format: "unknown" });
     });
   });
 });
