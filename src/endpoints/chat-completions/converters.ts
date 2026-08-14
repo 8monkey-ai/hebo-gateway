@@ -632,6 +632,28 @@ export class ChatCompletionsTransformStream extends TransformStream<
             break;
           }
 
+          case "reasoning-start": {
+            // Anthropic hands redacted thinking over as the block opens, in place of any
+            // text, so no delta ever carries it.
+            const { redactedData, format } = extractReasoningMetadata(part.providerMetadata);
+            if (!redactedData || encryptedIds.has(part.id)) break;
+            encryptedIds.add(part.id);
+
+            controller.enqueue(
+              createChunk({
+                reasoning_details: [
+                  encryptedReasoningDetail(
+                    part.id,
+                    reasoningIndex(`${part.id}:encrypted`),
+                    redactedData,
+                    format,
+                  ),
+                ],
+              }),
+            );
+            break;
+          }
+
           case "reasoning-delta": {
             controller.enqueue(
               createChunk(
@@ -687,14 +709,18 @@ export class ChatCompletionsTransformStream extends TransformStream<
 
             // Mirror the tool call's Gemini thought signature into reasoning_details.
             const delta: ChatCompletionsAssistantMessageDelta = { tool_calls: [toolCall] };
-            const detail = toThoughtSignatureDetail(
-              part.toolCallId,
-              part.providerMetadata,
-              reasoningIdToIndex.size,
-            );
-            if (detail) {
-              reasoningIdToIndex.set(`${part.toolCallId}:signature`, detail.index);
-              delta.reasoning_details = [detail];
+            const { thoughtSignature } = extractReasoningMetadata(part.providerMetadata);
+            if (thoughtSignature) {
+              delta.reasoning_details = [
+                encryptedReasoningDetail(
+                  part.toolCallId,
+                  // Keyed apart from the reasoning blocks so the signature gets an index of
+                  // its own, and allocated through the shared counter so it cannot collide.
+                  reasoningIndex(`${part.toolCallId}:signature`),
+                  thoughtSignature,
+                  GEMINI_REASONING_FORMAT,
+                ),
+              ];
             }
 
             controller.enqueue(createChunk(delta));

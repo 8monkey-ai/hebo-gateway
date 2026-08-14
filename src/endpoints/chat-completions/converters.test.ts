@@ -410,6 +410,30 @@ describe("Chat Completions Converters", () => {
       ]);
     });
 
+    test("should emit Anthropic redacted thinking from reasoning-start", async () => {
+      const deltas = await streamDeltas([
+        {
+          type: "reasoning-start",
+          id: "0",
+          providerMetadata: { anthropic: { redactedData: "redacted-blob" } },
+        },
+        { type: "reasoning-start", id: "1" },
+        { type: "reasoning-delta", id: "1", text: "Thinking..." },
+      ] as unknown as TextStreamPart<ToolSet>[]);
+
+      expect(deltas).toHaveLength(2);
+      expect(deltas[0]!.reasoning_details).toEqual([
+        {
+          id: "0",
+          index: 0,
+          type: "reasoning.encrypted",
+          data: "redacted-blob",
+          format: "anthropic-claude-v1",
+        },
+      ]);
+      expect(deltas[1]!.reasoning).toBe("Thinking...");
+    });
+
     test("should emit OpenAI encrypted reasoning once, on reasoning-end", async () => {
       const providerMetadata = {
         openai: { itemId: "rs_1", reasoningEncryptedContent: "encrypted-trace" },

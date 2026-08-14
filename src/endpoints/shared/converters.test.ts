@@ -220,14 +220,29 @@ describe("Shared Converters", () => {
     });
 
     test("should read the snakized spellings the params middleware produces", () => {
-      const metadata = {
-        vertex: { thought_signature: "sig" },
-        anthropic: { redacted_data: "data" },
-      };
-      expect(extractReasoningMetadata(metadata)).toMatchObject({
+      expect(extractReasoningMetadata({ vertex: { thought_signature: "sig" } })).toMatchObject({
         thoughtSignature: "sig",
         format: "google-gemini-v1",
       });
+      expect(extractReasoningMetadata({ anthropic: { redacted_data: "data" } })).toMatchObject({
+        redactedData: "data",
+        format: "anthropic-claude-v1",
+      });
+      expect(
+        extractReasoningMetadata({
+          openai: { item_id: "rs_1", reasoning_encrypted_content: "blob" },
+        }),
+      ).toMatchObject({
+        itemId: "rs_1",
+        encryptedContent: "blob",
+        format: "openai-responses-v1",
+      });
+    });
+
+    test("should keep scanning past an empty artifact", () => {
+      expect(
+        extractReasoningMetadata({ openai: { signature: "", reasoningEncryptedContent: "blob" } }),
+      ).toMatchObject({ encryptedContent: "blob", format: "openai-responses-v1" });
     });
 
     test("should tag the format from the provider namespace", () => {

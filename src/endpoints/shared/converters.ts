@@ -325,7 +325,7 @@ export function extractReasoningMetadata(
       metadata["thoughtSignature"] ?? metadata["thought_signature"],
     );
 
-    if (signature ?? redactedData ?? encryptedContent ?? itemId ?? thoughtSignature) {
+    if (signature || redactedData || encryptedContent || itemId || thoughtSignature) {
       return {
         signature,
         redactedData,
