@@ -780,10 +780,38 @@ Most SDKs handle these fields out-of-the-box.
 
 Advanced models (like Anthropic Claude 3.7 or Gemini 3) surface structured reasoning steps and signatures that act as a "save state" for the model's internal reasoning process. To maintain this context across multi-turn conversations and tool-calling workflows, you should pass back the following extensions in subsequent messages:
 
-- **reasoning_details**: Standardized array of reasoning steps and generic signatures.
+- **reasoning_details**: Standardized array of reasoning steps and signatures.
 - **extra_content**: Provider-specific extensions, such as **Google's thought signatures** on Vertex AI.
 
-For **Gemini 3** models, returning the thought signature via `extra_content` is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance.
+On `/chat/completions`, `reasoning_details` follows the convention used by OpenRouter and the Vercel AI Gateway, so most OpenAI-compatible clients round-trip it without any changes. Each entry is tagged with the `format` of the provider that produced it — `anthropic-claude-v1`, `google-gemini-v1`, `openai-responses-v1`, `azure-openai-responses-v1` or `xai-responses-v1` — and carries the opaque blob in the field that convention uses:
+
+| Provider         | Opaque state                          | How it is surfaced                                                                                                           |
+| ---------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Anthropic Claude | thinking signature, redacted thinking | `reasoning.text` + `signature`, `reasoning.encrypted` + `data`                                                               |
+| Google Gemini    | thought signature                     | `reasoning.encrypted` + `data`, `id` = the `tool_calls[].id` it belongs to; also `extra_content.vertex.thought_signature`    |
+| OpenAI GPT       | encrypted reasoning trace             | `reasoning.encrypted` + `data`, `id` = the reasoning item id, alongside the `reasoning.text` summary entry sharing that `id` |
+
+Echo the array back on the assistant message and the gateway restores the provider state. Entries are matched by `id`; Gemini signatures sent back without an `id` are matched to tool calls in order, so payloads produced by gateways that omit it are accepted too.
+
+For **Gemini 3** models, returning the thought signature is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance. The gateway exposes it in two interchangeable ways and you only need to echo back one of them — `reasoning_details`, or the Vertex-specific `extra_content.vertex.thought_signature` on the tool call. When both are present, `extra_content` takes precedence.
+
+```json
+{
+  "role": "assistant",
+  "tool_calls": [
+    { "id": "call_abc", "type": "function", "function": { "name": "bash", "arguments": "{}" } }
+  ],
+  "reasoning_details": [
+    {
+      "id": "call_abc",
+      "index": 0,
+      "type": "reasoning.encrypted",
+      "data": "AY89a18IwQsQ8in...",
+      "format": "google-gemini-v1"
+    }
+  ]
+}
+```
 
 ### Service Tier
 

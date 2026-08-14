@@ -19,8 +19,9 @@ import {
   toChatCompletionsUsage,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
+  ChatCompletionsTransformStream,
 } from "./converters";
-import type { ChatCompletionsToolMessage } from "./schema";
+import type { ChatCompletionsChunk, ChatCompletionsToolMessage } from "./schema";
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({
@@ -81,6 +82,30 @@ const mockGenerateTextResult = (
     finalStep: { ...result, stepNumber: 0 },
   } as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>;
 };
+
+const collectStreamChunks = async (parts: unknown[]): Promise<ChatCompletionsChunk[]> => {
+  const source = new ReadableStream({
+    start(controller) {
+      for (const part of parts) controller.enqueue(part);
+      controller.close();
+    },
+  });
+
+  const chunks: ChatCompletionsChunk[] = [];
+  // oxlint-disable-next-line no-explicit-any
+  for await (const frame of source.pipeThrough(new ChatCompletionsTransformStream("m")) as any) {
+    chunks.push((frame as { data: ChatCompletionsChunk }).data);
+  }
+  return chunks;
+};
+
+/** One summary part of an OpenAI reasoning item; siblings repeat the same trace. */
+const openAISummaryPart = (text: string) =>
+  ({
+    type: "reasoning",
+    text,
+    providerMetadata: { openai: { item_id: "rs_123", reasoning_encrypted_content: "gAAAA" } },
+  }) as const;
 
 describe("Chat Completions Converters", () => {
   describe("fromChatCompletionsToolResultMessage", () => {
@@ -260,7 +285,7 @@ describe("Chat Completions Converters", () => {
         type: "reasoning.text",
         text: "I am thinking...",
         signature: "sig-123",
-        format: "unknown",
+        format: "anthropic-claude-v1",
         index: 0,
       });
       expect(message.reasoning_details![0]!.id).toStartWith("reasoning-");
@@ -348,7 +373,10 @@ describe("Chat Completions Converters", () => {
         text: "",
         providerOptions: {
           unknown: {
+            // Written under both providers' keys: each reads only the one it knows, and
+            // the format tag is too often flattened to "unknown" to be trusted.
             redactedData: "secret-data",
+            reasoningEncryptedContent: "secret-data",
           },
         },
       });
@@ -936,6 +964,454 @@ describe("Chat Completions Converters", () => {
       const call = toChatCompletionsToolCall("call_1", "a".repeat(200), {});
       expect(call.function.name).toHaveLength(128);
       expect(call.function.name).toBe("a".repeat(128));
+    });
+  });
+
+  describe("Gemini thought signatures", () => {
+    test("should mirror a tool call signature into reasoning_details", () => {
+      const message = toChatCompletionsAssistantMessage(
+        mockGenerateTextResult({
+          toolCalls: [
+            {
+              type: "tool-call",
+              toolCallId: "call_140507",
+              toolName: "get_weather",
+              input: { city: "Paris" },
+              providerMetadata: { vertex: { thought_signature: "AY89a1+1pqtA" } },
+            },
+          ],
+        }),
+      );
+
+      // The shape OpenRouter and the Vercel AI Gateway both emit, with OpenRouter's id
+      // so the signature can be matched back to the call it belongs to.
+      expect(message.reasoning_details).toEqual([
+        {
+          id: "call_140507",
+          index: 0,
+          type: "reasoning.encrypted",
+          data: "AY89a1+1pqtA",
+          format: "google-gemini-v1",
+        },
+      ]);
+      // Still emitted the Vertex-specific way, for clients that already read it.
+      expect(message.tool_calls![0]!.extra_content).toEqual({
+        vertex: { thought_signature: "AY89a1+1pqtA" },
+      });
+    });
+
+    test("should number signature details after the reasoning details", () => {
+      const message = toChatCompletionsAssistantMessage(
+        mockGenerateTextResult({
+          content: [
+            {
+              type: "reasoning",
+              text: "Weather check for Paris.",
+              providerMetadata: { vertex: { thought_signature: "sig-reasoning" } },
+            },
+          ],
+          toolCalls: [
+            {
+              type: "tool-call",
+              toolCallId: "call_1",
+              toolName: "get_weather",
+              input: {},
+              providerMetadata: { vertex: { thought_signature: "sig-tool" } },
+            },
+          ],
+        }),
+      );
+
+      // A reasoning part's thought signature is a signature on reasoning content, so it
+      // rides on the reasoning entry rather than becoming an entry of its own.
+      expect(message.reasoning_details![0]).toMatchObject({
+        index: 0,
+        type: "reasoning.text",
+        text: "Weather check for Paris.",
+        signature: "sig-reasoning",
+        format: "google-gemini-v1",
+      });
+      expect(message.reasoning_details![0]!.id).toStartWith("reasoning-");
+      expect(message.reasoning_details![1]).toEqual({
+        id: "call_1",
+        index: 1,
+        type: "reasoning.encrypted",
+        data: "sig-tool",
+        format: "google-gemini-v1",
+      });
+    });
+
+    test("should reattach a signature keyed by tool call id (OpenRouter shape)", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            type: "reasoning.encrypted",
+            data: "AY89a1/FAGOuMLk7",
+            format: "google-gemini-v1",
+            id: "sbw2b87p",
+            index: 0,
+          },
+        ],
+        tool_calls: [
+          {
+            id: "sbw2b87p",
+            type: "function",
+            function: { name: "get_weather", arguments: '{"city":"Paris"}' },
+          },
+        ],
+      });
+
+      // Never replayed as redacted reasoning: a thought signature is not reasoning.
+      expect(message.content).toEqual([
+        {
+          type: "tool-call",
+          toolCallId: "sbw2b87p",
+          toolName: "get_weather",
+          input: { city: "Paris" },
+          providerOptions: { unknown: { thoughtSignature: "AY89a1/FAGOuMLk7" } },
+        },
+      ]);
+    });
+
+    test("should reattach id-less signatures in tool call order (Vercel shape)", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          { type: "reasoning.encrypted", data: "sig-a", format: "google-gemini-v1", index: 0 },
+          { type: "reasoning.encrypted", data: "sig-b", format: "google-gemini-v1", index: 1 },
+        ],
+        tool_calls: [
+          { id: "call_a", type: "function", function: { name: "a", arguments: "{}" } },
+          { id: "call_b", type: "function", function: { name: "b", arguments: "{}" } },
+        ],
+      });
+
+      const content = message.content as Array<{ providerOptions?: unknown }>;
+      expect(content[0]!.providerOptions).toEqual({ unknown: { thoughtSignature: "sig-a" } });
+      expect(content[1]!.providerOptions).toEqual({ unknown: { thoughtSignature: "sig-b" } });
+    });
+
+    test("should let extra_content win over reasoning_details on a tool call", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            type: "reasoning.encrypted",
+            data: "from-details",
+            format: "google-gemini-v1",
+            id: "call_1",
+            index: 0,
+          },
+        ],
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "a", arguments: "{}" },
+            extra_content: { google: { thought_signature: "from-extra-content" } },
+          },
+        ],
+      });
+
+      expect((message.content as Array<{ providerOptions?: unknown }>)[0]!.providerOptions).toEqual(
+        { google: { thought_signature: "from-extra-content" } },
+      );
+    });
+
+    test("should treat a gemini detail that carries text as reasoning, not a signature", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        // Vercel emits one of these alongside the signature.
+        reasoning_details: [
+          {
+            type: "reasoning.text",
+            text: "**Weather Check for Paris**",
+            signature: "sig-reasoning",
+            format: "google-gemini-v1",
+            index: 0,
+          },
+        ],
+        tool_calls: [{ id: "call_1", type: "function", function: { name: "a", arguments: "{}" } }],
+      });
+
+      const content = message.content as Array<Record<string, unknown>>;
+      expect(content[0]).toEqual({
+        type: "reasoning",
+        text: "**Weather Check for Paris**",
+        // Both keys: Gemini reads thoughtSignature, everything else reads signature.
+        providerOptions: {
+          unknown: { signature: "sig-reasoning", thoughtSignature: "sig-reasoning" },
+        },
+      });
+      expect(content[1]!["providerOptions"]).toBeUndefined();
+    });
+
+    test("should accept a signature on a text-less reasoning.text entry", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            type: "reasoning.text",
+            text: "",
+            signature: "sig-legacy",
+            format: "google-gemini-v1",
+            id: "call_1",
+            index: 0,
+          },
+        ],
+        tool_calls: [{ id: "call_1", type: "function", function: { name: "a", arguments: "{}" } }],
+      });
+
+      expect((message.content as Array<{ providerOptions?: unknown }>)[0]!.providerOptions).toEqual(
+        { unknown: { thoughtSignature: "sig-legacy" } },
+      );
+    });
+
+    test("should not feed a foreign signature to Gemini's key", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            type: "reasoning.text",
+            text: "thinking",
+            signature: "anthropic-sig",
+            format: "anthropic-claude-v1",
+            index: 0,
+          },
+        ],
+      });
+
+      expect((message.content as Array<{ providerOptions?: unknown }>)[0]!.providerOptions).toEqual(
+        { unknown: { signature: "anthropic-sig" } },
+      );
+    });
+
+    test("should ignore a signature that matches no tool call", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "done",
+        reasoning_details: [
+          {
+            type: "reasoning.encrypted",
+            data: "orphan",
+            format: "google-gemini-v1",
+            id: "call_gone",
+            index: 0,
+          },
+        ],
+      });
+
+      expect(message.content).toEqual([{ type: "text", text: "done" }]);
+    });
+
+    test("should put a text-part signature back on the text part", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "Paris is sunny.",
+        // Gemini signs plain assistant text too; that arrives on extra_content, and the
+        // provider only reads signatures off content parts.
+        extra_content: { vertex: { thought_signature: "sig-text" } },
+      });
+
+      expect(message.content).toEqual([
+        {
+          type: "text",
+          text: "Paris is sunny.",
+          providerOptions: { unknown: { thoughtSignature: "sig-text" } },
+        },
+      ]);
+    });
+
+    test("should emit the signature on the tool call chunk when streaming", async () => {
+      const chunks = await collectStreamChunks([
+        {
+          type: "tool-call",
+          toolCallId: "call_1",
+          toolName: "get_weather",
+          input: { city: "Paris" },
+          providerMetadata: { vertex: { thought_signature: "stream-sig" } },
+        },
+      ]);
+
+      expect(chunks[0]!.choices[0]!.delta.tool_calls![0]!.id).toBe("call_1");
+      expect(chunks[0]!.choices[0]!.delta.reasoning_details).toEqual([
+        {
+          id: "call_1",
+          index: 0,
+          type: "reasoning.encrypted",
+          data: "stream-sig",
+          format: "google-gemini-v1",
+        },
+      ]);
+    });
+  });
+
+  describe("OpenAI encrypted reasoning", () => {
+    test("should emit the encrypted trace beside the summary text", () => {
+      const message = toChatCompletionsAssistantMessage(
+        mockGenerateTextResult({
+          content: [
+            {
+              type: "reasoning",
+              text: "Checking the weather.",
+              providerMetadata: {
+                openai: { item_id: "rs_123", reasoning_encrypted_content: "gAAAA" },
+              },
+            },
+          ],
+        }),
+      );
+
+      // Both entries carry the reasoning item id, which is what has to come back for the
+      // trace to be replayable.
+      expect(message.reasoning_details).toEqual([
+        {
+          id: "rs_123",
+          index: 0,
+          type: "reasoning.text",
+          text: "Checking the weather.",
+          signature: undefined,
+          format: "openai-responses-v1",
+        },
+        {
+          id: "rs_123",
+          index: 1,
+          type: "reasoning.encrypted",
+          data: "gAAAA",
+          format: "openai-responses-v1",
+        },
+      ]);
+    });
+
+    test("should emit the encrypted trace once per reasoning item", () => {
+      const message = toChatCompletionsAssistantMessage(
+        mockGenerateTextResult({
+          content: [openAISummaryPart("First."), openAISummaryPart("Second.")],
+        }),
+      );
+
+      expect(message.reasoning_details!.map((d) => [d.index, d.type])).toEqual([
+        [0, "reasoning.text"],
+        [1, "reasoning.encrypted"],
+        [2, "reasoning.text"],
+      ]);
+    });
+
+    test("should merge the encrypted entry back onto its summary part", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            type: "reasoning.text",
+            text: "Checking the weather.",
+            format: "openai-responses-v1",
+            id: "rs_123",
+            index: 0,
+          },
+          {
+            type: "reasoning.encrypted",
+            data: "gAAAA",
+            format: "openai-responses-v1",
+            id: "rs_123",
+            index: 1,
+          },
+        ],
+      });
+
+      // One part, not two: the provider wants the trace on the item it belongs to.
+      expect(message.content).toEqual([
+        {
+          type: "reasoning",
+          text: "Checking the weather.",
+          providerOptions: {
+            unknown: {
+              itemId: "rs_123",
+              redactedData: "gAAAA",
+              reasoningEncryptedContent: "gAAAA",
+            },
+          },
+        },
+      ]);
+    });
+
+    test("should not replay a non-OpenAI id as an OpenAI reasoning item id", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            type: "reasoning.encrypted",
+            data: "gAAAA",
+            format: "unknown",
+            id: "reasoning-4f2a",
+            index: 0,
+          },
+        ],
+      });
+
+      // itemId is gated on the format tag: OpenAI turns a bogus one into an item
+      // reference and rejects the request.
+      expect((message.content as Array<{ providerOptions?: unknown }>)[0]!.providerOptions).toEqual(
+        { unknown: { redactedData: "gAAAA", reasoningEncryptedContent: "gAAAA" } },
+      );
+    });
+
+    test("should emit the encrypted trace when the reasoning item closes in a stream", async () => {
+      const chunks = await collectStreamChunks([
+        {
+          type: "reasoning-delta",
+          id: "rs_123:0",
+          text: "Checking",
+          providerMetadata: { openai: { item_id: "rs_123" } },
+        },
+        {
+          type: "reasoning-end",
+          id: "rs_123:0",
+          providerMetadata: { openai: { item_id: "rs_123", reasoning_encrypted_content: "gAAAA" } },
+        },
+      ]);
+
+      expect(chunks[0]!.choices[0]!.delta.reasoning_details).toEqual([
+        {
+          id: "rs_123",
+          index: 0,
+          type: "reasoning.text",
+          text: "Checking",
+          signature: undefined,
+          format: "openai-responses-v1",
+        },
+      ]);
+      // Its own index, so a client concatenating by index does not splice the blob into
+      // the summary text.
+      expect(chunks[1]!.choices[0]!.delta.reasoning_details).toEqual([
+        {
+          id: "rs_123",
+          index: 1,
+          type: "reasoning.encrypted",
+          data: "gAAAA",
+          format: "openai-responses-v1",
+        },
+      ]);
+    });
+
+    test("should not emit a chunk for a reasoning item with no encrypted trace", async () => {
+      const chunks = await collectStreamChunks([
+        {
+          type: "reasoning-end",
+          id: "r-1",
+          providerMetadata: { anthropic: { signature: "sig" } },
+        },
+      ]);
+
+      expect(chunks).toHaveLength(0);
     });
   });
 });

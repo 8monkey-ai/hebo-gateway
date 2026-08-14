@@ -252,32 +252,119 @@ export function stripEmptyKeys(obj: unknown) {
   return obj;
 }
 
-export function extractReasoningMetadata(providerMetadata?: SharedV4ProviderMetadata): {
-  redactedData?: string;
+/**
+ * `reasoning_details[].format` tags, as enumerated by OpenRouter. Clients use them to
+ * tell which convention an opaque reasoning blob follows, so they can decide whether
+ * it is safe to replay. https://openrouter.ai/docs/use-cases/reasoning-tokens
+ */
+export type ReasoningFormat =
+  | "unknown"
+  | "openai-responses-v1"
+  | "azure-openai-responses-v1"
+  | "bedrock-openai-responses-v1"
+  | "xai-responses-v1"
+  | "meta-responses-v1"
+  | "anthropic-claude-v1"
+  | "google-gemini-v1";
+
+export const GEMINI_REASONING_FORMAT = "google-gemini-v1";
+
+/**
+ * Maps an AI SDK provider metadata namespace to the format tag for that provider's
+ * reasoning blobs. The params middleware snakizes metadata *values* but never renames
+ * namespaces, so these are the namespaces the providers themselves emit.
+ */
+const REASONING_FORMATS: Record<string, ReasoningFormat> = {
+  anthropic: "anthropic-claude-v1",
+  // Claude on Bedrock. GPT on Bedrock runs through the Mantle endpoint, which reports
+  // itself under `openai`.
+  bedrock: "anthropic-claude-v1",
+  amazonBedrock: "anthropic-claude-v1",
+  google: GEMINI_REASONING_FORMAT,
+  googleVertex: GEMINI_REASONING_FORMAT,
+  vertex: GEMINI_REASONING_FORMAT,
+  openai: "openai-responses-v1",
+  azure: "azure-openai-responses-v1",
+  xai: "xai-responses-v1",
+};
+
+export function toReasoningFormat(namespace: string): ReasoningFormat {
+  return REASONING_FORMATS[namespace] ?? "unknown";
+}
+
+/**
+ * OpenAI-style encrypted reasoning, whichever host serves it. These are the formats
+ * whose `id` is an OpenAI reasoning item id and can be replayed as one.
+ */
+export function isOpenAIReasoningFormat(format?: string | null): boolean {
+  return (
+    format === "openai-responses-v1" ||
+    format === "azure-openai-responses-v1" ||
+    format === "bedrock-openai-responses-v1"
+  );
+}
+
+export type ReasoningMetadata = {
+  /** Anthropic thinking signature. */
   signature?: string;
-} {
-  if (!providerMetadata) return {};
+  /** Anthropic redacted thinking payload. */
+  redactedData?: string;
+  /** OpenAI encrypted reasoning trace. */
+  encryptedContent?: string;
+  /** OpenAI reasoning item id the trace belongs to. */
+  itemId?: string;
+  /** Gemini thought signature. */
+  thoughtSignature?: string;
+  /** Format tag for the namespace the fields were found in. */
+  format: ReasoningFormat;
+};
 
-  for (const metadata of Object.values(providerMetadata)) {
-    if (metadata && typeof metadata === "object") {
-      let redactedData: string | undefined;
-      let signature: string | undefined;
-      let found = false;
+function readMetadataString(
+  metadata: JSONObject,
+  camelKey: string,
+  snakeKey: string,
+): string | undefined {
+  // Responses come back snakized by the params middleware; raw AI SDK output is camel.
+  const value = metadata[camelKey] ?? metadata[snakeKey];
+  return typeof value === "string" ? value : undefined;
+}
 
-      if ("redactedData" in metadata && typeof metadata["redactedData"] === "string") {
-        redactedData = metadata["redactedData"];
-        found = true;
-      }
-      if ("signature" in metadata && typeof metadata["signature"] === "string") {
-        signature = metadata["signature"];
-        found = true;
-      }
+/**
+ * Pulls every opaque reasoning artifact the supported providers attach to a reasoning
+ * or tool-call part, along with the format tag implied by its namespace. Namespaces are
+ * scanned rather than named so new hosts of the same model work without a code change.
+ */
+export function extractReasoningMetadata(
+  providerMetadata?: SharedV4ProviderMetadata,
+): ReasoningMetadata {
+  const out: ReasoningMetadata = { format: "unknown" };
+  if (!providerMetadata) return out;
 
-      if (found) {
-        return { redactedData, signature };
-      }
+  for (const namespace in providerMetadata) {
+    const metadata = providerMetadata[namespace];
+    if (!metadata || typeof metadata !== "object") continue;
+
+    if (out.format === "unknown") out.format = toReasoningFormat(namespace);
+
+    const signature = readMetadataString(metadata, "signature", "signature");
+    const redactedData = readMetadataString(metadata, "redactedData", "redacted_data");
+    const encryptedContent = readMetadataString(
+      metadata,
+      "reasoningEncryptedContent",
+      "reasoning_encrypted_content",
+    );
+    const itemId = readMetadataString(metadata, "itemId", "item_id");
+    const thoughtSignature = readMetadataString(metadata, "thoughtSignature", "thought_signature");
+
+    if (signature || redactedData || encryptedContent || itemId || thoughtSignature) {
+      out.signature = signature;
+      out.redactedData = redactedData;
+      out.encryptedContent = encryptedContent;
+      out.itemId = itemId;
+      out.thoughtSignature = thoughtSignature;
+      return out;
     }
   }
 
-  return {};
+  return out;
 }

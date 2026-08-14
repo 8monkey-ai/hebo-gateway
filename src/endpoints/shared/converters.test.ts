@@ -12,6 +12,8 @@ import {
   normalizeToolName,
   stripEmptyKeys,
   extractReasoningMetadata,
+  isOpenAIReasoningFormat,
+  toReasoningFormat,
 } from "./converters";
 
 describe("Shared Converters", () => {
@@ -212,15 +214,70 @@ describe("Shared Converters", () => {
       const metadata = {
         provider: { redactedData: "data", signature: "sig" },
       };
-      expect(extractReasoningMetadata(metadata)).toEqual({
+      expect(extractReasoningMetadata(metadata)).toMatchObject({
         redactedData: "data",
         signature: "sig",
       });
     });
 
-    test("should return empty object if not found", () => {
-      expect(extractReasoningMetadata({})).toEqual({});
-      expect(extractReasoningMetadata()).toEqual({});
+    test("should return only the format if nothing was found", () => {
+      expect(extractReasoningMetadata({})).toEqual({ format: "unknown" });
+      expect(extractReasoningMetadata()).toEqual({ format: "unknown" });
+    });
+
+    test("should extract OpenAI encrypted reasoning and item id", () => {
+      expect(
+        extractReasoningMetadata({
+          openai: { itemId: "rs_123", reasoningEncryptedContent: "enc" },
+        }),
+      ).toMatchObject({
+        itemId: "rs_123",
+        encryptedContent: "enc",
+        format: "openai-responses-v1",
+      });
+    });
+
+    test("should accept snakized metadata as emitted on the response path", () => {
+      expect(
+        extractReasoningMetadata({
+          openai: { item_id: "rs_123", reasoning_encrypted_content: "enc" },
+        }),
+      ).toMatchObject({ itemId: "rs_123", encryptedContent: "enc" });
+      expect(extractReasoningMetadata({ vertex: { thought_signature: "sig" } })).toMatchObject({
+        thoughtSignature: "sig",
+        format: "google-gemini-v1",
+      });
+    });
+
+    test("should derive the format tag from the provider namespace", () => {
+      expect(toReasoningFormat("anthropic")).toBe("anthropic-claude-v1");
+      expect(toReasoningFormat("bedrock")).toBe("anthropic-claude-v1");
+      expect(toReasoningFormat("amazonBedrock")).toBe("anthropic-claude-v1");
+      expect(toReasoningFormat("google")).toBe("google-gemini-v1");
+      expect(toReasoningFormat("vertex")).toBe("google-gemini-v1");
+      expect(toReasoningFormat("googleVertex")).toBe("google-gemini-v1");
+      expect(toReasoningFormat("openai")).toBe("openai-responses-v1");
+      expect(toReasoningFormat("azure")).toBe("azure-openai-responses-v1");
+      expect(toReasoningFormat("xai")).toBe("xai-responses-v1");
+      expect(toReasoningFormat("somethingelse")).toBe("unknown");
+    });
+
+    test("should report the format even when no blob is present", () => {
+      expect(extractReasoningMetadata({ anthropic: {} })).toEqual({
+        format: "anthropic-claude-v1",
+      });
+    });
+  });
+
+  describe("isOpenAIReasoningFormat", () => {
+    test("should cover every OpenAI-hosted variant", () => {
+      expect(isOpenAIReasoningFormat("openai-responses-v1")).toBe(true);
+      expect(isOpenAIReasoningFormat("azure-openai-responses-v1")).toBe(true);
+      expect(isOpenAIReasoningFormat("bedrock-openai-responses-v1")).toBe(true);
+      expect(isOpenAIReasoningFormat("anthropic-claude-v1")).toBe(false);
+      expect(isOpenAIReasoningFormat("google-gemini-v1")).toBe(false);
+      expect(isOpenAIReasoningFormat("unknown")).toBe(false);
+      expect(isOpenAIReasoningFormat()).toBe(false);
     });
   });
 });
