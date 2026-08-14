@@ -1,4 +1,4 @@
-import type { SharedV4ProviderMetadata } from "@ai-sdk/provider";
+import type { JSONObject, SharedV4ProviderMetadata } from "@ai-sdk/provider";
 import type {
   GenerateTextResult,
   StreamTextResult,
@@ -33,6 +33,8 @@ import {
   parseBase64,
   parseImageInput,
   extractReasoningMetadata,
+  GEMINI_REASONING_FORMAT,
+  type ReasoningMetadata,
   type RuntimeContext,
   type TextCallOptions,
   type ToolChoiceOptions,
@@ -195,41 +197,73 @@ export function fromChatCompletionsUserMessage(
   return out;
 }
 
+/** `ai` does not re-export its assistant content part types; narrow them out instead. */
+type ReasoningPart = Extract<Exclude<AssistantContent, string>[number], { type: "reasoning" }>;
+
+/**
+ * Turns a `reasoning_details` entry's opaque blobs into provider options.
+ *
+ * Every provider key for a slot is written rather than picking one from `format`:
+ * clients routinely flatten the tag, each provider reads only the key it knows, and
+ * provider option schemas strip the keys they do not.
+ */
+function toReasoningOptions(detail: ChatCompletionsReasoningDetail): Record<string, string> {
+  const options: Record<string, string> = {};
+  if (detail.signature) {
+    options["signature"] = detail.signature;
+    options["thoughtSignature"] = detail.signature;
+  }
+  if (detail.data) {
+    options["redactedData"] = detail.data;
+    options["reasoningEncryptedContent"] = detail.data;
+  }
+  if (detail.id) options["itemId"] = detail.id;
+  return options;
+}
+
 export function fromChatCompletionsAssistantMessage(
   message: ChatCompletionsAssistantMessage,
 ): AssistantModelMessage {
   const { tool_calls, role, content, extra_content, reasoning_details, cache_control } = message;
 
   const parts: AssistantContent = [];
+  /** Gemini thought signatures, keyed by the tool call they belong to. */
+  const thoughtSignatures = new Map<string, string>();
+  /** Reasoning parts by id, so OpenAI's text and encrypted entries merge back into one. */
+  const reasoningById = new Map<string, ReasoningPart>();
 
-  if (reasoning_details?.length) {
-    for (const detail of reasoning_details) {
-      if (detail.text && detail.type === "reasoning.text") {
-        parts.push({
-          type: "reasoning",
-          text: detail.text,
-          providerOptions: detail.signature
-            ? {
-                unknown: {
-                  signature: detail.signature,
-                },
-              }
-            : undefined,
-        });
-      } else if (detail.type === "reasoning.encrypted" && detail.data) {
-        parts.push({
-          type: "reasoning",
-          text: "",
-          providerOptions: {
-            unknown: {
-              redactedData: detail.data,
-            },
-          },
-        });
-      }
+  for (const detail of reasoning_details ?? []) {
+    // Gemini hangs its thought signature off a tool call rather than a reasoning block,
+    // so it travels as an encrypted entry carrying that call's id.
+    if (detail.type === "reasoning.encrypted" && detail.format === GEMINI_REASONING_FORMAT) {
+      if (detail.id && detail.data) thoughtSignatures.set(detail.id, detail.data);
+      continue;
     }
+
+    if (!detail.text && !detail.data) continue;
+    const options = toReasoningOptions(detail);
+
+    // OpenAI splits one reasoning item into a text entry and an encrypted entry sharing
+    // an id, and wants them back on a single part.
+    const existing = detail.id ? reasoningById.get(detail.id) : undefined;
+    if (existing) {
+      existing.text ||= detail.text ?? "";
+      existing.providerOptions = {
+        unknown: {
+          ...(existing.providerOptions?.["unknown"] as Record<string, string>),
+          ...options,
+        },
+      };
+      continue;
+    }
+
+    const part: ReasoningPart = { type: "reasoning", text: detail.text ?? "" };
+    if (Object.keys(options).length > 0) part.providerOptions = { unknown: options };
+    if (detail.id) reasoningById.set(detail.id, part);
+    parts.push(part);
   }
 
+  let lastTextPart: TextPart | undefined;
   if (content !== undefined && content !== null) {
     const inputContent =
       typeof content === "string"
@@ -247,8 +281,20 @@ export function fromChatCompletionsAssistantMessage(
           };
         }
         parts.push(textPart);
+        lastTextPart = textPart;
       }
     }
+  }
+
+  // Gemini signs plain text too, and that signature travels out on the message's
+  // extra_content. The provider only reads options off content parts, so put it back on
+  // the text that carried it.
+  const { thoughtSignature } = extractReasoningMetadata(extra_content ?? undefined);
+  if (thoughtSignature && lastTextPart) {
+    lastTextPart.providerOptions = {
+      ...lastTextPart.providerOptions,
+      unknown: { ...(lastTextPart.providerOptions?.["unknown"] as JSONObject), thoughtSignature },
+    };
   }
 
   if (tool_calls?.length) {
@@ -261,8 +307,14 @@ export function fromChatCompletionsAssistantMessage(
         toolName: fn.name,
         input: parseJsonOrText(fn.arguments).value,
       };
+      // The provider-specific extra_content wins; otherwise fall back to the thought
+      // signature from reasoning_details. `unknown` is merged into the provider's
+      // namespace by the params middleware, so it reaches Vertex as `thoughtSignature`.
+      const signature = thoughtSignatures.get(id);
       if (extra_content) {
         out.providerOptions = extra_content;
+      } else if (signature) {
+        out.providerOptions = { unknown: { thoughtSignature: signature } };
       }
       parts.push(out);
     }
@@ -513,7 +565,18 @@ export class ChatCompletionsTransformStream extends TransformStream<
     const creationTime = Math.floor(Date.now() / 1000);
     let toolCallIndexCounter = 0;
     const reasoningIdToIndex = new Map<string, number>();
+    const encryptedIds = new Set<string>();
     let finishProviderMetadata: SharedV4ProviderMetadata | undefined;
+
+    /** Reasoning entries share one index space, allocated in order of first appearance. */
+    const reasoningIndex = (key: string): number => {
+      let index = reasoningIdToIndex.get(key);
+      if (index === undefined) {
+        index = reasoningIdToIndex.size;
+        reasoningIdToIndex.set(key, index);
+      }
+      return index;
+    };
 
     const createChunk = (
       delta: ChatCompletionsAssistantMessageDelta,
@@ -558,12 +621,6 @@ export class ChatCompletionsTransformStream extends TransformStream<
           }
 
           case "reasoning-delta": {
-            let index = reasoningIdToIndex.get(part.id);
-            if (index === undefined) {
-              index = reasoningIdToIndex.size;
-              reasoningIdToIndex.set(part.id, index);
-            }
-
             controller.enqueue(
               createChunk(
                 {
@@ -576,12 +633,40 @@ export class ChatCompletionsTransformStream extends TransformStream<
                         providerMetadata: part.providerMetadata,
                       },
                       part.id,
-                      index,
+                      reasoningIndex(part.id),
                     ),
                   ],
                 },
                 part.providerMetadata,
               ),
+            );
+            break;
+          }
+
+          case "reasoning-end": {
+            // OpenAI only reveals its encrypted trace when the item closes, so it never
+            // rides along on a delta — and repeats it for every summary part of the item.
+            const { encryptedContent, itemId, format } = extractReasoningMetadata(
+              part.providerMetadata,
+            );
+            const id = itemId ?? part.id;
+            if (!encryptedContent || encryptedIds.has(id)) break;
+            encryptedIds.add(id);
+
+            controller.enqueue(
+              createChunk({
+                reasoning_details: [
+                  {
+                    id,
+                    // Keyed apart from the text deltas of the same block so the encrypted
+                    // entry gets an index of its own.
+                    index: reasoningIndex(`${id}:encrypted`),
+                    type: "reasoning.encrypted",
+                    data: encryptedContent,
+                    format,
+                  },
+                ],
+              }),
             );
             break;
           }
@@ -594,11 +679,20 @@ export class ChatCompletionsTransformStream extends TransformStream<
               part.providerMetadata,
             ) as ChatCompletionsToolCallDelta;
             toolCall.index = toolCallIndexCounter++;
-            controller.enqueue(
-              createChunk({
-                tool_calls: [toolCall],
-              }),
+
+            // Mirror the tool call's Gemini thought signature into reasoning_details.
+            const delta: ChatCompletionsAssistantMessageDelta = { tool_calls: [toolCall] };
+            const detail = toThoughtSignatureDetail(
+              part.toolCallId,
+              part.providerMetadata,
+              reasoningIdToIndex.size,
             );
+            if (detail) {
+              reasoningIdToIndex.set(`${part.toolCallId}:signature`, detail.index);
+              delta.reasoning_details = [detail];
+            }
+
+            controller.enqueue(createChunk(delta));
             break;
           }
 
@@ -650,6 +744,7 @@ export const toChatCompletionsAssistantMessage = (
   }
 
   const reasoningDetails: ChatCompletionsReasoningDetail[] = [];
+  const encryptedIds = new Set<string>();
 
   for (const part of result.content) {
     if (part.type === "text") {
@@ -662,10 +757,33 @@ export const toChatCompletionsAssistantMessage = (
         message.extra_content = part.providerMetadata;
       }
     } else if (part.type === "reasoning") {
-      reasoningDetails.push(
-        toReasoningDetail(part, `reasoning-${crypto.randomUUID()}`, reasoningDetails.length),
-      );
+      const metadata = extractReasoningMetadata(part.providerMetadata);
+      const id = metadata.itemId ?? `reasoning-${crypto.randomUUID()}`;
+      reasoningDetails.push(toReasoningDetail(part, id, reasoningDetails.length, metadata));
+
+      // OpenAI hands its encrypted trace over *alongside* the summary text rather than
+      // in place of it, repeating it on every summary part of the same item.
+      if (metadata.encryptedContent && !encryptedIds.has(id)) {
+        encryptedIds.add(id);
+        reasoningDetails.push({
+          id,
+          index: reasoningDetails.length,
+          type: "reasoning.encrypted",
+          data: metadata.encryptedContent,
+          format: metadata.format,
+        });
+      }
     }
+  }
+
+  // Appended after the reasoning entries so `index` stays in generation order.
+  for (const toolCall of result.toolCalls ?? []) {
+    const detail = toThoughtSignatureDetail(
+      toolCall.toolCallId,
+      toolCall.providerMetadata,
+      reasoningDetails.length,
+    );
+    if (detail) reasoningDetails.push(detail);
   }
 
   if (result.finalStep.reasoningText) {
@@ -688,26 +806,50 @@ export function toReasoningDetail(
   reasoning: ReasoningOutput,
   id: string,
   index: number,
+  metadata: ReasoningMetadata = extractReasoningMetadata(reasoning.providerMetadata),
 ): ChatCompletionsReasoningDetail {
-  const { redactedData, signature } = extractReasoningMetadata(reasoning.providerMetadata);
+  const { redactedData, signature, thoughtSignature, itemId, format } = metadata;
+  // OpenAI's reasoning item id is the correlation key clients must echo back, so it
+  // wins over the synthetic one.
+  const detailId = itemId ?? id;
 
+  // Anthropic sends redacted thinking *instead of* the text.
   if (redactedData) {
-    return {
-      id,
-      index,
-      type: "reasoning.encrypted",
-      data: redactedData,
-      format: "unknown",
-    };
+    return { id: detailId, index, type: "reasoning.encrypted", data: redactedData, format };
   }
 
   return {
-    id,
+    id: detailId,
     index,
     type: "reasoning.text",
     text: reasoning.text,
-    signature,
-    format: "unknown",
+    // Gemini calls its signature a thought signature; it plays the same role here.
+    signature: signature ?? thoughtSignature,
+    format,
+  };
+}
+
+/**
+ * Gemini hangs its thought signature off the tool call rather than off a reasoning
+ * block. Mirror it into a `reasoning_details` entry so OpenAI-compatible clients
+ * round-trip it: both OpenRouter and the Vercel AI Gateway use `reasoning.encrypted`
+ * with the blob in `data`, and OpenRouter sets `id` to the tool call it belongs to so it
+ * can be reattached to the right call on the next turn.
+ */
+export function toThoughtSignatureDetail(
+  toolCallId: string,
+  providerMetadata: SharedV4ProviderMetadata | undefined,
+  index: number,
+): ChatCompletionsReasoningDetail | undefined {
+  const { thoughtSignature } = extractReasoningMetadata(providerMetadata);
+  if (!thoughtSignature) return undefined;
+
+  return {
+    id: toolCallId,
+    index,
+    type: "reasoning.encrypted",
+    data: thoughtSignature,
+    format: GEMINI_REASONING_FORMAT,
   };
 }
 

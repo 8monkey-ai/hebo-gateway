@@ -8,10 +8,12 @@ import type {
   FilePart,
   LanguageModelUsage,
   AssistantModelMessage,
+  TextStreamPart,
 } from "ai";
 
 import type { RuntimeContext } from "../shared/converters";
 import {
+  ChatCompletionsTransformStream,
   convertToTextCallOptions,
   toChatCompletions,
   toChatCompletionsAssistantMessage,
@@ -20,7 +22,7 @@ import {
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
-import type { ChatCompletionsToolMessage } from "./schema";
+import type { ChatCompletionsAssistantMessageDelta, ChatCompletionsToolMessage } from "./schema";
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({
@@ -80,6 +82,22 @@ const mockGenerateTextResult = (
     ...result,
     finalStep: { ...result, stepNumber: 0 },
   } as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>;
+};
+
+const streamDeltas = async (parts: TextStreamPart<ToolSet>[]) => {
+  const source = new ReadableStream<TextStreamPart<ToolSet>>({
+    start(controller) {
+      for (const part of parts) controller.enqueue(part);
+      controller.close();
+    },
+  });
+
+  const deltas: ChatCompletionsAssistantMessageDelta[] = [];
+  for await (const frame of source.pipeThrough(new ChatCompletionsTransformStream("mock"))) {
+    if (frame.data instanceof Error) throw frame.data;
+    deltas.push(frame.data.choices[0]!.delta);
+  }
+  return deltas;
 };
 
 describe("Chat Completions Converters", () => {
@@ -260,7 +278,7 @@ describe("Chat Completions Converters", () => {
         type: "reasoning.text",
         text: "I am thinking...",
         signature: "sig-123",
-        format: "unknown",
+        format: "anthropic-claude-v1",
         index: 0,
       });
       expect(message.reasoning_details![0]!.id).toStartWith("reasoning-");
@@ -291,6 +309,128 @@ describe("Chat Completions Converters", () => {
       expect(message.reasoning_details![0]!.text).toBeUndefined();
       expect(message.reasoning_details![0]!.signature).toBeUndefined();
     });
+
+    test("should mirror a tool call thought signature into reasoning_details", () => {
+      const mockResult = mockGenerateTextResult({
+        finishReason: "tool-calls",
+        toolCalls: [
+          {
+            type: "tool-call",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            input: { location: "London" },
+            providerMetadata: { vertex: { thought_signature: "tool-signature" } },
+          },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.reasoning_details).toEqual([
+        {
+          id: "call_123",
+          index: 0,
+          type: "reasoning.encrypted",
+          data: "tool-signature",
+          format: "google-gemini-v1",
+        },
+      ]);
+    });
+
+    test("should emit OpenAI encrypted reasoning once per item", () => {
+      const providerMetadata = {
+        openai: { itemId: "rs_1", reasoningEncryptedContent: "encrypted-trace" },
+      };
+      const mockResult = mockGenerateTextResult({
+        content: [
+          { type: "reasoning", text: "First summary.", providerMetadata },
+          { type: "reasoning", text: "Second summary.", providerMetadata },
+        ],
+      });
+
+      const message = toChatCompletionsAssistantMessage(mockResult);
+
+      expect(message.reasoning_details).toEqual([
+        {
+          id: "rs_1",
+          index: 0,
+          type: "reasoning.text",
+          text: "First summary.",
+          signature: undefined,
+          format: "openai-responses-v1",
+        },
+        {
+          id: "rs_1",
+          index: 1,
+          type: "reasoning.encrypted",
+          data: "encrypted-trace",
+          format: "openai-responses-v1",
+        },
+        {
+          id: "rs_1",
+          index: 2,
+          type: "reasoning.text",
+          text: "Second summary.",
+          signature: undefined,
+          format: "openai-responses-v1",
+        },
+      ]);
+    });
+  });
+
+  describe("ChatCompletionsTransformStream", () => {
+    test("should emit a thought signature detail alongside the tool call", async () => {
+      const deltas = await streamDeltas([
+        {
+          type: "reasoning-delta",
+          id: "r1",
+          text: "Thinking...",
+          providerMetadata: { vertex: {} },
+        },
+        {
+          type: "tool-call",
+          toolCallId: "call_123",
+          toolName: "get_weather",
+          input: { location: "London" },
+          providerMetadata: { vertex: { thought_signature: "tool-signature" } },
+        },
+      ] as unknown as TextStreamPart<ToolSet>[]);
+
+      expect(deltas[0]!.reasoning_details![0]!.index).toBe(0);
+      expect(deltas[1]!.tool_calls![0]!.id).toBe("call_123");
+      // A separate index, so clients merging deltas by index keep them apart.
+      expect(deltas[1]!.reasoning_details).toEqual([
+        {
+          id: "call_123",
+          index: 1,
+          type: "reasoning.encrypted",
+          data: "tool-signature",
+          format: "google-gemini-v1",
+        },
+      ]);
+    });
+
+    test("should emit OpenAI encrypted reasoning once, on reasoning-end", async () => {
+      const providerMetadata = {
+        openai: { itemId: "rs_1", reasoningEncryptedContent: "encrypted-trace" },
+      };
+      const deltas = await streamDeltas([
+        { type: "reasoning-delta", id: "rs_1:0", text: "Summary.", providerMetadata },
+        { type: "reasoning-end", id: "rs_1:0", providerMetadata },
+        { type: "reasoning-end", id: "rs_1:1", providerMetadata },
+      ] as unknown as TextStreamPart<ToolSet>[]);
+
+      expect(deltas).toHaveLength(2);
+      expect(deltas[1]!.reasoning_details).toEqual([
+        {
+          id: "rs_1",
+          index: 1,
+          type: "reasoning.encrypted",
+          data: "encrypted-trace",
+          format: "openai-responses-v1",
+        },
+      ]);
+    });
   });
 
   describe("fromChatCompletionsAssistantMessage", () => {
@@ -318,6 +458,7 @@ describe("Chat Completions Converters", () => {
         providerOptions: {
           unknown: {
             signature: "sig-xyz",
+            thoughtSignature: "sig-xyz",
           },
         },
       });
@@ -349,8 +490,123 @@ describe("Chat Completions Converters", () => {
         providerOptions: {
           unknown: {
             redactedData: "secret-data",
+            reasoningEncryptedContent: "secret-data",
           },
         },
+      });
+    });
+
+    test("should reattach a gemini thought signature to its tool call", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "thought-sig",
+            format: "google-gemini-v1",
+          },
+        ],
+        tool_calls: [
+          { id: "call_1", type: "function", function: { name: "bash", arguments: "{}" } },
+          { id: "call_2", type: "function", function: { name: "bash", arguments: "{}" } },
+        ],
+      });
+
+      const content = message.content;
+      // The signature entry becomes tool call options, never a reasoning part.
+      expect(content).toHaveLength(2);
+      expect(content[0]).toMatchObject({
+        type: "tool-call",
+        toolCallId: "call_1",
+        providerOptions: { unknown: { thoughtSignature: "thought-sig" } },
+      });
+      expect(content[1]).toEqual({
+        type: "tool-call",
+        toolCallId: "call_2",
+        toolName: "bash",
+        input: {},
+      });
+    });
+
+    test("should prefer extra_content over reasoning_details for tool call signatures", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: null,
+        reasoning_details: [
+          {
+            id: "call_1",
+            index: 0,
+            type: "reasoning.encrypted",
+            data: "from-details",
+            format: "google-gemini-v1",
+          },
+        ],
+        tool_calls: [
+          {
+            id: "call_1",
+            type: "function",
+            function: { name: "bash", arguments: "{}" },
+            extra_content: { vertex: { thought_signature: "from-extra-content" } },
+          },
+        ],
+      });
+
+      expect(message.content[0]).toMatchObject({
+        providerOptions: { vertex: { thought_signature: "from-extra-content" } },
+      });
+    });
+
+    test("should merge OpenAI text and encrypted entries onto one reasoning part", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "Done.",
+        reasoning_details: [
+          {
+            id: "rs_1",
+            index: 0,
+            type: "reasoning.text",
+            text: "Summary.",
+            format: "openai-responses-v1",
+          },
+          {
+            id: "rs_1",
+            index: 1,
+            type: "reasoning.encrypted",
+            data: "encrypted-trace",
+            format: "openai-responses-v1",
+          },
+        ],
+      });
+
+      const content = message.content;
+      expect(content).toHaveLength(2);
+      expect(content[0]).toEqual({
+        type: "reasoning",
+        text: "Summary.",
+        providerOptions: {
+          unknown: {
+            itemId: "rs_1",
+            redactedData: "encrypted-trace",
+            reasoningEncryptedContent: "encrypted-trace",
+          },
+        },
+      });
+    });
+
+    test("should push a message-level thought signature onto the text part", () => {
+      const message = fromChatCompletionsAssistantMessage({
+        role: "assistant",
+        content: "Let me check the weather.",
+        extra_content: { vertex: { thought_signature: "text-sig" } },
+      });
+
+      expect(message.content[0]).toEqual({
+        type: "text",
+        text: "Let me check the weather.",
+        providerOptions: { unknown: { thoughtSignature: "text-sig" } },
       });
     });
 
