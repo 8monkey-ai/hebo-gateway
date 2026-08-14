@@ -26,6 +26,14 @@ test("other models fall back to the native provider", () => {
   expect(model.provider).toBe("google.vertex.chat");
 });
 
+// Dotted Gemini versions keep their delimiter, so no explicit mapping is needed.
+test("dotted Gemini versions resolve without an explicit mapping", () => {
+  const provider = withCanonicalIdsForVertex(vertex);
+  const model = provider.languageModel("google/gemini-3.7-flash");
+  expect(model.modelId).toBe("gemini-3.7-flash");
+  expect(model.provider).toBe("google.vertex.chat");
+});
+
 // ---------------------------------------------------------------------------
 // The MaaS override inherits the provider's project and credentials
 // ---------------------------------------------------------------------------

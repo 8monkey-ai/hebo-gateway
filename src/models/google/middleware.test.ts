@@ -19,6 +19,7 @@ test("geminiReasoningMiddleware > matching patterns", () => {
     "google/gemini-3-flash-preview",
     "google/gemini-3.1-flash-lite",
     "google/gemini-3.1-pro-preview",
+    "google/gemini-3.7-flash",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const nonMatching = ["google/gemini-1.5-pro", "google/gemini-1.5-flash"];
@@ -249,6 +250,38 @@ test("geminiReasoningMiddleware > should default reasoning effort for Gemini 3 F
     providerOptions: {
       google: {
         thinkingConfig: {
+          includeThoughts: true,
+        },
+      },
+      unknown: {},
+    },
+  });
+});
+
+// Uses the provider-native id: newer Gemini 3.x minors must hit the same branch
+// without an added pattern, so 3.8+ needs no middleware change.
+test("geminiReasoningMiddleware > should map thinking level for Gemini 3.7 Flash", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "high" },
+      },
+    },
+  };
+
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "gemini-3.7-flash" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          thinkingLevel: "high",
           includeThoughts: true,
         },
       },
