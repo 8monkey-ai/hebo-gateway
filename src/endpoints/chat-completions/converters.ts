@@ -34,6 +34,7 @@ import {
   parseImageInput,
   extractReasoningMetadata,
   GEMINI_REASONING_FORMAT,
+  type ReasoningFormat,
   type ReasoningMetadata,
   type RuntimeContext,
   type TextCallOptions,
@@ -511,6 +512,17 @@ function parseToolResult(
 
 // --- Response Flow ---
 
+/**
+ * The single wire shape every opaque reasoning blob leaves as: Anthropic's redacted
+ * thinking, OpenAI's encrypted trace and Gemini's thought signature.
+ */
+const encryptedReasoningDetail = (
+  id: string,
+  index: number,
+  data: string,
+  format: ReasoningFormat,
+): ChatCompletionsReasoningDetail => ({ id, index, type: "reasoning.encrypted", data, format });
+
 export function toChatCompletions(
   result: GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,
   model: string,
@@ -653,19 +665,12 @@ export class ChatCompletionsTransformStream extends TransformStream<
             if (!encryptedContent || encryptedIds.has(id)) break;
             encryptedIds.add(id);
 
+            // Keyed apart from the text deltas of the same block so the encrypted entry
+            // gets an index of its own.
+            const index = reasoningIndex(`${id}:encrypted`);
             controller.enqueue(
               createChunk({
-                reasoning_details: [
-                  {
-                    id,
-                    // Keyed apart from the text deltas of the same block so the encrypted
-                    // entry gets an index of its own.
-                    index: reasoningIndex(`${id}:encrypted`),
-                    type: "reasoning.encrypted",
-                    data: encryptedContent,
-                    format,
-                  },
-                ],
+                reasoning_details: [encryptedReasoningDetail(id, index, encryptedContent, format)],
               }),
             );
             break;
@@ -765,13 +770,14 @@ export const toChatCompletionsAssistantMessage = (
       // in place of it, repeating it on every summary part of the same item.
       if (metadata.encryptedContent && !encryptedIds.has(id)) {
         encryptedIds.add(id);
-        reasoningDetails.push({
-          id,
-          index: reasoningDetails.length,
-          type: "reasoning.encrypted",
-          data: metadata.encryptedContent,
-          format: metadata.format,
-        });
+        reasoningDetails.push(
+          encryptedReasoningDetail(
+            id,
+            reasoningDetails.length,
+            metadata.encryptedContent,
+            metadata.format,
+          ),
+        );
       }
     }
   }
@@ -815,7 +821,7 @@ export function toReasoningDetail(
 
   // Anthropic sends redacted thinking *instead of* the text.
   if (redactedData) {
-    return { id: detailId, index, type: "reasoning.encrypted", data: redactedData, format };
+    return encryptedReasoningDetail(detailId, index, redactedData, format);
   }
 
   return {
@@ -844,13 +850,7 @@ export function toThoughtSignatureDetail(
   const { thoughtSignature } = extractReasoningMetadata(providerMetadata);
   if (!thoughtSignature) return undefined;
 
-  return {
-    id: toolCallId,
-    index,
-    type: "reasoning.encrypted",
-    data: thoughtSignature,
-    format: GEMINI_REASONING_FORMAT,
-  };
+  return encryptedReasoningDetail(toolCallId, index, thoughtSignature, GEMINI_REASONING_FORMAT);
 }
 
 export function toChatCompletionsUsage(usage: LanguageModelUsage): ChatCompletionsUsage {
