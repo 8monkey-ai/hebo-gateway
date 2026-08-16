@@ -1,4 +1,14 @@
-import { metrics, type Attributes, type Histogram } from "@opentelemetry/api";
+import { metrics, type Attributes, type Counter, type Histogram } from "@opentelemetry/api";
+import {
+  InvalidResponseDataError,
+  InvalidToolInputError,
+  JSONParseError,
+  MissingToolResultsError,
+  NoObjectGeneratedError,
+  NoSuchToolError,
+  ToolCallRepairError,
+  TypeValidationError,
+} from "ai";
 
 import { STATUS_TEXT } from "../errors/utils";
 import { logger } from "../logger";
@@ -212,4 +222,96 @@ const emitOutputTokens = (emit: Emit, tokenAttrs: Attributes) => {
   }
   emit(reasoned, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": true });
   emit(nonReasoning, { "gen_ai.token.type": "output", "gen_ai.token.reasoning": false });
+};
+
+export type FeatureErrorType =
+  | "invalid_input"
+  | "unknown_tool"
+  | "repair_failed"
+  | "missing_results"
+  | "invalid_json"
+  | "schema_mismatch"
+  | "no_output"
+  | "invalid_response";
+
+type FeatureKind = "tool_call" | "structured_output";
+
+const FEATURE_COUNTERS: Record<FeatureKind, { name: string; description: string }> = {
+  tool_call: {
+    name: "gen_ai.server.tool_call",
+    description:
+      "Number of requests that exercised tool calling. error.type is set only on failure.",
+  },
+  structured_output: {
+    name: "gen_ai.server.structured_output",
+    description:
+      "Number of requests that exercised structured output. error.type is set only on failure.",
+  },
+};
+
+const featureCounters: Partial<Record<FeatureKind, Counter>> = {};
+
+const getFeatureCounter = (kind: FeatureKind) =>
+  (featureCounters[kind] ??= getMeter().createCounter(FEATURE_COUNTERS[kind].name, {
+    description: FEATURE_COUNTERS[kind].description,
+    unit: "{invocation}",
+  }));
+
+const classifyAiSdkError = (
+  error: unknown,
+): { kind: FeatureKind; type: FeatureErrorType } | undefined => {
+  if (InvalidToolInputError.isInstance(error)) return { kind: "tool_call", type: "invalid_input" };
+  if (NoSuchToolError.isInstance(error)) return { kind: "tool_call", type: "unknown_tool" };
+  if (ToolCallRepairError.isInstance(error)) return { kind: "tool_call", type: "repair_failed" };
+  if (MissingToolResultsError.isInstance(error))
+    return { kind: "tool_call", type: "missing_results" };
+  if (NoObjectGeneratedError.isInstance(error))
+    return { kind: "structured_output", type: "no_output" };
+  if (TypeValidationError.isInstance(error))
+    return { kind: "structured_output", type: "schema_mismatch" };
+  if (JSONParseError.isInstance(error)) return { kind: "structured_output", type: "invalid_json" };
+  if (InvalidResponseDataError.isInstance(error))
+    return { kind: "structured_output", type: "invalid_response" };
+  return undefined;
+};
+
+export const recordFeatureOutcome = (
+  kind: FeatureKind,
+  metricAttrs: Attributes,
+  errorType: FeatureErrorType | undefined,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (!signalLevel || (signalLevel !== "recommended" && signalLevel !== "full")) return;
+  const attrs = errorType
+    ? Object.assign({}, metricAttrs, { "error.type": errorType })
+    : metricAttrs;
+  getFeatureCounter(kind).add(1, attrs);
+};
+
+export const recordFeatureUsage = (
+  options: { tools?: unknown; output?: unknown },
+  metricAttrs: Attributes,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  if (options.tools && Object.keys(options.tools as object).length > 0) {
+    recordFeatureOutcome("tool_call", metricAttrs, undefined, signalLevel);
+  }
+  if (options.output) {
+    recordFeatureOutcome("structured_output", metricAttrs, undefined, signalLevel);
+  }
+};
+
+/**
+ * Classifies an error against known AI SDK error classes and emits a failure on
+ * the corresponding feature counter. No-op for unrelated errors (those are
+ * captured by `gen_ai.server.request.duration`).
+ */
+export const recordAiSdkFeatureError = (
+  error: unknown,
+  metricAttrs: Attributes,
+  signalLevel?: TelemetrySignalLevel,
+) => {
+  const classified = classifyAiSdkError(error);
+  if (!classified) return;
+  recordFeatureOutcome(classified.kind, metricAttrs, classified.type, signalLevel);
 };
