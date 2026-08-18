@@ -7,6 +7,7 @@ import {
   geminiEmbedding2,
   gemma31b,
   gemma4E4b,
+  gemma426bA4b,
   gemma,
   gemini,
 } from "./presets";
@@ -119,6 +120,16 @@ test("gemma4E4b > should expose audio+image input with vertex provider", () => {
       capabilities: ["tool_call", "structured_output", "temperature"],
       context: 131072,
       providers: ["vertex"],
+    },
+  });
+});
+
+test("gemma426bA4b > should advertise reasoning capability", () => {
+  expect(gemma426bA4b()).toMatchObject({
+    "google/gemma-4-26b-a4b": {
+      capabilities: ["reasoning", "tool_call", "structured_output", "temperature"],
+      context: 262144,
+      providers: ["vertex", "deepinfra"],
     },
   });
 });

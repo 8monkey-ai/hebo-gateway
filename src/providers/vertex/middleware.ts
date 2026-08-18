@@ -70,11 +70,18 @@ modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
 export const vertexGemma4ThinkingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
+    // MaaS uses the OpenAI-compatible provider, whose generic forwarding
+    // middleware runs before this provider middleware. Restrict the mapping to
+    // the routed native model so the same catalog entry remains unchanged on
+    // other providers.
+    if (model.modelId !== "google/gemma-4-26b-a4b-it-maas") return params;
+
     const vertex = params.providerOptions?.["vertex"];
     if (!vertex || typeof vertex !== "object") return params;
 
     const reasoning = vertex["reasoning"] as ChatCompletionsReasoningConfig | undefined;
+
     if (!reasoning) return params;
 
     // Normalization drops `enabled: true` when no effort/budget is set,
@@ -87,6 +94,6 @@ export const vertexGemma4ThinkingMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel(["google/gemma-4-*"], {
+modelMiddlewareMatcher.useForProvider(["vertex.maas", "vertex.maas.*"], {
   language: [vertexGemma4ThinkingMiddleware],
 });

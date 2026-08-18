@@ -118,21 +118,24 @@ for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
   });
 }
 
-test("vertexGemma4ThinkingMiddleware > is registered only for gemma-4", () => {
+test("vertexGemma4ThinkingMiddleware > is registered only for Vertex MaaS", () => {
   expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas")).toContain(
     vertexGemma4ThinkingMiddleware,
   );
-  expect(modelMiddlewareMatcher.for("openai/gpt-oss-120b-maas", "vertex.maas")).not.toContain(
+  expect(modelMiddlewareMatcher.for("openai/gpt-oss-120b-maas", "vertex.maas")).toContain(
     vertexGemma4ThinkingMiddleware,
   );
-  expect(modelMiddlewareMatcher.for("google/gemma-3-27b", "vertex.maas")).not.toContain(
+  expect(modelMiddlewareMatcher.for("google/gemma-3-27b", "deepinfra")).not.toContain(
     vertexGemma4ThinkingMiddleware,
   );
 });
 
 test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", async () => {
   const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat");
-  const model = new MockLanguageModelV4({ modelId: "google/gemma-4-26b-a4b-it-maas" });
+  const model = new MockLanguageModelV4({
+    provider: "vertex.maas.chat",
+    modelId: "google/gemma-4-26b-a4b-it-maas",
+  });
 
   const params = await chain.reduce(
     async (acc, { transformParams }) => {
@@ -149,5 +152,55 @@ test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", as
 
   expect(params.providerOptions).toEqual({
     vertex: { chat_template_kwargs: { enable_thinking: true } },
+  });
+});
+
+test("vertexGemma4ThinkingMiddleware > does not translate other MaaS models", async () => {
+  const chain = modelMiddlewareMatcher.for("openai/gpt-oss-120b", "vertex.maas.chat");
+  const model = new MockLanguageModelV4({
+    provider: "vertex.maas.chat",
+    modelId: "openai/gpt-oss-120b-maas",
+  });
+
+  const params = await chain.reduce(
+    async (acc, { transformParams }) => {
+      const current = await acc;
+      return transformParams
+        ? transformParams({ type: "generate", params: current, model })
+        : current;
+    },
+    Promise.resolve({
+      prompt: [],
+      providerOptions: { unknown: { reasoning: { enabled: true } } },
+    } as LanguageModelV4CallOptions),
+  );
+
+  expect(params.providerOptions).toEqual({
+    vertex: { reasoning: { enabled: true } },
+  });
+});
+
+test("vertexGemma4ThinkingMiddleware > does not translate reasoning for non-Vertex providers", async () => {
+  const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "deepinfra");
+  const model = new MockLanguageModelV4({
+    provider: "deepinfra",
+    modelId: "google/gemma-4-26b-a4b-it",
+  });
+
+  const params = await chain.reduce(
+    async (acc, { transformParams }) => {
+      const current = await acc;
+      return transformParams
+        ? transformParams({ type: "generate", params: current, model })
+        : current;
+    },
+    Promise.resolve({
+      prompt: [],
+      providerOptions: { unknown: { reasoning: { enabled: true } } },
+    } as LanguageModelV4CallOptions),
+  );
+
+  expect(params.providerOptions).toEqual({
+    deepinfra: { reasoning: { enabled: true } },
   });
 });

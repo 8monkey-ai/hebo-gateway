@@ -668,8 +668,25 @@ export const toChatCompletionsAssistantMessage = (
     }
   }
 
+  // OpenAI-compatible providers normally expose reasoning in `content`, but
+  // keep the response converter compatible with providers that populate the
+  // AI SDK result's normalized final-step reasoning field instead.
+  if (reasoningDetails.length === 0) {
+    for (const part of result.finalStep.reasoning ?? []) {
+      if (part.type === "reasoning") {
+        reasoningDetails.push(
+          toReasoningDetail(part, `reasoning-${crypto.randomUUID()}`, reasoningDetails.length),
+        );
+      }
+    }
+  }
+
   if (result.finalStep.reasoningText) {
     message.reasoning = result.finalStep.reasoningText;
+  } else if (reasoningDetails.length > 0) {
+    message.reasoning = reasoningDetails
+      .flatMap((detail) => (detail.type === "reasoning.text" && detail.text ? [detail.text] : []))
+      .join("");
   }
 
   if (reasoningDetails.length > 0) {

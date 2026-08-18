@@ -15,6 +15,7 @@ import {
   convertToTextCallOptions,
   toChatCompletions,
   toChatCompletionsAssistantMessage,
+  ChatCompletionsTransformStream,
   toChatCompletionsToolCall,
   toChatCompletionsUsage,
   fromChatCompletionsAssistantMessage,
@@ -291,6 +292,87 @@ describe("Chat Completions Converters", () => {
       expect(message.reasoning_details![0]!.text).toBeUndefined();
       expect(message.reasoning_details![0]!.signature).toBeUndefined();
     });
+
+    test("should surface normalized final-step reasoning separately from content", () => {
+      const message = toChatCompletionsAssistantMessage(
+        mockGenerateTextResult({
+          text: "Final answer.",
+          content: [{ type: "text", text: "Final answer." }],
+          reasoning: [{ type: "reasoning", text: "I am thinking..." }],
+        }),
+      );
+
+      expect(message).toMatchObject({
+        content: "Final answer.",
+        reasoning: "I am thinking...",
+        reasoning_details: [
+          {
+            type: "reasoning.text",
+            text: "I am thinking...",
+            index: 0,
+          },
+        ],
+      });
+    });
+  });
+
+  describe("ChatCompletionsTransformStream", () => {
+    test("should keep reasoning deltas separate from text deltas", async () => {
+      const input = new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "reasoning-delta", id: "r1", text: "Think first. " });
+          controller.enqueue({ type: "text-delta", id: "t1", text: "Final answer." });
+          controller.close();
+        },
+      });
+
+      const output = input.pipeThrough(
+        new ChatCompletionsTransformStream("google/gemma-4-26b-a4b"),
+      );
+      const chunks = [];
+      for await (const frame of output) {
+        const data = frame.data;
+        if (data instanceof Error) throw new Error(data.message);
+        chunks.push(data.choices[0]!.delta);
+      }
+
+      expect(chunks).toEqual([
+        {
+          reasoning: "Think first. ",
+          reasoning_details: [
+            {
+              id: "r1",
+              index: 0,
+              type: "reasoning.text",
+              text: "Think first. ",
+              format: "unknown",
+            },
+          ],
+        },
+        { role: "assistant", content: "Final answer." },
+      ]);
+    });
+
+    test("should keep non-reasoning streams unchanged", async () => {
+      const input = new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "text-delta", id: "t1", text: "Final answer." });
+          controller.close();
+        },
+      });
+
+      const output = input.pipeThrough(
+        new ChatCompletionsTransformStream("google/gemma-4-26b-a4b"),
+      );
+      const chunks = [];
+      for await (const frame of output) {
+        const data = frame.data;
+        if (data instanceof Error) throw new Error(data.message);
+        chunks.push(data.choices[0]!.delta);
+      }
+
+      expect(chunks).toEqual([{ role: "assistant", content: "Final answer." }]);
+    });
   });
 
   describe("fromChatCompletionsAssistantMessage", () => {
@@ -498,7 +580,7 @@ describe("Chat Completions Converters", () => {
             },
           ],
         }),
-      ).toThrow(/Unsupported image media type/);
+      ).toThrow(/Unsupported image media type/u);
     });
 
     test("should convert input_audio content parts to file user content", () => {
