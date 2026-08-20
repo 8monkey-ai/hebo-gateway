@@ -143,7 +143,8 @@ export function convertToModelMessages(messages: ChatCompletionsMessage[]): Mode
   for (const message of messages) {
     if (message.role === "tool") continue;
 
-    if (message.role === "system") {
+    // `developer` is the OpenAI successor of `system`; both map to system instructions.
+    if (message.role === "system" || message.role === "developer") {
       const content = Array.isArray(message.content)
         ? message.content.map((p) => p.text).join("")
         : message.content;
