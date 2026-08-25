@@ -117,6 +117,7 @@ const toMessageParts = (message: ChatCompletionsMessage) => {
     // FUTURE: remove once Langfuse supports gen_ai.system_instructions
     // https://github.com/langfuse/langfuse/issues/11607
     case "system":
+    case "developer":
       return toTextParts(message.content);
     default:
       return [{ type: (message as { role: string }).role, content: "[UNHANDLED_ROLE]" }];

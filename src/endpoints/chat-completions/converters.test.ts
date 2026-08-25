@@ -782,6 +782,45 @@ describe("Chat Completions Converters", () => {
       });
     });
 
+    test("should convert developer messages to system role", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          { role: "developer", content: "You are concise." },
+          { role: "user", content: "hi" },
+        ],
+      });
+
+      expect(result.messages).toEqual([
+        { role: "system", content: "You are concise." },
+        { role: "user", content: "hi" },
+      ]);
+    });
+
+    test("should normalize array content and cache_control in developer message", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "developer",
+            content: [
+              { type: "text", text: "You are Brave Assistant, " },
+              { type: "text", text: "a helpful AI." },
+            ],
+            cache_control: { type: "ephemeral", ttl: "1h" },
+          },
+          { role: "user", content: "hi" },
+        ],
+      });
+
+      expect(result.messages[0]).toMatchObject({
+        role: "system",
+        content: "You are Brave Assistant, a helpful AI.",
+      });
+      expect(result.messages[0]!.providerOptions!["unknown"]!["cache_control"]).toEqual({
+        type: "ephemeral",
+        ttl: "1h",
+      });
+    });
+
     test("should map service_tier into providerOptions.unknown", () => {
       const result = convertToTextCallOptions({
         messages: [{ role: "user", content: "hi" }],

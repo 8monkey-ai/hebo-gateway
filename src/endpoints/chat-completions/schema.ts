@@ -90,6 +90,16 @@ export const ChatCompletionsSystemMessageSchema = z.object({
 });
 export type ChatCompletionsSystemMessage = z.infer<typeof ChatCompletionsSystemMessageSchema>;
 
+// Replaces `system` for o1-and-newer OpenAI models; treated as system instructions.
+export const ChatCompletionsDeveloperMessageSchema = z.object({
+  role: z.literal("developer"),
+  content: z.union([z.string(), z.array(ChatCompletionsContentPartTextSchema)]),
+  name: z.string().nullish(),
+  // Extension origin: OpenRouter/Vercel/Anthropic
+  cache_control: ChatCompletionsCacheControlSchema.nullish().meta({ extension: true }),
+});
+export type ChatCompletionsDeveloperMessage = z.infer<typeof ChatCompletionsDeveloperMessageSchema>;
+
 export const ChatCompletionsUserMessageSchema = z.object({
   role: z.literal("user"),
   content: z.union([z.string(), z.array(ChatCompletionsContentPartSchema)]),
@@ -142,6 +152,7 @@ export type ChatCompletionsToolMessage = z.infer<typeof ChatCompletionsToolMessa
 
 export const ChatCompletionsMessageSchema = z.discriminatedUnion("role", [
   ChatCompletionsSystemMessageSchema,
+  ChatCompletionsDeveloperMessageSchema,
   ChatCompletionsUserMessageSchema,
   ChatCompletionsAssistantMessageSchema,
   ChatCompletionsToolMessageSchema,

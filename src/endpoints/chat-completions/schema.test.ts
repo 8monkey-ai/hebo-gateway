@@ -125,4 +125,18 @@ describe("ChatCompletionsBodySchema", () => {
     const parsed = ChatCompletionsBodySchema.safeParse(body);
     expect(parsed.success).toBe(true);
   });
+
+  test("accepts developer messages with string and array content", () => {
+    const body = {
+      model: "gpt-4o",
+      messages: [
+        { role: "developer", content: "dev", name: null, cache_control: null },
+        { role: "developer", content: [{ type: "text", text: "dev part" }] },
+        { role: "user", content: "hi" },
+      ],
+    };
+
+    const parsed = ChatCompletionsBodySchema.safeParse(body);
+    expect(parsed.success).toBe(true);
+  });
 });

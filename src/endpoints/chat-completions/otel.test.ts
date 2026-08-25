@@ -92,6 +92,22 @@ describe("Chat Completions OTEL", () => {
     ]);
   });
 
+  test("should map developer message text parts in request attributes", () => {
+    const inputs: ChatCompletionsBody = {
+      model: "openai/gpt-oss-20b",
+      messages: [{ role: "developer", content: "be concise" }],
+    };
+
+    const attrs = getChatRequestAttributes(inputs, "full");
+
+    expect(attrs["gen_ai.input.messages"]).toEqual([
+      JSON.stringify({
+        role: "developer",
+        parts: [{ type: "text", content: "be concise" }],
+      }),
+    ]);
+  });
+
   test("should map assistant text content part arrays in request attributes", () => {
     const inputs: ChatCompletionsBody = {
       model: "openai/gpt-oss-20b",
