@@ -289,7 +289,9 @@ export function fromChatCompletionsAssistantMessage(
 
   // Gemini signs plain text too, and that signature travels out on the message's
   // extra_content. The provider only reads options off content parts, so put it back on
-  // the text that carried it.
+  // the text that carried it. extra_content is still passed through verbatim below,
+  // where it stands for the whole message (cache control, service tier, ...); this copy
+  // is the only one the provider actually reads.
   const { thoughtSignature } = extractReasoningMetadata(extra_content ?? undefined);
   if (thoughtSignature && lastTextPart) {
     lastTextPart.providerOptions = {
@@ -635,16 +637,21 @@ export class ChatCompletionsTransformStream extends TransformStream<
           case "reasoning-start": {
             // Anthropic hands redacted thinking over as the block opens, in place of any
             // text, so no delta ever carries it.
-            const { redactedData, format } = extractReasoningMetadata(part.providerMetadata);
-            if (!redactedData || encryptedIds.has(part.id)) break;
-            encryptedIds.add(part.id);
+            const { redactedData, itemId, format } = extractReasoningMetadata(
+              part.providerMetadata,
+            );
+            // Same id precedence as reasoning-end and the non-streaming path, so one item
+            // can never be emitted twice under two ids.
+            const id = itemId ?? part.id;
+            if (!redactedData || encryptedIds.has(id)) break;
+            encryptedIds.add(id);
 
             controller.enqueue(
               createChunk({
                 reasoning_details: [
                   encryptedReasoningDetail(
-                    part.id,
-                    reasoningIndex(`${part.id}:encrypted`),
+                    id,
+                    reasoningIndex(`${id}:encrypted`),
                     redactedData,
                     format,
                   ),
@@ -789,6 +796,8 @@ export const toChatCompletionsAssistantMessage = (
       }
     } else if (part.type === "reasoning") {
       const metadata = extractReasoningMetadata(part.providerMetadata);
+      // Unlike stream parts, generateText content parts carry no id of their own, so
+      // synthesize one when the provider does not name the item.
       const id = metadata.itemId ?? `reasoning-${crypto.randomUUID()}`;
       reasoningDetails.push(toReasoningDetail(part, id, reasoningDetails.length, metadata));
 
@@ -868,7 +877,7 @@ export function toReasoningDetail(
  * with the blob in `data`, and OpenRouter sets `id` to the tool call it belongs to so it
  * can be reattached to the right call on the next turn.
  */
-export function toThoughtSignatureDetail(
+function toThoughtSignatureDetail(
   toolCallId: string,
   providerMetadata: SharedV4ProviderMetadata | undefined,
   index: number,
