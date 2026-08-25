@@ -461,7 +461,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
       });
 
       expect(step2.status).toBe("completed");
-      expect(getOutputText(step2).toLowerCase()).toMatch(/paris|22|sunny|celsius/);
+      expect(getOutputText(step2).toLowerCase()).toMatch(/paris|22|sunny|celsius/u);
     },
     { timeout: 90_000 },
   );
@@ -591,7 +591,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
       });
 
       expect(response.status).toBe("completed");
-      const content = getOutputText(response).replaceAll(/[\s,{}\\]/g, "");
+      const content = getOutputText(response).replaceAll(/[\s,{}\\]/gu, "");
       expect(content).toContain("12231");
     },
     { timeout: 120_000 },
@@ -666,7 +666,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
         expect(Array.isArray(reasoningItem.summary)).toBe(true);
       }
 
-      const content = getOutputText(response).replaceAll(/[\s,{}\\]/g, "");
+      const content = getOutputText(response).replaceAll(/[\s,{}\\]/gu, "");
       expect(content).toContain("3901");
     },
     { timeout: 120_000 },

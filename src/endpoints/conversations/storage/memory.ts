@@ -56,8 +56,7 @@ export class InMemoryStorage implements ConversationStorage {
 
       if (obj instanceof Map) {
         for (const [k, v] of obj as Map<unknown, unknown>) {
-          stack.push(k);
-          stack.push(v);
+          stack.push(k, v);
         }
         continue;
       }

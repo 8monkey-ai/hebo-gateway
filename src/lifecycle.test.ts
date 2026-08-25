@@ -148,6 +148,7 @@ describe("winterCgHandler", () => {
     });
 
     const handler = winterCgHandler(
+      // eslint-disable-next-line require-await -- must reject, not throw synchronously
       async (ctx) => {
         ctx.operation = "chat";
         ctx.otel["custom.tenant"] = "tenant-123";

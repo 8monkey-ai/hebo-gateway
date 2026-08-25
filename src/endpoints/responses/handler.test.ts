@@ -342,20 +342,20 @@ describe("Responses Handler", () => {
     }
 
     // Check response.created
-    const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/);
+    const createdMatch = result.match(/event: response\.created\ndata: (\{.*?\})\n/u);
     expect(createdMatch).toBeTruthy();
     const createdData = (JSON.parse(createdMatch![1]!) as ResponseCreatedEvent["data"]).response;
     expect(createdData.status).toBe("in_progress");
 
     // Check response.in_progress
-    const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/);
+    const inProgressMatch = result.match(/event: response\.in_progress\ndata: (\{.*?\})\n/u);
     expect(inProgressMatch).toBeTruthy();
     const inProgressData = (JSON.parse(inProgressMatch![1]!) as ResponseInProgressEvent["data"])
       .response;
     expect(inProgressData.status).toBe("in_progress");
 
     // Check response.completed
-    const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/);
+    const completedMatch = result.match(/event: response\.completed\ndata: (\{.*?\})\n/u);
     expect(completedMatch).toBeTruthy();
     const completedData = (JSON.parse(completedMatch![1]!) as ResponseCompletedEvent["data"])
       .response;

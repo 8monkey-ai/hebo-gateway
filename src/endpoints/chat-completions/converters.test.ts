@@ -778,7 +778,7 @@ describe("Chat Completions Converters", () => {
             },
           ],
         }),
-      ).toThrow(/Unsupported image media type/);
+      ).toThrow(/Unsupported image media type/u);
     });
 
     test("should convert input_audio content parts to file user content", () => {

@@ -22,5 +22,13 @@
     "strict-boolean-expressions": "off",
     "prefer-readonly-parameter-types": "off"
   },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "consistent-function-scoping": "off"
+      }
+    }
+  ],
   "ignorePatterns": ["dist/**", "node_modules/**", "examples/**"]
 }

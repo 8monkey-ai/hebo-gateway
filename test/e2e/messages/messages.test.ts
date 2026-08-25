@@ -410,7 +410,7 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
         ?.text;
       expect(text).toBeDefined();
       // The model should incorporate the tool result
-      expect(text.toLowerCase()).toMatch(/paris|22|sunny|celsius/);
+      expect(text.toLowerCase()).toMatch(/paris|22|sunny|celsius/u);
     },
     { timeout: 90_000 },
   );

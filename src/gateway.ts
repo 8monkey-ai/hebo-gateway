@@ -13,7 +13,7 @@ import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
 let inflight = 0;
 
 export function gateway(config: GatewayConfig) {
-  const basePath = (config.basePath ?? "").replace(/\/+$/, "");
+  const basePath = (config.basePath ?? "").replace(/\/+$/u, "");
   const parsedConfig = parseConfig(config);
 
   const notFoundHandler = winterCgHandler(() => {

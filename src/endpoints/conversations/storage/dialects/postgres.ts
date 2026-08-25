@@ -195,6 +195,8 @@ function createBunPostgresExecutor(
       // protocol don't populate `count` or `affectedRows`, but they do provide a command
       // string like "OK 1"
       if (changes === 0 && result.command?.startsWith("OK ")) {
+        // parseInt stops at the first non-digit; Number() would yield NaN for trailing text
+        // eslint-disable-next-line prefer-number-coercion
         const parsed = parseInt(result.command.slice(3), 10);
         if (!isNaN(parsed)) changes = parsed;
       }

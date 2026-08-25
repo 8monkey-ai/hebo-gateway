@@ -55,7 +55,7 @@ export const escapeSqlString = (str: string) => str.replaceAll("'", "''");
  * This normalization converts those escapes back into literal characters before parsing.
  */
 function normalizeJsonUnicodeEscapes(value: string): string {
-  return value.replaceAll(/\\u\{([0-9a-fA-F]+)\}/g, (_, hex) => String.fromCodePoint(+`0x${hex}`));
+  return value.replaceAll(/\\u\{([0-9a-fA-F]+)\}/gu, (_, hex) => String.fromCodePoint(+`0x${hex}`));
 }
 
 /**

@@ -96,7 +96,7 @@ export const withCanonicalIds = (
       out = out.replaceAll(".", "-");
     }
     if (stripNamespace) {
-      out = out.replace(/^[^/]+\//, "");
+      out = out.replace(/^[^/]+\//u, "");
     } else if (namespaceSeparator !== "/") {
       out = out.replace("/", namespaceSeparator);
     }

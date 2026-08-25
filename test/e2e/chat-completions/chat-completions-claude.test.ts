@@ -208,7 +208,7 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - Claude Sonnet 
       });
 
       expect(step2.choices[0]!.finish_reason).toBe("stop");
-      expect(step2.choices[0]!.message.content!.toLowerCase()).toMatch(/paris|22|sunny|celsius/);
+      expect(step2.choices[0]!.message.content!.toLowerCase()).toMatch(/paris|22|sunny|celsius/u);
     },
     { timeout: 90_000 },
   );

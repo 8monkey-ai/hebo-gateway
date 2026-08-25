@@ -175,7 +175,7 @@ describe("Chat Completions Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse<ChatCompletions>(res);
     expect(data).toEqual({
-      id: expect.stringMatching(/^chatcmpl-/) as unknown as string,
+      id: expect.stringMatching(/^chatcmpl-/u) as unknown as string,
       object: "chat.completion",
       created: expect.any(Number) as unknown as number,
       model: "openai/gpt-oss-20b",
@@ -253,7 +253,7 @@ describe("Chat Completions Handler", () => {
     const res = await endpoint.handler(request);
     const data = await parseResponse<ChatCompletions>(res);
     expect(data).toEqual({
-      id: expect.stringMatching(/^chatcmpl-/) as unknown as string,
+      id: expect.stringMatching(/^chatcmpl-/u) as unknown as string,
       object: "chat.completion",
       created: expect.any(Number) as unknown as number,
       model: "openai/gpt-oss-20b",

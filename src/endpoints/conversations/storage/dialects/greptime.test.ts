@@ -75,7 +75,9 @@ describe("Greptime Dialect (Mocked)", () => {
     }
 
     // Also verify the total count of commas in the partition clause to ensure no extra/missing ones
-    const partitionMatch = createConversations!.sql.match(/PARTITION ON COLUMNS \("id"\) \((.*)\)/);
+    const partitionMatch = createConversations!.sql.match(
+      /PARTITION ON COLUMNS \("id"\) \((.*)\)/u,
+    );
     expect(partitionMatch).toBeDefined();
     const partitions = partitionMatch![1]!.split(",");
     expect(partitions.length).toBe(16);
@@ -106,7 +108,7 @@ describe("Greptime Dialect (Mocked)", () => {
 
     // Date using pg driver should be a specific string format
     expect(typeof insertConv!.params[2]).toBe("string");
-    expect(insertConv!.params[2] as string).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}/);
+    expect(insertConv!.params[2] as string).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}/u);
   });
 
   test("should generate correct Greptime JSON extraction and SELECT casts", () => {

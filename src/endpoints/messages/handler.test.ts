@@ -329,7 +329,7 @@ describe("Messages Handler", () => {
     }
 
     // Verify message_start
-    const messageStartMatch = result.match(/event: message_start\ndata: (\{.*?\})\n/);
+    const messageStartMatch = result.match(/event: message_start\ndata: (\{.*?\})\n/u);
     expect(messageStartMatch).toBeTruthy();
     const messageStart = JSON.parse(messageStartMatch![1]!) as {
       type: string;
@@ -340,7 +340,7 @@ describe("Messages Handler", () => {
     expect(messageStart.message.role).toBe("assistant");
 
     // Verify message_delta has stop_reason
-    const messageDeltaMatch = result.match(/event: message_delta\ndata: (\{.*?\})\n/);
+    const messageDeltaMatch = result.match(/event: message_delta\ndata: (\{.*?\})\n/u);
     expect(messageDeltaMatch).toBeTruthy();
     const messageDelta = JSON.parse(messageDeltaMatch![1]!) as {
       delta: { stop_reason: string };
@@ -580,7 +580,7 @@ describe("Messages Handler", () => {
     }
 
     // Parse the message_delta event and verify input_tokens is present
-    const messageDeltaMatch = result.match(/event: message_delta\ndata: (\{.*?\})\n/);
+    const messageDeltaMatch = result.match(/event: message_delta\ndata: (\{.*?\})\n/u);
     expect(messageDeltaMatch).toBeTruthy();
     const messageDelta = JSON.parse(messageDeltaMatch![1]!) as {
       delta: { stop_reason: string };

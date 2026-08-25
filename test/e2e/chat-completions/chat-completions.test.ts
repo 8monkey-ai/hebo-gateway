@@ -465,7 +465,7 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - gpt-oss-120b)"
 
       expect(step2.choices[0]!.finish_reason).toBe("stop");
       const text = step2.choices[0]!.message.content!;
-      expect(text.toLowerCase()).toMatch(/paris|22|sunny|celsius/);
+      expect(text.toLowerCase()).toMatch(/paris|22|sunny|celsius/u);
     },
     { timeout: 90_000 },
   );
@@ -538,7 +538,7 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - gpt-oss-120b)"
 
       expect(completion.choices[0]!.finish_reason).toBe("stop");
       // Model may format number as "12,231", "12{}231", "12 231", "12\,231", or "12231"
-      const content = completion.choices[0]!.message.content!.replaceAll(/[\s,{}\\]/g, "");
+      const content = completion.choices[0]!.message.content!.replaceAll(/[\s,{}\\]/gu, "");
       expect(content).toContain("12231");
     },
     { timeout: 120_000 },
@@ -606,7 +606,7 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - gpt-oss-120b)"
 
       expect(completion.choices[0]!.finish_reason).toBe("stop");
       // Model may format number as "3,901", "3{}901", "3 901", "3\,901", or "3901"
-      const content = completion.choices[0]!.message.content!.replaceAll(/[\s,{}\\]/g, "");
+      const content = completion.choices[0]!.message.content!.replaceAll(/[\s,{}\\]/gu, "");
       expect(content).toContain("3901");
     },
     { timeout: 120_000 },

@@ -228,7 +228,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
       });
 
       expect(step2.status).toBe("completed");
-      expect(getOutputText(step2).toLowerCase()).toMatch(/paris|22|sunny|celsius/);
+      expect(getOutputText(step2).toLowerCase()).toMatch(/paris|22|sunny|celsius/u);
     },
     { timeout: 90_000 },
   );
