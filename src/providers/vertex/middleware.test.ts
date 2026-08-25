@@ -111,28 +111,47 @@ for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
     const result = await vertexGemma4ThinkingMiddleware.transformParams!({
       type: "generate",
       params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
-      model: new MockLanguageModelV4({ modelId: "google/gemma-4-26b-a4b-it-maas" }),
+      model: new MockLanguageModelV4({
+        modelId: "google/gemma-4-26b-a4b-it-maas",
+        provider: "vertex.maas.chat",
+      }),
     });
 
     expect(result.providerOptions!["vertex"]).toEqual(expected);
   });
 }
 
-test("vertexGemma4ThinkingMiddleware > is registered only for gemma-4", () => {
-  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas")).toContain(
+const nonGemmaModelIds = ["openai/gpt-oss-120b-maas", "google/gemma-3-27b"] as const;
+
+for (const modelId of nonGemmaModelIds) {
+  test(`vertexGemma4ThinkingMiddleware > leaves ${modelId} untouched`, async () => {
+    const vertex = { reasoning: { enabled: true, effort: "medium" }, reasoningEffort: "medium" };
+
+    const result = await vertexGemma4ThinkingMiddleware.transformParams!({
+      type: "generate",
+      params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
+      model: new MockLanguageModelV4({ modelId, provider: "vertex.maas.chat" }),
+    });
+
+    expect(result.providerOptions!["vertex"]).toEqual(vertex);
+  });
+}
+
+test("vertexGemma4ThinkingMiddleware > is registered only for the maas endpoint", () => {
+  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat")).toContain(
     vertexGemma4ThinkingMiddleware,
   );
-  expect(modelMiddlewareMatcher.for("openai/gpt-oss-120b-maas", "vertex.maas")).not.toContain(
-    vertexGemma4ThinkingMiddleware,
-  );
-  expect(modelMiddlewareMatcher.for("google/gemma-3-27b", "vertex.maas")).not.toContain(
+  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "google.vertex.chat")).not.toContain(
     vertexGemma4ThinkingMiddleware,
   );
 });
 
 test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", async () => {
   const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat");
-  const model = new MockLanguageModelV4({ modelId: "google/gemma-4-26b-a4b-it-maas" });
+  const model = new MockLanguageModelV4({
+    modelId: "google/gemma-4-26b-a4b-it-maas",
+    provider: "vertex.maas.chat",
+  });
 
   const params = await chain.reduce(
     async (acc, { transformParams }) => {

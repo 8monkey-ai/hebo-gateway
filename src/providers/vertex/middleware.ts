@@ -62,15 +62,28 @@ modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
   language: [vertexServiceTierMiddleware],
 });
 
+// Matches both the canonical id (`google/gemma-4-26b-a4b`) and the MaaS-specific one
+// (`google/gemma-4-26b-a4b-it-maas`). The MaaS endpoint serves several model families
+// under one provider id, so the Gemma check lives here rather than in the registration.
+const GEMMA_4_MODEL_ID = /(?:^|\/)gemma-4-/u;
+
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/maas/capabilities/thinking
 // Gemma thinking on the MaaS OpenAI-compatible endpoint is binary:
 // any effort enables it, `none` / `enabled: false` disables it.
-// Gemma-only: other MaaS models control thinking differently
-// (gpt-oss uses reasoning_effort; the *-thinking variants are always on).
+// Gemma-only: other MaaS models control thinking differently (gpt-oss uses
+// reasoning_effort; the *-thinking variants are always on), hence the model gate.
+//
+// `chat_template_kwargs` is spread verbatim into the request body, so it has to stay
+// snake_case. That is why this is registered per provider rather than per model: provider
+// rules run after the forward middleware, which merges `providerOptions.unknown` into the
+// `vertex` namespace and camelizes it. Other hosts serving Gemma take the same knob, but
+// only the MaaS wire format is documented, so the scope stays deliberately narrow.
 export const vertexGemma4ThinkingMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
+    if (!GEMMA_4_MODEL_ID.test(model.modelId)) return params;
+
     const vertex = params.providerOptions?.["vertex"];
     if (!vertex || typeof vertex !== "object") return params;
 
@@ -87,6 +100,6 @@ export const vertexGemma4ThinkingMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel(["google/gemma-4-*"], {
+modelMiddlewareMatcher.useForProvider(["vertex.maas*"], {
   language: [vertexGemma4ThinkingMiddleware],
 });
