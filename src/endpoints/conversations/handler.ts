@@ -7,6 +7,7 @@ import { logger } from "../../logger";
 import { addSpanEvent } from "../../telemetry/span";
 import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
 import { parseRequestBody } from "../../utils/body";
+import type { ResponsesInputItem } from "../responses/schema";
 import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
 import {
   ConversationCreateParamsSchema,
@@ -21,7 +22,6 @@ import {
   type ConversationList,
 } from "./schema";
 import type { ConversationItemInput, ConversationMetadata } from "./storage/types";
-import type { ResponsesInputItem } from "../responses/schema";
 
 // Codex-shaped clients echo absent optional fields back as literal null; the
 // request schema accepts that, but the storage layer uses `id?: string`, so

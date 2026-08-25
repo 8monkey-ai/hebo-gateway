@@ -17,8 +17,7 @@ export const moonshotReasoningMiddleware: LanguageModelMiddleware = {
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["moonshotai"] ??=
-      {}) as MoonshotAILanguageModelOptions;
+    const target = (params.providerOptions!["moonshotai"] ??= {}) as MoonshotAILanguageModelOptions;
 
     if (reasoning.enabled === false) {
       target.thinking = { type: "disabled" };
