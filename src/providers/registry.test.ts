@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createAzure } from "@ai-sdk/azure";
 import { createVoyage } from "voyage-ai-provider";
 
 import { claudeSonnet45 } from "../models/anthropic/presets";
-import { gpt56Sol } from "../models/openai/presets";
+import { gpt56Luna, gpt56Sol } from "../models/openai/presets";
 import { voyage4Lite } from "../models/voyage/presets";
+import { withCanonicalIdsForAzure } from "../providers/azure/canonical";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical";
 import { resolveProvider } from "./registry";
@@ -104,4 +106,34 @@ test("Claude Sonnet 4.5 still resolves through Bedrock's native endpoint", () =>
 
   expect(languageModel.modelId).toBe("us.anthropic.claude-sonnet-4-5-20250929-v1:0");
   expect(languageModel.provider).toBe("amazon-bedrock");
+});
+
+test("GPT-5.6 Luna resolves to its default Azure deployment in gateway config", () => {
+  const config = {
+    providers: {
+      azure: withCanonicalIdsForAzure(
+        createAzure({ resourceName: "test-resource", apiKey: "test-key" }),
+      ),
+    },
+    models: {
+      ...gpt56Luna({
+        providers: ["azure"],
+      }),
+    },
+  };
+
+  const modelId = "openai/gpt-5.6-luna";
+
+  const provider = resolveProvider({
+    providers: config.providers,
+    models: config.models,
+    modelId,
+    operation: "chat",
+  });
+
+  const languageModel = provider.languageModel(modelId);
+
+  // Azure names deployments after the model by default, so the namespace is dropped.
+  expect(languageModel.modelId).toBe("gpt-5.6-luna");
+  expect(languageModel.provider).toBe("azure.responses");
 });
