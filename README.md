@@ -136,7 +136,7 @@ console.log(text);
 
 For most setups, start with one of the built-in canonical provider adapters. They wrap a provider SDK and let the gateway route using stable canonical model IDs like `openai/gpt-4.1-mini` instead of provider-native IDs.
 
-Built-in adapters are available for `Alibaba`, `Anthropic`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
+Built-in adapters are available for `Alibaba`, `Anthropic`, `Azure`, `Bedrock`, `Chutes`, `Cohere`, `DeepInfra`, `DeepSeek`, `Fireworks`, `Groq`, `MiniMax`, `Moonshot`, `OpenAI`, `Together AI`, `Vertex`, `Voyage`, `xAI`, and `Z.ai`.
 
 Import the helper from the matching package path:
 
@@ -158,7 +158,14 @@ const settings = { region: "us-east-1", apiKey: process.env["BEDROCK_API_KEY"] }
 const bedrock = withCanonicalIdsForBedrock(createAmazonBedrock(settings), { mantle: settings });
 ```
 
-For Azure, use `createAzure` from `@ai-sdk/azure` directly. Name each [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/endpoints) deployment after its Hebo canonical ID (e.g. `anthropic/claude-sonnet-4.5`).
+For Azure, the adapter removes the canonical namespace. For example, `openai/gpt-5.6-luna` uses the Azure deployment `gpt-5.6-luna`. Pass an extra mapping as the second argument when your deployment has a custom name.
+
+```ts
+import { createAzure } from "@ai-sdk/azure";
+import { withCanonicalIdsForAzure } from "@hebo-ai/gateway/providers/azure";
+
+const azure = withCanonicalIdsForAzure(createAzure({ resourceName: "my-resource" }));
+```
 
 For custom provider setups, wrap the provider instance with `withCanonicalIds` and define your own canonicalization mapping and rules:
 
