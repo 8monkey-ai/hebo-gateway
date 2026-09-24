@@ -17,7 +17,7 @@ test("withCanonicalIdsForBedrock > maps Claude Sonnet 5 to inference profile wit
 });
 
 // ---------------------------------------------------------------------------
-// GPT-5.x routes through the nested Mantle provider
+// GPT-5.5+ and GPT-6 route through the nested Mantle provider
 // ---------------------------------------------------------------------------
 
 const mantleCases = [
@@ -25,6 +25,9 @@ const mantleCases = [
   { canonical: "openai/gpt-5.6-sol", native: "openai.gpt-5.6-sol" },
   { canonical: "openai/gpt-5.6-terra", native: "openai.gpt-5.6-terra" },
   { canonical: "openai/gpt-5.6-luna", native: "openai.gpt-5.6-luna" },
+  { canonical: "openai/gpt-6-astra", native: "openai.gpt-6-astra" },
+  { canonical: "openai/gpt-6-sol", native: "openai.gpt-6-sol" },
+  { canonical: "openai/gpt-6-luna", native: "openai.gpt-6-luna" },
 ] as const;
 
 for (const { canonical, native } of mantleCases) {

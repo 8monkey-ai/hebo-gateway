@@ -261,7 +261,7 @@ Out-of-the-box model presets:
   Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v5.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v5.x`, `v6.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 

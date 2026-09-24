@@ -21,6 +21,9 @@ test("openAI middleware > matching patterns", () => {
     "openai/gpt-5.4-pro",
     "openai/gpt-5.5",
     "openai/gpt-5.5-pro",
+    "openai/gpt-6-astra",
+    "openai/gpt-6-sol",
+    "openai/gpt-6-luna",
     "openai/gpt-oss-20b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
