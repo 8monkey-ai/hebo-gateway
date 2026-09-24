@@ -1,4 +1,4 @@
-import type { XaiLanguageModelChatOptions } from "@ai-sdk/xai";
+import type { XaiLanguageModelResponsesOptions } from "@ai-sdk/xai";
 import type { LanguageModelMiddleware } from "ai";
 
 import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
@@ -14,7 +14,7 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
     const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
     if (!reasoning) return params;
 
-    const target = (params.providerOptions!["xai"] ??= {}) as XaiLanguageModelChatOptions;
+    const target = (params.providerOptions!["xai"] ??= {}) as XaiLanguageModelResponsesOptions;
 
     if (reasoning.enabled === false) {
       target.reasoningEffort = undefined;

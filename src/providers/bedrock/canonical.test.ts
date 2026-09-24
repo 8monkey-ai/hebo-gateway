@@ -117,10 +117,13 @@ const fromInstance = (settings: BedrockSettings = {}, config: CanonicalConfig = 
     ),
   );
 
+// Mantle serves the `openai.gpt-*` (non-OSS), `google.gemma-4` and `xai.*` IDs under its
+// separate `openai/v1` route rather than the plain `v1` one; the rest of the path below is
+// incidental to these tests, which pin down how the host and region get resolved.
 test("Mantle uses the region resolved by the wrapped provider", async () => {
   const { url } = await fromInstance({ region: "ap-southeast-2" });
 
-  expect(url).toBe("https://bedrock-mantle.ap-southeast-2.api.aws/v1/responses");
+  expect(url).toBe("https://bedrock-mantle.ap-southeast-2.api.aws/openai/v1/responses");
 });
 
 test("Mantle forwards the custom headers of the wrapped provider", async () => {
@@ -133,13 +136,13 @@ test("Mantle forwards the custom headers of the wrapped provider", async () => {
 test("Mantle keeps its own base URL when the wrapped provider overrides the Converse one", async () => {
   const { url } = await fromInstance({ baseURL: "https://bedrock-runtime.eu-west-1.example.com" });
 
-  expect(url).toBe("https://bedrock-mantle.eu-west-1.api.aws/v1/responses");
+  expect(url).toBe("https://bedrock-mantle.eu-west-1.api.aws/openai/v1/responses");
 });
 
 test("Mantle settings take precedence over the inherited ones", async () => {
   const { url } = await fromInstance({}, { mantle: { region: "us-gov-west-1" } });
 
-  expect(url).toBe("https://bedrock-mantle.us-gov-west-1.api.aws/v1/responses");
+  expect(url).toBe("https://bedrock-mantle.us-gov-west-1.api.aws/openai/v1/responses");
 });
 
 test("Mantle ignores a base URL label that is not a region", async () => {
@@ -150,7 +153,7 @@ test("Mantle ignores a base URL label that is not a region", async () => {
     // does not resolve. Its own settings have to win instead.
     const { url } = await fromInstance({ baseURL: "https://bedrock.internal.example.com" });
 
-    expect(url).toBe("https://bedrock-mantle.us-east-2.api.aws/v1/responses");
+    expect(url).toBe("https://bedrock-mantle.us-east-2.api.aws/openai/v1/responses");
   } finally {
     process.env["AWS_REGION"] = previous;
   }
@@ -166,7 +169,7 @@ test("Mantle keeps the inherited headers when the region is unresolvable", async
       { mantle: { region: "us-east-1" } },
     );
 
-    expect(url).toBe("https://bedrock-mantle.us-east-1.api.aws/v1/responses");
+    expect(url).toBe("https://bedrock-mantle.us-east-1.api.aws/openai/v1/responses");
     expect(headers.get("x-custom")).toBe("yes");
   } finally {
     process.env["AWS_REGION"] = previous;
