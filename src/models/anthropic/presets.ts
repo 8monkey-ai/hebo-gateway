@@ -141,6 +141,19 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
+export const claudeOpus55 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-opus-5.5" as const,
+  {
+    ...CLAUDE_BASE,
+    ...CLAUDE_PDF_MODALITIES,
+    name: "Claude Opus 5.5",
+    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
+    context: 1_000_000,
+    created: "2026-09-22",
+    knowledge: "2026-06",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
 export const claudeOpus5 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-5" as const,
   {
@@ -164,6 +177,19 @@ export const claudeOpus48 = presetFor<CanonicalModelId, CatalogModel>()(
     context: 1_000_000,
     created: "2026-05-28",
     knowledge: "2026-02",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const claudeFable51 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-fable-5.1" as const,
+  {
+    ...CLAUDE_BASE,
+    ...CLAUDE_PDF_MODALITIES,
+    name: "Claude Fable 5.1",
+    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
+    context: 1_000_000,
+    created: "2026-09-01",
+    knowledge: "2026-06",
   } satisfies DeepPartial<CatalogModel>,
 );
 
@@ -230,6 +256,8 @@ export const claudeOpus4 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const claudeAtomic = {
+  "v5.5": [claudeOpus55],
+  "v5.1": [claudeFable51],
   v5: [claudeOpus5, claudeSonnet5, claudeFable5],
   "v4.8": [claudeOpus48],
   "v4.7": [claudeOpus47],
@@ -240,7 +268,7 @@ const claudeAtomic = {
   "v3.7": [claudeSonnet37],
   "v3.5": [claudeSonnet35, claudeHaiku35],
   v3: [claudeHaiku3],
-  fable: [claudeFable5],
+  fable: [claudeFable51, claudeFable5],
   haiku: [claudeHaiku45, claudeHaiku35, claudeHaiku3],
   sonnet: [
     claudeSonnet5,
@@ -251,6 +279,7 @@ const claudeAtomic = {
     claudeSonnet35,
   ],
   opus: [
+    claudeOpus55,
     claudeOpus5,
     claudeOpus48,
     claudeOpus47,
@@ -262,7 +291,7 @@ const claudeAtomic = {
 } as const;
 
 const claudeGroups = {
-  "v5.x": [...claudeAtomic["v5"]],
+  "v5.x": [...claudeAtomic["v5.5"], ...claudeAtomic["v5.1"], ...claudeAtomic["v5"]],
   "v4.x": [
     ...claudeAtomic["v4.8"],
     ...claudeAtomic["v4.7"],
@@ -277,6 +306,7 @@ const claudeGroups = {
 export const claude = {
   ...claudeAtomic,
   ...claudeGroups,
-  latest: [...claudeAtomic["v5"]],
+  // Opus and Fable moved past 5.0 independently; Sonnet 5 is still the newest Sonnet.
+  latest: [claudeOpus55, claudeSonnet5, claudeFable51],
   all: Object.values(claudeAtomic).flat(),
 } as const;
