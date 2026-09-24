@@ -8,11 +8,13 @@ import type {
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 
 /**
- * The Grok 4.20 line rejects `reasoning_effort` outright. The SDK gates this itself, but only
- * for its own top-level `reasoning` option: writing `providerOptions.xai.reasoningEffort`
- * short-circuits that check, so the gate has to be mirrored here.
+ * The Grok 4.20 line rejects `reasoning_effort` outright, dated variants included, while its
+ * multi-agent sibling accepts it. The SDK gates this itself, but only for its own top-level
+ * `reasoning` option: writing `providerOptions.xai.reasoningEffort` short-circuits that check,
+ * so the gate has to be mirrored here.
  */
-const REJECTS_EFFORT = /^grok-4\.20(?:-\d{4})?-(?:non-)?reasoning$/u;
+const rejectsEffort = (modelId: string) =>
+  modelId.startsWith("grok-4.20") && modelId.endsWith("-reasoning");
 
 /** `xhigh` is Grok 4.6 only — anything above `high` collapses back to it elsewhere. */
 function mapXaiReasoningEffort(
@@ -49,7 +51,7 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
 
     const target = (params.providerOptions!["xai"] ??= {}) as XaiLanguageModelResponsesOptions;
 
-    if (REJECTS_EFFORT.test(model.modelId)) {
+    if (rejectsEffort(model.modelId)) {
       // FUTURE: warn that the requested effort was dropped for a model that rejects it
       target.reasoningEffort = undefined;
     } else if (reasoning.enabled === false) {
