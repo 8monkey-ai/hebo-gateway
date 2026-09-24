@@ -13,6 +13,7 @@ const explicitMappings: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3.5-35b", "qwen3.5-35b-a3b"],
   ["alibaba/qwen3.5-0.8b", "qwen3.5-0.8b"],
   ["alibaba/qwen3.6-flash", "qwen3.6-35b-a3b"],
+  ["alibaba/qwen3.8-2.4t", "qwen3.8-2.4t-a95b"],
   ["alibaba/qwen3-vl-235b", "qwen3-vl-235b-a22b"],
 ];
 
@@ -36,6 +37,11 @@ const stripNamespaceFallbacks: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3.6-max-preview", "qwen3.6-max-preview"],
   ["alibaba/qwen3.7-plus", "qwen3.7-plus"],
   ["alibaba/qwen3.7-max", "qwen3.7-max"],
+  ["alibaba/qwen3.8-max", "qwen3.8-max"],
+  ["alibaba/qwen3.8-max-prime", "qwen3.8-max-prime"],
+  ["alibaba/qwen3.8-flash", "qwen3.8-flash"],
+  ["alibaba/qwen3.8-omni-flash", "qwen3.8-omni-flash"],
+  ["alibaba/qwen3.8-27b", "qwen3.8-27b"],
   ["alibaba/qwen3-coder-next", "qwen3-coder-next"],
   ["alibaba/qwen3-embedding-0.6b", "qwen3-embedding-0.6b"],
   ["alibaba/qwen3-embedding-4b", "qwen3-embedding-4b"],

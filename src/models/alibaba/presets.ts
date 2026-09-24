@@ -336,6 +336,94 @@ export const qwen37Max = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+const QWEN38_BASE = {
+  modalities: {
+    input: ["text", "image", "video", "file"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+  context: 1_000_000,
+  providers: ["alibaba"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
+export const qwen38Max = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.8-max" as const,
+  {
+    ...QWEN38_BASE,
+    providers: ["alibaba", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3.8 Max",
+    created: "2026-08-03",
+  } satisfies CatalogModel,
+);
+
+export const qwen38MaxPrime = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.8-max-prime" as const,
+  {
+    ...QWEN38_BASE,
+    name: "Qwen3.8 Max Prime",
+    created: "2026-09-23",
+  } satisfies CatalogModel,
+);
+
+export const qwen38Flash = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.8-flash" as const,
+  {
+    ...QWEN38_BASE,
+    providers: ["alibaba", "deepinfra"] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3.8 Flash",
+    created: "2026-08-26",
+  } satisfies CatalogModel,
+);
+
+export const qwen38OmniFlash = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.8-omni-flash" as const,
+  {
+    ...QWEN38_BASE,
+    modalities: {
+      input: ["text", "image", "audio", "video", "file"] as const,
+      output: ["text"] as const,
+    },
+    name: "Qwen3.8 Omni Flash",
+    created: "2026-09-17",
+  } satisfies CatalogModel,
+);
+
+export const qwen38_24t = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.8-2.4t" as const,
+  {
+    ...QWEN38_BASE,
+    modalities: {
+      input: ["text"] as const,
+      output: ["text"] as const,
+    },
+    capabilities: ["reasoning", "tool_call", "structured_output", "temperature"],
+    providers: [
+      "alibaba",
+      "deepinfra",
+      "togetherai",
+    ] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3.8 2.4T",
+    context: 1_048_576,
+    created: "2026-08-12",
+  } satisfies CatalogModel,
+);
+
+export const qwen38_27b = presetFor<CanonicalModelId, CatalogModel>()(
+  "alibaba/qwen3.8-27b" as const,
+  {
+    ...QWEN38_BASE,
+    providers: [
+      "alibaba",
+      "groq",
+      "chutes",
+      "deepinfra",
+    ] as const satisfies readonly CanonicalProviderId[],
+    name: "Qwen3.8 27B",
+    context: 262144,
+    created: "2026-08-14",
+  } satisfies CatalogModel,
+);
+
 export const qwen3CoderNext = presetFor<CanonicalModelId, CatalogModel>()(
   "alibaba/qwen3-coder-next" as const,
   {
@@ -415,6 +503,7 @@ const qwenAtomic = {
   ],
   "v3.6": [qwen36Plus, qwen36Flash, qwen36_27b, qwen36MaxPreview],
   "v3.7": [qwen37Plus, qwen37Max],
+  "v3.8": [qwen38Max, qwen38MaxPrime, qwen38Flash, qwen38OmniFlash, qwen38_24t, qwen38_27b],
   coder: [qwen3CoderNext],
   vl: [qwen3Vl235b],
   embedding: [qwen3Embedding06b, qwen3Embedding4b, qwen3Embedding8b],
@@ -426,6 +515,7 @@ const qwenGroups = {
     ...qwenAtomic["v3.5"],
     ...qwenAtomic["v3.6"],
     ...qwenAtomic["v3.7"],
+    ...qwenAtomic["v3.8"],
   ],
   embeddings: [...qwenAtomic["embedding"]],
 } as const;
@@ -433,6 +523,6 @@ const qwenGroups = {
 export const qwen = {
   ...qwenAtomic,
   ...qwenGroups,
-  latest: [...qwenAtomic["v3.7"]],
+  latest: [...qwenAtomic["v3.8"]],
   all: Object.values(qwenAtomic).flat(),
 } as const;

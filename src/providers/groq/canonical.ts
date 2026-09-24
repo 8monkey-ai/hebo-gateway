@@ -8,6 +8,7 @@ const MAPPING = {
   "meta/llama-3.3-70b": "llama-3.3-70b-versatile",
   "meta/llama-4-scout": "meta-llama/llama-4-scout-17b-16e-instruct",
   "alibaba/qwen3-32b": "qwen/qwen3-32b",
+  "alibaba/qwen3.8-27b": "qwen/qwen3.8-27b",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForGroq = (
