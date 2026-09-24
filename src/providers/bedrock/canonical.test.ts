@@ -4,6 +4,18 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 
 import { withCanonicalIdsForBedrock } from "./canonical";
 
+test("withCanonicalIdsForBedrock > maps Claude Opus 5.5 to inference profile without version postfix", () => {
+  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+  const model = provider.languageModel("anthropic/claude-opus-5.5");
+  expect(model.modelId).toBe("us.anthropic.claude-opus-5-5");
+});
+
+test("withCanonicalIdsForBedrock > maps Claude Fable 5.1 to inference profile without version postfix", () => {
+  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+  const model = provider.languageModel("anthropic/claude-fable-5.1");
+  expect(model.modelId).toBe("us.anthropic.claude-fable-5-1");
+});
+
 test("withCanonicalIdsForBedrock > maps Claude Opus 5 to inference profile without version postfix", () => {
   const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
   const model = provider.languageModel("anthropic/claude-opus-5");
