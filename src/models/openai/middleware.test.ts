@@ -114,6 +114,175 @@ test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider
   });
 });
 
+// The GPT-6 line takes `max` as its own level above `xhigh`, so it must survive the mapping.
+// `openai.gpt-6-astra` is how Bedrock Mantle names the same model, and this middleware runs
+// there too: the matcher applies model- and provider-matched entries alike.
+for (const modelId of [
+  "gpt-6-astra",
+  "gpt-6-sol",
+  "gpt-6-luna",
+  "gpt-6",
+  "gpt-7",
+  "openai/gpt-6-astra",
+  "openai.gpt-6-astra",
+]) {
+  test(`openAIReasoningMiddleware > should keep max effort for ${modelId}`, async () => {
+    const params = {
+      prompt: [],
+      providerOptions: {
+        unknown: {
+          reasoning: { enabled: true, effort: "max" },
+        },
+      },
+    };
+
+    const result = await openAIReasoningMiddleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId }),
+    });
+
+    expect(result).toEqual({
+      prompt: [],
+      providerOptions: {
+        openai: { reasoningEffort: "max" },
+        unknown: {},
+      },
+    });
+  });
+}
+
+// Earlier models have no `max`, so it has to come back down to `xhigh`.
+for (const modelId of ["gpt-5", "gpt-5.1", "openai/gpt-5.6-sol"]) {
+  test(`openAIReasoningMiddleware > should lower max effort to xhigh for ${modelId}`, async () => {
+    const params = {
+      prompt: [],
+      providerOptions: {
+        unknown: {
+          reasoning: { enabled: true, effort: "max" },
+        },
+      },
+    };
+
+    const result = await openAIReasoningMiddleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId }),
+    });
+
+    expect(result).toEqual({
+      prompt: [],
+      providerOptions: {
+        openai: { reasoningEffort: "xhigh" },
+        unknown: {},
+      },
+    });
+  });
+}
+
+test("openAIReasoningMiddleware > should lower minimal effort to low on GPT-6", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "minimal" },
+      },
+    },
+  };
+
+  const result = await openAIReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "gpt-6-astra" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      openai: { reasoningEffort: "low" },
+      unknown: {},
+    },
+  });
+});
+
+test("openAIReasoningMiddleware > should keep minimal effort on GPT-5", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "minimal" },
+      },
+    },
+  };
+
+  const result = await openAIReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "gpt-5" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      openai: { reasoningEffort: "minimal" },
+      unknown: {},
+    },
+  });
+});
+
+// Sol and Luna are the only GPT-6 models that can turn reasoning off.
+for (const modelId of ["gpt-6-sol", "gpt-6-luna"]) {
+  test(`openAIReasoningMiddleware > should disable reasoning with none for ${modelId}`, async () => {
+    const params = {
+      prompt: [],
+      providerOptions: {
+        unknown: {
+          reasoning: { enabled: false },
+        },
+      },
+    };
+
+    const result = await openAIReasoningMiddleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId }),
+    });
+
+    expect(result).toEqual({
+      prompt: [],
+      providerOptions: {
+        openai: { reasoningEffort: "none" },
+        unknown: {},
+      },
+    });
+  });
+}
+
+// Astra has no `none`, so the request lands on the lowest effort it does offer instead of
+// being dropped by the SDK and leaving reasoning at its default.
+for (const reasoning of [{ enabled: false }, { enabled: true, effort: "none" }]) {
+  test(`openAIReasoningMiddleware > should fall back to low on GPT-6 Astra for ${JSON.stringify(reasoning)}`, async () => {
+    const params = {
+      prompt: [],
+      providerOptions: { unknown: { reasoning } },
+    };
+
+    const result = await openAIReasoningMiddleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId: "gpt-6-astra" }),
+    });
+
+    expect(result).toEqual({
+      prompt: [],
+      providerOptions: {
+        openai: { reasoningEffort: "low" },
+        unknown: {},
+      },
+    });
+  });
+}
+
 test("openAIReasoningMiddleware > should disable reasoning when requested (standard model)", async () => {
   const params = {
     prompt: [],
