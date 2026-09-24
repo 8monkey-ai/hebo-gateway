@@ -1,13 +1,46 @@
 import type { XaiLanguageModelResponsesOptions } from "@ai-sdk/xai";
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
+import type {
+  ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningEffort,
+} from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+
+/**
+ * The Grok 4.20 line rejects `reasoning_effort` outright. The SDK gates this itself, but only
+ * for its own top-level `reasoning` option: writing `providerOptions.xai.reasoningEffort`
+ * short-circuits that check, so the gate has to be mirrored here.
+ */
+const REJECTS_EFFORT = /^grok-4\.20(?:-\d{4})?-(?:non-)?reasoning$/u;
+
+/** `xhigh` is Grok 4.6 only — anything above `high` collapses back to it elsewhere. */
+function mapXaiReasoningEffort(
+  effort: ChatCompletionsReasoningEffort,
+  modelId: string,
+): XaiLanguageModelResponsesOptions["reasoningEffort"] {
+  switch (effort) {
+    case "none":
+      return "none";
+    case "minimal":
+    case "low":
+      return "low";
+    case "medium":
+      return "medium";
+    case "high":
+      return "high";
+    case "xhigh":
+    case "max":
+      return modelId === "grok-4.6" ? "xhigh" : "high";
+  }
+
+  return undefined;
+}
 
 export const xaiReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
@@ -16,26 +49,15 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
 
     const target = (params.providerOptions!["xai"] ??= {}) as XaiLanguageModelResponsesOptions;
 
-    if (reasoning.enabled === false) {
+    if (REJECTS_EFFORT.test(model.modelId)) {
+      // FUTURE: warn that the requested effort was dropped for a model that rejects it
       target.reasoningEffort = undefined;
+    } else if (reasoning.enabled === false) {
+      // `none` is what actually disables thinking; omitting the field leaves the model at
+      // its own default, which is not what "reasoning off" asked for.
+      target.reasoningEffort = "none";
     } else if (reasoning.effort) {
-      switch (reasoning.effort) {
-        case "none":
-          target.reasoningEffort = undefined;
-          break;
-        case "minimal":
-        case "low":
-          target.reasoningEffort = "low";
-          break;
-        case "medium":
-          target.reasoningEffort = "medium";
-          break;
-        case "high":
-        case "xhigh":
-        case "max":
-          target.reasoningEffort = "high";
-          break;
-      }
+      target.reasoningEffort = mapXaiReasoningEffort(reasoning.effort, model.modelId);
     }
 
     delete unknown["reasoning"];

@@ -182,7 +182,7 @@ test("xaiReasoningMiddleware > should map max effort to high", async () => {
   });
 });
 
-test("xaiReasoningMiddleware > should clear reasoning when disabled", async () => {
+test("xaiReasoningMiddleware > should disable reasoning with none when disabled", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -202,13 +202,13 @@ test("xaiReasoningMiddleware > should clear reasoning when disabled", async () =
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      xai: { reasoningEffort: undefined },
+      xai: { reasoningEffort: "none" },
       unknown: {},
     },
   });
 });
 
-test("xaiReasoningMiddleware > should map none effort to undefined", async () => {
+test("xaiReasoningMiddleware > should map none effort to none", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -227,7 +227,116 @@ test("xaiReasoningMiddleware > should map none effort to undefined", async () =>
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      xai: { reasoningEffort: undefined },
+      xai: { reasoningEffort: "none" },
+      unknown: {},
+    },
+  });
+});
+
+test("xaiReasoningMiddleware > should map xhigh effort to xhigh on Grok 4.6", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "xhigh" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "grok-4.6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "xhigh" },
+      unknown: {},
+    },
+  });
+});
+
+test("xaiReasoningMiddleware > should map max effort to xhigh on Grok 4.6", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "max" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "grok-4.6" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "xhigh" },
+      unknown: {},
+    },
+  });
+});
+
+// `xai/grok-4.2-reasoning` resolves to this native ID, and the 4.20 line rejects the parameter
+// outright, so nothing may be sent for it — not even `none`.
+for (const modelId of [
+  "grok-4.20-0309-reasoning",
+  "grok-4.20-0309-non-reasoning",
+  "grok-4.20-reasoning",
+]) {
+  test(`xaiReasoningMiddleware > should drop the effort for ${modelId}`, async () => {
+    const params = {
+      prompt: [],
+      providerOptions: {
+        xai: { reasoningEffort: "high" },
+        unknown: {
+          reasoning: { enabled: true, effort: "high" },
+        },
+      },
+    };
+
+    const result = await xaiReasoningMiddleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId }),
+    });
+
+    expect(result).toEqual({
+      prompt: [],
+      providerOptions: {
+        xai: { reasoningEffort: undefined },
+        unknown: {},
+      },
+    });
+  });
+}
+
+test("xaiReasoningMiddleware > should keep the effort for the 4.20 multi-agent model", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "high" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "grok-4.20-multi-agent-0309" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "high" },
       unknown: {},
     },
   });
