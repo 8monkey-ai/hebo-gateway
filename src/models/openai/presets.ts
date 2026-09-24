@@ -317,6 +317,33 @@ export const gpt56Luna = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const gpt6Astra = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-6-astra" as const,
+  {
+    ...GPT_MULTI_CLOUD_BASE,
+    name: "GPT-6 Astra",
+    created: "2026-09-04",
+    knowledge: "2026-04",
+    context: 1050000,
+  } satisfies CatalogModel,
+);
+
+export const gpt6Sol = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-6-sol" as const, {
+  ...GPT_MULTI_CLOUD_BASE,
+  name: "GPT-6 Sol",
+  created: "2026-09-22",
+  knowledge: "2026-04",
+  context: 1050000,
+} satisfies CatalogModel);
+
+export const gpt6Luna = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-6-luna" as const, {
+  ...GPT_MULTI_CLOUD_BASE,
+  name: "GPT-6 Luna",
+  created: "2026-09-22",
+  knowledge: "2026-05",
+  context: 1050000,
+} satisfies CatalogModel);
+
 export const textEmbedding3Small = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/text-embedding-3-small" as const,
   {
@@ -373,6 +400,7 @@ const gptAtomic = {
   "v5.4": [gpt54, gpt54Mini, gpt54Nano, gpt54Pro],
   "v5.5": [gpt55, gpt55Pro],
   "v5.6": [gpt56Sol, gpt56Terra, gpt56Luna],
+  v6: [gpt6Astra, gpt6Sol, gpt6Luna],
   codex: [
     gpt5Codex,
     gpt51Codex,
@@ -396,6 +424,7 @@ const gptGroups = {
     ...gptAtomic["v5.5"],
     ...gptAtomic["v5.6"],
   ],
+  "v6.x": [...gptAtomic["v6"]],
 } as const;
 
 const textEmbeddingsAtomic = {
@@ -416,8 +445,8 @@ export const gptOss = {
 export const gpt = {
   ...gptAtomic,
   ...gptGroups,
-  // 5.6 Sol/Terra/Luna span the frontier/balanced/cheap tiers; 5.5 Pro is still the newest Pro.
-  latest: [gpt56Sol, gpt56Terra, gpt56Luna, gpt55Pro],
+  // Astra/Sol/Luna span the frontier/balanced/cheap tiers; 5.5 Pro is still the newest Pro.
+  latest: [gpt6Astra, gpt6Sol, gpt6Luna, gpt55Pro],
   all: Object.values(gptAtomic).flat(),
 } as const;
 
