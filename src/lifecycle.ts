@@ -6,7 +6,11 @@ import { getErrorMeta } from "./errors/utils";
 import { logger } from "./logger";
 import { getBaggageAttributes } from "./telemetry/baggage";
 import { instrumentFetch } from "./telemetry/fetch";
-import { recordRequestDuration } from "./telemetry/gen-ai";
+import {
+  getGenAiGeneralAttributes,
+  recordAiSdkFeatureError,
+  recordRequestDuration,
+} from "./telemetry/gen-ai";
 import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
 import { observeV8jsMemoryMetrics } from "./telemetry/memory";
 import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
@@ -72,6 +76,8 @@ export const winterCgHandler = (
       if (ctx.request.signal.aborted) realStatus = 499;
       else if (status === 200 && ctx.response?.status) realStatus = ctx.response.status;
 
+      const traceLevel = ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai;
+
       if (realStatus !== 200) {
         const err: unknown = reason ?? ctx.request.signal.reason;
         logger[realStatus >= 500 ? "error" : "warn"]({
@@ -82,6 +88,7 @@ export const winterCgHandler = (
         // On error we may not reach the handler's own ctx.otel flush, so flush here.
         span.setAttributes(ctx.otel);
         span.recordError(err, true);
+        recordAiSdkFeatureError(err, getGenAiGeneralAttributes(ctx, traceLevel), traceLevel);
       }
       span.setAttributes({ "http.response.status_code_effective": realStatus });
 
@@ -91,12 +98,7 @@ export const winterCgHandler = (
         ctx.operation === "messages" ||
         ctx.operation === "responses"
       ) {
-        recordRequestDuration(
-          performance.now() - start,
-          realStatus,
-          ctx,
-          ctx.trace ?? parsedConfig.telemetry?.signals?.gen_ai,
-        );
+        recordRequestDuration(performance.now() - start, realStatus, ctx, traceLevel);
       }
 
       span.finish();
