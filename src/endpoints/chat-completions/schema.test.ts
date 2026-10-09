@@ -100,6 +100,11 @@ describe("ChatCompletionsBodySchema", () => {
               cache_control: null,
             },
             {
+              type: "file",
+              file: { file_data: "data:application/pdf;base64,ZmlsZQ==", filename: null },
+              cache_control: null,
+            },
+            {
               type: "input_audio",
               input_audio: { data: "YXVkaW8=", format: "mp3" },
               cache_control: null,

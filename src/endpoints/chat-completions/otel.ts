@@ -37,6 +37,11 @@ const toBlobPart = (modality: string, mimeType?: string) => {
   return part;
 };
 
+const withFileName = (part: Record<string, unknown>, filename?: string | null) => {
+  if (filename) part["file_name"] = filename;
+  return part;
+};
+
 const toToolResponsePart = (id: string, content: string | ChatCompletionsContentPartText[]) => ({
   type: "tool_call_response" as const,
   id,
@@ -92,9 +97,23 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         parts.push(toBlobPart("audio", `audio/${part.input_audio.format}`));
         break;
       case "file": {
-        const filePart = toBlobPart("file", part.file.media_type);
-        if (part.file.filename) filePart["file_name"] = part.file.filename;
-        parts.push(filePart);
+        const file = part.file;
+        if ("file_data" in file) {
+          // `file_data` is a data URL, a remote URL, or bare base64; only a URL
+          // is safe to record verbatim.
+          if (file.file_data.slice(0, 5).toLowerCase() === "data:") {
+            const { mimeType } = parseDataUrl(file.file_data);
+            parts.push(withFileName(toBlobPart("file", mimeType || undefined), file.filename));
+          } else if (file.file_data.includes("://")) {
+            parts.push(
+              withFileName({ type: "uri", modality: "file", uri: file.file_data }, file.filename),
+            );
+          } else {
+            parts.push(withFileName(toBlobPart("file"), file.filename));
+          }
+          break;
+        }
+        parts.push(withFileName(toBlobPart("file", file.media_type), file.filename));
         break;
       }
       default:

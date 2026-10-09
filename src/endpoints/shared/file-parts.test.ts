@@ -150,6 +150,61 @@ describe("FilePart conversion (v7 image/file unification)", () => {
       expect(parts[0]!.data).toMatchObject({ type: "data" });
     });
 
+    test.each([
+      ["application/pdf", "report.pdf"],
+      ["text/csv", "rows.csv"],
+    ])(
+      "OpenRouter file_data data URL yields the %s media type and filename",
+      async (mediaType, filename) => {
+        const { fileParts } = createRecordingEndpoint(chatCompletions);
+        const parts = await fileParts(url, {
+          model: MODEL_ID,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "file",
+                  file: { filename, file_data: `data:${mediaType};base64,${HELLO_BASE64}` },
+                },
+              ],
+            },
+          ],
+        });
+
+        expect(parts).toHaveLength(1);
+        expect(parts[0]!.mediaType).toBe(mediaType);
+        expect(parts[0]!.filename).toBe(filename);
+        const data = parts[0]!.data as { type: "data"; data: Uint8Array };
+        expect(data.type).toBe("data");
+        expect([...data.data]).toEqual(HELLO_BYTES);
+      },
+    );
+
+    test("OpenRouter file_data bare base64 falls back to a generic binary type", async () => {
+      const { fileParts } = createRecordingEndpoint(chatCompletions);
+      const parts = await fileParts(url, {
+        model: MODEL_ID,
+        messages: [
+          { role: "user", content: [{ type: "file", file: { file_data: HELLO_BASE64 } }] },
+        ],
+      });
+
+      expect(parts).toHaveLength(1);
+      expect(parts[0]!.mediaType).toBe("application/octet-stream");
+      expect(parts[0]!.data).toMatchObject({ type: "data" });
+    });
+
+    test("file part without data or file_data is rejected", async () => {
+      const { rawPost } = createRecordingEndpoint(chatCompletions);
+      const res = await rawPost(url, {
+        model: MODEL_ID,
+        messages: [{ role: "user", content: [{ type: "file", file: { filename: "a.pdf" } }] }],
+      });
+
+      expect(res.status).toBe(400);
+    });
+
     test("input_audio is converted to an audio file part", async () => {
       const { fileParts } = createRecordingEndpoint(chatCompletions);
       const parts = await fileParts(url, {

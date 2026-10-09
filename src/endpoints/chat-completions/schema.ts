@@ -50,13 +50,22 @@ export const ChatCompletionsContentPartImageSchema = z.object({
   cache_control: ChatCompletionsCacheControlSchema.nullish().meta({ extension: true }),
 });
 
+// Inline base64 payload with an explicit media type.
+const ChatCompletionsFileInlineSchema = z.object({
+  data: z.string(),
+  media_type: z.string(),
+  filename: z.string().nullish(),
+});
+
+// Extension origin: OpenRouter — `file_data` is a data URL or a remote URL.
+const ChatCompletionsFileDataSchema = z.object({
+  file_data: z.string(),
+  filename: z.string().nullish(),
+});
+
 export const ChatCompletionsContentPartFileSchema = z.object({
   type: z.literal("file"),
-  file: z.object({
-    data: z.string(),
-    media_type: z.string(),
-    filename: z.string().nullish(),
-  }),
+  file: z.union([ChatCompletionsFileInlineSchema, ChatCompletionsFileDataSchema]),
   // Extension origin: OpenRouter/Vercel/Anthropic
   cache_control: ChatCompletionsCacheControlSchema.nullish().meta({ extension: true }),
 });

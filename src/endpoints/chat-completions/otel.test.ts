@@ -247,6 +247,52 @@ describe("Chat Completions OTEL", () => {
     ]);
   });
 
+  test("should map OpenRouter file_data parts to blob or uri parts", () => {
+    const inputs: ChatCompletionsBody = {
+      model: "openai/gpt-oss-20b",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "file",
+              file: { file_data: "data:application/pdf;base64,AAAA", filename: "inline.pdf" },
+            },
+            {
+              type: "file",
+              file: { file_data: "https://example.com/report.pdf", filename: "remote.pdf" },
+            },
+            { type: "file", file: { file_data: "AAAA" } },
+          ],
+        },
+      ],
+    };
+
+    const attrs = getChatRequestAttributes(inputs, "full");
+
+    expect(attrs["gen_ai.input.messages"]).toEqual([
+      JSON.stringify({
+        role: "user",
+        parts: [
+          {
+            type: "blob",
+            modality: "file",
+            content: "[REDACTED_BINARY_DATA]",
+            mime_type: "application/pdf",
+            file_name: "inline.pdf",
+          },
+          {
+            type: "uri",
+            modality: "file",
+            uri: "https://example.com/report.pdf",
+            file_name: "remote.pdf",
+          },
+          { type: "blob", modality: "file", content: "[REDACTED_BINARY_DATA]" },
+        ],
+      }),
+    ]);
+  });
+
   test("should map assistant text content part arrays in response attributes", () => {
     const completions: ChatCompletions = {
       id: "chatcmpl_123",

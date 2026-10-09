@@ -781,6 +781,31 @@ describe("Chat Completions Converters", () => {
       ).toThrow(/Unsupported image media type/u);
     });
 
+    test("should forward an OpenRouter file_data remote URL to the provider", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                file: { filename: "report.pdf", file_data: "https://example.com/report.pdf" },
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.messages[0]!.content).toEqual([
+        {
+          type: "file",
+          data: new URL("https://example.com/report.pdf"),
+          filename: "report.pdf",
+          mediaType: "application/octet-stream",
+        },
+      ]);
+    });
+
     test("should convert input_audio content parts to file user content", () => {
       const result = convertToTextCallOptions({
         messages: [
