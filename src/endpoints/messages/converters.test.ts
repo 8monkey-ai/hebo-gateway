@@ -131,6 +131,44 @@ describe("Messages Converters", () => {
       });
     });
 
+    test("should keep in-array system messages in place", () => {
+      const messages = convertToModelMessages([
+        { role: "user", content: "Hi" },
+        { role: "system", content: "Be concise." },
+        { role: "user", content: "hey" },
+      ]);
+      expect(messages).toEqual([
+        { role: "user", content: "Hi" },
+        { role: "system", content: "Be concise." },
+        { role: "user", content: "hey" },
+      ]);
+    });
+
+    test("should convert in-array system blocks with cache_control", () => {
+      const messages = convertToModelMessages(
+        [
+          {
+            role: "system",
+            content: [
+              { type: "text", text: "Be " },
+              { type: "text", text: "concise.", cache_control: { type: "ephemeral" } },
+            ],
+          },
+          { role: "user", content: "Hi" },
+        ],
+        "You are helpful.",
+      );
+      expect(messages).toEqual([
+        { role: "system", content: "You are helpful." },
+        {
+          role: "system",
+          content: "Be concise.",
+          providerOptions: { unknown: { cache_control: { type: "ephemeral" } } },
+        },
+        { role: "user", content: "Hi" },
+      ]);
+    });
+
     test("should convert user message with text content block", () => {
       const messages = convertToModelMessages([
         {

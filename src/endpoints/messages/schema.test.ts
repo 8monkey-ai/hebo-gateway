@@ -104,6 +104,24 @@ describe("MessagesBodySchema", () => {
     expect(parsed.success).toBe(true);
   });
 
+  test("accepts a system message inside messages[]", () => {
+    const body = {
+      model: "claude-sonnet-4",
+      max_tokens: 1024,
+      messages: [
+        { role: "user", content: "hey" },
+        { role: "system", content: "Be concise." },
+        {
+          role: "system",
+          content: [{ type: "text", text: "Be concise.", cache_control: null }],
+        },
+      ],
+    };
+
+    const parsed = MessagesBodySchema.safeParse(body);
+    expect(parsed.success).toBe(true);
+  });
+
   test("accepts system block array with null cache_control", () => {
     const body = {
       model: "claude-sonnet-4",
