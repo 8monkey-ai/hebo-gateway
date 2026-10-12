@@ -13,7 +13,6 @@ import {
   bedrockClaudeReasoningMiddleware,
   bedrockGptReasoningMiddleware,
   bedrockMantleReasoningMiddleware,
-  bedrockMidConversationSystemMiddleware,
   bedrockPromptCachingMiddleware,
   bedrockServiceTierMiddleware,
 } from "./middleware";
@@ -719,70 +718,4 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
   });
   // Reasoning models reject `temperature`.
   expect(body).not.toHaveProperty("temperature");
-});
-
-test("bedrock middlewares > matching provider resolves mid-conversation system middleware", () => {
-  const middleware = modelMiddlewareMatcher.resolve({
-    kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
-    providerId: "amazon-bedrock",
-  });
-
-  expect(middleware).toContain(bedrockMidConversationSystemMiddleware);
-});
-
-test("bedrockMidConversationSystemMiddleware > should demote mid-conversation system turns to user text", async () => {
-  const params = {
-    prompt: [
-      { role: "system", content: "You are helpful" },
-      { role: "user", content: [{ type: "text", text: "Hi" }] },
-      { role: "assistant", content: [{ type: "text", text: "Hello" }] },
-      {
-        role: "system",
-        content: "<system-reminder>Stay on task</system-reminder>",
-        providerOptions: { bedrock: { cacheControl: { type: "ephemeral" } } },
-      },
-      { role: "user", content: [{ type: "text", text: "Continue" }] },
-    ],
-  } as unknown as LanguageModelV4CallOptions;
-
-  const result = await bedrockMidConversationSystemMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  // Leading system message is preserved (becomes the top-level `system` field).
-  expect(result.prompt[0]).toEqual({ role: "system", content: "You are helpful" });
-  // Mid-conversation system turn keeps its position, as user text.
-  expect(result.prompt[3]).toEqual({
-    role: "user",
-    content: [{ type: "text", text: "<system-reminder>Stay on task</system-reminder>" }],
-    providerOptions: { bedrock: { cacheControl: { type: "ephemeral" } } },
-  });
-  expect(result.prompt.map((message) => message.role)).toEqual([
-    "system",
-    "user",
-    "assistant",
-    "user",
-    "user",
-  ]);
-});
-
-test("bedrockMidConversationSystemMiddleware > should keep consecutive leading system messages", async () => {
-  const params = {
-    prompt: [
-      { role: "system", content: "First" },
-      { role: "system", content: "Second" },
-      { role: "user", content: [{ type: "text", text: "Hi" }] },
-    ],
-  } as unknown as LanguageModelV4CallOptions;
-
-  const result = await bedrockMidConversationSystemMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  expect(result.prompt.map((message) => message.role)).toEqual(["system", "system", "user"]);
 });
