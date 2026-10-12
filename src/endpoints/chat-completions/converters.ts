@@ -31,7 +31,7 @@ import {
   normalizeToolName,
   stripEmptyKeys,
   parseBase64,
-  parseFileInput,
+  parseFileDataInput,
   parseImageInput,
   extractReasoningMetadata,
   GEMINI_REASONING_FORMAT,
@@ -411,22 +411,10 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
 function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
   const { image, mediaType } = parseImageInput(url);
 
-  if (image instanceof URL) {
-    // Media type is unknown for remote URLs; fall back to the top-level type.
-    const out: FilePart = {
-      type: "file" as const,
-      data: image,
-      mediaType: mediaType ?? "image",
-    };
-    if (cacheControl) {
-      out.providerOptions = {
-        unknown: { cache_control: cacheControl },
-      };
-    }
-    return out;
-  }
-
-  return fromFilePart(image, mediaType ?? "image/jpeg", undefined, cacheControl);
+  // Media type is unknown for remote URLs; fall back to the top-level type.
+  return image instanceof URL
+    ? fromUrlFilePart(image, mediaType ?? "image", undefined, cacheControl)
+    : fromFilePart(image, mediaType ?? "image/jpeg", undefined, cacheControl);
 }
 
 /**
@@ -439,23 +427,25 @@ function fromFileDataPart(
   filename?: string,
   cacheControl?: ChatCompletionsCacheControl,
 ) {
-  if (fileData.slice(0, 5).toLowerCase() === "data:") {
-    const { data, mediaType } = parseFileInput(fileData);
-    return fromFilePart(data, mediaType ?? DEFAULT_FILE_MEDIA_TYPE, filename, cacheControl);
-  }
-
-  // A URL requires a scheme, which bare base64 never has, so this split is safe.
-  const url = toUrl(fileData);
-  if (!url) {
-    return fromFilePart(fileData, DEFAULT_FILE_MEDIA_TYPE, filename, cacheControl);
-  }
+  const { data, mediaType } = parseFileDataInput(fileData);
 
   // The media type is unknown for remote URLs; fall back to a generic binary type.
+  return typeof data === "string"
+    ? fromFilePart(data, mediaType ?? DEFAULT_FILE_MEDIA_TYPE, filename, cacheControl)
+    : fromUrlFilePart(data, DEFAULT_FILE_MEDIA_TYPE, filename, cacheControl);
+}
+
+function fromUrlFilePart(
+  url: URL,
+  mediaType: string,
+  filename?: string,
+  cacheControl?: ChatCompletionsCacheControl,
+) {
   const out: FilePart = {
     type: "file" as const,
     data: url,
     filename,
-    mediaType: DEFAULT_FILE_MEDIA_TYPE,
+    mediaType,
   };
   if (cacheControl) {
     out.providerOptions = {
@@ -463,14 +453,6 @@ function fromFileDataPart(
     };
   }
   return out;
-}
-
-function toUrl(value: string): URL | undefined {
-  try {
-    return new URL(value);
-  } catch {
-    return undefined;
-  }
 }
 
 function fromFilePart(

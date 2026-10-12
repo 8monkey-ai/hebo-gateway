@@ -14,7 +14,7 @@ import {
 import { z } from "zod";
 
 import { GatewayError } from "../../errors/gateway";
-import { parseDataUrl } from "../../utils/url";
+import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url";
 import type { ReasoningConfig, ReasoningEffort, CacheControl, ServiceTier } from "./schema";
 
 /**
@@ -70,7 +70,7 @@ export function parseBase64(base64: string): Uint8Array {
  * payload plus the declared media type when the data URL carried one.
  */
 export function parseFileInput(data: string): { data: string; mediaType?: string } {
-  if (data.startsWith("data:")) {
+  if (isDataUrl(data)) {
     const { mimeType, dataStart } = parseDataUrl(data);
     if (!mimeType || dataStart <= 5 || dataStart >= data.length) {
       throw new GatewayError("Invalid data URL", 400);
@@ -81,11 +81,31 @@ export function parseFileInput(data: string): { data: string; mediaType?: string
   return { data };
 }
 
+/**
+ * Parses an OpenRouter-style `file_data` value, which is either a data URL, a remote
+ * URL forwarded to the provider as-is, or bare base64 with an unknown media type.
+ */
+export function parseFileDataInput(value: string): { data: string | URL; mediaType?: string } {
+  if (isDataUrl(value)) return parseFileInput(value);
+  if (!hasUrlScheme(value)) return { data: value };
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch (error) {
+    throw new GatewayError("Invalid file URL", 400, undefined, error);
+  }
+  // The AI SDK only fetches http(s) file URLs; anything else would reach the provider.
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new GatewayError(`Unsupported file URL protocol: ${url.protocol}`, 400);
+  }
+  return { data: url };
+}
+
 export function parseImageInput(url: string): { image: string | URL; mediaType?: string } {
-  const dataPrefix = "data:";
-  if (url.startsWith(dataPrefix)) {
+  if (isDataUrl(url)) {
     const { mimeType, dataStart } = parseDataUrl(url);
-    if (!mimeType || dataStart <= dataPrefix.length || dataStart >= url.length) {
+    if (!mimeType || dataStart <= 5 || dataStart >= url.length) {
       throw new GatewayError("Invalid data URL", 400);
     }
     if (!mimeType.startsWith("image/")) {

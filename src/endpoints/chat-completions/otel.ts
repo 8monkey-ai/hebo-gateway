@@ -1,7 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
 import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
+import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url";
 import type {
   ChatCompletionsAssistantMessage,
   ChatCompletions,
@@ -85,7 +85,7 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         break;
       case "image_url": {
         const url = part.image_url.url;
-        if (url.slice(0, 5).toLowerCase() === "data:") {
+        if (isDataUrl(url)) {
           const { mimeType } = parseDataUrl(url);
           parts.push(toBlobPart("image", mimeType || undefined));
         } else {
@@ -100,11 +100,11 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         const file = part.file;
         if ("file_data" in file) {
           // `file_data` is a data URL, a remote URL, or bare base64; only a URL
-          // is safe to record verbatim.
-          if (file.file_data.slice(0, 5).toLowerCase() === "data:") {
+          // is safe to record verbatim. Classification matches the converter.
+          if (isDataUrl(file.file_data)) {
             const { mimeType } = parseDataUrl(file.file_data);
             parts.push(withFileName(toBlobPart("file", mimeType || undefined), file.filename));
-          } else if (file.file_data.includes("://")) {
+          } else if (hasUrlScheme(file.file_data)) {
             parts.push(
               withFileName({ type: "uri", modality: "file", uri: file.file_data }, file.filename),
             );

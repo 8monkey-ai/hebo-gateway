@@ -806,6 +806,44 @@ describe("Chat Completions Converters", () => {
       ]);
     });
 
+    test("should decode an OpenRouter file_data data URL with an uppercase scheme", () => {
+      const result = convertToTextCallOptions({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                file: { filename: "a.pdf", file_data: "DATA:application/pdf;base64,aGVsbG8=" },
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.messages[0]!.content).toEqual([
+        {
+          type: "file",
+          data: new Uint8Array([104, 101, 108, 108, 111]),
+          filename: "a.pdf",
+          mediaType: "application/pdf",
+        },
+      ]);
+    });
+
+    test("should reject an OpenRouter file_data URL with a non-HTTP(S) scheme", () => {
+      expect(() =>
+        convertToTextCallOptions({
+          messages: [
+            {
+              role: "user",
+              content: [{ type: "file", file: { file_data: "file:///etc/passwd" } }],
+            },
+          ],
+        }),
+      ).toThrow(/Unsupported file URL protocol/u);
+    });
+
     test("should convert input_audio content parts to file user content", () => {
       const result = convertToTextCallOptions({
         messages: [
