@@ -36,7 +36,8 @@ describe("extractProviderNamespace", () => {
   test("should handle Anthropic and its infrastructure variants", () => {
     expect(extractProviderNamespace("anthropic.messages")).toBe("anthropic");
     expect(extractProviderNamespace("vertex.anthropic.messages")).toBe("vertex");
-    expect(extractProviderNamespace("bedrock.anthropic.messages")).toBe("bedrock");
+    // Bedrock serves Claude through InvokeModel, which takes the Anthropic request shape.
+    expect(extractProviderNamespace("bedrock.anthropic.messages")).toBe("anthropic");
   });
 
   test("should handle Azure (default to first component)", () => {

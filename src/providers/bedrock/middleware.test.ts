@@ -6,10 +6,13 @@ import { wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+// Also registers the model-level Claude middlewares the full chain below relies on.
+import { claudeReasoningMiddleware } from "../../models/anthropic/middleware";
 // Also registers the model-level GPT middlewares the full chain below relies on.
 import { openAIReasoningMiddleware } from "../../models/openai/middleware";
 import { withCanonicalIdsForBedrock } from "./canonical";
 import {
+  bedrockAnthropicServiceTierMiddleware,
   bedrockClaudeReasoningMiddleware,
   bedrockGptReasoningMiddleware,
   bedrockMantleReasoningMiddleware,
@@ -718,4 +721,119 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
   });
   // Reasoning models reject `temperature`.
   expect(body).not.toHaveProperty("temperature");
+});
+
+// ---------------------------------------------------------------------------
+// Claude on InvokeModel (nested Anthropic provider)
+// ---------------------------------------------------------------------------
+
+test("bedrock middlewares > the Anthropic provider keeps none of the Converse translations", () => {
+  const middleware = modelMiddlewareMatcher.resolve({
+    kind: "text",
+    modelId: "anthropic/claude-opus-4.6",
+    providerId: "bedrock.anthropic.messages",
+  });
+
+  expect(middleware).toContain(bedrockAnthropicServiceTierMiddleware);
+  expect(middleware).not.toContain(bedrockServiceTierMiddleware);
+  expect(middleware).not.toContain(bedrockClaudeReasoningMiddleware);
+  expect(middleware).not.toContain(bedrockPromptCachingMiddleware);
+});
+
+test("bedrockAnthropicServiceTierMiddleware > drops the Converse-only service tier", async () => {
+  const result = await bedrockAnthropicServiceTierMiddleware.transformParams!({
+    type: "generate",
+    params: {
+      prompt: [],
+      providerOptions: { anthropic: { serviceTier: "flex", thinking: { type: "adaptive" } } },
+    },
+    model: new MockLanguageModelV4({ modelId: "us.anthropic.claude-opus-4-6-v1" }),
+  });
+
+  expect(result.providerOptions!["anthropic"]).toEqual({
+    serviceTier: undefined,
+    thinking: { type: "adaptive" },
+  });
+});
+
+test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape through the chain", async () => {
+  let body: Record<string, unknown> | undefined;
+
+  const provider = withCanonicalIdsForBedrock(
+    createAmazonBedrock({
+      region: "us-east-1",
+      apiKey: "provider-key",
+      fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
+        body = JSON.parse(init!.body as string) as Record<string, unknown>;
+        throw new Error("captured");
+      }) as unknown as typeof fetch,
+    }),
+  );
+
+  const modelId = "anthropic/claude-opus-4.6";
+  const model = provider.languageModel(modelId);
+  const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
+  const wrapped = wrapLanguageModel({ model, middleware });
+
+  expect(middleware).toContain(claudeReasoningMiddleware);
+
+  try {
+    await wrapped.doGenerate({
+      prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      providerOptions: {
+        unknown: { reasoning: { enabled: true, effort: "high" }, service_tier: "flex" },
+      },
+    });
+  } catch {
+    // The capturing fetch always throws, so only the request body is asserted on.
+  }
+
+  // Native Anthropic fields, not the Converse `reasoningConfig` / `serviceTier` ones.
+  expect(body).toMatchObject({
+    thinking: { type: "adaptive" },
+    anthropic_version: "bedrock-2023-05-31",
+  });
+  expect(body).not.toHaveProperty("reasoningConfig");
+  expect(body).not.toHaveProperty("service_tier");
+});
+
+test("bedrock middlewares > mid-conversation system turns reach InvokeModel", async () => {
+  let body: Record<string, unknown> | undefined;
+
+  const provider = withCanonicalIdsForBedrock(
+    createAmazonBedrock({
+      region: "us-east-1",
+      apiKey: "provider-key",
+      fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
+        body = JSON.parse(init!.body as string) as Record<string, unknown>;
+        throw new Error("captured");
+      }) as unknown as typeof fetch,
+    }),
+  );
+
+  const model = provider.languageModel("anthropic/claude-haiku-4.5");
+
+  try {
+    // The Claude Code shape: a top-level system prompt plus a later `system` turn, which
+    // Converse rejects with "Multiple system messages that are separated by [...]".
+    await model.doGenerate({
+      prompt: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: [{ type: "text", text: "Remember 7." }] },
+        { role: "assistant", content: [{ type: "text", text: "Got it." }] },
+        { role: "system", content: "<system-reminder>Digits only.</system-reminder>" },
+        { role: "user", content: [{ type: "text", text: "Which number?" }] },
+      ],
+    });
+  } catch {
+    // The capturing fetch always throws, so only the request body is asserted on.
+  }
+
+  expect(body?.["system"]).toEqual([{ type: "text", text: "You are a helpful assistant." }]);
+  expect(body?.["messages"]).toMatchObject([
+    { role: "user" },
+    { role: "assistant" },
+    { role: "system" },
+    { role: "user" },
+  ]);
 });

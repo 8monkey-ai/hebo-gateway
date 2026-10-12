@@ -1085,12 +1085,10 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   // Mid-conversation system turns (Claude Code shape)
   // =========================================================================
   // Claude Code sends a top-level system prompt and later `<system-reminder>` turns
-  // with `role: "system"` inside `messages[]`. The gateway accepts and forwards them,
-  // but `@ai-sdk/amazon-bedrock` still throws "Multiple system messages that are
-  // separated by user/assistant messages" because Converse has no mid-conversation
-  // system field. Unskip once upstream translates them (native Anthropic already
-  // passes them through via the mid-conversation-system beta).
-  test.skip(
+  // with `role: "system"` inside `messages[]`. Converse cannot express those, so Claude
+  // is served through Bedrock's InvokeModel endpoint, which takes the Anthropic body
+  // verbatim (the `mid-conversation-system` beta is added by the provider).
+  test(
     "mid-conversation system: top-level system plus in-array system turns",
     async () => {
       const message = await client.messages.create({

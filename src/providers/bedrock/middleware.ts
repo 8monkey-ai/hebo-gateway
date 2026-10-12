@@ -204,6 +204,28 @@ modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   ],
 });
 
+// Service tiers are a Converse feature (`serviceTier`). The nested Anthropic provider sends
+// the Anthropic body instead, whose `service_tier` is not served on Bedrock, and the
+// gateway's internal tiers (`flex`, `priority`, `scale`, `default`) would fail the Anthropic
+// provider-options schema. Drop it rather than fail the request.
+export const bedrockAnthropicServiceTierMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const anthropic = params.providerOptions?.["anthropic"];
+    if (anthropic?.["serviceTier"] !== undefined) anthropic["serviceTier"] = undefined;
+
+    return params;
+  },
+};
+
+// The nested Anthropic provider takes the Anthropic request shape verbatim, so none of the
+// Converse translations above apply to it: `bedrock.anthropic.messages` never matches
+// `amazon-bedrock`, and the Claude model middleware already emits that shape.
+modelMiddlewareMatcher.useForProvider("bedrock.anthropic*", {
+  language: [bedrockAnthropicServiceTierMiddleware],
+});
+
 // The nested Mantle provider is OpenAI-shaped, so none of the Converse translations above
 // apply to it: `bedrock-mantle.chat` / `bedrock-mantle.responses` never match `amazon-bedrock`.
 modelMiddlewareMatcher.useForProvider("bedrock-mantle*", {
