@@ -195,11 +195,45 @@ export const bedrockMantleReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
+// The Converse API has no mid-conversation system concept — `system` is a top-level
+// field only, and @ai-sdk/amazon-bedrock throws "Multiple system messages that are
+// separated by user/assistant messages" for any system turn after the first
+// user/assistant message. Claude Code sends exactly that (`<system-reminder>` turns),
+// so demote those turns to user text in place: position is preserved and the converter
+// merges them into the adjacent user turn. Leading system messages are untouched and
+// still become the top-level `system` field.
+export const bedrockMidConversationSystemMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const prompt = params.prompt;
+
+    let seenConversationTurn = false;
+    for (let i = 0; i < prompt.length; i++) {
+      const message = prompt[i]!;
+      if (message.role !== "system") {
+        seenConversationTurn = true;
+        continue;
+      }
+      if (!seenConversationTurn) continue;
+
+      prompt[i] = {
+        role: "user",
+        content: [{ type: "text", text: message.content }],
+        providerOptions: message.providerOptions,
+      };
+    }
+
+    return params;
+  },
+};
+
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   language: [
     bedrockServiceTierMiddleware,
     bedrockGptReasoningMiddleware,
     bedrockClaudeReasoningMiddleware,
+    bedrockMidConversationSystemMiddleware,
     bedrockPromptCachingMiddleware,
   ],
 });
