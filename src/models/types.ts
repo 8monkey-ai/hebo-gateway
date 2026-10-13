@@ -3,6 +3,8 @@ import type { ProviderId } from "../providers/types";
 export const CANONICAL_MODEL_IDS = [
   // Anthropic
   "anthropic/claude-opus-5.5",
+  "anthropic/claude-sonnet-5.5",
+  "anthropic/claude-haiku-5.5",
   "anthropic/claude-opus-5",
   "anthropic/claude-sonnet-5",
   "anthropic/claude-fable-5.1",
@@ -30,6 +32,7 @@ export const CANONICAL_MODEL_IDS = [
   "openai/gpt-6-astra",
   "openai/gpt-6-sol",
   "openai/gpt-6-luna",
+  "openai/gpt-6.1-sol",
   "openai/text-embedding-3-small",
   "openai/text-embedding-3-large",
   // Amazon
@@ -47,6 +50,7 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-3.5-flash-lite",
   "google/gemini-3.6-flash",
   "google/gemini-3.7-flash",
+  "google/gemini-3.8-flash",
   "google/gemini-embedding-2",
   "google/gemma-3-1b",
   "google/gemma-3-4b",
@@ -74,10 +78,13 @@ export const CANONICAL_MODEL_IDS = [
   "cohere/embed-multilingual-v3.0",
   "cohere/embed-multilingual-light-v3.0",
   "cohere/command-a",
+  "cohere/command-a-plus",
   "cohere/command-r7b",
   "cohere/command-a-translate",
   "cohere/command-a-reasoning",
   "cohere/command-a-vision",
+  "cohere/north-mini-code",
+  "cohere/north-small-translate",
   // MiniMax
   "minimax/m2.5",
   "minimax/m2.7",
@@ -86,6 +93,7 @@ export const CANONICAL_MODEL_IDS = [
   "moonshot/kimi-k2.5",
   "moonshot/kimi-k2.6",
   "moonshot/kimi-k2.7-code",
+  "moonshot/kimi-k3",
   // xAI
   "xai/grok-4.2",
   "xai/grok-4.3",
@@ -93,8 +101,10 @@ export const CANONICAL_MODEL_IDS = [
   "xai/grok-4.20-multi-agent",
   "xai/grok-4.5",
   "xai/grok-4.6",
+  "xai/grok-4.7",
   // DeepSeek
   "deepseek/deepseek-v4-pro",
+  "deepseek/deepseek-v4.1-flash",
   // Voyage
   "voyage/voyage-2-code",
   "voyage/voyage-2-law",
@@ -136,6 +146,8 @@ export const CANONICAL_MODEL_IDS = [
   "zhipu/glm-5-turbo",
   "zhipu/glm-5.1",
   "zhipu/glm-5.2",
+  "zhipu/glm-5.3",
+  "zhipu/glm-5.3-flash",
 ] as const;
 
 export type CanonicalModelId = (typeof CANONICAL_MODEL_IDS)[number];

@@ -21,6 +21,10 @@ const explicitMappings: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3.5-9b", "accounts/fireworks/models/qwen3p5-9b"],
   ["moonshot/kimi-k2.5", "accounts/fireworks/models/kimi-k2p5"],
   ["moonshot/kimi-k2.6", "accounts/fireworks/models/kimi-k2p6"],
+  ["moonshot/kimi-k3", "accounts/fireworks/models/kimi-k3"],
+  ["deepseek/deepseek-v4.1-flash", "accounts/fireworks/models/deepseek-v4p1-flash"],
+  ["zhipu/glm-5.3", "accounts/fireworks/models/glm-5p3"],
+  ["zhipu/glm-5.3-flash", "accounts/fireworks/models/glm-5p3-flash"],
 ];
 
 for (const [canonical, nativeId] of explicitMappings) {

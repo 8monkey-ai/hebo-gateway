@@ -36,6 +36,32 @@ export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
+export const claudeHaiku55 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-haiku-5.5" as const,
+  {
+    ...CLAUDE_BASE,
+    ...CLAUDE_PDF_MODALITIES,
+    name: "Claude Haiku 5.5",
+    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
+    context: 1_000_000,
+    created: "2026-10-07",
+    knowledge: "2026-06",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const claudeSonnet55 = presetFor<CanonicalModelId, CatalogModel>()(
+  "anthropic/claude-sonnet-5.5" as const,
+  {
+    ...CLAUDE_BASE,
+    ...CLAUDE_PDF_MODALITIES,
+    name: "Claude Sonnet 5.5",
+    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
+    context: 1_000_000,
+    created: "2026-09-28",
+    knowledge: "2026-06",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
 export const claudeSonnet5 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-5" as const,
   {
@@ -164,7 +190,7 @@ export const claudeOpus46 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const claudeAtomic = {
-  "v5.5": [claudeOpus55],
+  "v5.5": [claudeOpus55, claudeSonnet55, claudeHaiku55],
   "v5.1": [claudeFable51],
   v5: [claudeOpus5, claudeSonnet5, claudeFable5],
   "v4.8": [claudeOpus48],
@@ -172,8 +198,8 @@ const claudeAtomic = {
   "v4.6": [claudeSonnet46, claudeOpus46],
   "v4.5": [claudeHaiku45, claudeOpus45],
   fable: [claudeFable51, claudeFable5],
-  haiku: [claudeHaiku45],
-  sonnet: [claudeSonnet5, claudeSonnet46],
+  haiku: [claudeHaiku55, claudeHaiku45],
+  sonnet: [claudeSonnet55, claudeSonnet5, claudeSonnet46],
   opus: [claudeOpus55, claudeOpus5, claudeOpus48, claudeOpus47, claudeOpus46, claudeOpus45],
 } as const;
 
@@ -190,7 +216,7 @@ const claudeGroups = {
 export const claude = {
   ...claudeAtomic,
   ...claudeGroups,
-  // Opus and Fable moved past 5.0 independently; Sonnet 5 is still the newest Sonnet.
-  latest: [claudeOpus55, claudeSonnet5, claudeFable51],
+  // Opus, Sonnet, Haiku and Fable move past 5.0 independently; Fable 5.1 is its newest.
+  latest: [claudeOpus55, claudeSonnet55, claudeHaiku55, claudeFable51],
   all: Object.values(claudeAtomic).flat(),
 } as const;

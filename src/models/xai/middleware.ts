@@ -16,7 +16,9 @@ import { modelMiddlewareMatcher } from "../../middleware/matcher";
 const rejectsEffort = (modelId: string) =>
   modelId.startsWith("grok-4.20") && modelId.endsWith("-reasoning");
 
-/** `xhigh` is Grok 4.6 only — anything above `high` collapses back to it elsewhere. */
+/** `xhigh` arrived with Grok 4.6 — anything above `high` collapses back to it elsewhere. */
+const supportsXhigh = (modelId: string) => modelId === "grok-4.6" || modelId === "grok-4.7";
+
 function mapXaiReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
   modelId: string,
@@ -33,7 +35,7 @@ function mapXaiReasoningEffort(
       return "high";
     case "xhigh":
     case "max":
-      return modelId === "grok-4.6" ? "xhigh" : "high";
+      return supportsXhigh(modelId) ? "xhigh" : "high";
   }
 
   return undefined;
@@ -69,6 +71,13 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel(
-  ["xai/grok-4.20", "xai/grok-4.20-multi-agent", "xai/grok-4.3", "xai/grok-4.5", "xai/grok-4.6"],
+  [
+    "xai/grok-4.20",
+    "xai/grok-4.20-multi-agent",
+    "xai/grok-4.3",
+    "xai/grok-4.5",
+    "xai/grok-4.6",
+    "xai/grok-4.7",
+  ],
   { language: [xaiReasoningMiddleware] },
 );

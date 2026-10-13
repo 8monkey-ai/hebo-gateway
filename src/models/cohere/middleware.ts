@@ -38,10 +38,14 @@ export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
 };
 
 const COHERE_MAX_OUTPUT_TOKENS = 32000;
+
+/** North exposes a plain thinking toggle; only the Command A line takes a token budget. */
+const supportsTokenBudget = (modelId: string) => !modelId.includes("north");
+
 export const cohereReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
@@ -50,8 +54,10 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
 
     const target = (params.providerOptions!["cohere"] ??= {}) as CohereLanguageModelOptions;
 
-    if (!reasoning.enabled) {
+    if (!reasoning.enabled || reasoning.effort === "none") {
       target.thinking = { type: "disabled" };
+    } else if (!supportsTokenBudget(model.modelId)) {
+      target.thinking = { type: "enabled" };
     } else if (reasoning.max_tokens) {
       target.thinking = { type: "enabled", tokenBudget: reasoning.max_tokens };
     } else if (reasoning.effort) {
@@ -76,6 +82,7 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
 
 modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: [cohereDimensionsMiddleware] });
 
-modelMiddlewareMatcher.useForModel("cohere/command-a-reasoning", {
-  language: [cohereReasoningMiddleware],
-});
+modelMiddlewareMatcher.useForModel(
+  ["cohere/command-a-reasoning", "cohere/command-a-plus", "cohere/north-mini-code"],
+  { language: [cohereReasoningMiddleware] },
+);

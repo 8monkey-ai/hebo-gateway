@@ -48,19 +48,40 @@ export const kimiK27Code = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const kimiK3 = presetFor<CanonicalModelId, CatalogModel>()("moonshot/kimi-k3" as const, {
+  ...KIMI_BASE,
+  name: "Kimi K3",
+  created: "2026-07-16",
+  context: 1_048_576,
+  modalities: {
+    input: ["text", "image", "video"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: [...KIMI_BASE.capabilities, "attachments"],
+  providers: [
+    "moonshot",
+    "deepinfra",
+    "fireworks",
+    "togetherai",
+    "chutes",
+  ] as const satisfies readonly CanonicalProviderId[],
+} satisfies CatalogModel);
+
 const kimiAtomic = {
   "k2.5": [kimiK25],
   "k2.6": [kimiK26],
   "k2.7": [kimiK27Code],
+  k3: [kimiK3],
 } as const;
 
 const kimiGroups = {
   "k2.x": [...kimiAtomic["k2.5"], ...kimiAtomic["k2.6"], ...kimiAtomic["k2.7"]],
+  "k3.x": [...kimiAtomic["k3"]],
 } as const;
 
 export const kimi = {
   ...kimiAtomic,
   ...kimiGroups,
-  latest: [...kimiAtomic["k2.7"]],
+  latest: [...kimiAtomic["k3"]],
   all: Object.values(kimiAtomic).flat(),
 } as const;

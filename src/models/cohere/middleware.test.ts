@@ -9,11 +9,14 @@ import { cohereDimensionsMiddleware, cohereReasoningMiddleware } from "./middlew
 test("cohere middleware > matching patterns", () => {
   const languageMatching = [
     "cohere/command-a-reasoning",
+    "cohere/command-a-plus",
+    "cohere/north-mini-code",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const languageNonMatching = [
     "cohere/command-a",
     "cohere/command-r7b",
+    "cohere/north-small-translate",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {
@@ -133,6 +136,58 @@ test("cohereReasoningMiddleware > should default reasoning budget when enabled w
           type: "enabled",
         },
       },
+      unknown: {},
+    },
+  });
+});
+
+test("cohereReasoningMiddleware > should keep North on a plain thinking toggle", async () => {
+  const params = {
+    prompt: [],
+    maxOutputTokens: 2000,
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "high" },
+      },
+    },
+  };
+
+  const result = await cohereReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "north-mini-code-1-0" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    maxOutputTokens: 2000,
+    providerOptions: {
+      cohere: { thinking: { type: "enabled" } },
+      unknown: {},
+    },
+  });
+});
+
+test("cohereReasoningMiddleware > should disable thinking for none effort", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "none" },
+      },
+    },
+  };
+
+  const result = await cohereReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "north-mini-code-1-0" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      cohere: { thinking: { type: "disabled" } },
       unknown: {},
     },
   });

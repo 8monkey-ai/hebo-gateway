@@ -4,6 +4,7 @@ import type { CanonicalModelId, ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
 
 const MAPPING = {
+  "deepseek/deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
   "google/gemma-3-4b": "google/gemma-3-4b-it",
   "google/gemma-3-12b": "google/gemma-3-12b-it",
   "google/gemma-3-27b": "google/gemma-3-27b-it",
@@ -35,8 +36,11 @@ const MAPPING = {
   "alibaba/qwen3-embedding-4b": "Qwen/Qwen3-Embedding-4B",
   "alibaba/qwen3-embedding-8b": "Qwen/Qwen3-Embedding-8B",
   "moonshot/kimi-k2.5": "moonshotai/Kimi-K2.5",
+  "moonshot/kimi-k3": "moonshotai/Kimi-K3",
   "zhipu/glm-5": "zai-org/GLM-5",
   "zhipu/glm-5.1": "zai-org/GLM-5.1",
+  "zhipu/glm-5.3": "zai-org/GLM-5.3",
+  "zhipu/glm-5.3-flash": "zai-org/GLM-5.3-Flash",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForDeepInfra = (

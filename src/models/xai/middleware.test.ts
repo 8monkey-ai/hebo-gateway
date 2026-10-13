@@ -13,6 +13,7 @@ test("xai middleware > matching patterns", () => {
     "xai/grok-4.3",
     "xai/grok-4.5",
     "xai/grok-4.6",
+    "xai/grok-4.7",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const languageNonMatching = ["xai/grok-4.2"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
@@ -333,6 +334,31 @@ test("xaiReasoningMiddleware > should keep the effort for the 4.20 multi-agent m
     prompt: [],
     providerOptions: {
       xai: { reasoningEffort: "high" },
+      unknown: {},
+    },
+  });
+});
+
+test("xaiReasoningMiddleware > should map max effort to xhigh on Grok 4.7", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "max" },
+      },
+    },
+  };
+
+  const result = await xaiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "grok-4.7" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      xai: { reasoningEffort: "xhigh" },
       unknown: {},
     },
   });

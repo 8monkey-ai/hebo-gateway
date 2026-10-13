@@ -63,7 +63,10 @@ const isGpt6OrLater = (modelId: string) => {
   return Number(version.split("-")[0]?.split(".")[0]) >= 6;
 };
 
-/** Only Sol and Luna can turn reasoning off; the rest of the GPT-6 line has no `none`. */
+/**
+ * Only GPT-6 Sol and Luna can turn reasoning off; the rest of the GPT-6 line has no `none`,
+ * GPT-6.1 Sol included — it dropped the level its GPT-6 namesake still accepts.
+ */
 const supportsNoneEffort = (modelId: string) => {
   if (!isGpt6OrLater(modelId)) return true;
 

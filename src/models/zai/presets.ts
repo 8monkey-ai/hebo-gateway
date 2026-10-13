@@ -59,19 +59,54 @@ export const glm52 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5.2"
   ] as const satisfies readonly CanonicalProviderId[],
 } satisfies CatalogModel);
 
+export const glm53 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5.3" as const, {
+  ...GLM_5_BASE,
+  name: "GLM 5.3",
+  context: 1_000_000,
+  created: "2026-08-14",
+  providers: [
+    "zai",
+    "deepinfra",
+    "togetherai",
+    "fireworks",
+  ] as const satisfies readonly CanonicalProviderId[],
+} satisfies CatalogModel);
+
+export const glm53Flash = presetFor<CanonicalModelId, CatalogModel>()(
+  "zhipu/glm-5.3-flash" as const,
+  {
+    ...GLM_5_BASE,
+    name: "GLM 5.3 Flash",
+    context: 1_000_000,
+    created: "2026-08-26",
+    modalities: {
+      input: ["text", "image", "video", "pdf"] as const,
+      output: ["text"] as const,
+    },
+    capabilities: [...GLM_5_BASE.capabilities, "attachments"],
+    providers: [
+      "zai",
+      "deepinfra",
+      "togetherai",
+      "fireworks",
+    ] as const satisfies readonly CanonicalProviderId[],
+  } satisfies CatalogModel,
+);
+
 const glmAtomic = {
   v5: [glm5, glm5Turbo],
   "v5.1": [glm51],
   "v5.2": [glm52],
+  "v5.3": [glm53, glm53Flash],
 } as const;
 
 const glmGroups = {
-  "v5.x": [...glmAtomic["v5"], ...glmAtomic["v5.1"], ...glmAtomic["v5.2"]],
+  "v5.x": [...glmAtomic["v5"], ...glmAtomic["v5.1"], ...glmAtomic["v5.2"], ...glmAtomic["v5.3"]],
 } as const;
 
 export const glm = {
   ...glmAtomic,
   ...glmGroups,
-  latest: [...glmAtomic["v5.2"]],
+  latest: [...glmAtomic["v5.3"]],
   all: Object.values(glmAtomic).flat(),
 } as const;

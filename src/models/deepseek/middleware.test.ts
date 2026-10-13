@@ -9,6 +9,7 @@ import { deepseekReasoningMiddleware } from "./middleware";
 test("deepseek middleware > matching patterns", () => {
   const languageMatching = [
     "deepseek/deepseek-v4-pro",
+    "deepseek/deepseek-v4.1-flash",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {
@@ -42,7 +43,7 @@ test("deepseekReasoningMiddleware > should enable thinking when reasoning enable
   });
 });
 
-test("deepseekReasoningMiddleware > should enable thinking with effort", async () => {
+test("deepseekReasoningMiddleware > should map effort to the thinking strength", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -61,7 +62,32 @@ test("deepseekReasoningMiddleware > should enable thinking with effort", async (
   expect(result).toEqual({
     prompt: [],
     providerOptions: {
-      deepseek: { thinking: { type: "enabled" } },
+      deepseek: { thinking: { type: "enabled" }, reasoningEffort: "high" },
+      unknown: {},
+    },
+  });
+});
+
+test("deepseekReasoningMiddleware > should collapse medium effort to low", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "medium" },
+      },
+    },
+  };
+
+  const result = await deepseekReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4(),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      deepseek: { thinking: { type: "enabled" }, reasoningEffort: "low" },
       unknown: {},
     },
   });
