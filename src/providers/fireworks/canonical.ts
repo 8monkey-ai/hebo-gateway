@@ -9,6 +9,7 @@ const MAPPING = {
   "meta/llama-3.2-3b": "accounts/fireworks/models/llama-v3p2-3b-instruct",
   "meta/llama-3.2-11b": "accounts/fireworks/models/llama-v3p2-11b-vision-instruct",
   "meta/llama-3.3-70b": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+  "deepseek/deepseek-v4.1-flash": "accounts/fireworks/models/deepseek-v4p1-flash",
   "openai/gpt-oss-20b": "accounts/fireworks/models/gpt-oss-20b",
   "openai/gpt-oss-120b": "accounts/fireworks/models/gpt-oss-120b",
   "minimax/m2.7": "accounts/fireworks/models/minimax-m2p7",
@@ -18,8 +19,11 @@ const MAPPING = {
   "alibaba/qwen3.5-9b": "accounts/fireworks/models/qwen3p5-9b",
   "moonshot/kimi-k2.5": "accounts/fireworks/models/kimi-k2p5",
   "moonshot/kimi-k2.6": "accounts/fireworks/models/kimi-k2p6",
+  "moonshot/kimi-k3": "accounts/fireworks/models/kimi-k3",
   "zhipu/glm-5": "accounts/fireworks/models/glm-5",
   "zhipu/glm-5.1": "accounts/fireworks/models/glm-5p1",
+  "zhipu/glm-5.3": "accounts/fireworks/models/glm-5p3",
+  "zhipu/glm-5.3-flash": "accounts/fireworks/models/glm-5p3-flash",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForFireworks = (

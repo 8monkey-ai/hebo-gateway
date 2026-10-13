@@ -22,6 +22,15 @@ const COMMAND_VISION_BASE = {
   knowledge: "2024-06",
 } satisfies DeepPartial<CatalogModel>;
 
+const NORTH_BASE = {
+  modalities: {
+    input: ["text"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: ["tool_call", "structured_output", "reasoning", "temperature"] as const,
+  providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
 const EMBED_V3_BASE = {
   modalities: {
     input: ["text", "image"] as const,
@@ -44,6 +53,22 @@ export const commandA = presetFor<CanonicalModelId, CatalogModel>()("cohere/comm
   created: "2025-03-13",
   context: 256000,
 } satisfies CatalogModel);
+
+export const commandAPlus = presetFor<CanonicalModelId, CatalogModel>()(
+  "cohere/command-a-plus" as const,
+  {
+    ...COMMAND_BASE,
+    name: "Cohere Command A Plus",
+    created: "2026-05-20",
+    knowledge: "2025-04",
+    context: 128000,
+    modalities: {
+      input: ["text", "image"] as const,
+      output: ["text"] as const,
+    },
+    providers: ["cohere"],
+  } satisfies CatalogModel,
+);
 
 export const commandAReasoning = presetFor<CanonicalModelId, CatalogModel>()(
   "cohere/command-a-reasoning" as const,
@@ -82,6 +107,28 @@ export const commandR7b = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Cohere Command R7B",
     created: "2024-12-13",
     context: 128000,
+  } satisfies CatalogModel,
+);
+
+export const northMiniCode = presetFor<CanonicalModelId, CatalogModel>()(
+  "cohere/north-mini-code" as const,
+  {
+    ...NORTH_BASE,
+    name: "Cohere North Mini Code",
+    created: "2026-06-09",
+    knowledge: "2025-09",
+    context: 256000,
+  } satisfies CatalogModel,
+);
+
+export const northSmallTranslate = presetFor<CanonicalModelId, CatalogModel>()(
+  "cohere/north-small-translate" as const,
+  {
+    ...NORTH_BASE,
+    name: "Cohere North Small Translate",
+    created: "2026-09-09",
+    context: 32768,
+    capabilities: ["temperature"],
   } satisfies CatalogModel,
 );
 
@@ -138,7 +185,7 @@ export const embedMultilingualLightV3 = presetFor<CanonicalModelId, CatalogModel
 );
 
 const commandAtomic = {
-  A: [commandA, commandAReasoning, commandATranslate, commandAVision],
+  A: [commandA, commandAPlus, commandAReasoning, commandATranslate, commandAVision],
   R: [commandR7b],
 } as const;
 
@@ -147,8 +194,23 @@ const commandGroups = {} as const;
 export const command = {
   ...commandAtomic,
   ...commandGroups,
-  latest: [commandA],
+  latest: [commandAPlus],
   all: Object.values(commandAtomic).flat(),
+} as const;
+
+const northAtomic = {
+  v1: [northMiniCode, northSmallTranslate],
+} as const;
+
+const northGroups = {
+  "v1.x": [...northAtomic["v1"]],
+} as const;
+
+export const north = {
+  ...northAtomic,
+  ...northGroups,
+  latest: [...northAtomic["v1"]],
+  all: Object.values(northAtomic).flat(),
 } as const;
 
 const embedAtomic = {

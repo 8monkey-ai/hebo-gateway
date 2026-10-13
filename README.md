@@ -252,12 +252,13 @@ Out-of-the-box model presets:
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
   Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
+  North: `north` (`v1`, `v1.x`, `latest`, `all`)
 
 - **DeepSeek** — `@hebo-ai/gateway/models/deepseek`  
-  DeepSeek: `deepseek` (`v4`, `v4.x`, `latest`, `all`)
+  DeepSeek: `deepseek` (`v4`, `v4.1`, `v4.x`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3-preview`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3-preview`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
@@ -267,10 +268,10 @@ Out-of-the-box model presets:
   MiniMax: `minimax` (`v2`, `v3`, `v2.x`, `v3.x`, `latest`, `all`)
 
 - **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
-  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k2.x`, `latest`, `all`)
+  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k3`, `k2.x`, `k3.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v5.x`, `v6.x`, `codex`, `pro`, `latest`, `all`)
+  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v6.1`, `v5.x`, `v6.x`, `codex`, `pro`, `latest`, `all`)
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
@@ -278,10 +279,10 @@ Out-of-the-box model presets:
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `latest`, `all`)
+  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `v4.7`, `latest`, `all`)
 
 - **Z.ai** — `@hebo-ai/gateway/models/zai`  
-  GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.x`, `latest`, `all`)
+  GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.x`, `latest`, `all`)
 
 #### User-defined Models
 
@@ -906,8 +907,8 @@ If you provide a custom logger, it must implement `trace`, `debug`, `info`, `war
 Example with **pino**:
 
 ```ts
-import pino from "pino";
 import { gateway } from "@hebo-ai/gateway";
+import pino from "pino";
 
 const gw = gateway({
   // ...
@@ -1026,10 +1027,10 @@ Metric names and attributes follow OpenTelemetry GenAI semantic conventions. His
 To capture them, configure a global `MeterProvider` before creating the gateway:
 
 ```ts
+import { gateway } from "@hebo-ai/gateway";
 import { metrics } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
-import { gateway } from "@hebo-ai/gateway";
 
 metrics.setGlobalMeterProvider(
   new MeterProvider({
@@ -1168,8 +1169,8 @@ advanced: {
 You can pass per-request info from your framework into the gateway via the second `state` argument on the handler, then read it in hooks through `ctx.state`.
 
 ```ts
-import { Elysia } from "elysia";
 import { gateway } from "@hebo-ai/gateway";
+import { Elysia } from "elysia";
 
 const basePath = "/v1/gateway";
 
@@ -1228,15 +1229,15 @@ console.log(`🐒 /chat/completions mounted to ${app.server?.url}/chat`);
 We also provide full schemas, helper functions and types to convert between **OpenAI <> Vercel AI SDK** for advanced use cases like creating your own endpoint. They are available via deep-imports and completely tree-shakeable.
 
 ```ts
-import { streamText, wrapLanguageModel } from "ai";
 import { createGroq } from "@ai-sdk/groq";
-import * as z from "zod";
 import {
   ChatCompletionsBodySchema,
   convertToTextCallOptions,
   toChatCompletionsStreamResponse,
 } from "@hebo-ai/gateway/endpoints/chat-completions";
 import { forwardParamsMiddleware } from "@hebo-ai/gateway/middleware/common";
+import { streamText, wrapLanguageModel } from "ai";
+import * as z from "zod";
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 

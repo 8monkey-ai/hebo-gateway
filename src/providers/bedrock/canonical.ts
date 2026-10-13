@@ -25,6 +25,8 @@ import { withCanonicalIds } from "../registry";
 const MAPPING = {
   // Require Inference Profiles and can't be resolved from standard name mapping
   "anthropic/claude-opus-5.5": "{ip}anthropic.claude-opus-5-5",
+  "anthropic/claude-sonnet-5.5": "{ip}anthropic.claude-sonnet-5-5",
+  "anthropic/claude-haiku-5.5": "{ip}anthropic.claude-haiku-5-5",
   "anthropic/claude-opus-5": "{ip}anthropic.claude-opus-5",
   "anthropic/claude-sonnet-5": "{ip}anthropic.claude-sonnet-5",
   "anthropic/claude-haiku-4.5": "{ip}anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -69,6 +71,7 @@ const MANTLE_MAPPING = {
   "openai/gpt-6-astra": "openai.gpt-6-astra",
   "openai/gpt-6-sol": "openai.gpt-6-sol",
   "openai/gpt-6-luna": "openai.gpt-6-luna",
+  "openai/gpt-6.1-sol": "openai.gpt-6.1-sol",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;

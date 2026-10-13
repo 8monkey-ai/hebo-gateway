@@ -46,6 +46,13 @@ test("withCanonicalIdsForXai > maps grok-4.6 via explicit mapping", () => {
   expect(model.modelId).toBe("grok-4.6");
 });
 
+test("withCanonicalIdsForXai > maps grok-4.7 via explicit mapping", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.languageModel("xai/grok-4.7");
+  expect(model.modelId).toBe("grok-4.7");
+});
+
 test("withCanonicalIdsForXai > supports extra mapping override", () => {
   const provider = withCanonicalIdsForXai(xai, {
     "xai/custom-model": "custom-native-id",

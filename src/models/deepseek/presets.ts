@@ -29,17 +29,42 @@ export const deepseekV4Pro = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const deepseekV41Flash = presetFor<CanonicalModelId, CatalogModel>()(
+  "deepseek/deepseek-v4.1-flash" as const,
+  {
+    ...DEEPSEEK_BASE,
+    name: "DeepSeek V4.1 Flash",
+    created: "2026-09-10",
+    knowledge: "2025-05",
+    context: 1_000_000,
+    modalities: {
+      input: ["text", "image"] as const,
+      output: ["text"] as const,
+    },
+    capabilities: [...DEEPSEEK_BASE.capabilities, "attachments"],
+    providers: [
+      "deepseek",
+      "azure",
+      "deepinfra",
+      "fireworks",
+      "togetherai",
+    ] as const satisfies readonly CanonicalProviderId[],
+  } satisfies CatalogModel,
+);
+
 const deepseekAtomic = {
   v4: [deepseekV4Pro],
+  "v4.1": [deepseekV41Flash],
 } as const;
 
 const deepseekGroups = {
-  "v4.x": [...deepseekAtomic["v4"]],
+  "v4.x": [...deepseekAtomic["v4"], ...deepseekAtomic["v4.1"]],
 } as const;
 
 export const deepseek = {
   ...deepseekAtomic,
   ...deepseekGroups,
-  latest: [...deepseekAtomic["v4"]],
+  // V4.1 Flash is the newest release; V4 Pro is still the frontier model.
+  latest: [deepseekV4Pro, deepseekV41Flash],
   all: Object.values(deepseekAtomic).flat(),
 } as const;

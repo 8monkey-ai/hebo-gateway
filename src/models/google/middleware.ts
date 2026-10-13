@@ -29,6 +29,20 @@ export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
+/**
+ * Flash dropped the `minimal` thinking level after 3.6 (3.7 onwards starts at `low`), and
+ * sending a level a model does not list is rejected, so it collapses to `low` there.
+ */
+const supportsMinimalLevel = (modelId: string) => {
+  const start = modelId.indexOf("gemini-");
+  if (start === -1) return true;
+
+  const rest = modelId.slice(start + "gemini-".length);
+  const end = rest.indexOf("-");
+  // `3.8-flash` -> 3.8, `3-flash-preview` -> 3, a missing version -> NaN, never `>= 3.7`.
+  return !(Number(end === -1 ? rest : rest.slice(0, end)) >= 3.7);
+};
+
 // https://ai.google.dev/gemini-api/docs/thinking#thinking-levels
 export function mapGeminiReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
@@ -53,7 +67,7 @@ export function mapGeminiReasoningEffort(
   switch (effort) {
     case "none":
     case "minimal":
-      return "minimal";
+      return supportsMinimalLevel(modelId) ? "minimal" : "low";
     case "low":
       return "low";
     case "medium":

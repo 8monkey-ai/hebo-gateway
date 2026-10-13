@@ -21,8 +21,13 @@ const isClaude4 = (modelId: string) => modelId.includes("claude-") && modelId.in
 const isFable5 = (modelId: string) => modelId.includes("claude-fable-5");
 const isOpus5 = (modelId: string) => modelId.includes("claude-opus-5");
 const isSonnet5 = (modelId: string) => modelId.includes("claude-sonnet-5");
+const isHaiku5 = (modelId: string) => modelId.includes("claude-haiku-5");
 const isClaude4OrFable = (modelId: string) =>
-  isClaude4(modelId) || isFable5(modelId) || isOpus5(modelId) || isSonnet5(modelId);
+  isClaude4(modelId) ||
+  isFable5(modelId) ||
+  isOpus5(modelId) ||
+  isSonnet5(modelId) ||
+  isHaiku5(modelId);
 
 const isOpus48 = isClaude("opus", "4.8");
 const isOpus47 = isClaude("opus", "4.7");
@@ -33,6 +38,7 @@ const isSonnet46 = isClaude("sonnet", "4.6");
 const isNativeEffortClaude = (modelId: string) =>
   isOpus5(modelId) ||
   isSonnet5(modelId) ||
+  isHaiku5(modelId) ||
   isFable5(modelId) ||
   isOpus48(modelId) ||
   isOpus47(modelId);
@@ -199,6 +205,7 @@ modelMiddlewareMatcher.useForModel(
     "anthropic/claude-opus-4.8*",
     "anthropic/claude-opus-5*",
     "anthropic/claude-sonnet-5*",
+    "anthropic/claude-haiku-5*",
     "anthropic/claude-fable-*",
   ],
   {

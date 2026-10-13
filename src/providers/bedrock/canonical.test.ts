@@ -67,6 +67,8 @@ async function captureRequest(
 
 const anthropicCases = [
   { canonical: "anthropic/claude-opus-5.5", native: "us.anthropic.claude-opus-5-5" },
+  { canonical: "anthropic/claude-sonnet-5.5", native: "us.anthropic.claude-sonnet-5-5" },
+  { canonical: "anthropic/claude-haiku-5.5", native: "us.anthropic.claude-haiku-5-5" },
   {
     canonical: "anthropic/claude-haiku-4.5",
     native: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -194,6 +196,7 @@ const mantleCases = [
   { canonical: "openai/gpt-6-astra", native: "openai.gpt-6-astra" },
   { canonical: "openai/gpt-6-sol", native: "openai.gpt-6-sol" },
   { canonical: "openai/gpt-6-luna", native: "openai.gpt-6-luna" },
+  { canonical: "openai/gpt-6.1-sol", native: "openai.gpt-6.1-sol" },
 ] as const;
 
 for (const { canonical, native } of mantleCases) {

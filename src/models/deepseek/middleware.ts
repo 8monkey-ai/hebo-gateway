@@ -1,8 +1,33 @@
 import type { DeepSeekLanguageModelOptions } from "@ai-sdk/deepseek";
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
+import type {
+  ChatCompletionsReasoningConfig,
+  ChatCompletionsReasoningEffort,
+} from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+
+// DeepSeek V4 knows three thinking strengths; `medium` has no level of its own.
+// https://api-docs.deepseek.com/guides/reasoning_model
+function mapDeepseekReasoningEffort(
+  effort: ChatCompletionsReasoningEffort,
+): DeepSeekLanguageModelOptions["reasoningEffort"] {
+  switch (effort) {
+    case "none":
+      return undefined;
+    case "minimal":
+    case "low":
+    case "medium":
+      return "low";
+    case "high":
+    case "xhigh":
+      return "high";
+    case "max":
+      return "max";
+  }
+
+  return undefined;
+}
 
 export const deepseekReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
@@ -22,12 +47,16 @@ export const deepseekReasoningMiddleware: LanguageModelMiddleware = {
       target.thinking = { type: "enabled" };
     }
 
+    if (reasoning.effort && reasoning.effort !== "none") {
+      target.reasoningEffort = mapDeepseekReasoningEffort(reasoning.effort);
+    }
+
     delete unknown["reasoning"];
 
     return params;
   },
 };
 
-modelMiddlewareMatcher.useForModel("deepseek/deepseek-v4-pro", {
+modelMiddlewareMatcher.useForModel(["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash"], {
   language: [deepseekReasoningMiddleware],
 });

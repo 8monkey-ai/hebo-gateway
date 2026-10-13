@@ -9,6 +9,8 @@ import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./midd
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
     "anthropic/claude-opus-5.5",
+    "anthropic/claude-sonnet-5.5",
+    "anthropic/claude-haiku-5.5",
     "anthropic/claude-opus-5",
     "anthropic/claude-sonnet-5",
     "anthropic/claude-fable-5.1",
@@ -1046,6 +1048,72 @@ test("claudeReasoningMiddleware > should map xhigh effort for Claude Opus 4.5 wi
           budgetTokens: 60800,
         },
         effort: "high",
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("claudeReasoningMiddleware > should use native effort for Claude Haiku 5.5", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "max",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-5-5" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "max",
+      },
+      unknown: {},
+    },
+  });
+});
+
+test("claudeReasoningMiddleware > should use native effort for Claude Sonnet 5.5", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: {
+          enabled: true,
+          effort: "xhigh",
+        },
+      },
+    },
+  };
+
+  const result = await claudeReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-5-5" }),
+  });
+
+  expect(result).toEqual({
+    prompt: [],
+    providerOptions: {
+      anthropic: {
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "xhigh",
       },
       unknown: {},
     },

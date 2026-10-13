@@ -4,7 +4,7 @@ import { qwen } from "./alibaba/presets";
 import { nova } from "./amazon/presets";
 import { claude } from "./anthropic/presets";
 import { defineModelCatalog } from "./catalog";
-import { command, embed } from "./cohere/presets";
+import { command, embed, north } from "./cohere/presets";
 import { deepseek } from "./deepseek/presets";
 import { gemini, gemma } from "./google/presets";
 import { llama } from "./meta/presets";
@@ -22,6 +22,7 @@ const catalog = defineModelCatalog(
   claude.all,
   command.all,
   embed.all,
+  north.all,
   deepseek.all,
   gemini.all,
   gemma.all,
@@ -89,4 +90,32 @@ test("built-in presets > exclude retired, deprecated and explicitly removed mode
     expect(canonicalIds.has(id)).toBe(false);
     expect(catalog[id]).toBeUndefined();
   }
+});
+
+test("built-in presets > latest groups point at the newest release of each family", () => {
+  const ids = (presets: readonly (() => Record<string, unknown>)[]) =>
+    presets.map((preset) => Object.keys(preset())[0]);
+
+  expect(ids(claude.latest)).toEqual([
+    "anthropic/claude-opus-5.5",
+    "anthropic/claude-sonnet-5.5",
+    "anthropic/claude-haiku-5.5",
+    "anthropic/claude-fable-5.1",
+  ]);
+  expect(ids(command.latest)).toEqual(["cohere/command-a-plus"]);
+  expect(ids(north.latest)).toEqual(["cohere/north-mini-code", "cohere/north-small-translate"]);
+  expect(ids(deepseek.latest)).toEqual([
+    "deepseek/deepseek-v4-pro",
+    "deepseek/deepseek-v4.1-flash",
+  ]);
+  expect(ids(gemini.latest)).toEqual(["google/gemini-3.8-flash"]);
+  expect(ids(gpt.latest)).toEqual([
+    "openai/gpt-6-astra",
+    "openai/gpt-6.1-sol",
+    "openai/gpt-6-luna",
+    "openai/gpt-5.5-pro",
+  ]);
+  expect(ids(kimi.latest)).toEqual(["moonshot/kimi-k3"]);
+  expect(ids(grok.latest)).toEqual(["xai/grok-4.7"]);
+  expect(ids(glm.latest)).toEqual(["zhipu/glm-5.3", "zhipu/glm-5.3-flash"]);
 });

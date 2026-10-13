@@ -4,12 +4,29 @@ import {
   gemini35FlashLite,
   gemini36Flash,
   gemini37Flash,
+  gemini38Flash,
   geminiEmbedding2,
   gemma31b,
   gemma4E4b,
   gemma,
   gemini,
 } from "./presets";
+
+test("gemini38Flash > should expose Gemini 3.8 Flash metadata", () => {
+  expect(gemini38Flash()).toEqual({
+    "google/gemini-3.8-flash": {
+      name: "Gemini 3.8 Flash",
+      created: "2026-09-02",
+      modalities: {
+        input: ["text", "image", "pdf", "file", "audio", "video"],
+        output: ["text"],
+      },
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
+      context: 1048576,
+      providers: ["vertex"],
+    },
+  });
+});
 
 test("gemini37Flash > should expose Gemini 3.7 Flash metadata", () => {
   expect(gemini37Flash()).toEqual({
@@ -62,9 +79,9 @@ test("gemini35FlashLite > should expose Gemini 3.5 Flash-Lite metadata", () => {
   });
 });
 
-test("gemini.latest > should point to Gemini 3.7 Flash", () => {
+test("gemini.latest > should point to Gemini 3.8 Flash", () => {
   const ids = gemini.latest.map((preset) => Object.keys(preset())[0]);
-  expect(ids).toEqual(["google/gemini-3.7-flash"]);
+  expect(ids).toEqual(["google/gemini-3.8-flash"]);
 });
 
 test("gemini.v3.x > should include the new 3.5 Flash-Lite, 3.6 Flash and 3.7 Flash models", () => {
@@ -72,6 +89,7 @@ test("gemini.v3.x > should include the new 3.5 Flash-Lite, 3.6 Flash and 3.7 Fla
   expect(ids).toContain("google/gemini-3.5-flash-lite");
   expect(ids).toContain("google/gemini-3.6-flash");
   expect(ids).toContain("google/gemini-3.7-flash");
+  expect(ids).toContain("google/gemini-3.8-flash");
 });
 
 test("geminiEmbedding2 > should expose GA embedding metadata with multimodal input", () => {

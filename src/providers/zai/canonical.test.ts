@@ -20,6 +20,18 @@ for (const [canonical, nativeId] of explicitMappings) {
   });
 }
 
+const defaultMappings: [canonical: string, nativeId: string][] = [
+  ["zhipu/glm-5.3", "glm-5.3"],
+  ["zhipu/glm-5.3-flash", "glm-5.3-flash"],
+];
+
+for (const [canonical, nativeId] of defaultMappings) {
+  test(`default transform: ${canonical} → ${nativeId}`, () => {
+    const model = provider.languageModel(canonical);
+    expect(model.modelId).toBe(nativeId);
+  });
+}
+
 test("withCanonicalIdsForZai > supports extra mapping override", () => {
   const customProvider = withCanonicalIdsForZai(createZhipu({ apiKey: "test-key" }), {
     "zhipu/custom-model": "custom-native-id",

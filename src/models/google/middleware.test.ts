@@ -16,6 +16,7 @@ test("geminiReasoningMiddleware > matching patterns", () => {
     "google/gemini-3.1-flash-lite",
     "google/gemini-3.1-pro-preview",
     "google/gemini-3.7-flash",
+    "google/gemini-3.8-flash",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const nonMatching = [
@@ -257,5 +258,54 @@ test("geminiReasoningMiddleware > should map thinking level for Gemini 3.7 Flash
       },
       unknown: {},
     },
+  });
+});
+
+test("geminiReasoningMiddleware > should keep the minimal level on Gemini 3.6 Flash", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "minimal" },
+      },
+    },
+  };
+
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "gemini-3.6-flash" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    google: {
+      thinkingConfig: { thinkingLevel: "minimal", includeThoughts: true },
+    },
+    unknown: {},
+  });
+});
+
+// Flash dropped `minimal` after 3.6: an unlisted level is rejected, so it becomes `low`.
+test("geminiReasoningMiddleware > should collapse minimal to low on Gemini 3.8 Flash", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      unknown: {
+        reasoning: { enabled: true, effort: "minimal" },
+      },
+    },
+  };
+
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "gemini-3.8-flash" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    google: {
+      thinkingConfig: { thinkingLevel: "low", includeThoughts: true },
+    },
+    unknown: {},
   });
 });
