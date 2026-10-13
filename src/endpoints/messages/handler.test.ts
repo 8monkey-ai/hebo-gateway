@@ -192,6 +192,22 @@ describe("Messages Handler", () => {
     expect(res.status).toBe(200);
   });
 
+  test("should accept a system message inside messages[]", async () => {
+    const request = postJson(baseUrl, {
+      model: "openai/gpt-oss-20b",
+      max_tokens: 100,
+      messages: [
+        { role: "user", content: "hey" },
+        { role: "system", content: "Be concise." },
+        { role: "user", content: "hey again" },
+      ],
+    });
+    const res = await endpoint.handler(request);
+    expect(res.status).toBe(200);
+    const data = await parseResponse<Messages>(res);
+    expect(data!.stop_reason).toBe("end_turn");
+  });
+
   test("should generate non-streaming response with content blocks", async () => {
     const request = postJson(baseUrl, {
       model: "openai/gpt-oss-20b",

@@ -2,6 +2,7 @@ import type { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import type { LanguageModelMiddleware } from "ai";
 
 import type {
+  ChatCompletionsCacheControl,
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
@@ -177,10 +178,14 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
 
-    const cacheControl = unknown["cache_control"] as AnthropicProviderOptions["cacheControl"];
+    const cacheControl = unknown["cache_control"] as ChatCompletionsCacheControl | undefined;
     if (cacheControl) {
       ((params.providerOptions!["anthropic"] ??= {}) as AnthropicProviderOptions).cacheControl =
-        cacheControl;
+        // Claude TTLs are `5m` and `1h`. The gateway also accepts OpenAI's 24h retention
+        // (`prompt_cache_retention`), which would fail the provider-options schema.
+        cacheControl.ttl === "24h"
+          ? { type: cacheControl.type, ttl: "1h" }
+          : (cacheControl as AnthropicProviderOptions["cacheControl"]);
     }
 
     delete unknown["cache_control"];

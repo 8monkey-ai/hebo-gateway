@@ -12,6 +12,7 @@ import type {
   ChatCompletionsReasoningEffort,
   ChatCompletionsServiceTier,
 } from "../../endpoints/chat-completions/schema";
+import { logger } from "../../logger";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
@@ -19,7 +20,26 @@ const BEDROCK_EFFORT_CAPABLE = ["-4-6", "-4-7"] as const;
 const isBedrockEffortCapable = (modelId: string) =>
   BEDROCK_EFFORT_CAPABLE.some((tag) => modelId.includes(tag));
 
+// Bedrock serves the default tier when the tier is omitted, so `auto` maps to nothing.
 // https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
+const toBedrockServiceTier = (
+  tier: ChatCompletionsServiceTier,
+): BedrockProviderOptions["serviceTier"] => {
+  switch (tier) {
+    case "auto":
+      return undefined;
+    case "scale":
+      return "reserved";
+    case "default":
+    case "flex":
+    case "priority":
+      return tier;
+  }
+
+  return undefined;
+};
+
+// Converse takes the tier in the request body.
 export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -28,22 +48,9 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
     if (!bedrock || typeof bedrock !== "object") return params;
 
     const tier = bedrock.serviceTier as ChatCompletionsServiceTier | undefined;
-    switch (tier) {
-      case undefined:
-        return params;
-      case "auto":
-        // Bedrock uses its default tier when omitted.
-        delete bedrock.serviceTier;
-        return params;
-      case "scale":
-        bedrock.serviceTier = "reserved";
-        return params;
-      case "default":
-      case "flex":
-      case "priority":
-        bedrock.serviceTier = tier;
-        return params;
-    }
+    if (tier === undefined) return params;
+
+    bedrock.serviceTier = toBedrockServiceTier(tier);
 
     return params;
   },
@@ -202,6 +209,94 @@ modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
     bedrockClaudeReasoningMiddleware,
     bedrockPromptCachingMiddleware,
   ],
+});
+
+// The InvokeModel endpoint takes the service tier as a request header, with the same tier
+// names Converse takes in its body. The Anthropic body's own `service_tier` (`auto` /
+// `standard_only`) is not served on Bedrock, so the tier moves out of the provider options,
+// where the gateway's tiers would also fail the Anthropic options schema.
+//   https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html
+const BEDROCK_SERVICE_TIER_HEADER = "x-amzn-bedrock-service-tier";
+
+export const bedrockAnthropicServiceTierMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const anthropic = params.providerOptions?.["anthropic"];
+    if (!anthropic || typeof anthropic !== "object") return params;
+
+    const tier = anthropic["serviceTier"] as ChatCompletionsServiceTier | undefined;
+    if (tier === undefined) return params;
+
+    anthropic["serviceTier"] = undefined;
+
+    const mapped = toBedrockServiceTier(tier);
+    if (mapped) (params.headers ??= {})[BEDROCK_SERVICE_TIER_HEADER] ??= mapped;
+
+    return params;
+  },
+};
+
+// Bedrock implements a subset of the Anthropic betas and rejects the rest of the
+// `anthropic-beta` header with a 400, while first-party clients (Claude Code, the Claude
+// app) send their full list — they only trim it when they know they are talking to Bedrock,
+// and the gateway looks like the first-party Messages API. Every beta a request genuinely
+// needs is added by the provider itself (into the InvokeModel body's `anthropic_beta`), so
+// filtering the forwarded header drops nothing else.
+// https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html
+const BEDROCK_ANTHROPIC_BETAS = new Set([
+  "computer-use-2024-10-22",
+  "computer-use-2025-01-24",
+  "context-1m-2025-08-07",
+  "context-management-2025-06-27",
+  "dev-full-thinking-2025-05-14",
+  "effort-2025-11-24",
+  "interleaved-thinking-2025-05-14",
+  "output-128k-2025-02-19",
+  "token-efficient-tools-2025-02-19",
+  "tool-examples-2025-10-29",
+  "tool-search-tool-2025-10-19",
+  // Undocumented, but `@ai-sdk/amazon-bedrock` opts into these on this endpoint itself.
+  "fine-grained-tool-streaming-2025-05-14",
+  "mid-conversation-system-2026-04-07",
+  "mid-conversation-system-clear-at-2026-08-21",
+]);
+
+const ANTHROPIC_BETA_HEADER = "anthropic-beta";
+
+export const bedrockAnthropicBetaMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const header = params.headers?.[ANTHROPIC_BETA_HEADER];
+    if (!header) return params;
+
+    let kept = "";
+    let dropped = "";
+    for (const entry of header.split(",")) {
+      // The Anthropic model lowercases header betas before merging them into the request.
+      const beta = entry.trim().toLowerCase();
+      if (!beta) continue;
+
+      if (BEDROCK_ANTHROPIC_BETAS.has(beta)) kept += kept ? `,${beta}` : beta;
+      else dropped += dropped ? `, ${beta}` : beta;
+    }
+
+    if (!dropped) return params;
+
+    logger.debug(`[bedrock] dropped unsupported anthropic betas: ${dropped}`);
+    // Undefined rather than deleted: the provider reads the key with `?? ""`.
+    params.headers![ANTHROPIC_BETA_HEADER] = kept || undefined;
+
+    return params;
+  },
+};
+
+// The nested Anthropic provider takes the Anthropic request shape verbatim, so none of the
+// Converse translations above apply to it: `bedrock.anthropic.messages` never matches
+// `amazon-bedrock`, and the Claude model middleware already emits that shape.
+modelMiddlewareMatcher.useForProvider("bedrock.anthropic*", {
+  language: [bedrockAnthropicServiceTierMiddleware, bedrockAnthropicBetaMiddleware],
 });
 
 // The nested Mantle provider is OpenAI-shaped, so none of the Converse translations above

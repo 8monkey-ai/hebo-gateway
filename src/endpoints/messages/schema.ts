@@ -112,6 +112,14 @@ const AssistantContentBlockSchema = z.discriminatedUnion("type", [
 ]);
 export type AssistantContentBlock = z.infer<typeof AssistantContentBlockSchema>;
 
+// FUTURE: Support multimodal content in system messages (currently limited to text by AI SDK)
+const SystemBlockSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+  cache_control: CacheControlSchema.nullish(),
+});
+export type SystemBlock = z.infer<typeof SystemBlockSchema>;
+
 const UserMessageSchema = z.object({
   role: z.literal("user"),
   content: z.union([z.string(), z.array(UserContentBlockSchema)]),
@@ -122,20 +130,18 @@ const AssistantMessageSchema = z.object({
   content: z.union([z.string(), z.array(AssistantContentBlockSchema)]),
 });
 
+// Anthropic accepts `system` turns inside `messages[]` (mid-conversation system).
+const SystemMessageSchema = z.object({
+  role: z.literal("system"),
+  content: z.union([z.string(), z.array(SystemBlockSchema)]),
+});
+
 const MessagesMessageSchema = z.discriminatedUnion("role", [
   UserMessageSchema,
   AssistantMessageSchema,
+  SystemMessageSchema,
 ]);
 export type MessagesMessage = z.infer<typeof MessagesMessageSchema>;
-
-// --- System Block Schema ---
-
-// FUTURE: Support multimodal content in system messages (currently limited to text by AI SDK)
-const SystemBlockSchema = z.object({
-  type: z.literal("text"),
-  text: z.string(),
-  cache_control: CacheControlSchema.nullish(),
-});
 
 // --- Tool Schemas ---
 

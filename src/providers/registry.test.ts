@@ -77,7 +77,7 @@ test("GPT-5.6 Sol resolves through Bedrock's Mantle endpoint in gateway config",
   expect(languageModel.provider).toBe("bedrock-mantle.responses");
 });
 
-test("Claude Sonnet 4.5 still resolves through Bedrock's native endpoint", () => {
+test("Claude Sonnet 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
   const config = {
     providers: {
       bedrock: withCanonicalIdsForBedrock(
@@ -102,6 +102,7 @@ test("Claude Sonnet 4.5 still resolves through Bedrock's native endpoint", () =>
 
   const languageModel = provider.languageModel(modelId);
 
+  // Same Bedrock ID as on Converse, but served with the Anthropic request shape.
   expect(languageModel.modelId).toBe("us.anthropic.claude-sonnet-4-5-20250929-v1:0");
-  expect(languageModel.provider).toBe("amazon-bedrock");
+  expect(languageModel.provider).toBe("bedrock.anthropic.messages");
 });

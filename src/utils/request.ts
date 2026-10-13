@@ -22,6 +22,7 @@ export const FORWARD_HEADER_ALLOWLIST = [
   "x-amzn-bedrock-guardrailidentifier",
   "x-amzn-bedrock-guardrailversion",
   "x-amzn-bedrock-performanceconfig-latency",
+  "x-amzn-bedrock-service-tier",
   "x-amzn-bedrock-trace",
   // Google Vertex
   "x-goog-api-client",

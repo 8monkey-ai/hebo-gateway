@@ -1081,4 +1081,35 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
     },
     { timeout: 120_000 },
   );
+  // =========================================================================
+  // Mid-conversation system turns (Claude Code shape)
+  // =========================================================================
+  // Claude Code sends a top-level system prompt and later `<system-reminder>` turns
+  // with `role: "system"` inside `messages[]`. Converse cannot express those, so Claude
+  // is served through Bedrock's InvokeModel endpoint, which takes the Anthropic body
+  // verbatim (the `mid-conversation-system` beta is added by the provider).
+  test(
+    "mid-conversation system: top-level system plus in-array system turns",
+    async () => {
+      const message = await client.messages.create({
+        model: MODEL,
+        max_tokens: 64,
+        system: "You are a helpful assistant.",
+        messages: [
+          { role: "user", content: "Remember the number 7." },
+          { role: "assistant", content: "Got it." },
+          {
+            role: "system",
+            content: "<system-reminder>Answer with digits only.</system-reminder>",
+          },
+          { role: "user", content: "Which number did I ask you to remember?" },
+        ],
+      });
+
+      expect(message.type).toBe("message");
+      const text = (message.content[0] as Anthropic.Messages.TextBlock).text;
+      expect(text).toContain("7");
+    },
+    { timeout: 60_000 },
+  );
 });

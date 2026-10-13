@@ -30,7 +30,7 @@ import {
   type RuntimeContext,
   type TextCallOptions,
 } from "../shared/converters";
-import type { ReasoningConfig, ServiceTier, CacheControl } from "../shared/schema";
+import type { ReasoningConfig, ServiceTier } from "../shared/schema";
 import type {
   MessagesInputs,
   MessagesMessage,
@@ -48,6 +48,7 @@ import type {
   MessagesStreamEvent,
   MessagesServiceTier,
   ContentBlockStartEvent,
+  SystemBlock,
 } from "./schema";
 
 // --- Request Flow ---
@@ -163,29 +164,12 @@ export function convertThinkingToReasoning(
 
 export function convertToModelMessages(
   messages: MessagesMessage[],
-  system?: string | Array<{ type: "text"; text: string; cache_control?: CacheControl | null }>,
+  system?: string | SystemBlock[],
 ): ModelMessage[] {
   const modelMessages: ModelMessage[] = [];
 
   // System prompt
-  if (system) {
-    if (typeof system === "string") {
-      modelMessages.push({ role: "system", content: system });
-    } else {
-      const text = system.map((block) => block.text).join("");
-      const msg: ModelMessage = { role: "system", content: text };
-
-      // Pass through cache_control from the last system block that has it
-      for (let i = system.length - 1; i >= 0; i--) {
-        if (system[i]!.cache_control) {
-          msg.providerOptions = { unknown: { cache_control: system[i]!.cache_control } };
-          break;
-        }
-      }
-
-      modelMessages.push(msg);
-    }
-  }
+  if (system) modelMessages.push(fromSystemContent(system));
 
   // Tool call id → name map built incrementally; assistant messages always
   // precede their corresponding tool results in a valid conversation.
@@ -197,6 +181,10 @@ export function convertToModelMessages(
       for (let i = 0; i < userMessages.length; i++) {
         modelMessages.push(userMessages[i]!);
       }
+    } else if (message.role === "system") {
+      // Anthropic allows mid-conversation system turns; keep the position and let
+      // the provider decide how to express it.
+      modelMessages.push(fromSystemContent(message.content));
     } else if (message.role === "assistant") {
       if (Array.isArray(message.content)) {
         for (const block of message.content) {
@@ -209,6 +197,28 @@ export function convertToModelMessages(
   }
 
   return modelMessages;
+}
+
+function fromSystemContent(content: string | SystemBlock[]): ModelMessage {
+  if (typeof content === "string") return { role: "system", content };
+
+  // Called once per system turn, and Claude Code sends a `<system-reminder>` turn of a
+  // single block on most requests, so concatenate in place instead of `map().join()`.
+  let text = "";
+  for (let i = 0; i < content.length; i++) text += content[i]!.text;
+
+  const message: ModelMessage = { role: "system", content: text };
+
+  // Pass through cache_control from the last block that has it
+  for (let i = content.length - 1; i >= 0; i--) {
+    const cacheControl = content[i]!.cache_control;
+    if (cacheControl) {
+      message.providerOptions = { unknown: { cache_control: cacheControl } };
+      break;
+    }
+  }
+
+  return message;
 }
 
 function fromUserMessage(

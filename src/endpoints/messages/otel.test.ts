@@ -123,6 +123,27 @@ describe("Messages OTEL", () => {
     );
   });
 
+  test("should include in-array system messages in full mode", () => {
+    const body: MessagesBody = {
+      model: "anthropic/claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      messages: [
+        { role: "user", content: "Hi" },
+        { role: "system", content: [{ type: "text" as const, text: "Be concise." }] },
+      ],
+    };
+
+    const attrs = getMessagesRequestAttributes(body, "full");
+
+    const messages = attrs["gen_ai.input.messages"] as string[];
+    expect(messages[1]).toBe(
+      JSON.stringify({
+        role: "system",
+        parts: [{ type: "text", content: "Be concise." }],
+      }),
+    );
+  });
+
   test("should stringify tool definitions in full mode", () => {
     const tool = {
       name: "get_weather",

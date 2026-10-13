@@ -8,6 +8,7 @@ import type {
   MessagesBody,
   MessagesMessage,
   MessagesResponseContentBlock,
+  SystemBlock,
   UserContentBlock,
 } from "./schema";
 
@@ -63,6 +64,8 @@ const toMessageParts = (message: MessagesMessage) => {
   for (const block of message.content) {
     if (message.role === "user") {
       parts.push(toUserBlockParts(block as UserContentBlock));
+    } else if (message.role === "system") {
+      parts.push({ type: "text", content: (block as SystemBlock).text });
     } else {
       const assistantBlock = block as AssistantContentBlock;
       switch (assistantBlock.type) {

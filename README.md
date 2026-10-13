@@ -147,7 +147,16 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
-`withCanonicalIdsForBedrock` additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so GPT-5.x models resolve through it while everything else keeps using Converse. Mantle is available in [fewer regions](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) than `bedrock-runtime`, so set `mantle.region` when the wrapped provider points somewhere Mantle does not serve. Mantle inherits the wrapped provider’s region and custom headers, but not its credentials: those never leave the `createAmazonBedrock` closure, and its request signing is bound to the `bedrock` service while Mantle requires `bedrock-mantle`. By default Mantle therefore reads the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`), which needs no configuration at all. To pass credentials explicitly, declare them once and hand them to both:
+`withCanonicalIdsForBedrock` nests two further Bedrock endpoints. Claude models resolve through [`InvokeModel`](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages.html), which takes the Anthropic request shape verbatim — mid-conversation `system` turns (what Claude Code sends), `anthropic_beta` features and native `cache_control` are all unavailable on Converse. It inherits the base URL, custom headers **and** credentials of the wrapped provider, because `InvokeModel` signs for the same service and host as Converse, so no extra configuration is needed. Pass `anthropic` settings to override any of that, or `anthropic: false` to keep Claude on Converse. A forwarded `anthropic-beta` header is filtered to the [betas Bedrock implements](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html), since Bedrock rejects the first-party-only ones Claude Code sends by default; the betas a request actually needs are still added by the provider.
+
+```ts
+const bedrock = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
+  // optional: Claude is served from InvokeModel by default
+  anthropic: { region: "us-west-2" },
+});
+```
+
+It additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so GPT-5.x models resolve through it while everything else keeps using Converse. Mantle is available in [fewer regions](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) than `bedrock-runtime`, so set `mantle.region` when the wrapped provider points somewhere Mantle does not serve. Mantle inherits the wrapped provider’s region and custom headers, but not its credentials: those never leave the `createAmazonBedrock` closure, and its request signing is bound to the `bedrock` service while Mantle requires `bedrock-mantle`. By default Mantle therefore reads the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`), which needs no configuration at all. To pass credentials explicitly, declare them once and hand them to both:
 
 ```ts
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
@@ -829,13 +838,14 @@ The chat completions endpoint accepts a provider-agnostic `service_tier` extensi
 Provider-specific mapping:
 
 - **OpenAI**: forwards as OpenAI `serviceTier` (no middleware remap).
+- **Anthropic**: maps to Anthropic `serviceTier` (`default` -> `standard_only`; `auto` forwarded; `flex`/`priority`/`scale` have no equivalent and are dropped).
 - **Groq**: maps to Groq `serviceTier` (`default` -> `on_demand`, `scale`/`priority` -> `performance`).
 - **Google Vertex**: maps to request headers via middleware:
   - `default` -> `x-vertex-ai-llm-request-type: shared`
   - `flex` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: flex`
   - `priority` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: priority`
   - `scale` -> `x-vertex-ai-llm-request-type: dedicated`
-- **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
+- **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default). Claude models, served from `InvokeModel`, take the same tiers as the `x-amzn-bedrock-service-tier` request header instead.
 
 When available, the resolved value is echoed back on response as `service_tier`.
 
@@ -866,7 +876,7 @@ Accepted request fields:
 Provider behavior:
 
 - **OpenAI-compatible**: forwards `prompt_cache_key` and `prompt_cache_retention` as native provider options.
-- **Anthropic Claude**: maps top-level caching to Anthropic cache control, while message/part `cache_control` breakpoints are preserved.
+- **Anthropic Claude**: maps top-level caching to Anthropic cache control, while message/part `cache_control` breakpoints are preserved. Claude serves `5m` and `1h` TTLs, so OpenAI's 24h retention is clamped to `1h`. Applies on every host serving Claude, Bedrock `InvokeModel` included.
 - **Google Gemini**: maps `cached_content` to Gemini `cachedContent`.
 - **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 

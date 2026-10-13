@@ -28,6 +28,160 @@ test("withCanonicalIdsForBedrock > maps Claude Sonnet 5 to inference profile wit
   expect(model.modelId).toBe("us.anthropic.claude-sonnet-5");
 });
 
+type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
+type CanonicalConfig = Parameters<typeof withCanonicalIdsForBedrock>[1] & object;
+type CapturedRequest = { url: string; headers: Headers };
+
+/**
+ * Resolves the request `canonicalId` would be sent with, through a fetch that records it and
+ * then throws, so no request ever leaves the process.
+ */
+async function captureRequest(
+  canonicalId: string,
+  build: (fetch: typeof globalThis.fetch) => ReturnType<typeof withCanonicalIdsForBedrock>,
+): Promise<CapturedRequest> {
+  let captured: CapturedRequest | undefined;
+
+  const provider = build(((input: RequestInfo | URL, init?: RequestInit) => {
+    captured = {
+      url: input instanceof Request ? input.url : String(input),
+      headers: new Headers(init?.headers),
+    };
+    throw new Error("captured");
+  }) as unknown as typeof globalThis.fetch);
+
+  try {
+    await provider
+      .languageModel(canonicalId)
+      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+  } catch {
+    // expected: the capturing fetch always throws, only the request is asserted on
+  }
+
+  return captured!;
+}
+
+// ---------------------------------------------------------------------------
+// Claude routes through the nested Anthropic provider (InvokeModel)
+// ---------------------------------------------------------------------------
+
+const anthropicCases = [
+  { canonical: "anthropic/claude-opus-5.5", native: "us.anthropic.claude-opus-5-5" },
+  {
+    canonical: "anthropic/claude-haiku-4.5",
+    native: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  },
+  // Not in the mapping: resolved by the fallback affixes, same as on Converse.
+  { canonical: "anthropic/claude-opus-9", native: "us.anthropic.claude-opus-9-v1:0" },
+] as const;
+
+for (const { canonical, native } of anthropicCases) {
+  test(`withCanonicalIdsForBedrock > routes ${canonical} to InvokeModel`, () => {
+    const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+    const model = provider.languageModel(canonical);
+
+    // Converse and InvokeModel take the same IDs, inference profiles included.
+    expect(model.modelId).toBe(native);
+    expect(model.provider).toBe("bedrock.anthropic.messages");
+  });
+}
+
+test("withCanonicalIdsForBedrock > keeps Claude on Converse when the nested provider is off", () => {
+  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
+    anthropic: false,
+  });
+  const model = provider.languageModel("anthropic/claude-haiku-4.5");
+
+  expect(model.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
+  expect(model.provider).toBe("amazon-bedrock");
+});
+
+test("withCanonicalIdsForBedrock > reuses the Anthropic model instance across lookups", () => {
+  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+
+  expect(provider.languageModel("anthropic/claude-opus-5")).toBe(
+    provider.languageModel("anthropic/claude-opus-5"),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The nested Anthropic provider inherits the auth of the wrapped instance
+// ---------------------------------------------------------------------------
+
+/** Captures the request the Claude model would send, without hitting the network. */
+const captureAnthropicRequest = (settings: BedrockSettings, config: CanonicalConfig = {}) =>
+  captureRequest("anthropic/claude-haiku-4.5", (fetch) =>
+    withCanonicalIdsForBedrock(createAmazonBedrock({ ...settings, fetch }), {
+      ...config,
+      // Own settings put the nested provider on its own transport, so it needs the capture too.
+      anthropic: config.anthropic && { ...config.anthropic, fetch },
+    }),
+  );
+
+test("Anthropic uses the InvokeModel route on the host of the wrapped provider", async () => {
+  const { url } = await captureAnthropicRequest({
+    region: "ap-southeast-2",
+    apiKey: "provider-key",
+  });
+
+  expect(url).toBe(
+    "https://bedrock-runtime.ap-southeast-2.amazonaws.com/model/us.anthropic.claude-haiku-4-5-20251001-v1%3A0/invoke",
+  );
+});
+
+test("Anthropic keeps the custom base URL of the wrapped provider", async () => {
+  const { url } = await captureAnthropicRequest({
+    region: "eu-west-1",
+    apiKey: "provider-key",
+    baseURL: "https://bedrock-runtime.eu-west-1.example.com",
+  });
+
+  expect(url).toStartWith("https://bedrock-runtime.eu-west-1.example.com/model/");
+});
+
+test("Anthropic forwards the custom headers of the wrapped provider", async () => {
+  const { headers } = await captureAnthropicRequest({
+    region: "eu-west-1",
+    apiKey: "provider-key",
+    headers: { "x-custom": "yes" },
+  });
+
+  expect(headers.get("x-custom")).toBe("yes");
+});
+
+test("Anthropic inherits the bearer token of the wrapped provider", async () => {
+  const { headers } = await captureAnthropicRequest({
+    region: "eu-west-1",
+    apiKey: "provider-key",
+  });
+
+  // The placeholder that keeps the nested provider off its own credentials never leaks.
+  expect(headers.get("authorization")).toBe("Bearer provider-key");
+});
+
+test("Anthropic inherits the request signing of the wrapped provider", async () => {
+  const { headers } = await captureAnthropicRequest({
+    region: "us-east-2",
+    // Credentials never leave the `createAmazonBedrock` closure, but its signing fetch does.
+    credentialProvider: () =>
+      Promise.resolve({ accessKeyId: "AKIAEXAMPLE", secretAccessKey: "secret" }),
+  });
+
+  expect(headers.get("authorization")).toStartWith("AWS4-HMAC-SHA256 Credential=AKIAEXAMPLE/");
+  expect(headers.get("authorization")).toContain("/us-east-2/bedrock/aws4_request");
+});
+
+test("Anthropic settings take precedence over the inherited ones", async () => {
+  const { url, headers } = await captureAnthropicRequest(
+    { region: "eu-west-1", apiKey: "provider-key" },
+    { anthropic: { region: "us-gov-west-1", apiKey: "anthropic-key" } },
+  );
+
+  // Explicit credentials put the nested provider back on its own auth, base URL included.
+  expect(url).toStartWith("https://bedrock-runtime.us-gov-west-1.amazonaws.com/model/");
+  expect(headers.get("authorization")).toBe("Bearer anthropic-key");
+});
+
 // ---------------------------------------------------------------------------
 // GPT-5.5+ and GPT-6 route through the nested Mantle provider
 // ---------------------------------------------------------------------------
@@ -75,42 +229,12 @@ test("withCanonicalIdsForBedrock > keeps GPT-OSS on the native Converse provider
 // The nested Mantle provider inherits what the wrapped instance exposes
 // ---------------------------------------------------------------------------
 
-type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
-type CanonicalConfig = Parameters<typeof withCanonicalIdsForBedrock>[1] & object;
-type CapturedRequest = { url: string; headers: Headers };
-
-/** Captures the request the Mantle model would send, without hitting the network. */
-async function captureMantleRequest(
-  build: (fetch: typeof globalThis.fetch) => ReturnType<typeof withCanonicalIdsForBedrock>,
-): Promise<CapturedRequest> {
-  let captured: CapturedRequest | undefined;
-
-  const provider = build(((input: RequestInfo | URL, init?: RequestInit) => {
-    captured = {
-      url: input instanceof Request ? input.url : String(input),
-      headers: new Headers(init?.headers),
-    };
-    throw new Error("captured");
-  }) as unknown as typeof globalThis.fetch);
-
-  // The capturing fetch always throws, so only the request itself is asserted on.
-  try {
-    await provider
-      .languageModel("openai/gpt-5.6-sol")
-      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
-  } catch {
-    // expected
-  }
-
-  return captured!;
-}
-
 /**
  * An instance hides its credentials, so Mantle takes its own. The API key keeps it off SigV4,
  * so no ambient credentials are consulted.
  */
 const fromInstance = (settings: BedrockSettings = {}, config: CanonicalConfig = {}) =>
-  captureMantleRequest((fetch) =>
+  captureRequest("openai/gpt-5.6-sol", (fetch) =>
     withCanonicalIdsForBedrock(
       createAmazonBedrock({ region: "eu-west-1", apiKey: "provider-key", ...settings }),
       { ...config, mantle: { apiKey: "mantle-key", fetch, ...config.mantle } },
