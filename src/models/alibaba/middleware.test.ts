@@ -9,19 +9,16 @@ import { qwenReasoningMiddleware } from "./middleware";
 
 test("qwenReasoningMiddleware > matching patterns", () => {
   const matching = [
-    "alibaba/qwen3-235b",
-    "alibaba/qwen3-32b",
+    "alibaba/qwen3.5-397b",
+    "alibaba/qwen3.5-27b",
     "alibaba/qwen3.5-plus",
     "alibaba/qwen3.5-flash",
     "alibaba/qwen3.5-27b",
     "alibaba/qwen3.6-plus",
     "alibaba/qwen3.6-flash",
-    "alibaba/qwen3.6-max-preview",
     "alibaba/qwen3.8-max",
     "alibaba/qwen3.8-omni-flash",
     "alibaba/qwen3.8-27b",
-    "alibaba/qwen3-coder-next",
-    "alibaba/qwen3-vl-235b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   const nonMatching = [
@@ -55,7 +52,7 @@ test("qwenReasoningMiddleware > should enable thinking with medium effort", asyn
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
   });
 
   expect(result).toEqual({
@@ -148,7 +145,7 @@ test("qwenReasoningMiddleware > should use default max tokens when not specified
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
   });
 
   expect(result).toEqual({
@@ -191,7 +188,7 @@ test("qwenReasoningMiddleware > should map all effort levels to correct budgets"
       const result = await qwenReasoningMiddleware.transformParams!({
         type: "generate",
         params,
-        model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
+        model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
       });
 
       expect(result).toEqual({
@@ -227,7 +224,7 @@ test("qwenReasoningMiddleware > should clear pre-existing enableThinking when di
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
   });
 
   expect(result).toEqual({
@@ -255,7 +252,7 @@ test("qwenReasoningMiddleware > should skip when no reasoning config", async () 
   const result = await qwenReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-235b" }),
+    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
   });
 
   expect(result).toEqual(params);

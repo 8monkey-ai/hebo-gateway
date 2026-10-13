@@ -8,7 +8,7 @@ import { deepseekReasoningMiddleware } from "./middleware";
 
 test("deepseek middleware > matching patterns", () => {
   const languageMatching = [
-    "deepseek/deepseek-v3.2",
+    "deepseek/deepseek-v4-pro",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {

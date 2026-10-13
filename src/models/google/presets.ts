@@ -33,16 +33,6 @@ const GEMINI_EMBEDDINGS_BASE = {
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
-export const geminiEmbedding001 = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/embedding-001" as const,
-  {
-    ...GEMINI_EMBEDDINGS_BASE,
-    name: "Gemini Embedding 001",
-    created: "2025-05-20",
-    context: 8192,
-  } satisfies CatalogModel,
-);
-
 export const geminiEmbedding2 = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-embedding-2" as const,
   {
@@ -123,36 +113,6 @@ export const gemini35Flash = presetFor<CanonicalModelId, CatalogModel>()(
     ...GEMINI_3X_BASE,
     name: "Gemini 3.5 Flash",
     created: "2026-05-19",
-    knowledge: "2025-01",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const gemini25FlashLite = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemini-2.5-flash-lite" as const,
-  {
-    ...GEMINI_BASE,
-    name: "Gemini 2.5 Flash Lite",
-    created: "2025-06-17",
-    knowledge: "2025-01",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const gemini25Flash = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemini-2.5-flash" as const,
-  {
-    ...GEMINI_BASE,
-    name: "Gemini 2.5 Flash",
-    created: "2025-03-20",
-    knowledge: "2025-01",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const gemini25Pro = presetFor<CanonicalModelId, CatalogModel>()(
-  "google/gemini-2.5-pro" as const,
-  {
-    ...GEMINI_BASE,
-    name: "Gemini 2.5 Pro",
-    created: "2025-03-20",
     knowledge: "2025-01",
   } satisfies DeepPartial<CatalogModel>,
 );
@@ -294,17 +254,15 @@ export const gemma = {
 // ---------------------------------------------------------------------------
 
 const geminiAtomic = {
-  "v2.5": [gemini25FlashLite, gemini25Flash, gemini25Pro],
   "v3.1": [gemini31FlashLite],
   "v3.5": [gemini35FlashLite, gemini35Flash],
   "v3.6": [gemini36Flash],
   "v3.7": [gemini37Flash],
   "v3-preview": [gemini3FlashPreview, gemini31ProPreview],
-  embeddings: [geminiEmbedding001, geminiEmbedding2],
+  embeddings: [geminiEmbedding2],
 } as const;
 
 const geminiGroups = {
-  "v2.x": [...geminiAtomic["v2.5"]],
   "v3.x": [
     ...geminiAtomic["v3-preview"],
     ...geminiAtomic["v3.1"],

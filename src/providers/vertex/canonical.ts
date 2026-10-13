@@ -6,13 +6,8 @@ import {
 } from "@ai-sdk/google-vertex/maas";
 import { customProvider } from "ai";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
+import type { ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
-
-const MAPPING = {
-  "alibaba/qwen3-235b": "qwen3-235b-a22b-instruct-2507-maas",
-  "deepseek/deepseek-v3.2": "deepseek-v3.2-maas",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 /**
  * `createVertex` keeps `project` and `googleAuthOptions` in a closure, so the resolved
@@ -29,7 +24,7 @@ type VertexModelConfig = {
 // MaaS endpoint, which serves Gemma only from the global endpoint.
 const createMaas = (provider: GoogleVertexProvider): GoogleVertexMaasProvider => {
   // Any model id works: constructing a model issues no request, it only resolves settings.
-  const { config } = provider.languageModel("gemini-2.5-flash") as unknown as {
+  const { config } = provider.languageModel("gemini-3.7-flash") as unknown as {
     config: VertexModelConfig;
   };
 
@@ -74,7 +69,7 @@ export const withCanonicalIdsForVertex = (
   let maas: GoogleVertexMaasProvider | undefined;
 
   const base = withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
+    mapping: extraMapping,
     options: {
       stripNamespace: true,
       normalizeDelimiters: ["anthropic"],

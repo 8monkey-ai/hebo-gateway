@@ -36,39 +36,6 @@ export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
-export const claudeHaiku35 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-haiku-3.5" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Haiku 3.5",
-    created: "2024-10-22",
-    knowledge: "2024-07",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const claudeHaiku3 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-haiku-3" as const,
-  {
-    ...CLAUDE_BASE,
-    name: "Claude Haiku 3",
-    created: "2024-03-07",
-    knowledge: "2023-08",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const claudeSonnet45 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-sonnet-4.5" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Sonnet 4.5",
-    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
-    created: "2025-09-29",
-    knowledge: "2025-07",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
 export const claudeSonnet5 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-5" as const,
   {
@@ -91,41 +58,6 @@ export const claudeSonnet46 = presetFor<CanonicalModelId, CatalogModel>()(
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     created: "2026-02-17",
     knowledge: "2025-08",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const claudeSonnet4 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-sonnet-4" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Sonnet 4",
-    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
-    created: "2025-05-14",
-    knowledge: "2025-03",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const claudeSonnet37 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-sonnet-3.7" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Sonnet 3.7",
-    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
-    created: "2025-02-19",
-    knowledge: "2024-10",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const claudeSonnet35 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-sonnet-3.5" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Sonnet 3.5",
-    created: "2024-10-22",
-    knowledge: "2024-04",
   } satisfies DeepPartial<CatalogModel>,
 );
 
@@ -231,30 +163,6 @@ export const claudeOpus46 = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies DeepPartial<CatalogModel>,
 );
 
-export const claudeOpus41 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-opus-4.1" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Opus 4.1",
-    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
-    created: "2025-08-05",
-    knowledge: "2025-03",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
-export const claudeOpus4 = presetFor<CanonicalModelId, CatalogModel>()(
-  "anthropic/claude-opus-4" as const,
-  {
-    ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
-    name: "Claude Opus 4",
-    capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
-    created: "2025-05-14",
-    knowledge: "2025-03",
-  } satisfies DeepPartial<CatalogModel>,
-);
-
 const claudeAtomic = {
   "v5.5": [claudeOpus55],
   "v5.1": [claudeFable51],
@@ -262,32 +170,11 @@ const claudeAtomic = {
   "v4.8": [claudeOpus48],
   "v4.7": [claudeOpus47],
   "v4.6": [claudeSonnet46, claudeOpus46],
-  "v4.5": [claudeHaiku45, claudeSonnet45, claudeOpus45],
-  "v4.1": [claudeOpus41],
-  v4: [claudeSonnet4, claudeOpus4],
-  "v3.7": [claudeSonnet37],
-  "v3.5": [claudeSonnet35, claudeHaiku35],
-  v3: [claudeHaiku3],
+  "v4.5": [claudeHaiku45, claudeOpus45],
   fable: [claudeFable51, claudeFable5],
-  haiku: [claudeHaiku45, claudeHaiku35, claudeHaiku3],
-  sonnet: [
-    claudeSonnet5,
-    claudeSonnet46,
-    claudeSonnet45,
-    claudeSonnet4,
-    claudeSonnet37,
-    claudeSonnet35,
-  ],
-  opus: [
-    claudeOpus55,
-    claudeOpus5,
-    claudeOpus48,
-    claudeOpus47,
-    claudeOpus46,
-    claudeOpus45,
-    claudeOpus41,
-    claudeOpus4,
-  ],
+  haiku: [claudeHaiku45],
+  sonnet: [claudeSonnet5, claudeSonnet46],
+  opus: [claudeOpus55, claudeOpus5, claudeOpus48, claudeOpus47, claudeOpus46, claudeOpus45],
 } as const;
 
 const claudeGroups = {
@@ -297,10 +184,7 @@ const claudeGroups = {
     ...claudeAtomic["v4.7"],
     ...claudeAtomic["v4.6"],
     ...claudeAtomic["v4.5"],
-    ...claudeAtomic["v4.1"],
-    ...claudeAtomic["v4"],
   ],
-  "v3.x": [...claudeAtomic["v3.7"], ...claudeAtomic["v3.5"], ...claudeAtomic["v3"]],
 } as const;
 
 export const claude = {

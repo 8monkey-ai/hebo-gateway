@@ -28,6 +28,6 @@ export const deepseekReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("deepseek/deepseek-v3.2", {
+modelMiddlewareMatcher.useForModel("deepseek/deepseek-v4-pro", {
   language: [deepseekReasoningMiddleware],
 });

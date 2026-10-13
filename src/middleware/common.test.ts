@@ -50,7 +50,7 @@ describe("forwardParamsMiddleware", () => {
   test("should snakize providerMetadata in generate output", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV4({
-      modelId: "google/gemini-2.5-flash",
+      modelId: "google/gemini-3.7-flash",
       // oxlint-disable-next-line require-await
       doGenerate: async () => ({
         content: [{ type: "text", text: "hi" }],
@@ -97,7 +97,7 @@ describe("forwardParamsMiddleware", () => {
   test("should snakize providerMetadata in generate output content parts", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV4({
-      modelId: "google/gemini-2.5-flash",
+      modelId: "google/gemini-3.7-flash",
       // oxlint-disable-next-line require-await
       doGenerate: async () => ({
         content: [
@@ -145,7 +145,7 @@ describe("forwardParamsMiddleware", () => {
   test("should snakize providerMetadata in stream parts", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const model = new MockLanguageModelV4({
-      modelId: "google/gemini-2.5-flash",
+      modelId: "google/gemini-3.7-flash",
       // oxlint-disable-next-line require-await
       doStream: async () => ({
         stream: new ReadableStream({
@@ -209,7 +209,7 @@ describe("forwardParamsMiddleware", () => {
     const result = await middleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-flash" }),
+      model: new MockLanguageModelV4({ modelId: "google/gemini-3.7-flash" }),
     });
 
     expect(result.providerOptions).toEqual({

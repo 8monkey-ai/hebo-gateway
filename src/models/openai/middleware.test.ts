@@ -12,12 +12,8 @@ import {
 
 test("openAI middleware > matching patterns", () => {
   const languageMatching = [
-    "openai/gpt-5",
-    "openai/gpt-5.2-chat",
-    "openai/gpt-5.3-codex",
     "openai/gpt-5.4",
     "openai/gpt-5.4-mini",
-    "openai/gpt-5.4-nano",
     "openai/gpt-5.4-pro",
     "openai/gpt-5.5",
     "openai/gpt-5.5-pro",
@@ -29,7 +25,6 @@ test("openAI middleware > matching patterns", () => {
 
   const languageNonMatching = [
     "openai/text-embedding-3-small",
-    "anthropic/claude-sonnet-3.7",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {
@@ -48,7 +43,9 @@ test("openAI middleware > matching patterns", () => {
     "openai/text-embedding-3-large",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
-  const embeddingNonMatching = ["openai/gpt-5"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingNonMatching = [
+    "openai/gpt-5.4-mini",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of embeddingMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
@@ -75,7 +72,7 @@ test("openAIPromptCachingMiddleware > should map key and retention", async () =>
   const result = await openAIPromptCachingMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
   });
 
   expect(result.providerOptions).toEqual({
@@ -100,7 +97,7 @@ test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
   });
 
   expect(result).toEqual({
@@ -153,7 +150,7 @@ for (const modelId of [
 }
 
 // Earlier models have no `max`, so it has to come back down to `xhigh`.
-for (const modelId of ["gpt-5", "gpt-5.1", "openai/gpt-5.6-sol"]) {
+for (const modelId of ["gpt-5.2", "gpt-5.4-mini", "openai/gpt-5.6-sol"]) {
   test(`openAIReasoningMiddleware > should lower max effort to xhigh for ${modelId}`, async () => {
     const params = {
       prompt: [],
@@ -296,7 +293,7 @@ test("openAIReasoningMiddleware > should disable reasoning when requested (stand
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
   });
 
   expect(result).toEqual({
@@ -361,7 +358,7 @@ test("openAIReasoningMiddleware > should default reasoning effort when enabled w
   const result = await openAIReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5" }),
+    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
   });
 
   expect(result).toEqual({

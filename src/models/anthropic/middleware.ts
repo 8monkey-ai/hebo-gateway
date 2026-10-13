@@ -27,8 +27,6 @@ const isClaude4OrFable = (modelId: string) =>
 const isOpus48 = isClaude("opus", "4.8");
 const isOpus47 = isClaude("opus", "4.7");
 const isOpus46 = isClaude("opus", "4.6");
-const isOpus45 = isClaude("opus", "4.5");
-const isOpus4 = isClaude("opus", "4");
 const isSonnet46 = isClaude("sonnet", "4.6");
 
 // Models with native effort levels (low–max) and adaptive extended thinking.
@@ -94,8 +92,6 @@ export function mapClaudeReasoningEffort(
 
 function getMaxOutputTokens(modelId: string): number {
   if (isNativeEffortClaude(modelId) || isOpus46(modelId)) return 128_000;
-  if (isOpus45(modelId)) return 64_000;
-  if (isOpus4(modelId)) return 32_000;
   return 64_000;
 }
 
@@ -196,8 +192,11 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
 
 modelMiddlewareMatcher.useForModel(
   [
-    "anthropic/claude-*3*7*",
-    "anthropic/claude-*4*",
+    "anthropic/claude-haiku-4.5",
+    "anthropic/claude-opus-4.5",
+    "anthropic/claude-*4.6*",
+    "anthropic/claude-opus-4.7*",
+    "anthropic/claude-opus-4.8*",
     "anthropic/claude-opus-5*",
     "anthropic/claude-sonnet-5*",
     "anthropic/claude-fable-*",

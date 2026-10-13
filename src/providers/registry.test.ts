@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createVoyage } from "voyage-ai-provider";
 
-import { claudeSonnet45 } from "../models/anthropic/presets";
+import { claudeHaiku45 } from "../models/anthropic/presets";
 import { gpt56Sol } from "../models/openai/presets";
 import { voyage4Lite } from "../models/voyage/presets";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical";
@@ -77,7 +77,7 @@ test("GPT-5.6 Sol resolves through Bedrock's Mantle endpoint in gateway config",
   expect(languageModel.provider).toBe("bedrock-mantle.responses");
 });
 
-test("Claude Sonnet 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
+test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
   const config = {
     providers: {
       bedrock: withCanonicalIdsForBedrock(
@@ -85,13 +85,13 @@ test("Claude Sonnet 4.5 resolves through Bedrock's InvokeModel endpoint", () => 
       ),
     },
     models: {
-      ...claudeSonnet45({
+      ...claudeHaiku45({
         providers: ["bedrock"],
       }),
     },
   };
 
-  const modelId = "anthropic/claude-sonnet-4.5";
+  const modelId = "anthropic/claude-haiku-4.5";
 
   const provider = resolveProvider({
     providers: config.providers,
@@ -103,6 +103,6 @@ test("Claude Sonnet 4.5 resolves through Bedrock's InvokeModel endpoint", () => 
   const languageModel = provider.languageModel(modelId);
 
   // Same Bedrock ID as on Converse, but served with the Anthropic request shape.
-  expect(languageModel.modelId).toBe("us.anthropic.claude-sonnet-4-5-20250929-v1:0");
+  expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
   expect(languageModel.provider).toBe("bedrock.anthropic.messages");
 });

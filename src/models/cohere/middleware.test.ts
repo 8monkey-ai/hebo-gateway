@@ -13,7 +13,7 @@ test("cohere middleware > matching patterns", () => {
 
   const languageNonMatching = [
     "cohere/command-a",
-    "cohere/command-r-plus",
+    "cohere/command-r7b",
   ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
 
   for (const id of languageMatching) {

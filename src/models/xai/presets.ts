@@ -17,52 +17,12 @@ const GROK_REASONING_BASE = {
   capabilities: ["tool_call", "structured_output", "reasoning", "temperature"] as const,
 } satisfies DeepPartial<CatalogModel>;
 
-export const grok41Fast = presetFor<CanonicalModelId, CatalogModel>()(
-  "xai/grok-4.1-fast" as const,
-  {
-    ...GROK_BASE,
-    name: "Grok 4.1 Fast",
-    created: "2025-11-20",
-    knowledge: "2025-06",
-  } satisfies CatalogModel,
-);
-
-export const grok41FastReasoning = presetFor<CanonicalModelId, CatalogModel>()(
-  "xai/grok-4.1-fast-reasoning" as const,
-  {
-    ...GROK_REASONING_BASE,
-    name: "Grok 4.1 Fast Reasoning",
-    created: "2025-11-20",
-    knowledge: "2025-06",
-  } satisfies CatalogModel,
-);
-
 export const grok42 = presetFor<CanonicalModelId, CatalogModel>()("xai/grok-4.2" as const, {
   ...GROK_BASE,
   name: "Grok 4.2",
   created: "2026-03-16",
   knowledge: "2024-11",
 } satisfies CatalogModel);
-
-export const grok42Reasoning = presetFor<CanonicalModelId, CatalogModel>()(
-  "xai/grok-4.2-reasoning" as const,
-  {
-    ...GROK_REASONING_BASE,
-    name: "Grok 4.2 Reasoning",
-    created: "2026-03-16",
-    knowledge: "2024-11",
-  } satisfies CatalogModel,
-);
-
-export const grok42MultiAgent = presetFor<CanonicalModelId, CatalogModel>()(
-  "xai/grok-4.2-multi-agent" as const,
-  {
-    ...GROK_REASONING_BASE,
-    name: "Grok 4.2 Multi-Agent",
-    created: "2026-03-16",
-    knowledge: "2024-11",
-  } satisfies CatalogModel,
-);
 
 export const grok43 = presetFor<CanonicalModelId, CatalogModel>()("xai/grok-4.3" as const, {
   ...GROK_REASONING_BASE,
@@ -105,8 +65,7 @@ export const grok46 = presetFor<CanonicalModelId, CatalogModel>()("xai/grok-4.6"
 } satisfies CatalogModel);
 
 const grokAtomic = {
-  "v4.1": [grok41Fast, grok41FastReasoning],
-  "v4.2": [grok42, grok42Reasoning, grok42MultiAgent],
+  "v4.2": [grok42],
   "v4.3": [grok43],
   "v4.20": [grok420, grok420MultiAgent],
   "v4.5": [grok45],

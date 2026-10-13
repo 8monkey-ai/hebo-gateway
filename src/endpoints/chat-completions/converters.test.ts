@@ -1229,7 +1229,7 @@ describe("Chat Completions Converters", () => {
               },
             },
           }),
-          "google/gemini-2.5-pro",
+          "google/gemini-3.1-pro-preview",
         );
 
         expect(completion.service_tier).toBe(expected);

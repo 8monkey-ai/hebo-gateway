@@ -53,7 +53,7 @@ for (const { tier, expectedHeaders } of vertexServiceTierCases) {
     const result = await vertexServiceTierMiddleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV4({ modelId: "google/gemini-2.5-pro" }),
+      model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-pro-preview" }),
     });
 
     expect(result.headers).toEqual(expectedHeaders);

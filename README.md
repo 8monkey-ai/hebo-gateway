@@ -55,8 +55,8 @@ Start by creating a gateway instance with at least one provider and a few models
 ```ts
 import { createGroq } from "@ai-sdk/groq";
 import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
-import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/openai";
+import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 export const gw = gateway({
   // PROVIDER REGISTRY
@@ -191,7 +191,7 @@ const myProvider = withCanonicalIds(
   {
     mapping: {
       "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
-      "anthropic/claude-sonnet-4.5": "claude-sonnet-4-5",
+      "anthropic/claude-sonnet-4.6": "claude-sonnet-4-6",
     },
   },
 );
@@ -218,18 +218,18 @@ Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use t
 
 Presets come in two forms:
 
-- Individual presets (e.g. `gptOss20b`, `claudeSonnet45`) for a single model.
+- Individual presets (e.g. `gptOss20b`, `claudeSonnet46`) for a single model.
 - Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, `vX` (e.g. `claude["v4.5"]`).
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";
+import { claudeSonnet46, claude } from "@hebo-ai/gateway/models/anthropic";
 import { gptOss20b } from "@hebo-ai/gateway/models/openai";
-import { claudeSonnet45, claude } from "@hebo-ai/gateway/models/anthropic";
 
 // Individual preset
 const models = defineModelCatalog(
   gptOss20b({ providers: ["groq"] }),
-  claudeSonnet45({ providers: ["bedrock"] }),
+  claudeSonnet46({ providers: ["bedrock"] }),
 );
 
 // Family preset (pick a group and apply the same override to each)
@@ -241,23 +241,23 @@ const modelsFromFamily = defineModelCatalog(
 Out-of-the-box model presets:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`  
-  Qwen: `qwen` (`v3`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3.x`, `coder`, `vl`, `embedding`, `embeddings`, `latest`, `all`)
+  Qwen: `qwen` (`v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3.x`, `embedding`, `embeddings`, `latest`, `all`)
 
 - **Amazon** — `@hebo-ai/gateway/models/amazon`  
   Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
 
 - **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v5.5`, `v5.1`, `v5`, `v4.8`, `v4.7`, `v4.6`, `v4.5`, `v4.1`, `v4`, `v3.7`, `v3.5`, `v3`, `v5.x`, `v4.x`, `v3.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+  Claude: `claude` (`v5.5`, `v5.1`, `v5`, `v4.8`, `v4.7`, `v4.6`, `v4.5`, `v5.x`, `v4.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
 
 - **Cohere** — `@hebo-ai/gateway/models/cohere`  
   Command: `command` (`A`, `R`, `latest`, `all`)
   Embed: `embed` (`v4`, `v3`, `latest`, `all`)
 
 - **DeepSeek** — `@hebo-ai/gateway/models/deepseek`  
-  DeepSeek: `deepseek` (`v3.2`, `v4`, `v4.x`, `latest`, `all`)
+  DeepSeek: `deepseek` (`v4`, `v4.x`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v2.5`, `v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3-preview`, `v2.x`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3-preview`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
@@ -270,7 +270,7 @@ Out-of-the-box model presets:
   Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k2.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v5.x`, `v6.x`, `chat`, `codex`, `pro`, `latest`, `all`)  
+  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v5.x`, `v6.x`, `codex`, `pro`, `latest`, `all`)
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
 
@@ -278,7 +278,7 @@ Out-of-the-box model presets:
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.1`, `v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `latest`, `all`)
+  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `latest`, `all`)
 
 - **Z.ai** — `@hebo-ai/gateway/models/zai`  
   GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.x`, `latest`, `all`)

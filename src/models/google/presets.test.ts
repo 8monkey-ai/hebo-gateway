@@ -92,7 +92,7 @@ test("geminiEmbedding2 > should expose GA embedding metadata with multimodal inp
 test("gemini.embeddings > should include Gemini Embedding 2 GA", () => {
   const ids = gemini.embeddings.map((preset) => Object.keys(preset())[0]);
   expect(ids).toContain("google/gemini-embedding-2");
-  expect(ids).toContain("google/embedding-001");
+  expect(ids).toEqual(["google/gemini-embedding-2"]);
 });
 
 test("gemma31b > should expose text-only metadata with vertex provider", () => {

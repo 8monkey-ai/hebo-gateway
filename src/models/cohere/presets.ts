@@ -75,25 +75,6 @@ export const commandAVision = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
-export const commandR = presetFor<CanonicalModelId, CatalogModel>()("cohere/command-r" as const, {
-  ...COMMAND_BASE,
-  name: "Cohere Command R",
-  created: "2024-08-01",
-  context: 128000,
-  providers: ["cohere", "bedrock", "azure"],
-} satisfies CatalogModel);
-
-export const commandRPlus = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/command-r-plus" as const,
-  {
-    ...COMMAND_BASE,
-    name: "Cohere Command R+",
-    created: "2024-08-01",
-    context: 128000,
-    providers: ["cohere", "bedrock", "azure"],
-  } satisfies CatalogModel,
-);
-
 export const commandR7b = presetFor<CanonicalModelId, CatalogModel>()(
   "cohere/command-r7b" as const,
   {
@@ -158,7 +139,7 @@ export const embedMultilingualLightV3 = presetFor<CanonicalModelId, CatalogModel
 
 const commandAtomic = {
   A: [commandA, commandAReasoning, commandATranslate, commandAVision],
-  R: [commandR, commandRPlus, commandR7b],
+  R: [commandR7b],
 } as const;
 
 const commandGroups = {} as const;

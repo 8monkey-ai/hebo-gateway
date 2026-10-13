@@ -436,39 +436,6 @@ test("bedrockClaudeReasoningMiddleware > should set adaptive type and maxReasoni
   });
 });
 
-test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for Claude 3.x", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-        effort: "high",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-3.7" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-      },
-    },
-  });
-});
-
 test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for Claude 4.5", async () => {
   const params = {
     prompt: [],

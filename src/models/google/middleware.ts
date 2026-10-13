@@ -9,7 +9,6 @@ import type {
 } from "../../endpoints/chat-completions/schema";
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -68,9 +67,6 @@ export function mapGeminiReasoningEffort(
   return undefined;
 }
 
-export const GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 65536;
-export const GEMINI_2_5_PRO_MIN_THINKING_BUDGET = 128;
-
 export const geminiReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
@@ -87,19 +83,7 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     const target = (params.providerOptions!["google"] ??= {}) as GoogleLanguageModelOptions;
     const modelId = model.modelId;
 
-    if (modelId.includes("gemini-2")) {
-      const is25Pro = modelId.includes("gemini-2.5-pro");
-
-      target.thinkingConfig = {
-        thinkingBudget:
-          reasoning.max_tokens ??
-          calculateReasoningBudgetFromEffort(
-            reasoning.effort ?? "none",
-            params.maxOutputTokens ?? GEMINI_DEFAULT_MAX_OUTPUT_TOKENS,
-            is25Pro ? GEMINI_2_5_PRO_MIN_THINKING_BUDGET : 0,
-          ),
-      };
-    } else if (modelId.includes("gemini-3") && reasoning.effort) {
+    if (reasoning.effort) {
       if (reasoning.effort === "none") {
         // thinkingBudget: 0 fully disables thinking (thinkingLevel: "minimal" still allows some)
         target.thinkingConfig = { thinkingBudget: 0 };
@@ -149,6 +133,6 @@ modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
   embedding: [geminiDimensionsMiddleware],
 });
 
-modelMiddlewareMatcher.useForModel(["google/gemini-2*", "google/gemini-3*"], {
+modelMiddlewareMatcher.useForModel("google/gemini-3*", {
   language: [geminiReasoningMiddleware, geminiPromptCachingMiddleware],
 });
