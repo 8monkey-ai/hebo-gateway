@@ -81,6 +81,8 @@ jobs:
           model: ${{ vars.AGENT_MODEL }}
           thinking_level: ${{ vars.AGENT_THINKING }}
           export_session_html: true
+          extensions: |
+            npm:pi-web-access
           diff_ignore_patterns: "dist/ pnpm-lock.yaml node_modules/"
 
       - name: Upload Pi session HTML
