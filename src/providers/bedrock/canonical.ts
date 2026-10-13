@@ -84,14 +84,38 @@ const MANTLE_MAPPING = {
   "openai/gpt-6-luna": "openai.gpt-6-luna",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
-/**
- * `createAmazonBedrock` keeps `region` and its credentials in a closure, so the resolved
- * base URL is only reachable through the config the AI SDK attaches to a model instance.
- */
+type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;
+
 type BedrockModelConfig = {
   baseUrl: () => string;
   headers: () => Record<string, string | undefined>;
-  fetch?: AmazonBedrockAnthropicProviderSettings["fetch"];
+  fetch?: BedrockFetch;
+};
+
+/**
+ * `createAmazonBedrock` keeps `region`, its credentials and its auth fetch in a closure, so
+ * they are only reachable through the config the AI SDK attaches to a model instance.
+ */
+const resolveBedrockConfig = (provider: AmazonBedrockProvider, nested: string) => {
+  // Any model id works: constructing a model issues no request, it only resolves settings.
+  const { config } = provider.languageModel("amazon.nova-lite-v1:0") as unknown as {
+    config: BedrockModelConfig;
+  };
+
+  let baseURL: string | undefined;
+  let headers: Record<string, string | undefined> | undefined;
+  try {
+    // Headers first: they resolve unconditionally, while the base URL throws on a missing
+    // region, and losing that is no reason to drop the inherited headers too.
+    headers = config.headers();
+    baseURL = config.baseUrl();
+  } catch {
+    // Region is unresolvable (neither `region` nor `AWS_REGION` is set). Let the nested
+    // provider load its own settings so the error surfaces from there instead.
+    logger.debug(`[canonical] could not resolve the bedrock base url for ${nested}`);
+  }
+
+  return { baseURL, headers, fetch: config.fetch };
 };
 
 /** `https://bedrock-runtime.us-east-1.amazonaws.com` -> `us-east-1` */
@@ -104,26 +128,11 @@ const resolveMantle = (
   provider: AmazonBedrockProvider,
   settings: BedrockMantleProviderSettings = {},
 ): BedrockMantleProvider => {
-  // Any model id works: constructing a model issues no request, it only resolves settings.
-  const { config } = provider.languageModel("amazon.nova-lite-v1:0") as unknown as {
-    config: BedrockModelConfig;
-  };
-
-  let region: string | undefined;
-  let headers: Record<string, string | undefined> | undefined;
-  try {
-    // Headers first: they resolve unconditionally, while the base URL throws on a missing
-    // region, and losing the region is no reason to drop the inherited headers too.
-    headers = config.headers();
-    const parsed = REGION_FROM_BASE_URL.exec(config.baseUrl())?.[1];
-    // A custom base URL can hold anything in that label, and a wrong region would only
-    // surface as a DNS failure. Keep it only when it looks like a region.
-    region = parsed && AWS_REGION.test(parsed) ? parsed : undefined;
-  } catch {
-    // Region is unresolvable (neither `region` nor `AWS_REGION` is set). Let Mantle load
-    // its own settings so the error surfaces from there instead.
-    logger.debug("[canonical] could not resolve the bedrock region for mantle");
-  }
+  const { baseURL, headers } = resolveBedrockConfig(provider, "mantle");
+  const parsed = baseURL && REGION_FROM_BASE_URL.exec(baseURL)?.[1];
+  // A custom base URL can hold anything in that label, and a wrong region would only
+  // surface as a DNS failure. Keep it only when it looks like a region.
+  const region = parsed && AWS_REGION.test(parsed) ? parsed : undefined;
 
   // Credentials are not readable back off a provider instance: they never leave the
   // `createAmazonBedrock` closure, and its SigV4 fetch cannot be borrowed either because it
@@ -137,9 +146,6 @@ const resolveMantle = (
     headers: settings.headers ?? headers,
   });
 };
-
-/** Canonical IDs under this namespace are served by the nested Anthropic provider. */
-const ANTHROPIC_NAMESPACE = "anthropic/";
 
 /** Settings that make the nested provider authenticate itself instead of inheriting. */
 const OWN_AUTH_SETTINGS = [
@@ -156,8 +162,6 @@ const OWN_AUTH_SETTINGS = [
  * inherited fetch applies the wrapped provider's auth, and this header never gets sent.
  */
 const INHERITED_AUTH = "inherited";
-
-type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;
 
 const withoutAuthorization = (headers: HeadersInit): Record<string, string> => {
   const entries: Iterable<[string, string]> =
@@ -179,25 +183,9 @@ const resolveAnthropic = (
   provider: AmazonBedrockProvider,
   settings: AmazonBedrockAnthropicProviderSettings = {},
 ): AmazonBedrockAnthropicProvider => {
-  // Any model id works: constructing a model issues no request, it only resolves settings.
-  const { config } = provider.languageModel("amazon.nova-lite-v1:0") as unknown as {
-    config: BedrockModelConfig;
-  };
-
-  let baseURL: string | undefined;
-  let headers: Record<string, string | undefined> | undefined;
-  try {
-    // Headers first: they resolve unconditionally, while the base URL throws on a missing
-    // region, and losing that is no reason to drop the inherited headers too.
-    headers = config.headers();
-    // InvokeModel lives on the same `bedrock-runtime` host as Converse, custom base URL
-    // included, so the resolved one carries over as is.
-    baseURL = config.baseUrl();
-  } catch {
-    // Region is unresolvable (neither `region` nor `AWS_REGION` is set). Let the nested
-    // provider resolve its own base URL so the error surfaces from there instead.
-    logger.debug("[canonical] could not resolve the bedrock base url for anthropic");
-  }
+  // InvokeModel lives on the same `bedrock-runtime` host as Converse, custom base URL
+  // included, so the resolved one carries over as is.
+  const { baseURL, headers, fetch } = resolveBedrockConfig(provider, "anthropic");
 
   const inherited = {
     ...settings,
@@ -214,7 +202,7 @@ const resolveAnthropic = (
   // Unlike Mantle, InvokeModel signs for the same `bedrock` service as Converse, so the
   // wrapped provider's fetch signs these requests too — credentials (including a
   // `credentialProvider`) are inherited instead of having to be configured twice.
-  const baseFetch: BedrockFetch = config.fetch ?? globalThis.fetch;
+  const baseFetch: BedrockFetch = fetch ?? globalThis.fetch;
   // The cast only drops the runtime-specific extras of `typeof globalThis.fetch`
   // (`preconnect` on Bun), which a request-signing wrapper has no use for.
   const inheritedFetch = ((input: RequestInfo | URL, init?: RequestInit) =>
@@ -228,6 +216,35 @@ const resolveAnthropic = (
     apiKey: INHERITED_AUTH,
     fetch: inheritedFetch,
   });
+};
+
+/** Routes `anthropic/*` lookups to the nested InvokeModel provider, created on first use. */
+const nestAnthropic = (
+  base: ProviderV4,
+  provider: AmazonBedrockProvider,
+  settings?: AmazonBedrockAnthropicProviderSettings,
+): ProviderV4 => {
+  let anthropic: AmazonBedrockAnthropicProvider | undefined;
+  const models = new Map<string, LanguageModelV4>();
+
+  return {
+    ...base,
+    languageModel: (id) => {
+      if (!id.startsWith("anthropic/")) return base.languageModel(id);
+
+      let model = models.get(id);
+      if (model) return model;
+
+      // The Converse model resolves the canonical ID without issuing a request, and
+      // InvokeModel takes the exact same IDs, inference profiles included.
+      const bedrockId = base.languageModel(id).modelId;
+      logger.debug(`[canonical] mapped ${id} to ${bedrockId} (invoke)`);
+      anthropic ??= resolveAnthropic(provider, settings);
+      model = anthropic.languageModel(bedrockId);
+      models.set(id, model);
+      return model;
+    },
+  };
 };
 
 export type BedrockInferenceProfileOptions = {
@@ -310,31 +327,8 @@ export const withCanonicalIdsForBedrock = (
 
   // Claude is open-ended (every `anthropic/*` ID, mapped or not), so it is routed on lookup
   // rather than enumerated like the Mantle models above.
-  const anthropicSettings = config.anthropic === false ? undefined : config.anthropic;
-  let anthropic: AmazonBedrockAnthropicProvider | undefined;
-  const anthropicModels = new Map<string, LanguageModelV4>();
-  const anthropicModel = (canonicalId: string) => {
-    let model = anthropicModels.get(canonicalId);
-    if (model) return model;
-
-    // The Converse model resolves the canonical ID without issuing a request, and InvokeModel
-    // takes the exact same IDs, inference profiles included.
-    const bedrockId = base.languageModel(canonicalId).modelId;
-    logger.debug(`[canonical] mapped ${canonicalId} to ${bedrockId} (invoke)`);
-    anthropic ??= resolveAnthropic(provider, anthropicSettings);
-    model = anthropic.languageModel(bedrockId);
-    anthropicModels.set(canonicalId, model);
-    return model;
-  };
-
-  const fallbackProvider: ProviderV4 =
-    config.anthropic === false
-      ? base
-      : {
-          ...base,
-          languageModel: (id) =>
-            id.startsWith(ANTHROPIC_NAMESPACE) ? anthropicModel(id) : base.languageModel(id),
-        };
+  const fallbackProvider =
+    config.anthropic === false ? base : nestAnthropic(base, provider, config.anthropic);
 
   return customProvider({ languageModels, fallbackProvider });
 };

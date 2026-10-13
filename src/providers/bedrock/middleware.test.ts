@@ -20,6 +20,13 @@ import {
   bedrockServiceTierMiddleware,
 } from "./middleware";
 
+/** A fetch that records the JSON request body and throws, so no request leaves the process. */
+const capturingFetch = (onBody: (body: Record<string, unknown>) => void) =>
+  ((_input: RequestInfo | URL, init?: RequestInit) => {
+    onBody(JSON.parse(init!.body as string) as Record<string, unknown>);
+    throw new Error("captured");
+  }) as unknown as typeof fetch;
+
 test("bedrock middlewares > matching provider resolves GPT middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
@@ -688,10 +695,9 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
     {
       mantle: {
         apiKey: "mantle-key",
-        fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
-          body = JSON.parse(init!.body as string) as Record<string, unknown>;
-          throw new Error("captured");
-        }) as unknown as typeof fetch,
+        fetch: capturingFetch((captured) => {
+          body = captured;
+        }),
       },
     },
   );
@@ -756,22 +762,25 @@ test("bedrockAnthropicServiceTierMiddleware > drops the Converse-only service ti
   });
 });
 
-test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape through the chain", async () => {
-  let body: Record<string, unknown> | undefined;
-
+/** A Claude model on the nested Anthropic provider (InvokeModel), with its body captured. */
+const anthropicModel = (canonicalId: string) => {
+  const captured: { body?: Record<string, unknown> } = {};
   const provider = withCanonicalIdsForBedrock(
     createAmazonBedrock({
       region: "us-east-1",
       apiKey: "provider-key",
-      fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
-        body = JSON.parse(init!.body as string) as Record<string, unknown>;
-        throw new Error("captured");
-      }) as unknown as typeof fetch,
+      fetch: capturingFetch((body) => {
+        captured.body = body;
+      }),
     }),
   );
 
+  return { model: provider.languageModel(canonicalId), captured };
+};
+
+test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape through the chain", async () => {
   const modelId = "anthropic/claude-opus-4.6";
-  const model = provider.languageModel(modelId);
+  const { model, captured } = anthropicModel(modelId);
   const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
   const wrapped = wrapLanguageModel({ model, middleware });
 
@@ -789,29 +798,16 @@ test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape thro
   }
 
   // Native Anthropic fields, not the Converse `reasoningConfig` / `serviceTier` ones.
-  expect(body).toMatchObject({
+  expect(captured.body).toMatchObject({
     thinking: { type: "adaptive" },
     anthropic_version: "bedrock-2023-05-31",
   });
-  expect(body).not.toHaveProperty("reasoningConfig");
-  expect(body).not.toHaveProperty("service_tier");
+  expect(captured.body).not.toHaveProperty("reasoningConfig");
+  expect(captured.body).not.toHaveProperty("service_tier");
 });
 
 test("bedrock middlewares > mid-conversation system turns reach InvokeModel", async () => {
-  let body: Record<string, unknown> | undefined;
-
-  const provider = withCanonicalIdsForBedrock(
-    createAmazonBedrock({
-      region: "us-east-1",
-      apiKey: "provider-key",
-      fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
-        body = JSON.parse(init!.body as string) as Record<string, unknown>;
-        throw new Error("captured");
-      }) as unknown as typeof fetch,
-    }),
-  );
-
-  const model = provider.languageModel("anthropic/claude-haiku-4.5");
+  const { model, captured } = anthropicModel("anthropic/claude-haiku-4.5");
 
   try {
     // The Claude Code shape: a top-level system prompt plus a later `system` turn, which
@@ -829,8 +825,10 @@ test("bedrock middlewares > mid-conversation system turns reach InvokeModel", as
     // The capturing fetch always throws, so only the request body is asserted on.
   }
 
-  expect(body?.["system"]).toEqual([{ type: "text", text: "You are a helpful assistant." }]);
-  expect(body?.["messages"]).toMatchObject([
+  expect(captured.body?.["system"]).toEqual([
+    { type: "text", text: "You are a helpful assistant." },
+  ]);
+  expect(captured.body?.["messages"]).toMatchObject([
     { role: "user" },
     { role: "assistant" },
     { role: "system" },

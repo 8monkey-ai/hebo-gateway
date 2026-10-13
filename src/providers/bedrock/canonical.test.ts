@@ -32,6 +32,35 @@ type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
 type CanonicalConfig = Parameters<typeof withCanonicalIdsForBedrock>[1] & object;
 type CapturedRequest = { url: string; headers: Headers };
 
+/**
+ * Resolves the request `canonicalId` would be sent with, through a fetch that records it and
+ * then throws, so no request ever leaves the process.
+ */
+async function captureRequest(
+  canonicalId: string,
+  build: (fetch: typeof globalThis.fetch) => ReturnType<typeof withCanonicalIdsForBedrock>,
+): Promise<CapturedRequest> {
+  let captured: CapturedRequest | undefined;
+
+  const provider = build(((input: RequestInfo | URL, init?: RequestInit) => {
+    captured = {
+      url: input instanceof Request ? input.url : String(input),
+      headers: new Headers(init?.headers),
+    };
+    throw new Error("captured");
+  }) as unknown as typeof globalThis.fetch);
+
+  try {
+    await provider
+      .languageModel(canonicalId)
+      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+  } catch {
+    // expected: the capturing fetch always throws, only the request is asserted on
+  }
+
+  return captured!;
+}
+
 // ---------------------------------------------------------------------------
 // Claude routes through the nested Anthropic provider (InvokeModel)
 // ---------------------------------------------------------------------------
@@ -80,37 +109,14 @@ test("withCanonicalIdsForBedrock > reuses the Anthropic model instance across lo
 // ---------------------------------------------------------------------------
 
 /** Captures the request the Claude model would send, without hitting the network. */
-async function captureAnthropicRequest(
-  settings: BedrockSettings,
-  config: CanonicalConfig = {},
-): Promise<CapturedRequest> {
-  let captured: CapturedRequest | undefined;
-
-  const fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    captured = {
-      url: input instanceof Request ? input.url : String(input),
-      headers: new Headers(init?.headers),
-    };
-    throw new Error("captured");
-  }) as unknown as typeof globalThis.fetch;
-
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ ...settings, fetch }), {
-    ...config,
-    // Own settings put the nested provider on its own transport, so it needs the capture too.
-    anthropic: config.anthropic && { ...config.anthropic, fetch },
-  });
-
-  // The capturing fetch always throws, so only the request itself is asserted on.
-  try {
-    await provider
-      .languageModel("anthropic/claude-haiku-4.5")
-      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
-  } catch {
-    // expected
-  }
-
-  return captured!;
-}
+const captureAnthropicRequest = (settings: BedrockSettings, config: CanonicalConfig = {}) =>
+  captureRequest("anthropic/claude-haiku-4.5", (fetch) =>
+    withCanonicalIdsForBedrock(createAmazonBedrock({ ...settings, fetch }), {
+      ...config,
+      // Own settings put the nested provider on its own transport, so it needs the capture too.
+      anthropic: config.anthropic && { ...config.anthropic, fetch },
+    }),
+  );
 
 test("Anthropic uses the InvokeModel route on the host of the wrapped provider", async () => {
   const { url } = await captureAnthropicRequest({
@@ -223,38 +229,12 @@ test("withCanonicalIdsForBedrock > keeps GPT-OSS on the native Converse provider
 // The nested Mantle provider inherits what the wrapped instance exposes
 // ---------------------------------------------------------------------------
 
-/** Captures the request the Mantle model would send, without hitting the network. */
-async function captureMantleRequest(
-  build: (fetch: typeof globalThis.fetch) => ReturnType<typeof withCanonicalIdsForBedrock>,
-): Promise<CapturedRequest> {
-  let captured: CapturedRequest | undefined;
-
-  const provider = build(((input: RequestInfo | URL, init?: RequestInit) => {
-    captured = {
-      url: input instanceof Request ? input.url : String(input),
-      headers: new Headers(init?.headers),
-    };
-    throw new Error("captured");
-  }) as unknown as typeof globalThis.fetch);
-
-  // The capturing fetch always throws, so only the request itself is asserted on.
-  try {
-    await provider
-      .languageModel("openai/gpt-5.6-sol")
-      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
-  } catch {
-    // expected
-  }
-
-  return captured!;
-}
-
 /**
  * An instance hides its credentials, so Mantle takes its own. The API key keeps it off SigV4,
  * so no ambient credentials are consulted.
  */
 const fromInstance = (settings: BedrockSettings = {}, config: CanonicalConfig = {}) =>
-  captureMantleRequest((fetch) =>
+  captureRequest("openai/gpt-5.6-sol", (fetch) =>
     withCanonicalIdsForBedrock(
       createAmazonBedrock({ region: "eu-west-1", apiKey: "provider-key", ...settings }),
       { ...config, mantle: { apiKey: "mantle-key", fetch, ...config.mantle } },
