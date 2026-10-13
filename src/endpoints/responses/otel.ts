@@ -2,7 +2,7 @@ import type { Attributes } from "@opentelemetry/api";
 import type { FinishReason } from "ai";
 
 import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
+import { isDataUrl, parseDataUrl } from "../../utils/url";
 import type {
   Responses,
   ResponsesBody,
@@ -48,7 +48,7 @@ const toInputParts = (content: string | ResponsesInputContent[]): TelemetryPart[
         break;
       case "input_image": {
         const url = part.image_url;
-        if (url && url.slice(0, 5).toLowerCase() === "data:") {
+        if (url && isDataUrl(url)) {
           const { mimeType } = parseDataUrl(url);
           parts.push(toBlobPart("image", mimeType || undefined));
         } else if (url) {

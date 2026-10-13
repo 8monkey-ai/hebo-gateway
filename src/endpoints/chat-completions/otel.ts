@@ -1,7 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
 import { type TelemetrySignalLevel } from "../../types";
-import { parseDataUrl } from "../../utils/url";
+import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url";
 import type {
   ChatCompletionsAssistantMessage,
   ChatCompletions,
@@ -34,6 +34,11 @@ const toBlobPart = (modality: string, mimeType?: string) => {
     content: "[REDACTED_BINARY_DATA]",
   };
   if (mimeType) part["mime_type"] = mimeType;
+  return part;
+};
+
+const withFileName = (part: Record<string, unknown>, filename?: string | null) => {
+  if (filename) part["file_name"] = filename;
   return part;
 };
 
@@ -80,7 +85,7 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         break;
       case "image_url": {
         const url = part.image_url.url;
-        if (url.slice(0, 5).toLowerCase() === "data:") {
+        if (isDataUrl(url)) {
           const { mimeType } = parseDataUrl(url);
           parts.push(toBlobPart("image", mimeType || undefined));
         } else {
@@ -92,9 +97,23 @@ const toUserParts = (content: string | ChatCompletionsContentPart[]) => {
         parts.push(toBlobPart("audio", `audio/${part.input_audio.format}`));
         break;
       case "file": {
-        const filePart = toBlobPart("file", part.file.media_type);
-        if (part.file.filename) filePart["file_name"] = part.file.filename;
-        parts.push(filePart);
+        const file = part.file;
+        if ("file_data" in file) {
+          // `file_data` is a data URL, a remote URL, or bare base64; only a URL
+          // is safe to record verbatim. Classification matches the converter.
+          if (isDataUrl(file.file_data)) {
+            const { mimeType } = parseDataUrl(file.file_data);
+            parts.push(withFileName(toBlobPart("file", mimeType || undefined), file.filename));
+          } else if (hasUrlScheme(file.file_data)) {
+            parts.push(
+              withFileName({ type: "uri", modality: "file", uri: file.file_data }, file.filename),
+            );
+          } else {
+            parts.push(withFileName(toBlobPart("file"), file.filename));
+          }
+          break;
+        }
+        parts.push(withFileName(toBlobPart("file", file.media_type), file.filename));
         break;
       }
       default:

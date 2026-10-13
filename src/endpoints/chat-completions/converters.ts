@@ -31,6 +31,7 @@ import {
   normalizeToolName,
   stripEmptyKeys,
   parseBase64,
+  parseFileDataInput,
   parseImageInput,
   extractReasoningMetadata,
   GEMINI_REASONING_FORMAT,
@@ -65,6 +66,9 @@ import type {
   ChatCompletionsContentPartText,
   ChatCompletionsCacheControl,
 } from "./schema";
+
+/** Fallback when a file part does not declare its media type. */
+const DEFAULT_FILE_MEDIA_TYPE = "application/octet-stream";
 
 // --- Request Flow ---
 
@@ -368,13 +372,14 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
     switch (part.type) {
       case "image_url":
         return fromImageUrlPart(part.image_url.url, part.cache_control ?? undefined);
-      case "file":
-        return fromFilePart(
-          part.file.data,
-          part.file.media_type,
-          part.file.filename ?? undefined,
-          part.cache_control ?? undefined,
-        );
+      case "file": {
+        const file = part.file;
+        const cacheControl = part.cache_control ?? undefined;
+        const filename = file.filename ?? undefined;
+        return "file_data" in file
+          ? fromFileDataPart(file.file_data, filename, cacheControl)
+          : fromFilePart(file.data, file.media_type, filename, cacheControl);
+      }
       case "input_audio":
         return fromFilePart(
           part.input_audio.data,
@@ -406,22 +411,48 @@ export function fromChatCompletionsContent(content: ChatCompletionsContentPart[]
 function fromImageUrlPart(url: string, cacheControl?: ChatCompletionsCacheControl) {
   const { image, mediaType } = parseImageInput(url);
 
-  if (image instanceof URL) {
-    // Media type is unknown for remote URLs; fall back to the top-level type.
-    const out: FilePart = {
-      type: "file" as const,
-      data: image,
-      mediaType: mediaType ?? "image",
-    };
-    if (cacheControl) {
-      out.providerOptions = {
-        unknown: { cache_control: cacheControl },
-      };
-    }
-    return out;
-  }
+  // Media type is unknown for remote URLs; fall back to the top-level type.
+  return image instanceof URL
+    ? fromUrlFilePart(image, mediaType ?? "image", undefined, cacheControl)
+    : fromFilePart(image, mediaType ?? "image/jpeg", undefined, cacheControl);
+}
 
-  return fromFilePart(image, mediaType ?? "image/jpeg", undefined, cacheControl);
+/**
+ * OpenRouter-style file part: `file_data` carries either a data URL (bytes plus
+ * media type inline), a remote URL forwarded to the provider as-is, or bare
+ * base64 with an unknown media type.
+ */
+function fromFileDataPart(
+  fileData: string,
+  filename?: string,
+  cacheControl?: ChatCompletionsCacheControl,
+) {
+  const { data, mediaType } = parseFileDataInput(fileData);
+
+  // The media type is unknown for remote URLs; fall back to a generic binary type.
+  return typeof data === "string"
+    ? fromFilePart(data, mediaType ?? DEFAULT_FILE_MEDIA_TYPE, filename, cacheControl)
+    : fromUrlFilePart(data, DEFAULT_FILE_MEDIA_TYPE, filename, cacheControl);
+}
+
+function fromUrlFilePart(
+  url: URL,
+  mediaType: string,
+  filename?: string,
+  cacheControl?: ChatCompletionsCacheControl,
+) {
+  const out: FilePart = {
+    type: "file" as const,
+    data: url,
+    filename,
+    mediaType,
+  };
+  if (cacheControl) {
+    out.providerOptions = {
+      unknown: { cache_control: cacheControl },
+    };
+  }
+  return out;
 }
 
 function fromFilePart(
