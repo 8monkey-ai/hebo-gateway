@@ -117,14 +117,10 @@ export const winterCgHandler = (
           ctx.result = (await run(ctx, parsedConfig)) as typeof ctx.result;
 
           const toError = ctx.operation === "messages" ? toAnthropicError : toOpenAIError;
-          ctx.response = toResponse(
-            ctx.result!,
-            prepareResponseInit(ctx.requestId, ctx.response as ResponseInit | undefined),
-            {
-              onDone: finalize,
-              toError: (error) => toError(error, ctx.requestId),
-            },
-          );
+          ctx.response = toResponse(ctx.result!, prepareResponseInit(ctx.requestId, ctx.response), {
+            onDone: finalize,
+            toError: (error) => toError(error, ctx.requestId),
+          });
         }
 
         if (parsedConfig.hooks?.onResponse) {

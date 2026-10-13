@@ -35,11 +35,7 @@ import { prepareForwardHeaders } from "../../utils/request";
 import type { RuntimeContext } from "../shared/converters";
 import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
 import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
-import {
-  ChatCompletionsBodySchema,
-  type ChatCompletionsBody,
-  type ChatCompletionsInputs,
-} from "./schema";
+import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -102,7 +98,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const { model: _model, stream, trace: _trace, ...inputs } = ctx.body;
-    const textOptions = convertToTextCallOptions(inputs as ChatCompletionsInputs);
+    const textOptions = convertToTextCallOptions(inputs);
     logger.trace(
       {
         requestId: ctx.requestId,
@@ -143,7 +139,7 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
             recordTimeToFirstToken(ttft, genAiGeneralAttrs, ctx.trace);
           }
         },
-        onFinish: (res) => {
+        onEnd: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toChatCompletions(
             res as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,

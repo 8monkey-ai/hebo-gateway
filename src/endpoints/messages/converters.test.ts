@@ -45,7 +45,7 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
   }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
-  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>>,
+  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>["finalStep"]>,
 ): GenerateTextResult<ToolSet, RuntimeContext, Output.Output> => {
   const result = {
     text: "",
@@ -57,7 +57,6 @@ const mockGenerateTextResult = (
     dynamicToolResults: [],
     finishReason: "stop",
     usage: mockUsage(),
-    totalUsage: mockUsage(),
     warnings: [],
     content: [],
     reasoning: [],
@@ -394,7 +393,10 @@ describe("Messages Converters", () => {
       expect(output.type).toBe("content");
       expect(output.value).toHaveLength(2);
       expect((output.value[0] as { type: string }).type).toBe("text");
-      expect((output.value[1] as { type: string }).type).toBe("image-data");
+      expect(output.value[1]).toMatchObject({
+        type: "file",
+        data: { type: "data", data: "aGVsbG8=" },
+      });
     });
 
     test("should apply cache_control on tool_result block", () => {
@@ -756,7 +758,6 @@ describe("Messages Converters", () => {
           text: "Hello!",
           content: [{ type: "text", text: "Hello!" }],
           usage: mockUsage({ inputTokens: 10, outputTokens: 5 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5 }),
         }),
         "anthropic/claude-3",
       );
@@ -786,7 +787,6 @@ describe("Messages Converters", () => {
             },
           ],
           usage: mockUsage({ inputTokens: 15, outputTokens: 10 }),
-          totalUsage: mockUsage({ inputTokens: 15, outputTokens: 10 }),
         }),
         "anthropic/claude-3",
       );
@@ -815,7 +815,6 @@ describe("Messages Converters", () => {
             { type: "text", text: "42" },
           ],
           usage: mockUsage({ inputTokens: 10, outputTokens: 5 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5 }),
         }),
         "anthropic/claude-3",
       );
@@ -843,7 +842,6 @@ describe("Messages Converters", () => {
             { type: "text", text: "42" },
           ],
           usage: mockUsage({ inputTokens: 10, outputTokens: 5 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5 }),
         }),
         "anthropic/claude-3",
       );
@@ -862,7 +860,6 @@ describe("Messages Converters", () => {
           text: "",
           content: [{ type: "text", text: "" }],
           usage: mockUsage(),
-          totalUsage: mockUsage(),
         }),
         "anthropic/claude-3",
       );
@@ -876,7 +873,6 @@ describe("Messages Converters", () => {
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
           usage: mockUsage(),
-          totalUsage: mockUsage(),
           providerMetadata: {
             anthropic: { service_tier: "default" },
           },
@@ -893,7 +889,6 @@ describe("Messages Converters", () => {
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
           usage: mockUsage(),
-          totalUsage: mockUsage(),
           providerMetadata: {
             anthropic: { service_tier: "auto" },
           },
@@ -910,7 +905,6 @@ describe("Messages Converters", () => {
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
           usage: mockUsage(),
-          totalUsage: mockUsage(),
           providerMetadata: {
             openai: { service_tier: "scale" },
           },

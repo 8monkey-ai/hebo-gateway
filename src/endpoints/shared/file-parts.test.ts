@@ -277,7 +277,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
       ["image/jpeg", HELLO_BASE64],
       ["image/webp", HELLO_BASE64],
     ])("base64 image block keeps the %s media type", async (mediaType, data) => {
-      const { fileParts } = createRecordingEndpoint(messages as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(messages);
       const parts = await fileParts(
         url,
         send([{ type: "image", source: { type: "base64", media_type: mediaType, data } }]),
@@ -289,7 +289,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("URL image block falls back to the top-level image media type", async () => {
-      const { fileParts } = createRecordingEndpoint(messages as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(messages);
       const parts = await fileParts(
         url,
         send([{ type: "image", source: { type: "url", url: REMOTE_URL } }]),
@@ -300,7 +300,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("base64 document block keeps its non-image media type", async () => {
-      const { fileParts } = createRecordingEndpoint(messages as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(messages);
       const parts = await fileParts(
         url,
         send([
@@ -316,7 +316,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("image and document blocks coexist and keep their order", async () => {
-      const { fileParts } = createRecordingEndpoint(messages as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(messages);
       const parts = await fileParts(
         url,
         send([
@@ -347,7 +347,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
       ["image/png", RED_PIXEL_PNG],
       ["image/gif", HELLO_BASE64],
     ])("input_image data URL keeps the %s media type", async (mediaType, data) => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(
         url,
         send([{ type: "input_image", image_url: `data:${mediaType};base64,${data}` }]),
@@ -358,7 +358,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("input_image remote URL falls back to the top-level image media type", async () => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(url, send([{ type: "input_image", image_url: REMOTE_URL }]));
 
       expect(parts[0]!.mediaType).toBe("image");
@@ -366,7 +366,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("input_image file_id is forwarded as a file part, not a deprecated image part", async () => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(url, send([{ type: "input_image", file_id: "file_abc123" }]));
 
       expect(parts).toHaveLength(1);
@@ -374,7 +374,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("input_file keeps its non-image media type and filename", async () => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(
         url,
         send([{ type: "input_file", file_data: HELLO_BASE64, filename: "report.pdf" }]),
@@ -394,7 +394,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
       ["audio/wav", HELLO_BASE64],
       ["image/png", RED_PIXEL_PNG],
     ])("input_file data URL keeps the %s media type", async (mediaType, data) => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(
         url,
         send([
@@ -413,7 +413,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("input_file data URL decodes to the underlying bytes", async () => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(
         url,
         send([{ type: "input_file", file_data: `data:text/plain;base64,${HELLO_BASE64}` }]),
@@ -424,7 +424,7 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("input_file bare base64 still falls back to a generic binary media type", async () => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(url, send([{ type: "input_file", file_data: HELLO_BASE64 }]));
 
       expect(parts[0]!.mediaType).toBe("application/octet-stream");
@@ -433,14 +433,14 @@ describe("FilePart conversion (v7 image/file unification)", () => {
     });
 
     test("input_file malformed data URL returns a 400", async () => {
-      const { rawPost } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { rawPost } = createRecordingEndpoint(responses);
       const res = await rawPost(url, send([{ type: "input_file", file_data: "data:,notbase64" }]));
 
       expect(res.status).toBe(400);
     });
 
     test("input_image and input_file coexist and keep their order", async () => {
-      const { fileParts } = createRecordingEndpoint(responses as typeof chatCompletions);
+      const { fileParts } = createRecordingEndpoint(responses);
       const parts = await fileParts(
         url,
         send([

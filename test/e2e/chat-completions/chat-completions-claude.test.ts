@@ -338,8 +338,7 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - Claude Sonnet 
       const completion = await client.chat.completions.create({
         model: MODEL,
         max_completion_tokens: 128,
-        reasoning_effort:
-          "none" as OpenAI.Chat.Completions.ChatCompletionCreateParams["reasoning_effort"],
+        reasoning_effort: "none",
         messages: [{ role: "user", content: "What is 2 + 2?" }],
       });
 

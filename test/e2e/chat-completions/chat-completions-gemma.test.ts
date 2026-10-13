@@ -85,9 +85,11 @@ describe.skipIf(!hasVertexCredentials)(
         let content = "";
         let reasoning = "";
         for await (const chunk of stream) {
-          const delta = chunk.choices[0]?.delta as
-            | (OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta & { reasoning?: string })
-            | undefined;
+          const delta:
+            | (OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta & {
+                reasoning?: string;
+              })
+            | undefined = chunk.choices[0]?.delta;
           if (delta?.content) content += delta.content;
           if (delta?.reasoning) reasoning += delta.reasoning;
         }
@@ -107,8 +109,7 @@ describe.skipIf(!hasVertexCredentials)(
         const completion = (await client.chat.completions.create({
           model: VERTEX_MODEL,
           max_completion_tokens: 256,
-          reasoning_effort:
-            "none" as OpenAI.Chat.Completions.ChatCompletionCreateParams["reasoning_effort"],
+          reasoning_effort: "none",
           messages: [{ role: "user", content: "What is 2 + 2?" }],
         })) as OpenAI.Chat.Completions.ChatCompletion & {
           choices: { message: { reasoning?: string } }[];

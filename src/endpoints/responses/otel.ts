@@ -270,7 +270,7 @@ export const getResponsesResponseAttributes = (
         } else if (item.type === "reasoning") {
           // Casting needed because ResponsesOutputItem and ResponsesInputItem share
           // the ResponsesReasoningItem definition.
-          base.parts = toItemParts(item as unknown as ResponsesInputItem);
+          base.parts = toItemParts(item);
         }
 
         return JSON.stringify(base);

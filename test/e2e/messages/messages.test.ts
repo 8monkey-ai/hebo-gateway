@@ -737,6 +737,8 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
       const message = await client.messages.create({
         model: MODEL,
         max_tokens: 32,
+        // Exercise forwarding of this deprecated client parameter.
+        // oxlint-disable-next-line typescript/no-deprecated
         temperature: 0,
         messages: [{ role: "user", content: "What is 1+1? Reply with just the number." }],
       });

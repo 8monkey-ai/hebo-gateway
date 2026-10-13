@@ -42,7 +42,7 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
   }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
-  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>>,
+  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>["finalStep"]>,
 ): GenerateTextResult<ToolSet, RuntimeContext, Output.Output> => {
   const result = {
     text: "",
@@ -54,7 +54,6 @@ const mockGenerateTextResult = (
     dynamicToolResults: [],
     finishReason: "stop",
     usage: mockUsage(),
-    totalUsage: mockUsage(),
     warnings: [],
     content: [],
     reasoning: [],

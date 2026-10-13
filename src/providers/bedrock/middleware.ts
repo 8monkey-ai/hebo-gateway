@@ -100,6 +100,9 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
       // and Sonnet 4.6 via additionalModelRequestFields. Opus 4.7 *only* supports
       // adaptive — "enabled" returns a 400.
       // https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
+      if (thinking.type === "between_tools") {
+        throw new Error("Bedrock reasoningConfig does not support between_tools thinking.");
+      }
       target.type = thinking.type;
       if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
         target.budgetTokens = thinking.budgetTokens;

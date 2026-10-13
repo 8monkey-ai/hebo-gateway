@@ -337,12 +337,16 @@ function fromToolResultBlock(
       } else if (part.type === "image") {
         if (part.source.type === "base64") {
           parts.push({
-            type: "image-data",
-            data: part.source.data,
+            type: "file",
+            data: { type: "data", data: part.source.data },
             mediaType: part.source.media_type,
           });
         } else {
-          parts.push({ type: "image-url", url: part.source.url });
+          parts.push({
+            type: "file",
+            mediaType: "image",
+            data: { type: "url", url: new URL(part.source.url) },
+          });
         }
       }
     }
@@ -697,7 +701,7 @@ export class MessagesTransformStream extends TransformStream<
               type: "tool_use",
               id: part.id,
               name: normalizeToolName(part.toolName),
-              input: {} as Record<string, never>,
+              input: {},
             };
             if (part.providerMetadata) contentBlock.extra_content = part.providerMetadata;
 
@@ -742,7 +746,7 @@ export class MessagesTransformStream extends TransformStream<
                 type: "tool_use",
                 id: part.toolCallId,
                 name: normalizeToolName(part.toolName),
-                input: {} as Record<string, never>,
+                input: {},
               };
               if (part.providerMetadata) contentBlock.extra_content = part.providerMetadata;
               controller.enqueue({

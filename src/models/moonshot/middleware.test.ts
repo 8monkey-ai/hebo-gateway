@@ -14,7 +14,7 @@ test("moonshot middlewares > matching model resolves reasoning middleware", () =
   expect(middleware).toContain(moonshotReasoningMiddleware);
 });
 
-test("moonshotReasoningMiddleware > should map enabled:true with budget_tokens", async () => {
+test("moonshotReasoningMiddleware > should enable thinking without forwarding unsupported max_tokens", async () => {
   const params = {
     prompt: [],
     providerOptions: {
@@ -31,12 +31,12 @@ test("moonshotReasoningMiddleware > should map enabled:true with budget_tokens",
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
-    thinking: { type: "enabled", budgetTokens: 8192 },
+    thinking: { type: "enabled" },
   });
   expect(result.providerOptions!["unknown"]).toEqual({});
 });
 
-test("moonshotReasoningMiddleware > should map effort to budgetTokens when max_tokens is absent", async () => {
+test("moonshotReasoningMiddleware > should enable thinking without forwarding unsupported effort", async () => {
   const params = {
     prompt: [],
     maxOutputTokens: 16384,
@@ -54,7 +54,7 @@ test("moonshotReasoningMiddleware > should map effort to budgetTokens when max_t
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
-    thinking: { type: "enabled", budgetTokens: Math.floor(16384 * 0.8) },
+    thinking: { type: "enabled" },
   });
   expect(result.providerOptions!["unknown"]).toEqual({});
 });

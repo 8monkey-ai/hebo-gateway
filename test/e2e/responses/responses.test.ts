@@ -252,7 +252,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
       let usage: { input_tokens: number; output_tokens: number } | undefined;
       for await (const event of stream) {
         if (event.type === "response.completed") {
-          usage = event.response.usage as typeof usage;
+          usage = event.response.usage;
         }
       }
 
@@ -606,7 +606,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - gpt-oss-120b)", () =>
       const response = await client.responses.create({
         model: MODEL,
         max_output_tokens: 1024,
-        reasoning: { effort: "none" } as OpenAI.Responses.ResponseCreateParams["reasoning"],
+        reasoning: { effort: "none" },
         input: "What is 2 + 2?",
       });
 

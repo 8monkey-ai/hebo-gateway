@@ -553,8 +553,7 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - gpt-oss-120b)"
       const completion = await client.chat.completions.create({
         model: MODEL,
         max_completion_tokens: 1024,
-        reasoning_effort:
-          "none" as OpenAI.Chat.Completions.ChatCompletionCreateParams["reasoning_effort"],
+        reasoning_effort: "none",
         messages: [{ role: "user", content: "What is 2 + 2?" }],
       });
 
@@ -719,6 +718,8 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - gpt-oss-120b)"
       const completion = await client.chat.completions.create({
         model: MODEL,
         max_completion_tokens: 1024,
+        // Exercise forwarding of this deprecated client parameter.
+        // oxlint-disable-next-line typescript/no-deprecated
         seed: 42,
         messages: [{ role: "user", content: "Say hello" }],
       });

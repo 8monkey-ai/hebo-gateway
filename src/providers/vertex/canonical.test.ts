@@ -46,7 +46,7 @@ const authClientFor = (token: string) =>
 
 /** Captures the request the MaaS model would send, without hitting the network. */
 async function captureMaasRequest(
-  settings: Omit<Parameters<typeof createVertex>[0], "fetch"> = {},
+  settings: Omit<NonNullable<Parameters<typeof createVertex>[0]>, "fetch"> = {},
 ): Promise<{ url: string; headers: Headers }> {
   let captured: { url: string; headers: Headers } | undefined;
 

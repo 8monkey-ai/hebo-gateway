@@ -90,7 +90,7 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
         max_completion_tokens: 256,
         messages: [
           { role: "user", content: "What's the weather in Berlin?" },
-          assistantMsg as unknown as OpenAI.Chat.Completions.ChatCompletionMessageParam,
+          assistantMsg,
           {
             role: "tool",
             tool_call_id: toolCall!.id,
@@ -162,7 +162,7 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
         max_completion_tokens: 256,
         messages: [
           { role: "user", content: "What's the weather in Madrid?" },
-          assistantMsg as unknown as OpenAI.Chat.Completions.ChatCompletionMessageParam,
+          assistantMsg,
           {
             role: "tool",
             tool_call_id: toolCall.id,
@@ -230,7 +230,7 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
           max_completion_tokens: 256,
           messages: [
             { role: "user", content: "What's the weather in Paris?" },
-            corruptedAssistantMsg as unknown as OpenAI.Chat.Completions.ChatCompletionMessageParam,
+            corruptedAssistantMsg,
             {
               role: "tool",
               tool_call_id: toolCall.id,

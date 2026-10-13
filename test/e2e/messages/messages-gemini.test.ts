@@ -59,11 +59,11 @@ describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature
 
       expect(turn1.stop_reason).toBe("tool_use");
 
-      const toolUseBlock = turn1.content.find((b) => b.type === "tool_use") as
+      const toolUseBlock:
         | (Anthropic.Messages.ToolUseBlock & {
             extra_content?: Record<string, Record<string, unknown>>;
           })
-        | undefined;
+        | undefined = turn1.content.find((b) => b.type === "tool_use");
       expect(toolUseBlock).toBeDefined();
       // Gemini 3 attaches thought_signature to tool_use blocks via extra_content
       expect(toolUseBlock?.extra_content).toBeDefined();
@@ -121,11 +121,11 @@ describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature
       });
 
       expect(turn1.stop_reason).toBe("tool_use");
-      const toolUseBlock = turn1.content.find((b) => b.type === "tool_use") as
+      const toolUseBlock:
         | (Anthropic.Messages.ToolUseBlock & {
             extra_content?: Record<string, Record<string, unknown>>;
           })
-        | undefined;
+        | undefined = turn1.content.find((b) => b.type === "tool_use");
       expect(toolUseBlock).toBeDefined();
 
       // Turn 2: send back tool_use with a deliberately corrupted thought_signature
@@ -138,7 +138,7 @@ describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature
       };
       const assistantMsg: Anthropic.Messages.MessageParam = {
         role: "assistant",
-        content: [corruptedToolUse] as unknown as Anthropic.Messages.ContentBlock[],
+        content: [corruptedToolUse],
       };
       const toolResultMsg: Anthropic.Messages.MessageParam = {
         role: "user",

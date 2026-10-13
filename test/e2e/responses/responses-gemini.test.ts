@@ -76,11 +76,11 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
 
       expect(turn1.status).toBe("completed");
 
-      const fnCall = turn1.output.find((o) => o.type === "function_call") as
+      const fnCall:
         | (ResponseFunctionToolCall & {
             extra_content?: Record<string, Record<string, unknown>>;
           })
-        | undefined;
+        | undefined = turn1.output.find((o) => o.type === "function_call");
       expect(fnCall).toBeDefined();
 
       // Gemini 3 attaches thought_signature to function_call items via extra_content
@@ -140,11 +140,11 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
       };
 
       expect(turn1.status).toBe("completed");
-      const fnCall = turn1.output.find((o) => o.type === "function_call") as
+      const fnCall:
         | (ResponseFunctionToolCall & {
             extra_content?: Record<string, Record<string, unknown>>;
           })
-        | undefined;
+        | undefined = turn1.output.find((o) => o.type === "function_call");
       expect(fnCall).toBeDefined();
 
       // Turn 2: send back function_call with corrupted thought_signature

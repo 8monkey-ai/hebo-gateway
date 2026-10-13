@@ -26,7 +26,7 @@ import { parseRequestBody } from "../../utils/body";
 import { prepareForwardHeaders } from "../../utils/request";
 import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
 import { getEmbeddingsRequestAttributes, getEmbeddingsResponseAttributes } from "./otel";
-import { EmbeddingsBodySchema, type EmbeddingsBody, type EmbeddingsInputs } from "./schema";
+import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -88,7 +88,7 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
 
     // Convert inputs to AI SDK call options.
     const { model: _model, trace: _trace, ...inputs } = ctx.body;
-    const embedOptions = convertToEmbedCallOptions(inputs as EmbeddingsInputs);
+    const embedOptions = convertToEmbedCallOptions(inputs);
     logger.trace(
       { requestId: ctx.requestId, options: embedOptions },
       "[embeddings] AI SDK options",

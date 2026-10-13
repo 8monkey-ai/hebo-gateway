@@ -98,7 +98,7 @@ export function forwardLanguageParams(providerName: ProviderId): LanguageModelMi
         if (message.content && Array.isArray(message.content)) {
           for (const part of message.content) {
             if ("providerOptions" in part && part.providerOptions) {
-              processOptions(part.providerOptions as Record<string, JSONObject>, providerName);
+              processOptions(part.providerOptions, providerName);
             }
           }
         }

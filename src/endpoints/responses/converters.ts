@@ -439,15 +439,17 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
       if (part.image_url !== undefined && part.image_url !== null) {
         const { image, mediaType } = parseImageInput(part.image_url);
         if (image instanceof URL) {
-          value.push({ type: "image-url", url: image.toString() });
+          value.push({ type: "file", mediaType: "image", data: { type: "url", url: image } });
         } else {
           value.push({
-            type: "image-data",
-            data: image,
+            type: "file",
+            data: { type: "data", data: image },
             mediaType: mediaType!,
           });
         }
       } else if (part.file_id !== undefined && part.file_id !== null) {
+        // Keep unscoped file IDs until the SDK resolves the routed provider.
+        // oxlint-disable-next-line typescript/no-deprecated
         value.push({ type: "image-file-id", fileId: part.file_id });
       }
       continue;
@@ -457,14 +459,18 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
       if (part.file_data !== undefined && part.file_data !== null) {
         const { data, mediaType } = parseFileInput(part.file_data);
         value.push({
-          type: "file-data",
-          data,
+          type: "file",
+          data: { type: "data", data },
           mediaType: mediaType ?? "application/octet-stream",
           filename: part.filename ?? undefined,
         });
       } else if (part.file_url !== undefined && part.file_url !== null) {
+        // Let the SDK infer the media type from the URL when none was supplied.
+        // oxlint-disable-next-line typescript/no-deprecated
         value.push({ type: "file-url", url: part.file_url });
       } else if (part.file_id !== undefined && part.file_id !== null) {
+        // Keep unscoped file IDs until the SDK resolves the routed provider.
+        // oxlint-disable-next-line typescript/no-deprecated
         value.push({ type: "file-id", fileId: part.file_id });
       }
       continue;
@@ -472,8 +478,8 @@ function fromToolOutput(output: string | ResponsesInputContent[]): ToolResultPar
 
     if (part.type === "input_audio") {
       value.push({
-        type: "file-data",
-        data: part.input_audio.data,
+        type: "file",
+        data: { type: "data", data: part.input_audio.data },
         mediaType: `audio/${part.input_audio.format}`,
       });
       continue;
@@ -701,10 +707,7 @@ function toFunctionCallItem(
     id: uuidv7(),
     call_id: toolCallId,
     name: normalizeToolName(toolName),
-    arguments:
-      typeof input === "string"
-        ? input
-        : JSON.stringify(stripEmptyKeys(input as Record<string, unknown>)),
+    arguments: typeof input === "string" ? input : JSON.stringify(stripEmptyKeys(input)),
     status,
   };
 

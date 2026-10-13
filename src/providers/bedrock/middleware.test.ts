@@ -976,3 +976,16 @@ test("bedrock middlewares > mid-conversation system turns reach InvokeModel", as
     { role: "user" },
   ]);
 });
+
+test("bedrockClaudeReasoningMiddleware > rejects unsupported between_tools thinking", () => {
+  expect(
+    bedrockClaudeReasoningMiddleware.transformParams!({
+      type: "generate",
+      params: {
+        prompt: [],
+        providerOptions: { bedrock: { thinking: { type: "between_tools" } } },
+      },
+      model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    }),
+  ).rejects.toThrow("Bedrock reasoningConfig does not support between_tools thinking.");
+});

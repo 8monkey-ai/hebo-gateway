@@ -51,7 +51,7 @@ const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUs
   }) satisfies LanguageModelUsage;
 
 const mockGenerateTextResult = (
-  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>>,
+  overrides: Partial<GenerateTextResult<ToolSet, RuntimeContext, Output.Output>["finalStep"]>,
 ): GenerateTextResult<ToolSet, RuntimeContext, Output.Output> => {
   const result = {
     text: "",
@@ -63,7 +63,6 @@ const mockGenerateTextResult = (
     dynamicToolResults: [],
     finishReason: "stop",
     usage: mockUsage(),
-    totalUsage: mockUsage(),
     warnings: [],
     content: [],
     reasoning: [],
@@ -358,8 +357,8 @@ describe("Responses Converters", () => {
           type: "content",
           value: [
             {
-              type: "file-data",
-              data: "aGVsbG8=",
+              type: "file",
+              data: { type: "data", data: "aGVsbG8=" },
               mediaType: "audio/wav",
             },
           ],
@@ -394,8 +393,8 @@ describe("Responses Converters", () => {
           type: "content",
           value: [
             {
-              type: "file-data",
-              data: "aGVsbG8=",
+              type: "file",
+              data: { type: "data", data: "aGVsbG8=" },
               mediaType: "application/pdf",
               filename: "report.pdf",
             },
@@ -594,7 +593,6 @@ describe("Responses Converters", () => {
           text: "Hello!",
           content: [{ type: "text", text: "Hello!" }],
           usage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
         }),
         "openai/gpt-5",
       );
@@ -626,7 +624,6 @@ describe("Responses Converters", () => {
             },
           ],
           usage: mockUsage({ inputTokens: 15, outputTokens: 10, totalTokens: 25 }),
-          totalUsage: mockUsage({ inputTokens: 15, outputTokens: 10, totalTokens: 25 }),
         }),
         "openai/gpt-5",
       );
@@ -652,7 +649,6 @@ describe("Responses Converters", () => {
             { type: "text", text: "42" },
           ],
           usage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
         }),
         "openai/gpt-5",
       );
@@ -681,7 +677,6 @@ describe("Responses Converters", () => {
             { type: "text", text: "42" },
           ],
           usage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
         }),
         "anthropic/claude-4-opus",
       );
@@ -700,7 +695,6 @@ describe("Responses Converters", () => {
           text: "Partial...",
           content: [{ type: "text", text: "Partial..." }],
           usage: mockUsage({ inputTokens: 10, outputTokens: 100, totalTokens: 110 }),
-          totalUsage: mockUsage({ inputTokens: 10, outputTokens: 100, totalTokens: 110 }),
         }),
         "openai/gpt-5",
       );
@@ -715,7 +709,6 @@ describe("Responses Converters", () => {
         mockGenerateTextResult({
           finishReason: "error",
           usage: mockUsage({ inputTokens: 5, outputTokens: 0, totalTokens: 5 }),
-          totalUsage: mockUsage({ inputTokens: 5, outputTokens: 0, totalTokens: 5 }),
         }),
         "openai/gpt-5",
       );
@@ -730,7 +723,6 @@ describe("Responses Converters", () => {
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
           usage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
-          totalUsage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
         }),
         "openai/gpt-5",
         { user_id: "u-123" },
@@ -746,7 +738,6 @@ describe("Responses Converters", () => {
           text: "Hi",
           content: [{ type: "text", text: "Hi" }],
           usage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
-          totalUsage: mockUsage({ inputTokens: 5, outputTokens: 2, totalTokens: 7 }),
           providerMetadata: {
             openai: { service_tier: "flex" },
           },

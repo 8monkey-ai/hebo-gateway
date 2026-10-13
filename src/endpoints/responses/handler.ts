@@ -35,7 +35,7 @@ import { prepareForwardHeaders } from "../../utils/request";
 import type { RuntimeContext } from "../shared/converters";
 import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
 import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
-import { ResponsesBodySchema, type ResponsesBody, type ResponsesInputs } from "./schema";
+import { ResponsesBodySchema, type ResponsesBody } from "./schema";
 
 export const responses = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -93,7 +93,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
     setSpanAttributes(genAiGeneralAttrs);
 
     const { model: _model, stream, trace: _trace, ...inputs } = ctx.body;
-    const textOptions = convertToTextCallOptions(inputs as ResponsesInputs);
+    const textOptions = convertToTextCallOptions(inputs);
     logger.trace({ requestId: ctx.requestId, options: textOptions }, "[responses] AI SDK options");
     addSpanEvent("hebo.options.prepared");
     setSpanAttributes(getResponsesRequestAttributes(ctx.body, ctx.trace));
@@ -126,7 +126,7 @@ export const responses = (config: GatewayConfig): Endpoint => {
             recordTimeToFirstToken(ttft, genAiGeneralAttrs, ctx.trace);
           }
         },
-        onFinish: (res) => {
+        onEnd: (res) => {
           addSpanEvent("hebo.ai-sdk.completed");
           const streamResult = toResponses(
             res as unknown as GenerateTextResult<ToolSet, RuntimeContext, Output.Output>,

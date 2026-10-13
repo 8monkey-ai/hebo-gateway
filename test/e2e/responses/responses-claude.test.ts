@@ -392,7 +392,7 @@ describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", 
       const response = await client.responses.create({
         model: MODEL,
         max_output_tokens: 128,
-        reasoning: { effort: "none" } as OpenAI.Responses.ResponseCreateParams["reasoning"],
+        reasoning: { effort: "none" },
         input: "What is 2 + 2?",
       });
 

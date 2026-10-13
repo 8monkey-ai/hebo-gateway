@@ -53,7 +53,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
       limit: limit ? limit + 1 : 100000,
       after,
       order,
-      metadata: metadata as ConversationMetadata,
+      metadata: metadata,
     });
 
     logger.trace(
@@ -91,7 +91,7 @@ export const conversations = (config: GatewayConfig): Endpoint => {
     addSpanEvent("hebo.request.parsed");
 
     const entity = await storage.createConversation({
-      metadata: parsed.data.metadata as ConversationMetadata,
+      metadata: parsed.data.metadata,
       items: parsed.data.items?.map(toStorageItem),
     });
 
