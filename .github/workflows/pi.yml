@@ -64,6 +64,14 @@ jobs:
         with:
           node-version: 24
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
       - name: Run Pi agent
         id: pi
         uses: shaftoe/pi-coding-agent-action@develop
@@ -73,6 +81,8 @@ jobs:
           model: ${{ vars.AGENT_MODEL }}
           thinking_level: ${{ vars.AGENT_THINKING }}
           export_session_html: true
+          extensions: |
+            npm:pi-web-access
           diff_ignore_patterns: "dist/ pnpm-lock.yaml node_modules/"
 
       - name: Upload Pi session HTML
