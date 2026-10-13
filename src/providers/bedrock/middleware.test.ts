@@ -12,6 +12,7 @@ import { claudeReasoningMiddleware } from "../../models/anthropic/middleware";
 import { openAIReasoningMiddleware } from "../../models/openai/middleware";
 import { withCanonicalIdsForBedrock } from "./canonical";
 import {
+  bedrockAnthropicBetaMiddleware,
   bedrockAnthropicServiceTierMiddleware,
   bedrockClaudeReasoningMiddleware,
   bedrockGptReasoningMiddleware,
@@ -746,6 +747,7 @@ test("bedrock middlewares > the Anthropic provider keeps none of the Converse tr
   });
 
   expect(middleware).toContain(bedrockAnthropicServiceTierMiddleware);
+  expect(middleware).toContain(bedrockAnthropicBetaMiddleware);
   expect(middleware).not.toContain(bedrockServiceTierMiddleware);
   expect(middleware).not.toContain(bedrockClaudeReasoningMiddleware);
   expect(middleware).not.toContain(bedrockPromptCachingMiddleware);
@@ -788,6 +790,51 @@ test("bedrockAnthropicServiceTierMiddleware > should ignore non-object provider 
   });
 
   expect(result.headers).toBeUndefined();
+});
+
+const transformBetaHeader = async (header?: string) => {
+  const result = await bedrockAnthropicBetaMiddleware.transformParams!({
+    type: "generate",
+    params: {
+      prompt: [],
+      headers: header === undefined ? undefined : { "anthropic-beta": header },
+    },
+    model: new MockLanguageModelV4({ modelId: "us.anthropic.claude-opus-4-6-v1" }),
+  });
+
+  return result.headers?.["anthropic-beta"];
+};
+
+test("bedrockAnthropicBetaMiddleware > should drop betas Bedrock does not implement", async () => {
+  // The Claude Code list: two first-party-only betas Bedrock 400s on, one it serves.
+  expect(
+    await transformBetaHeader(
+      "advisor-tool-2026-03-01,interleaved-thinking-2025-05-14,prompt-caching-scope-2026-01-05",
+    ),
+  ).toBe("interleaved-thinking-2025-05-14");
+});
+
+test("bedrockAnthropicBetaMiddleware > should clear the header when nothing is supported", async () => {
+  expect(await transformBetaHeader("advisor-tool-2026-03-01")).toBeUndefined();
+});
+
+test("bedrockAnthropicBetaMiddleware > should match betas regardless of whitespace and casing", async () => {
+  // The AWS docs list `Interleaved-thinking-2025-05-14` capitalized; the wire value is not.
+  expect(
+    await transformBetaHeader(
+      " Interleaved-Thinking-2025-05-14 , , advisor-tool-2026-03-01, effort-2025-11-24",
+    ),
+  ).toBe("interleaved-thinking-2025-05-14,effort-2025-11-24");
+});
+
+test("bedrockAnthropicBetaMiddleware > should leave a fully supported header untouched", async () => {
+  const header = "context-1m-2025-08-07, output-128k-2025-02-19";
+
+  expect(await transformBetaHeader(header)).toBe(header);
+});
+
+test("bedrockAnthropicBetaMiddleware > should ignore a missing header", async () => {
+  expect(await transformBetaHeader()).toBeUndefined();
 });
 
 /** A Claude model on the nested Anthropic provider (InvokeModel), with its request captured. */
@@ -872,6 +919,32 @@ test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic",
     messages: [{ content: [{ type: "text", cache_control: { type: "ephemeral", ttl: "1h" } }] }],
   });
   expect(captured.body).not.toHaveProperty("cachePoint");
+});
+
+test("bedrock middlewares > unsupported client betas never reach InvokeModel", async () => {
+  const modelId = "anthropic/claude-opus-4.6";
+  const { model, captured } = anthropicModel(modelId);
+  const wrapped = wrapLanguageModel({
+    model,
+    middleware: modelMiddlewareMatcher.for(modelId, model.provider),
+  });
+
+  try {
+    await wrapped.doGenerate({
+      prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      // Forwarded verbatim from the client: Claude Code sends its first-party list.
+      headers: {
+        "anthropic-beta":
+          "advisor-tool-2026-03-01,prompt-caching-scope-2026-01-05,context-1m-2025-08-07",
+      },
+    });
+  } catch {
+    // The capturing fetch always throws, so only the request is asserted on.
+  }
+
+  // The provider folds header betas into the body, so both sides must be filtered.
+  expect(captured.headers?.["anthropic-beta"]).toBe("context-1m-2025-08-07");
+  expect(captured.body?.["anthropic_beta"]).toEqual(["context-1m-2025-08-07"]);
 });
 
 test("bedrock middlewares > mid-conversation system turns reach InvokeModel", async () => {
