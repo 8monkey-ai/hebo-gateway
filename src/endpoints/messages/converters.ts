@@ -202,10 +202,12 @@ export function convertToModelMessages(
 function fromSystemContent(content: string | SystemBlock[]): ModelMessage {
   if (typeof content === "string") return { role: "system", content };
 
-  const message: ModelMessage = {
-    role: "system",
-    content: content.map((block) => block.text).join(""),
-  };
+  // Called once per system turn, and Claude Code sends a `<system-reminder>` turn of a
+  // single block on most requests, so concatenate in place instead of `map().join()`.
+  let text = "";
+  for (let i = 0; i < content.length; i++) text += content[i]!.text;
+
+  const message: ModelMessage = { role: "system", content: text };
 
   // Pass through cache_control from the last block that has it
   for (let i = content.length - 1; i >= 0; i--) {

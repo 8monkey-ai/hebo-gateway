@@ -86,6 +86,31 @@ test("claudePromptCachingMiddleware > should map cache_control ttl", async () =>
   });
 });
 
+test("claudePromptCachingMiddleware > should clamp the 24h retention ttl", async () => {
+  const params = {
+    prompt: [],
+    providerOptions: {
+      // OpenAI's `prompt_cache_retention: "24h"` normalizes to this; Claude serves 5m / 1h.
+      unknown: {
+        cache_control: { type: "ephemeral", ttl: "24h" },
+      },
+    },
+  };
+
+  const result = await claudePromptCachingMiddleware.transformParams!({
+    type: "generate",
+    params,
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+  });
+
+  expect(result.providerOptions).toEqual({
+    anthropic: {
+      cacheControl: { type: "ephemeral", ttl: "1h" },
+    },
+    unknown: {},
+  });
+});
+
 test("claudeReasoningMiddleware > should transform reasoning_effort string to thinking budget", async () => {
   const params = {
     prompt: [],

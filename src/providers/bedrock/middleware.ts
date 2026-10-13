@@ -19,7 +19,26 @@ const BEDROCK_EFFORT_CAPABLE = ["-4-6", "-4-7"] as const;
 const isBedrockEffortCapable = (modelId: string) =>
   BEDROCK_EFFORT_CAPABLE.some((tag) => modelId.includes(tag));
 
+// Bedrock serves the default tier when the tier is omitted, so `auto` maps to nothing.
 // https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
+const toBedrockServiceTier = (
+  tier: ChatCompletionsServiceTier,
+): BedrockProviderOptions["serviceTier"] => {
+  switch (tier) {
+    case "auto":
+      return undefined;
+    case "scale":
+      return "reserved";
+    case "default":
+    case "flex":
+    case "priority":
+      return tier;
+  }
+
+  return undefined;
+};
+
+// Converse takes the tier in the request body.
 export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -28,22 +47,9 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
     if (!bedrock || typeof bedrock !== "object") return params;
 
     const tier = bedrock.serviceTier as ChatCompletionsServiceTier | undefined;
-    switch (tier) {
-      case undefined:
-        return params;
-      case "auto":
-        // Bedrock uses its default tier when omitted.
-        delete bedrock.serviceTier;
-        return params;
-      case "scale":
-        bedrock.serviceTier = "reserved";
-        return params;
-      case "default":
-      case "flex":
-      case "priority":
-        bedrock.serviceTier = tier;
-        return params;
-    }
+    if (tier === undefined) return params;
+
+    bedrock.serviceTier = toBedrockServiceTier(tier);
 
     return params;
   },
@@ -204,16 +210,27 @@ modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   ],
 });
 
-// Service tiers are a Converse feature (`serviceTier`). The nested Anthropic provider sends
-// the Anthropic body instead, whose `service_tier` is not served on Bedrock, and the
-// gateway's internal tiers (`flex`, `priority`, `scale`, `default`) would fail the Anthropic
-// provider-options schema. Drop it rather than fail the request.
+// The InvokeModel endpoint takes the service tier as a request header, with the same tier
+// names Converse takes in its body. The Anthropic body's own `service_tier` (`auto` /
+// `standard_only`) is not served on Bedrock, so the tier moves out of the provider options,
+// where the gateway's tiers would also fail the Anthropic options schema.
+//   https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html
+const BEDROCK_SERVICE_TIER_HEADER = "x-amzn-bedrock-service-tier";
+
 export const bedrockAnthropicServiceTierMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
   transformParams: async ({ params }) => {
     const anthropic = params.providerOptions?.["anthropic"];
-    if (anthropic?.["serviceTier"] !== undefined) anthropic["serviceTier"] = undefined;
+    if (!anthropic || typeof anthropic !== "object") return params;
+
+    const tier = anthropic["serviceTier"] as ChatCompletionsServiceTier | undefined;
+    if (tier === undefined) return params;
+
+    anthropic["serviceTier"] = undefined;
+
+    const mapped = toBedrockServiceTier(tier);
+    if (mapped) (params.headers ??= {})[BEDROCK_SERVICE_TIER_HEADER] ??= mapped;
 
     return params;
   },

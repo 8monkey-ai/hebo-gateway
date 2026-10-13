@@ -163,13 +163,29 @@ const OWN_AUTH_SETTINGS = [
  */
 const INHERITED_AUTH = "inherited";
 
-const withoutAuthorization = (headers: HeadersInit): Record<string, string> => {
-  const entries: Iterable<[string, string]> =
-    headers instanceof Headers || Array.isArray(headers) ? headers : Object.entries(headers);
+const AUTHORIZATION = "authorization";
 
+/** The length check keeps the per-request header scan off `toLowerCase` for every key. */
+const isAuthorization = (key: string) =>
+  key.length === AUTHORIZATION.length && key.toLowerCase() === AUTHORIZATION;
+
+const withoutAuthorization = (headers: HeadersInit): Record<string, string> => {
   const out: Record<string, string> = {};
-  for (const [key, value] of entries) {
-    if (value === undefined || key.toLowerCase() === "authorization") continue;
+
+  // The AI SDK always hands over a plain record; iterating it directly keeps this off
+  // `Object.entries`, which allocates an array per header on every request.
+  if (!(headers instanceof Headers) && !Array.isArray(headers)) {
+    for (const key in headers) {
+      const value = headers[key];
+      // `undefined` values would be stringified by `Headers`.
+      if (value === undefined || isAuthorization(key)) continue;
+      out[key] = value;
+    }
+    return out;
+  }
+
+  for (const [key, value] of headers) {
+    if (value === undefined || isAuthorization(key)) continue;
     out[key] = value;
   }
   return out;
@@ -205,6 +221,8 @@ const resolveAnthropic = (
   const baseFetch: BedrockFetch = fetch ?? globalThis.fetch;
   // The cast only drops the runtime-specific extras of `typeof globalThis.fetch`
   // (`preconnect` on Bun), which a request-signing wrapper has no use for.
+  // The AI SDK always passes a URL plus `init`; a `Request` instance would carry its
+  // headers out of reach here and leak the placeholder to the signing fetch.
   const inheritedFetch = ((input: RequestInfo | URL, init?: RequestInit) =>
     baseFetch(
       input,
@@ -217,6 +235,13 @@ const resolveAnthropic = (
     fetch: inheritedFetch,
   });
 };
+
+/**
+ * Lookups are keyed by the caller-supplied id, and `anthropic/*` resolves for any id, so the
+ * memo is bounded like `ModelMiddlewareMatcher`'s: the gateway only ever asks for catalog
+ * ids, but `withCanonicalIdsForBedrock` is public API.
+ */
+const MAX_MEMOIZED_MODELS = 500;
 
 /** Routes `anthropic/*` lookups to the nested InvokeModel provider, created on first use. */
 const nestAnthropic = (
@@ -241,6 +266,7 @@ const nestAnthropic = (
       logger.debug(`[canonical] mapped ${id} to ${bedrockId} (invoke)`);
       anthropic ??= resolveAnthropic(provider, settings);
       model = anthropic.languageModel(bedrockId);
+      if (models.size >= MAX_MEMOIZED_MODELS) models.clear();
       models.set(id, model);
       return model;
     },

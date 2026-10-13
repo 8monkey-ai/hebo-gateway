@@ -838,13 +838,14 @@ The chat completions endpoint accepts a provider-agnostic `service_tier` extensi
 Provider-specific mapping:
 
 - **OpenAI**: forwards as OpenAI `serviceTier` (no middleware remap).
+- **Anthropic**: maps to Anthropic `serviceTier` (`default` -> `standard_only`; `auto` forwarded; `flex`/`priority`/`scale` have no equivalent and are dropped).
 - **Groq**: maps to Groq `serviceTier` (`default` -> `on_demand`, `scale`/`priority` -> `performance`).
 - **Google Vertex**: maps to request headers via middleware:
   - `default` -> `x-vertex-ai-llm-request-type: shared`
   - `flex` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: flex`
   - `priority` -> `x-vertex-ai-llm-request-type: shared` + `x-vertex-ai-llm-shared-request-type: priority`
   - `scale` -> `x-vertex-ai-llm-request-type: dedicated`
-- **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default).
+- **Amazon Bedrock**: maps to Bedrock `serviceTier.type` (`default`, `flex`, `priority`, `reserved`; `scale` -> `reserved`, `auto` -> omitted/default). Claude models, served from `InvokeModel`, take the same tiers as the `x-amzn-bedrock-service-tier` request header instead.
 
 When available, the resolved value is echoed back on response as `service_tier`.
 
@@ -875,7 +876,7 @@ Accepted request fields:
 Provider behavior:
 
 - **OpenAI-compatible**: forwards `prompt_cache_key` and `prompt_cache_retention` as native provider options.
-- **Anthropic Claude**: maps top-level caching to Anthropic cache control, while message/part `cache_control` breakpoints are preserved.
+- **Anthropic Claude**: maps top-level caching to Anthropic cache control, while message/part `cache_control` breakpoints are preserved. Claude serves `5m` and `1h` TTLs, so OpenAI's 24h retention is clamped to `1h`. Applies on every host serving Claude, Bedrock `InvokeModel` included.
 - **Google Gemini**: maps `cached_content` to Gemini `cachedContent`.
 - **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 

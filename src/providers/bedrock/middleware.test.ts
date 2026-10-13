@@ -21,9 +21,14 @@ import {
 } from "./middleware";
 
 /** A fetch that records the JSON request body and throws, so no request leaves the process. */
-const capturingFetch = (onBody: (body: Record<string, unknown>) => void) =>
+const capturingFetch = (
+  onBody: (body: Record<string, unknown>, headers: Record<string, string>) => void,
+) =>
   ((_input: RequestInfo | URL, init?: RequestInit) => {
-    onBody(JSON.parse(init!.body as string) as Record<string, unknown>);
+    onBody(
+      JSON.parse(init!.body as string) as Record<string, unknown>,
+      (init!.headers ?? {}) as Record<string, string>,
+    );
     throw new Error("captured");
   }) as unknown as typeof fetch;
 
@@ -746,31 +751,55 @@ test("bedrock middlewares > the Anthropic provider keeps none of the Converse tr
   expect(middleware).not.toContain(bedrockPromptCachingMiddleware);
 });
 
-test("bedrockAnthropicServiceTierMiddleware > drops the Converse-only service tier", async () => {
+// The InvokeModel tier names match Converse's; only the transport differs (header vs body).
+const invokeServiceTierCases = [
+  { tier: "auto", expected: undefined },
+  { tier: "default", expected: "default" },
+  { tier: "flex", expected: "flex" },
+  { tier: "priority", expected: "priority" },
+  { tier: "scale", expected: "reserved" },
+] as const;
+
+for (const { tier, expected } of invokeServiceTierCases) {
+  test(`bedrockAnthropicServiceTierMiddleware > should map ${tier} tier to the InvokeModel header`, async () => {
+    const result = await bedrockAnthropicServiceTierMiddleware.transformParams!({
+      type: "generate",
+      params: {
+        prompt: [],
+        providerOptions: { anthropic: { serviceTier: tier, thinking: { type: "adaptive" } } },
+      },
+      model: new MockLanguageModelV4({ modelId: "us.anthropic.claude-opus-4-6-v1" }),
+    });
+
+    // The Anthropic body only knows `auto` / `standard_only`, which Bedrock does not serve.
+    expect(result.providerOptions!["anthropic"]).toEqual({
+      serviceTier: undefined,
+      thinking: { type: "adaptive" },
+    });
+    expect(result.headers?.["x-amzn-bedrock-service-tier"]).toBe(expected);
+  });
+}
+
+test("bedrockAnthropicServiceTierMiddleware > should ignore non-object provider options", async () => {
   const result = await bedrockAnthropicServiceTierMiddleware.transformParams!({
     type: "generate",
-    params: {
-      prompt: [],
-      providerOptions: { anthropic: { serviceTier: "flex", thinking: { type: "adaptive" } } },
-    },
+    params: { prompt: [], providerOptions: { anthropic: 5 as never } },
     model: new MockLanguageModelV4({ modelId: "us.anthropic.claude-opus-4-6-v1" }),
   });
 
-  expect(result.providerOptions!["anthropic"]).toEqual({
-    serviceTier: undefined,
-    thinking: { type: "adaptive" },
-  });
+  expect(result.headers).toBeUndefined();
 });
 
-/** A Claude model on the nested Anthropic provider (InvokeModel), with its body captured. */
+/** A Claude model on the nested Anthropic provider (InvokeModel), with its request captured. */
 const anthropicModel = (canonicalId: string) => {
-  const captured: { body?: Record<string, unknown> } = {};
+  const captured: { body?: Record<string, unknown>; headers?: Record<string, string> } = {};
   const provider = withCanonicalIdsForBedrock(
     createAmazonBedrock({
       region: "us-east-1",
       apiKey: "provider-key",
-      fetch: capturingFetch((body) => {
+      fetch: capturingFetch((body, headers) => {
         captured.body = body;
+        captured.headers = headers;
       }),
     }),
   );
@@ -803,7 +832,46 @@ test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape thro
     anthropic_version: "bedrock-2023-05-31",
   });
   expect(captured.body).not.toHaveProperty("reasoningConfig");
+  // InvokeModel takes the tier as a signed request header instead.
   expect(captured.body).not.toHaveProperty("service_tier");
+  expect(captured.headers?.["x-amzn-bedrock-service-tier"]).toBe("flex");
+});
+
+test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic", async () => {
+  const modelId = "anthropic/claude-opus-4.6";
+  const { model, captured } = anthropicModel(modelId);
+  const wrapped = wrapLanguageModel({
+    model,
+    middleware: modelMiddlewareMatcher.for(modelId, model.provider),
+  });
+
+  try {
+    await wrapped.doGenerate({
+      prompt: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "hi",
+              providerOptions: { unknown: { cache_control: { type: "ephemeral", ttl: "1h" } } },
+            },
+          ],
+        },
+      ],
+      // OpenAI's 24h retention has no Claude equivalent; `1h` is the longest it serves.
+      providerOptions: { unknown: { cache_control: { type: "ephemeral", ttl: "24h" } } },
+    });
+  } catch {
+    // The capturing fetch always throws, so only the request body is asserted on.
+  }
+
+  // Native `cache_control`, not the Converse `cachePoint` translation.
+  expect(captured.body).toMatchObject({
+    cache_control: { type: "ephemeral", ttl: "1h" },
+    messages: [{ content: [{ type: "text", cache_control: { type: "ephemeral", ttl: "1h" } }] }],
+  });
+  expect(captured.body).not.toHaveProperty("cachePoint");
 });
 
 test("bedrock middlewares > mid-conversation system turns reach InvokeModel", async () => {

@@ -96,7 +96,9 @@ class ModelMiddlewareMatcher {
   }): ModelMiddleware[] {
     const { kind, modelId, providerId, forward, debug } = options;
 
-    const key = `${kind}-${modelId}:${providerId}`;
+    // `resolve` is also called without the forward / debug middlewares (tests, custom
+    // chains), so they belong in the key: the resulting chains are not interchangeable.
+    const key = `${kind}-${modelId}:${providerId}:${forward ? 1 : 0}${debug ? 1 : 0}`;
     const cached = this.cache.get(key);
     if (cached) {
       logger.debug(`[middleware] cache hit for ${modelId}:${providerId}`);

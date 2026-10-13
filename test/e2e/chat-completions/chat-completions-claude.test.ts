@@ -494,7 +494,28 @@ describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - Claude Sonnet 
   );
 
   // =========================================================================
-  // 15. Error handling — invalid model
+  // 15. Service tier
+  // =========================================================================
+  test(
+    "service_tier: default accepted",
+    async () => {
+      // Claude is served from InvokeModel, which takes the tier as the
+      // `x-amzn-bedrock-service-tier` request header instead of a body field.
+      const completion = await client.chat.completions.create({
+        model: MODEL,
+        max_completion_tokens: 64,
+        service_tier: "default",
+        messages: [{ role: "user", content: "Say hello" }],
+      });
+
+      expect(["stop", "length"]).toContain(completion.choices[0]!.finish_reason);
+      expect(completion.choices[0]!.message.content).toBeDefined();
+    },
+    { timeout: 120_000 },
+  );
+
+  // =========================================================================
+  // 16. Error handling — invalid model
   // =========================================================================
   test(
     "invalid model: returns an error",
