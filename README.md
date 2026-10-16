@@ -710,6 +710,7 @@ Transcription models use `modalities: { input: ["audio"], output: ["text"] }` in
 - **`stream`**: Streaming transcription (rejected with `400`).
 - **URL input**: `input_audio.url` / `source_url`.
 - **Model middleware**: `modelMiddlewareMatcher` does not apply, since the AI SDK has no transcription model middleware. Hooks run as usual.
+- **Retries**: Upstream calls are not retried (other endpoints retry twice via the AI SDK), so large uploads are never re-sent automatically. Retry on the client if needed.
 
 ### `/models`
 

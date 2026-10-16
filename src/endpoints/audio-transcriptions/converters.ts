@@ -6,7 +6,7 @@ import type {
 
 import { GatewayError } from "../../errors/gateway";
 import { extractProviderNamespace } from "../../middleware/common";
-import { readRequestBody } from "../../utils/body";
+import { readJson, readRequestBody } from "../../utils/body";
 import { toResponse } from "../../utils/response";
 import type { InputAudioFormat } from "../shared/schema";
 import type {
@@ -15,8 +15,6 @@ import type {
   TranscriptionsResponseFormat,
   TranscriptionsUsage,
 } from "./schema";
-
-const TEXT_DECODER = new TextDecoder();
 
 // Multipart fields that must stay strings (all other fields are JSON-coerced).
 const STRING_FORM_FIELDS = new Set(["model", "language", "prompt", "response_format"]);
@@ -52,26 +50,19 @@ export async function parseTranscriptionsRequest(
   maxBodySize: number,
 ): Promise<unknown> {
   const contentType = request.headers.get("content-type") ?? "";
-  const bytes = await readRequestBody(request, maxBodySize);
 
   // Only the media type is case-insensitive: the multipart boundary is not.
   if (contentType.slice(0, 19).toLowerCase() === "multipart/form-data") {
-    let form: FormData;
-    try {
-      form = await new Response(bytes as Uint8Array<ArrayBuffer>, {
-        headers: { "content-type": contentType },
-      }).formData();
-    } catch {
-      throw new GatewayError("Invalid multipart body", 400);
-    }
+    const form = await readRequestBody(
+      request,
+      maxBodySize,
+      (body) => new Response(body, { headers: { "content-type": contentType } }).formData(),
+      "Invalid multipart body",
+    );
     return convertFormDataToTranscriptionsBody(form);
   }
 
-  try {
-    return JSON.parse(TEXT_DECODER.decode(bytes));
-  } catch {
-    throw new GatewayError("Invalid JSON", 400);
-  }
+  return readRequestBody(request, maxBodySize, readJson, "Invalid JSON");
 }
 
 export async function convertFormDataToTranscriptionsBody(
@@ -86,6 +77,8 @@ export async function convertFormDataToTranscriptionsBody(
     // OpenAI SDKs send arrays as repeated `key[]` fields.
     const isArray = rawKey.endsWith("[]");
     const key = isArray ? rawKey.slice(0, -2) : rawKey;
+    // Assigning `__proto__` would replace the body's prototype (JSON.parse keeps it inert).
+    if (key === "__proto__") continue;
     const parsed = STRING_FORM_FIELDS.has(key) ? value : coerceFormValue(value);
 
     if (isArray) {
@@ -130,8 +123,9 @@ function toInputAudioFormat(filename: string, mediaType: string): InputAudioForm
 
   const format = AUDIO_FORMAT_ALIASES[extension] ?? AUDIO_FORMAT_ALIASES[subtype.toLowerCase()];
   if (!format) {
+    const name = filename.length > 100 ? `${filename.slice(0, 100)}…` : filename;
     throw new GatewayError(
-      `Unsupported audio format for file '${filename}'. Supported formats: ${[
+      `Unsupported audio format for file '${name}'. Supported formats: ${[
         ...new Set(Object.values(AUDIO_FORMAT_ALIASES)),
       ].join(", ")}`,
       400,
@@ -161,6 +155,7 @@ function toProviderParams(
     "language" | "prompt" | "temperature" | "timestamp_granularities"
   >,
   namespace: string,
+  modelId: string,
 ): Record<string, unknown> {
   const { language, prompt, temperature, timestamp_granularities } = inputs;
   const out: Record<string, unknown> = {};
@@ -177,9 +172,9 @@ function toProviderParams(
       if (prompt !== undefined) throw unsupportedParam("prompt", namespace);
       if (temperature !== undefined) throw unsupportedParam("temperature", namespace);
       if (language !== undefined) out["language_codes"] = [language];
-      if (timestamp_granularities?.includes("word")) {
-        // Chirp and Gemini Transcribe name the word timestamp toggle differently.
-        out["enable_word_time_offsets"] = true;
+      // Chirp always enables word offsets (its segments are built from them), so only
+      // Gemini Transcribe needs an explicit toggle.
+      if (modelId.startsWith("gemini") && timestamp_granularities?.includes("word")) {
         out["word_timestamp"] = true;
       }
       return out;
@@ -200,6 +195,7 @@ function toProviderParams(
 export function convertToTranscriptionCallOptions(
   inputs: TranscriptionsInputs & Record<string, unknown>,
   provider: string,
+  modelId: string,
 ): TranscriptionCallOptions {
   const {
     input_audio,
@@ -215,6 +211,7 @@ export function convertToTranscriptionCallOptions(
   const params = toProviderParams(
     { language, prompt, temperature, timestamp_granularities },
     extractProviderNamespace(provider),
+    modelId,
   );
 
   // Remaining body params (e.g. `diarize`, `chunking_strategy`) are provider-specific.

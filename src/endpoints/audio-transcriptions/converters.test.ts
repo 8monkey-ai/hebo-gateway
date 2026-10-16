@@ -9,11 +9,12 @@ import {
 
 const AUDIO = new Uint8Array([1, 2, 3]);
 
-const forwarded = (inputs: Record<string, unknown>, provider: string) =>
+const forwarded = (inputs: Record<string, unknown>, provider: string, modelId = "model") =>
   forwardTranscriptionParams(provider).transformParams(
     convertToTranscriptionCallOptions(
       { input_audio: { data: AUDIO, format: "mp3" }, ...inputs },
       provider,
+      modelId,
     ),
   ).providerOptions;
 
@@ -38,6 +39,29 @@ describe("Audio Transcriptions Converters", () => {
       });
     });
 
+    test("should ignore __proto__ fields", async () => {
+      const form = new FormData();
+      form.append("__proto__", '{"model":"injected"}');
+      form.append("__proto__[]", "x");
+      form.append("file", new File([AUDIO], "clip.mp3"));
+
+      const body = await convertFormDataToTranscriptionsBody(form);
+      expect(Object.getPrototypeOf(body)).toBe(Object.prototype);
+      expect(body["model"]).toBeUndefined();
+    });
+
+    test("should truncate long filenames in format errors", async () => {
+      const form = new FormData();
+      form.append("file", new File([AUDIO], `${"a".repeat(500)}.xyz`));
+
+      try {
+        await convertFormDataToTranscriptionsBody(form);
+        expect.unreachable("should have thrown");
+      } catch (err: unknown) {
+        expect((err as Error).message).toContain(`'${"a".repeat(100)}…'`);
+      }
+    });
+
     test("should derive the format from the media type when the filename has no extension", async () => {
       const form = new FormData();
       form.append("file", new File([AUDIO], "blob", { type: "audio/x-wav" }));
@@ -56,6 +80,7 @@ describe("Audio Transcriptions Converters", () => {
           response_format: "verbose_json",
         },
         "openai.transcription",
+        "whisper-1",
       );
 
       expect(options.audio).toBe(AUDIO);
@@ -75,15 +100,22 @@ describe("Audio Transcriptions Converters", () => {
       });
     });
 
-    test("should map language and word timestamps for Vertex", () => {
+    test("should map language and word timestamps for Vertex Gemini", () => {
       expect(
         forwarded(
           { language: "en-US", timestamp_granularities: ["word"] },
           "google.vertex.transcription",
+          "gemini-3.5-transcribe",
         ),
       ).toEqual({
-        vertex: { languageCodes: ["en-US"], enableWordTimeOffsets: true, wordTimestamp: true },
+        vertex: { languageCodes: ["en-US"], wordTimestamp: true },
       });
+    });
+
+    test("should not send a word timestamp toggle for Vertex Chirp", () => {
+      expect(
+        forwarded({ timestamp_granularities: ["word"] }, "google.vertex.transcription", "chirp_3"),
+      ).toEqual({});
     });
 
     test("should reject temperature for Vertex", () => {
@@ -91,6 +123,7 @@ describe("Audio Transcriptions Converters", () => {
         convertToTranscriptionCallOptions(
           { input_audio: { data: AUDIO, format: "mp3" }, temperature: 0.5 },
           "google.vertex.transcription",
+          "chirp_3",
         ),
       ).toThrow("Parameter 'temperature' is not supported by provider 'vertex'");
     });

@@ -26,16 +26,10 @@ import {
 import { getTranscriptionsRequestAttributes, getTranscriptionsResponseAttributes } from "./otel";
 import { TranscriptionsBodySchema, type TranscriptionsBody } from "./schema";
 
-// Keeps raw audio bytes out of trace logs.
-const redactAudio = (body: unknown) => {
-  const audio = (body as { input_audio?: { data?: unknown; format?: unknown } } | null)
-    ?.input_audio;
-  if (!audio) return body;
-  const data = audio.data;
-  const size =
-    typeof data === "string" ? data.length : data instanceof Uint8Array ? data.byteLength : 0;
-  return { ...(body as object), input_audio: { format: audio.format, data: `[${size} bytes]` } };
-};
+// Trace logs show the audio size instead of raw bytes. Redaction is deferred to
+// serialization (`toJSON`), so nothing is copied when trace logging is disabled.
+const redacted = (serialize: () => unknown) => ({ toJSON: serialize });
+const audioSize = (audio: Uint8Array) => `[${audio.byteLength} bytes]`;
 
 export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;
@@ -52,17 +46,28 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
 
     // Parse + validate input (multipart or JSON; body size limits apply to both).
     const raw = await parseTranscriptionsRequest(ctx.request, cfg.advanced.maxBodySize);
-    logger.trace(
-      { requestId: ctx.requestId, result: redactAudio(raw) },
-      "[transcriptions] TranscriptionsBody",
-    );
     addSpanEvent("hebo.request.deserialized");
 
     const parsed = TranscriptionsBodySchema.safeParse(raw);
     if (!parsed.success) {
       throw new GatewayError(z.prettifyError(parsed.error), 400, undefined, parsed.error);
     }
-    ctx.body = parsed.data;
+    const validated = parsed.data;
+    ctx.body = validated;
+    // Logged after validation, so `input_audio.data` is always decoded bytes.
+    logger.trace(
+      {
+        requestId: ctx.requestId,
+        result: redacted(() => ({
+          ...validated,
+          input_audio: {
+            format: validated.input_audio.format,
+            data: audioSize(validated.input_audio.data),
+          },
+        })),
+      },
+      "[transcriptions] TranscriptionsBody",
+    );
     addSpanEvent("hebo.request.parsed");
 
     if (hooks?.before) {
@@ -87,6 +92,9 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
         operation: ctx.operation,
       });
 
+    // `transcriptionModel` is optional on `ProviderV4`: canonical providers always define it
+    // (throwing `NoSuchModelError` for unknown IDs), but raw providers or providers returned
+    // by a `resolveProvider` hook may not.
     if (!ctx.provider.transcriptionModel) {
       throw new GatewayError(
         `Provider for model '${ctx.resolvedModelId}' does not support transcription`,
@@ -110,15 +118,19 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
     const { model: _model, trace: _trace, ...inputs } = body;
     const forward = forwardTranscriptionParams(transcriptionModel.provider);
     const transcriptionOptions = forward.transformParams(
-      convertToTranscriptionCallOptions(inputs, transcriptionModel.provider),
+      convertToTranscriptionCallOptions(
+        inputs,
+        transcriptionModel.provider,
+        transcriptionModel.modelId,
+      ),
     );
     logger.trace(
       {
         requestId: ctx.requestId,
-        options: {
+        options: redacted(() => ({
           ...transcriptionOptions,
-          audio: `[${transcriptionOptions.audio.byteLength} bytes]`,
-        },
+          audio: audioSize(transcriptionOptions.audio),
+        })),
       },
       "[transcriptions] AI SDK options",
     );
@@ -126,6 +138,8 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
     setSpanAttributes(getTranscriptionsRequestAttributes(body, ctx.trace));
 
     // Execute request. Calls `doGenerate` directly: `transcribe()` drops provider usage.
+    // This also means no AI SDK retries (other endpoints retry twice by default): failed
+    // uploads are not re-sent, so clients own retries for large, slow audio requests.
     const timeout = cfg.advanced.timeouts.normal;
     addSpanEvent("hebo.ai-sdk.started");
     const result = forward.transformResult(

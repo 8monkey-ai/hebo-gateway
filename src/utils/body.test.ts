@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseRequestBody, readRequestBody, DEFAULT_MAX_BODY_SIZE } from "./body";
+import { parseRequestBody, readJson, readRequestBody, DEFAULT_MAX_BODY_SIZE } from "./body";
 
 function jsonRequest(body: unknown, headers?: Record<string, string>): Request {
   return new Request("http://localhost/test", {
@@ -196,15 +196,22 @@ describe("parseRequestBody", () => {
 describe("readRequestBody", () => {
   const plainRequest = (body: BodyInit, headers?: Record<string, string>) =>
     new Request("http://localhost/test", { method: "POST", headers, body });
+  const readBytes = (body: ReadableStream<Uint8Array>) =>
+    new Response(body).arrayBuffer().then((buffer) => new Uint8Array(buffer));
 
-  test("reads plain bodies as bytes", async () => {
-    const bytes = await readRequestBody(plainRequest(new Uint8Array([1, 2, 3])));
+  test("reads plain bodies through the reader", async () => {
+    const bytes = await readRequestBody(
+      plainRequest(new Uint8Array([1, 2, 3])),
+      DEFAULT_MAX_BODY_SIZE,
+      readBytes,
+      "Invalid body",
+    );
     expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
   });
 
   test("enforces maxBodySize on plain bodies", async () => {
     try {
-      await readRequestBody(plainRequest(new Uint8Array(100)), 10);
+      await readRequestBody(plainRequest(new Uint8Array(100)), 10, readBytes, "Invalid body");
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       expect(err).toMatchObject({ status: 413 });
@@ -214,13 +221,30 @@ describe("readRequestBody", () => {
   test("enforces maxBodySize on streamed plain bodies without content-length", async () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
-        controller.enqueue(new Uint8Array(8));
-        controller.enqueue(new Uint8Array(8));
+        controller.enqueue(new TextEncoder().encode('{"a":"'));
+        controller.enqueue(new Uint8Array(8).fill(0x61));
         controller.close();
       },
     });
     try {
-      await readRequestBody(plainRequest(stream), 10);
+      await readRequestBody(plainRequest(stream), 10, readJson, "Invalid JSON");
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toMatchObject({ status: 413 });
+    }
+  });
+
+  test("enforces maxBodySize on multipart bodies", async () => {
+    const form = new FormData();
+    form.append("file", new File([new Uint8Array(1000)], "clip.mp3"));
+    const request = plainRequest(form);
+    try {
+      await readRequestBody(
+        request,
+        100,
+        (body) => new Response(body, { headers: request.headers }).formData(),
+        "Invalid multipart body",
+      );
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       expect(err).toMatchObject({ status: 413 });
@@ -229,13 +253,37 @@ describe("readRequestBody", () => {
 
   test("decompresses gzip bodies", async () => {
     const payload = { hello: "world" };
-    const bytes = await readRequestBody(gzipRequest(await compress(payload, "gzip")));
-    expect(JSON.parse(new TextDecoder().decode(bytes))).toEqual(payload);
+    const result = await readRequestBody(
+      gzipRequest(await compress(payload, "gzip")),
+      DEFAULT_MAX_BODY_SIZE,
+      readJson,
+      "Invalid JSON",
+    );
+    expect(result).toEqual(payload);
+  });
+
+  test("returns the invalid message when the reader rejects a complete body", async () => {
+    try {
+      await readRequestBody(
+        plainRequest("not json"),
+        DEFAULT_MAX_BODY_SIZE,
+        readJson,
+        "Invalid JSON",
+      );
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toMatchObject({ message: "Invalid JSON", status: 400 });
+    }
   });
 
   test("returns 400 for empty bodies", async () => {
     try {
-      await readRequestBody(plainRequest(new Uint8Array(0)));
+      await readRequestBody(
+        plainRequest(new Uint8Array(0)),
+        DEFAULT_MAX_BODY_SIZE,
+        readJson,
+        "Invalid JSON",
+      );
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       expect(err).toMatchObject({ status: 400 });
