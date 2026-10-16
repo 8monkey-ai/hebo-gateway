@@ -14,10 +14,29 @@ export type TranscriptionModelMiddleware = {
     model: TranscriptionModelV4;
   }) => PromiseLike<TranscriptionModelV4CallOptions> | TranscriptionModelV4CallOptions;
   wrapGenerate?: (options: {
-    doGenerate: () => PromiseLike<TranscriptionModelV4Result>;
+    doGenerate: () => PromiseLike<TranscriptionResult>;
     params: TranscriptionModelV4CallOptions;
     model: TranscriptionModelV4;
-  }) => PromiseLike<TranscriptionModelV4Result>;
+  }) => PromiseLike<TranscriptionResult>;
+};
+
+export type TranscriptionWord = TranscriptionModelV4Result["segments"][number];
+
+/**
+ * AI SDK transcription result plus a gateway-level `words` timeline. The AI SDK has a
+ * single `segments` array, which some providers fill with single words instead of phrases.
+ */
+export type TranscriptionResult = TranscriptionModelV4Result & { words?: TranscriptionWord[] };
+
+/**
+ * For models whose AI SDK `segments` are single words (e.g. xAI, Vertex Gemini):
+ * moves them to `words`, matching OpenAI's `words` / `segments` split.
+ */
+export const wordSegmentsMiddleware: TranscriptionModelMiddleware = {
+  wrapGenerate: async ({ doGenerate }) => {
+    const result = await doGenerate();
+    return { ...result, segments: [], words: result.segments };
+  },
 };
 
 /**

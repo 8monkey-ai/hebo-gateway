@@ -52,6 +52,7 @@ type VerboseTranscription = {
   language?: string;
   duration?: number;
   segments: { id: number; start: number; end: number; text: string }[];
+  words?: { word: string; start: number; end: number }[];
   usage: TranscriptionUsage;
 };
 
@@ -69,6 +70,8 @@ type SuiteOptions = {
   usage: "tokens" | "seconds";
   /** Whether the provider returns timestamped segments. */
   segments: boolean;
+  /** Whether the provider returns word timings by default. */
+  words?: boolean;
 };
 
 function describeTranscriptions(options: SuiteOptions) {
@@ -125,6 +128,10 @@ function describeTranscriptions(options: SuiteOptions) {
           expect(transcription.segments.length).toBeGreaterThan(0);
           const [first] = transcription.segments;
           expect(first!.end).toBeGreaterThanOrEqual(first!.start);
+        }
+        if (options.words) {
+          expect(transcription.words!.length).toBeGreaterThan(0);
+          expect(transcription.words![0]!.word.trim()).not.toContain(" ");
         }
       },
       { timeout: 60_000 },
@@ -207,7 +214,9 @@ describeTranscriptions({
   catalog: () => grokVoiceTranscribe20(),
   model: "xai/grok-voice-transcribe-2.0",
   usage: "seconds",
-  segments: true,
+  // xAI only returns word timings, so they go to `words`.
+  segments: false,
+  words: true,
 });
 
 const vertexProviders = () => ({

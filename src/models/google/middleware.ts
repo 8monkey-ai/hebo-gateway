@@ -9,7 +9,10 @@ import type {
 } from "../../endpoints/chat-completions/schema";
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
+import {
+  type TranscriptionModelMiddleware,
+  wordSegmentsMiddleware,
+} from "../../middleware/transcription";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -175,5 +178,6 @@ export const geminiTranscribeMiddleware: TranscriptionModelMiddleware = {
 };
 
 modelMiddlewareMatcher.useForModel("google/gemini-*-transcribe*", {
-  transcription: [geminiTranscribeMiddleware],
+  // Gemini Transcribe returns word timings only, which the AI SDK exposes as `segments`.
+  transcription: [geminiTranscribeMiddleware, wordSegmentsMiddleware],
 });

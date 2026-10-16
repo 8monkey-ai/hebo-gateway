@@ -49,6 +49,13 @@ export const TranscriptionsSegmentSchema = z.object({
 });
 export type TranscriptionsSegment = z.infer<typeof TranscriptionsSegmentSchema>;
 
+export const TranscriptionsWordSchema = z.object({
+  word: z.string(),
+  start: z.number(),
+  end: z.number(),
+});
+export type TranscriptionsWord = z.infer<typeof TranscriptionsWordSchema>;
+
 // Flat usage shape (OpenRouter-style): fields are filled in when the provider reports them.
 export const TranscriptionsUsageSchema = z.object({
   input_tokens: z.int().nonnegative().optional(),
@@ -65,6 +72,7 @@ export const TranscriptionsSchema = z.object({
   language: z.string().optional(),
   duration: z.number().nonnegative().optional(),
   segments: z.array(TranscriptionsSegmentSchema).optional(),
+  words: z.array(TranscriptionsWordSchema).optional(),
   usage: TranscriptionsUsageSchema,
   // Extensions
   provider_metadata: z.unknown().optional().meta({ extension: true }),

@@ -1,10 +1,7 @@
-import type {
-  JSONObject,
-  TranscriptionModelV4CallOptions,
-  TranscriptionModelV4Result,
-} from "@ai-sdk/provider";
+import type { JSONObject, TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 
 import { GatewayError } from "../../errors/gateway";
+import type { TranscriptionResult } from "../../middleware/transcription";
 import { readJson, readRequestBody } from "../../utils/body";
 import { toResponse } from "../../utils/response";
 import { toAudioMediaType } from "../shared/converters";
@@ -189,7 +186,7 @@ export function toTranscriptionsUsage(
 }
 
 export function toTranscriptions(
-  result: TranscriptionModelV4Result,
+  result: TranscriptionResult,
   responseFormat: TranscriptionsResponseFormat = "json",
 ): Transcriptions {
   const transcriptions: Transcriptions = {
@@ -207,6 +204,13 @@ export function toTranscriptions(
       end: segment.endSecond,
       text: segment.text,
     }));
+    if (result.words) {
+      transcriptions.words = result.words.map((word) => ({
+        word: word.text,
+        start: word.startSecond,
+        end: word.endSecond,
+      }));
+    }
   }
 
   if (result.providerMetadata) transcriptions.provider_metadata = result.providerMetadata;
@@ -215,7 +219,7 @@ export function toTranscriptions(
 }
 
 export function createTranscriptionsResponse(
-  result: TranscriptionModelV4Result,
+  result: TranscriptionResult,
   responseFormat?: TranscriptionsResponseFormat,
   responseInit?: ResponseInit,
 ): Response {

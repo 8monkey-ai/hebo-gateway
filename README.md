@@ -683,7 +683,7 @@ It supports:
 
 - OpenAI-style `multipart/form-data` uploads (`file`) and OpenRouter-style JSON with base64 `input_audio: { data, format }`.
 - `language`, `prompt`, `temperature` and `timestamp_granularities`, mapped to each model's native options by transcription middleware. Params a model doesn't support are forwarded unchanged, so the upstream provider decides whether to ignore or reject them. Custom mappings can be registered via `modelMiddlewareMatcher.useForModel` / `useForProvider` with a `transcription` entry.
-- `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration` and timestamped `segments`, built from the AI SDK's normalized result.
+- `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration`, timestamped `segments` and, for providers that return word timings (xAI, Vertex Gemini with `timestamp_granularities: ["word"]`), OpenAI-style `words: [{ word, start, end }]`. Built from the AI SDK's normalized result; word-level providers return an empty `segments` array rather than one segment per word.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
 - Built-in presets for OpenAI / Azure (`openai/gpt-transcribe`), Azure Speech (`microsoft/mai-transcribe-2`), xAI (`xai/grok-voice-transcribe-2.0`) and Vertex (`google/gemini-3.5-transcribe`).

@@ -4,6 +4,7 @@ import { transcriptionProviderOptions } from "../../../test/helpers/transcriptio
 import {
   convertFormDataToTranscriptionsBody,
   convertToTranscriptionCallOptions,
+  toTranscriptions,
   toTranscriptionsUsage,
 } from "./converters";
 
@@ -109,6 +110,45 @@ describe("Audio Transcriptions Converters", () => {
       expect(
         convertToTranscriptionCallOptions({ input_audio: { data: AUDIO, format } }).mediaType,
       ).toBe(mediaType);
+    });
+  });
+
+  describe("toTranscriptions", () => {
+    const result = {
+      text: "hello world",
+      segments: [{ text: "hello world", startSecond: 0, endSecond: 1 }],
+      language: "en",
+      durationInSeconds: 1,
+      warnings: [],
+      response: { timestamp: new Date(0), modelId: "transcribe-1" },
+    };
+
+    test("should return words separately from segments in verbose_json", () => {
+      const words = [
+        { text: "hello", startSecond: 0, endSecond: 0.5 },
+        { text: "world", startSecond: 0.5, endSecond: 1 },
+      ];
+
+      expect(toTranscriptions({ ...result, segments: [], words }, "verbose_json")).toMatchObject({
+        segments: [],
+        words: [
+          { word: "hello", start: 0, end: 0.5 },
+          { word: "world", start: 0.5, end: 1 },
+        ],
+      });
+    });
+
+    test("should omit words when the provider reports none", () => {
+      const transcriptions = toTranscriptions(result, "verbose_json");
+      expect(transcriptions.segments).toEqual([{ id: 0, start: 0, end: 1, text: "hello world" }]);
+      expect(transcriptions).not.toHaveProperty("words");
+    });
+
+    test("should omit segments and words in json", () => {
+      expect(toTranscriptions({ ...result, words: [] })).toEqual({
+        text: "hello world",
+        usage: { seconds: 1 },
+      });
     });
   });
 

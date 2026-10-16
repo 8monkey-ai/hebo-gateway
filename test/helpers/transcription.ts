@@ -1,23 +1,32 @@
-import type { TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
+import type { TranscriptionModelV4CallOptions, TranscriptionModelV4Result } from "@ai-sdk/provider";
 import { MockTranscriptionModelV4 } from "ai/test";
 
 import { convertToTranscriptionCallOptions } from "../../src/endpoints/audio-transcriptions/converters";
 import { modelMiddlewareMatcher } from "../../src/middleware/matcher";
-import { wrapTranscriptionModel } from "../../src/middleware/transcription";
+import {
+  type TranscriptionResult,
+  wrapTranscriptionModel,
+} from "../../src/middleware/transcription";
 import type { ModelId } from "../../src/models/types";
 
 const AUDIO = new Uint8Array([1, 2, 3]);
 
-/**
- * Runs OpenAI transcription params through the full middleware chain
- * (model -> forward params -> provider) and returns the provider options sent upstream.
- */
-export async function transcriptionProviderOptions(args: {
+type TranscriptionChainArgs = {
   modelId: ModelId;
   provider: string;
   providerModelId?: string;
   inputs?: Record<string, unknown>;
-}): Promise<TranscriptionModelV4CallOptions["providerOptions"]> {
+  segments?: TranscriptionModelV4Result["segments"];
+};
+
+/**
+ * Runs OpenAI transcription params through the full middleware chain
+ * (model -> forward params -> provider) against a mock upstream returning `segments`.
+ */
+export async function runTranscriptionChain(args: TranscriptionChainArgs): Promise<{
+  sent: TranscriptionModelV4CallOptions;
+  result: TranscriptionResult;
+}> {
   let sent: TranscriptionModelV4CallOptions | undefined;
   const model = new MockTranscriptionModelV4({
     provider: args.provider,
@@ -26,7 +35,7 @@ export async function transcriptionProviderOptions(args: {
       sent = options;
       return Promise.resolve({
         text: "",
-        segments: [],
+        segments: args.segments ?? [],
         language: undefined,
         durationInSeconds: undefined,
         warnings: [],
@@ -35,7 +44,7 @@ export async function transcriptionProviderOptions(args: {
     },
   });
 
-  await wrapTranscriptionModel({
+  const result = await wrapTranscriptionModel({
     model,
     middleware: modelMiddlewareMatcher.forTranscription(args.modelId, args.provider),
   }).doGenerate(
@@ -45,5 +54,12 @@ export async function transcriptionProviderOptions(args: {
     }),
   );
 
-  return sent!.providerOptions;
+  return { sent: sent!, result };
+}
+
+/** Returns the provider options the middleware chain sends upstream. */
+export async function transcriptionProviderOptions(
+  args: Omit<TranscriptionChainArgs, "segments">,
+): Promise<TranscriptionModelV4CallOptions["providerOptions"]> {
+  return (await runTranscriptionChain(args)).sent.providerOptions;
 }
