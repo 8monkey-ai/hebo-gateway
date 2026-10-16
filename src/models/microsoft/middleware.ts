@@ -1,13 +1,11 @@
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
-import { rejectUnsupportedParams } from "../../middleware/utils";
 
 // MAI-Transcribe is served by the Azure Speech API (not Azure OpenAI deployments), so it
 // selects that API explicitly and maps the OpenAI transcription params to its options.
 export const maiTranscribeMiddleware: TranscriptionModelMiddleware = {
-  transformParams: ({ params, model }) => {
+  transformParams: ({ params }) => {
     const unknown = ((params.providerOptions ??= {})["unknown"] ??= {});
-    rejectUnsupportedParams(unknown, ["prompt", "temperature"], `model '${model.modelId}'`);
 
     unknown["api"] = "speech";
 

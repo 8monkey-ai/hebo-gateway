@@ -72,7 +72,7 @@ describe("Audio Transcriptions Converters", () => {
       });
 
       expect(options.audio).toBe(AUDIO);
-      expect(options.mediaType).toBe("audio/mp3");
+      expect(options.mediaType).toBe("audio/mpeg");
       expect(options.providerOptions).toEqual({
         unknown: { language: "en", chunking_strategy: "auto" },
       });
@@ -96,6 +96,19 @@ describe("Audio Transcriptions Converters", () => {
       ).toEqual({
         openai: { language: "en", timestampGranularities: ["word"], chunkingStrategy: "auto" },
       });
+    });
+
+    test.each([
+      ["mp3", "audio/mpeg"],
+      ["mpga", "audio/mpeg"],
+      ["m4a", "audio/mp4"],
+      ["x-aac", "audio/aac"],
+      ["flac", "audio/flac"],
+      ["wav", "audio/wav"],
+    ] as const)("should map format '%s' to media type '%s'", (format, mediaType) => {
+      expect(
+        convertToTranscriptionCallOptions({ input_audio: { data: AUDIO, format } }).mediaType,
+      ).toBe(mediaType);
     });
   });
 

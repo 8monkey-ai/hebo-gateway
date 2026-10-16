@@ -1,6 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
 import { type TelemetrySignalLevel } from "../../types";
+import { toAudioMediaType } from "../shared/converters";
 import type { Transcriptions, TranscriptionsBody } from "./schema";
 
 export const getTranscriptionsRequestAttributes = (
@@ -22,7 +23,7 @@ export const getTranscriptionsRequestAttributes = (
       {
         type: "blob",
         modality: "audio",
-        mime_type: `audio/${body.input_audio.format}`,
+        mime_type: toAudioMediaType(body.input_audio.format),
         content: "[REDACTED_BINARY_DATA]",
       },
     ];

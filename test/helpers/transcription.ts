@@ -47,10 +47,3 @@ export async function transcriptionProviderOptions(args: {
 
   return sent!.providerOptions;
 }
-
-/** Like `transcriptionProviderOptions`, but returns the error message the chain throws. */
-export const transcriptionError = (args: Parameters<typeof transcriptionProviderOptions>[0]) =>
-  transcriptionProviderOptions(args).then(
-    () => "no error",
-    (error: Error) => error.message,
-  );

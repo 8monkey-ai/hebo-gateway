@@ -682,7 +682,7 @@ Official documentation: [OpenAI API Reference](https://developers.openai.com/api
 It supports:
 
 - OpenAI-style `multipart/form-data` uploads (`file`) and OpenRouter-style JSON with base64 `input_audio: { data, format }`.
-- `language`, `prompt`, `temperature` and `timestamp_granularities`, mapped to each model's / provider's native options by transcription middleware (a `400` is returned when the model or provider can't handle a value). Custom mappings can be registered via `modelMiddlewareMatcher.useForModel` / `useForProvider` with a `transcription` entry.
+- `language`, `prompt`, `temperature` and `timestamp_granularities`, mapped to each model's native options by transcription middleware. Params a model doesn't support are forwarded unchanged, so the upstream provider decides whether to ignore or reject them. Custom mappings can be registered via `modelMiddlewareMatcher.useForModel` / `useForProvider` with a `transcription` entry.
 - `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration` and timestamped `segments`, built from the AI SDK's normalized result.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).

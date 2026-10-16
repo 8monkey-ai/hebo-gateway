@@ -10,7 +10,6 @@ import type {
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
-import { rejectUnsupportedParams } from "../../middleware/utils";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -155,11 +154,9 @@ modelMiddlewareMatcher.useForModel("google/gemini-3*", {
 
 // Maps the OpenAI transcription params to Gemini Transcribe options.
 export const geminiTranscribeMiddleware: TranscriptionModelMiddleware = {
-  transformParams: ({ params, model }) => {
+  transformParams: ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
-
-    rejectUnsupportedParams(unknown, ["prompt", "temperature"], `model '${model.modelId}'`);
 
     const language = unknown["language"];
     if (language !== undefined) {

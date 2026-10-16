@@ -2,10 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import {
-  transcriptionError,
-  transcriptionProviderOptions,
-} from "../../../test/helpers/transcription";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
 import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware";
@@ -418,14 +415,14 @@ describe("openAITranscribeMiddleware", () => {
     ).toEqual({ openai: { responseFormat: "json", timestampGranularities: [] } });
   });
 
-  test("should reject timestamp granularities", async () => {
+  test("should forward explicit timestamp granularities for upstream to validate", async () => {
     expect(
-      await transcriptionError({
+      await transcriptionProviderOptions({
         modelId: "openai/gpt-transcribe",
         provider: "openai.transcription",
         providerModelId: "gpt-transcribe",
         inputs: { timestamp_granularities: ["word"] },
       }),
-    ).toBe("Parameter 'timestamp_granularities' is not supported by model 'gpt-transcribe'");
+    ).toEqual({ openai: { responseFormat: "json", timestampGranularities: ["word"] } });
   });
 });

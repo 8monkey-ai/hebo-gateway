@@ -2,10 +2,7 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import {
-  transcriptionError,
-  transcriptionProviderOptions,
-} from "../../../test/helpers/transcription";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
 import {
@@ -338,13 +335,13 @@ test("geminiTranscribeMiddleware > maps language and word timestamps", async () 
   ).toEqual({ vertex: { languageCodes: ["en-US"], wordTimestamp: true } });
 });
 
-test("geminiTranscribeMiddleware > rejects temperature", async () => {
+test("geminiTranscribeMiddleware > forwards unsupported params for upstream to validate", async () => {
   expect(
-    await transcriptionError({
+    await transcriptionProviderOptions({
       modelId: "google/gemini-3.5-transcribe",
       provider: "google.vertex.transcription",
       providerModelId: "gemini-3.5-transcribe",
       inputs: { temperature: 0.5 },
     }),
-  ).toBe("Parameter 'temperature' is not supported by model 'gemini-3.5-transcribe'");
+  ).toEqual({ vertex: { temperature: 0.5 } });
 });

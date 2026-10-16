@@ -7,6 +7,7 @@ import type {
 import { GatewayError } from "../../errors/gateway";
 import { readJson, readRequestBody } from "../../utils/body";
 import { toResponse } from "../../utils/response";
+import { toAudioMediaType } from "../shared/converters";
 import type { InputAudioFormat } from "../shared/schema";
 import type {
   Transcriptions,
@@ -155,7 +156,7 @@ export function convertToTranscriptionCallOptions(
 
   return {
     audio: input_audio.data,
-    mediaType: `audio/${input_audio.format}`,
+    mediaType: toAudioMediaType(input_audio.format),
     // No params: no provider namespace, so providers keep their own defaults.
     providerOptions: Object.keys(unknown).length > 0 ? { unknown } : {},
   };

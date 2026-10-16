@@ -4,8 +4,6 @@ import type { TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 import { MockProviderV4, MockTranscriptionModelV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { xaiTranscriptionMiddleware } from "../../providers/xai/middleware";
 import { audioTranscriptions } from "./handler";
 
 const baseUrl = "http://localhost/audio/transcriptions";
@@ -115,7 +113,7 @@ describe("Audio Transcriptions Handler", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.audio).toEqual(AUDIO);
-    expect(calls[0]!.mediaType).toBe("audio/mp3");
+    expect(calls[0]!.mediaType).toBe("audio/mpeg");
     expect(calls[0]!.providerOptions).toEqual({
       openai: {
         language: "en",
@@ -181,26 +179,6 @@ describe("Audio Transcriptions Handler", () => {
     expect(await parseResponse(res)).toEqual({ text: "hola", usage: { seconds: 0.8 } });
     expect(calls[0]!.mediaType).toBe("audio/ogg");
     expect(calls[0]!.providerOptions).toEqual({ xai: { diarize: true, language: "es" } });
-  });
-
-  test("should reject params the provider cannot handle", async () => {
-    // Provider-specific checks live in provider middleware.
-    expect(
-      modelMiddlewareMatcher.forTranscription("grok-voice-transcribe-2.0", "xai.transcription"),
-    ).toContain(xaiTranscriptionMiddleware);
-
-    const res = await endpoint.handler(
-      postJson(baseUrl, {
-        model: "grok-voice-transcribe-2.0",
-        input_audio: { data: AUDIO_BASE64, format: "mp3" },
-        prompt: "context",
-      }),
-    );
-
-    expect(res.status).toBe(400);
-    expect(await parseResponse(res)).toMatchObject({
-      error: { message: "Parameter 'prompt' is not supported by provider 'xai'" },
-    });
   });
 
   test.each(["text", "srt", "vtt"])("should reject response_format '%s'", async (format) => {

@@ -1,9 +1,6 @@
 import { expect, test } from "bun:test";
 
-import {
-  transcriptionError,
-  transcriptionProviderOptions,
-} from "../../../test/helpers/transcription";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware";
 import { maiTranscribeMiddleware } from "./middleware";
@@ -56,13 +53,13 @@ test("maiTranscribeMiddleware > selects the Speech API without params", async ()
   ).toEqual({ azure: { api: "speech" } });
 });
 
-test("maiTranscribeMiddleware > rejects prompt", async () => {
+test("maiTranscribeMiddleware > forwards unsupported params for upstream to validate", async () => {
   expect(
-    await transcriptionError({
+    await transcriptionProviderOptions({
       modelId: "microsoft/mai-transcribe-2",
       provider: "azure.transcription",
       providerModelId: "mai-transcribe-2",
       inputs: { prompt: "hi" },
     }),
-  ).toBe("Parameter 'prompt' is not supported by model 'mai-transcribe-2'");
+  ).toEqual({ azure: { api: "speech", prompt: "hi" } });
 });

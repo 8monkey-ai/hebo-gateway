@@ -1,5 +1,4 @@
 import type { ChatCompletionsReasoningEffort } from "../endpoints/chat-completions/schema";
-import { GatewayError } from "../errors/gateway";
 
 export function calculateReasoningBudgetFromEffort(
   effort: ChatCompletionsReasoningEffort,
@@ -32,18 +31,4 @@ export function calculateReasoningBudgetFromEffort(
   }
 
   return Math.max(minTokens, Math.floor(maxTokens * percentage));
-}
-
-/** Throws a 400 for the first of `params` set in `options`. */
-export function rejectUnsupportedParams(
-  options: Record<string, unknown> | undefined,
-  params: readonly string[],
-  target: string,
-) {
-  if (!options) return;
-  for (const param of params) {
-    if (options[param] !== undefined) {
-      throw new GatewayError(`Parameter '${param}' is not supported by ${target}`, 400);
-    }
-  }
 }
