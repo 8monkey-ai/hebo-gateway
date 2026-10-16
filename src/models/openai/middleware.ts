@@ -6,6 +6,8 @@ import type {
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
+import { rejectUnsupportedParams } from "../../middleware/utils";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
 export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -168,4 +170,22 @@ modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
 
 modelMiddlewareMatcher.useForModel("openai/gpt-*", {
   language: [openAIReasoningMiddleware, openAIPromptCachingMiddleware],
+});
+
+// GPT Transcribe only returns `json`. Without these, the AI SDK sends `verbose_json` and
+// `timestamp_granularities[]=segment` as soon as any OpenAI option is set.
+export const openAITranscribeMiddleware: TranscriptionModelMiddleware = {
+  transformParams: ({ params, model }) => {
+    const unknown = ((params.providerOptions ??= {})["unknown"] ??= {});
+    rejectUnsupportedParams(unknown, ["timestamp_granularities"], `model '${model.modelId}'`);
+
+    unknown["response_format"] = "json";
+    unknown["timestamp_granularities"] = [];
+
+    return params;
+  },
+};
+
+modelMiddlewareMatcher.useForModel("openai/gpt-transcribe*", {
+  transcription: [openAITranscribeMiddleware],
 });

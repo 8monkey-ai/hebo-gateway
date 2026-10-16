@@ -2,12 +2,17 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
+import {
+  transcriptionError,
+  transcriptionProviderOptions,
+} from "../../../test/helpers/transcription";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
 import {
   geminiDimensionsMiddleware,
   geminiPromptCachingMiddleware,
   geminiReasoningMiddleware,
+  geminiTranscribeMiddleware,
 } from "./middleware";
 
 test("geminiReasoningMiddleware > matching patterns", () => {
@@ -308,4 +313,38 @@ test("geminiReasoningMiddleware > should collapse minimal to low on Gemini 3.8 F
     },
     unknown: {},
   });
+});
+
+test("geminiTranscribeMiddleware > matching patterns", () => {
+  expect(
+    modelMiddlewareMatcher.resolve({
+      kind: "transcription",
+      modelId: "google/gemini-3.5-transcribe",
+    }),
+  ).toContain(geminiTranscribeMiddleware);
+  expect(
+    modelMiddlewareMatcher.resolve({ kind: "transcription", modelId: "google/gemini-3.5-flash" }),
+  ).not.toContain(geminiTranscribeMiddleware);
+});
+
+test("geminiTranscribeMiddleware > maps language and word timestamps", async () => {
+  expect(
+    await transcriptionProviderOptions({
+      modelId: "google/gemini-3.5-transcribe",
+      provider: "google.vertex.transcription",
+      providerModelId: "gemini-3.5-transcribe",
+      inputs: { language: "en-US", timestamp_granularities: ["word"] },
+    }),
+  ).toEqual({ vertex: { languageCodes: ["en-US"], wordTimestamp: true } });
+});
+
+test("geminiTranscribeMiddleware > rejects temperature", async () => {
+  expect(
+    await transcriptionError({
+      modelId: "google/gemini-3.5-transcribe",
+      provider: "google.vertex.transcription",
+      providerModelId: "gemini-3.5-transcribe",
+      inputs: { temperature: 0.5 },
+    }),
+  ).toBe("Parameter 'temperature' is not supported by model 'gemini-3.5-transcribe'");
 });

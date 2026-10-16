@@ -1,11 +1,8 @@
-import type {
-  JSONObject,
-  TranscriptionModelV4CallOptions,
-  TranscriptionModelV4Result,
-} from "@ai-sdk/provider";
+import type { JSONObject } from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { ProviderId } from "../providers/types";
+import type { TranscriptionModelMiddleware } from "./transcription";
 
 function snakeToCamel(key: string): string {
   // oxlint-disable-next-line prefer-includes
@@ -172,34 +169,30 @@ export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingMod
   return forwardEmbeddingParams(extractProviderNamespace(provider));
 }
 
-// The Azure SDK routes these model IDs to the Speech API (matched case-insensitively).
-export const isMaiTranscribeModel = (modelId: string) =>
-  modelId.toLowerCase().startsWith("mai-transcribe");
-
 /**
- * Transcription counterpart of `forwardParamsMiddleware`.
- * The AI SDK has no transcription model middleware, so this transforms call options
- * and results directly: snake_case params in providerOptions are converted to camelCase
- * and moved into providerOptions[providerName], and providerMetadata is snakized.
+ * Transcription counterpart of `forwardLanguageParams`: snake_case params in providerOptions
+ * are converted to camelCase and moved into providerOptions[providerName], and
+ * providerMetadata is snakized.
  */
-export function forwardTranscriptionParams(provider: string, modelId: string) {
-  const namespace = extractProviderNamespace(provider);
-  // Azure OpenAI deployments only read `openai` provider options; MAI-Transcribe models
-  // go to the Azure Speech API, which reads `azure` options.
-  const providerName =
-    namespace === "azure" && !isMaiTranscribeModel(modelId) ? "openai" : namespace;
-
+export function forwardTranscriptionParams(providerName: ProviderId): TranscriptionModelMiddleware {
   return {
-    transformParams: <T extends TranscriptionModelV4CallOptions>(params: T): T => {
+    transformParams: ({ params }) => {
       // Skip empty options: some providers apply extra defaults once their namespace exists.
       if (params.providerOptions && Object.keys(params.providerOptions).length > 0) {
         processOptions(params.providerOptions, providerName);
       }
       return params;
     },
-    transformResult: <T extends TranscriptionModelV4Result>(result: T): T => {
+    wrapGenerate: async ({ doGenerate }) => {
+      const result = await doGenerate();
       if (result.providerMetadata) processMetadata(result.providerMetadata);
       return result;
     },
   };
+}
+
+export function forwardParamsTranscriptionMiddleware(
+  provider: string,
+): TranscriptionModelMiddleware {
+  return forwardTranscriptionParams(extractProviderNamespace(provider));
 }

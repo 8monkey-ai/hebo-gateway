@@ -4,6 +4,8 @@ import type { TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 import { MockProviderV4, MockTranscriptionModelV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { xaiTranscriptionMiddleware } from "../../providers/xai/middleware";
 import { audioTranscriptions } from "./handler";
 
 const baseUrl = "http://localhost/audio/transcriptions";
@@ -26,9 +28,9 @@ const postForm = (fields: Record<string, string | string[] | File>) => {
 describe("Audio Transcriptions Handler", () => {
   const calls: TranscriptionModelV4CallOptions[] = [];
 
-  const whisper = new MockTranscriptionModelV4({
+  const transcriber = new MockTranscriptionModelV4({
     provider: "openai.transcription",
-    modelId: "whisper-1",
+    modelId: "transcribe-1",
     doGenerate: (options) => {
       calls.push(options);
       return Promise.resolve({
@@ -41,7 +43,7 @@ describe("Audio Transcriptions Handler", () => {
         durationInSeconds: 1.2,
         warnings: [],
         usage: { type: "duration", seconds: 2 },
-        response: { timestamp: new Date(0), modelId: "whisper-1" },
+        response: { timestamp: new Date(0), modelId: "transcribe-1" },
       });
     },
   });
@@ -64,12 +66,12 @@ describe("Audio Transcriptions Handler", () => {
 
   const endpoint = audioTranscriptions({
     providers: {
-      openai: new MockProviderV4({ transcriptionModels: { "whisper-1": whisper } }),
+      openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
       xai: new MockProviderV4({ transcriptionModels: { "grok-voice-transcribe-2.0": grok } }),
     },
     models: {
-      "whisper-1": {
-        name: "Whisper",
+      "transcribe-1": {
+        name: "Transcribe",
         modalities: { input: ["audio"], output: ["text"] },
         providers: ["openai"],
       },
@@ -96,7 +98,7 @@ describe("Audio Transcriptions Handler", () => {
     calls.length = 0;
     const res = await endpoint.handler(
       postForm({
-        model: "whisper-1",
+        model: "transcribe-1",
         file: new File([AUDIO], "speech.mp3", { type: "audio/mpeg" }),
         language: "en",
         prompt: "Greeting",
@@ -128,7 +130,7 @@ describe("Audio Transcriptions Handler", () => {
     calls.length = 0;
     const res = await endpoint.handler(
       postJson(baseUrl, {
-        model: "whisper-1",
+        model: "transcribe-1",
         input_audio: { data: AUDIO_BASE64, format: "wav" },
       }),
     );
@@ -146,7 +148,7 @@ describe("Audio Transcriptions Handler", () => {
   test("should return verbose_json from normalized segments", async () => {
     const res = await endpoint.handler(
       postJson(baseUrl, {
-        model: "whisper-1",
+        model: "transcribe-1",
         input_audio: { data: AUDIO_BASE64, format: "mp3" },
         response_format: "verbose_json",
       }),
@@ -182,6 +184,11 @@ describe("Audio Transcriptions Handler", () => {
   });
 
   test("should reject params the provider cannot handle", async () => {
+    // Provider-specific checks live in provider middleware.
+    expect(
+      modelMiddlewareMatcher.forTranscription("grok-voice-transcribe-2.0", "xai.transcription"),
+    ).toContain(xaiTranscriptionMiddleware);
+
     const res = await endpoint.handler(
       postJson(baseUrl, {
         model: "grok-voice-transcribe-2.0",
@@ -199,7 +206,7 @@ describe("Audio Transcriptions Handler", () => {
   test.each(["text", "srt", "vtt"])("should reject response_format '%s'", async (format) => {
     const res = await endpoint.handler(
       postJson(baseUrl, {
-        model: "whisper-1",
+        model: "transcribe-1",
         input_audio: { data: AUDIO_BASE64, format: "mp3" },
         response_format: format,
       }),
@@ -211,7 +218,7 @@ describe("Audio Transcriptions Handler", () => {
   test("should reject streaming", async () => {
     const res = await endpoint.handler(
       postForm({
-        model: "whisper-1",
+        model: "transcribe-1",
         file: new File([AUDIO], "speech.mp3"),
         stream: "true",
       }),
@@ -224,7 +231,7 @@ describe("Audio Transcriptions Handler", () => {
   test("should reject unsupported audio files", async () => {
     const res = await endpoint.handler(
       postForm({
-        model: "whisper-1",
+        model: "transcribe-1",
         file: new File([AUDIO], "speech.txt", { type: "text/plain" }),
       }),
     );
@@ -234,7 +241,7 @@ describe("Audio Transcriptions Handler", () => {
   });
 
   test("should return 400 if input_audio is missing", async () => {
-    const res = await endpoint.handler(postForm({ model: "whisper-1" }));
+    const res = await endpoint.handler(postForm({ model: "transcribe-1" }));
 
     expect(res.status).toBe(400);
     expect(await errorMessage(res)).toContain("input_audio");
@@ -243,7 +250,7 @@ describe("Audio Transcriptions Handler", () => {
   test("should enforce maxBodySize on uncompressed bodies", async () => {
     const res = await endpoint.handler(
       postForm({
-        model: "whisper-1",
+        model: "transcribe-1",
         file: new File([new Uint8Array(2048)], "speech.mp3"),
       }),
     );
@@ -283,9 +290,14 @@ describe("Audio Transcriptions Handler", () => {
   test("should run before and after hooks", async () => {
     calls.length = 0;
     const hooked = audioTranscriptions({
-      providers: { openai: new MockProviderV4({ transcriptionModels: { "whisper-1": whisper } }) },
+      providers: {
+        openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
+      },
       models: {
-        "whisper-1": { modalities: { input: ["audio"], output: ["text"] }, providers: ["openai"] },
+        "transcribe-1": {
+          modalities: { input: ["audio"], output: ["text"] },
+          providers: ["openai"],
+        },
       },
       hooks: {
         before: (ctx) => {
@@ -299,7 +311,10 @@ describe("Audio Transcriptions Handler", () => {
     });
 
     const res = await hooked.handler(
-      postJson(baseUrl, { model: "whisper-1", input_audio: { data: AUDIO_BASE64, format: "mp3" } }),
+      postJson(baseUrl, {
+        model: "transcribe-1",
+        input_audio: { data: AUDIO_BASE64, format: "mp3" },
+      }),
     );
 
     expect(await parseResponse(res)).toEqual({ text: "patched", usage: {} });

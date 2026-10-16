@@ -8,6 +8,7 @@ export * from "./logger";
 
 export * from "./middleware/common";
 export * from "./middleware/matcher";
+export * from "./middleware/transcription";
 
 export * from "./models/catalog";
 export * from "./models/types";

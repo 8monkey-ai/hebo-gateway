@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { forwardTranscriptionParams } from "../../middleware/common";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
 import {
   convertFormDataToTranscriptionsBody,
   convertToTranscriptionCallOptions,
@@ -8,15 +8,6 @@ import {
 } from "./converters";
 
 const AUDIO = new Uint8Array([1, 2, 3]);
-
-const forwarded = (inputs: Record<string, unknown>, provider: string, modelId = "model") =>
-  forwardTranscriptionParams(provider, modelId).transformParams(
-    convertToTranscriptionCallOptions(
-      { input_audio: { data: AUDIO, format: "mp3" }, ...inputs },
-      provider,
-      modelId,
-    ),
-  ).providerOptions;
 
 describe("Audio Transcriptions Converters", () => {
   describe("convertFormDataToTranscriptionsBody", () => {
@@ -72,115 +63,38 @@ describe("Audio Transcriptions Converters", () => {
   });
 
   describe("convertToTranscriptionCallOptions", () => {
-    test("should map OpenAI params into the openai namespace", () => {
-      const options = convertToTranscriptionCallOptions(
-        {
-          input_audio: { data: AUDIO, format: "mp3" },
-          language: "en",
-          response_format: "verbose_json",
-        },
-        "openai.transcription",
-        "custom-whisper",
-      );
+    test("should pass params as unknown provider options", () => {
+      const options = convertToTranscriptionCallOptions({
+        input_audio: { data: AUDIO, format: "mp3" },
+        language: "en",
+        response_format: "verbose_json",
+        chunking_strategy: "auto",
+      });
 
       expect(options.audio).toBe(AUDIO);
       expect(options.mediaType).toBe("audio/mp3");
-      expect(options.providerOptions).toEqual({ unknown: { language: "en" } });
-    });
-
-    test("should send Azure options to the openai namespace", () => {
-      expect(forwarded({ prompt: "hi" }, "azure.transcription")).toEqual({
-        openai: { prompt: "hi" },
+      expect(options.providerOptions).toEqual({
+        unknown: { language: "en", chunking_strategy: "auto" },
       });
     });
 
-    test("should force json and no timestamps for GPT Transcribe", () => {
+    test("should send no provider options without params", () => {
+      const options = convertToTranscriptionCallOptions({
+        input_audio: { data: AUDIO, format: "mp3" },
+      });
+
+      expect(options.providerOptions).toEqual({});
+    });
+
+    test("should forward params into the provider namespace", async () => {
       expect(
-        forwarded(
-          { language: "en", prompt: "hi", temperature: 0.2 },
-          "openai.transcription",
-          "gpt-transcribe",
-        ),
+        await transcriptionProviderOptions({
+          modelId: "custom/transcribe",
+          provider: "openai.transcription",
+          inputs: { language: "en", timestamp_granularities: ["word"], chunking_strategy: "auto" },
+        }),
       ).toEqual({
-        openai: {
-          language: "en",
-          prompt: "hi",
-          temperature: 0.2,
-          responseFormat: "json",
-          timestampGranularities: [],
-        },
-      });
-    });
-
-    test("should reject timestamp granularities for GPT Transcribe", () => {
-      expect(() =>
-        convertToTranscriptionCallOptions(
-          { input_audio: { data: AUDIO, format: "mp3" }, timestamp_granularities: ["word"] },
-          "openai.transcription",
-          "gpt-transcribe",
-        ),
-      ).toThrow("Parameter 'timestamp_granularities' is not supported by model 'gpt-transcribe'");
-    });
-
-    test("should map MAI-Transcribe params into the azure namespace", () => {
-      expect(
-        forwarded(
-          { language: "en", timestamp_granularities: ["word"], diarization: { enabled: true } },
-          "azure.transcription",
-          "mai-transcribe-2",
-        ),
-      ).toEqual({
-        azure: { locales: ["en"], timestamps: "word", diarization: { enabled: true } },
-      });
-    });
-
-    test("should reject prompt for MAI-Transcribe", () => {
-      expect(() =>
-        convertToTranscriptionCallOptions(
-          { input_audio: { data: AUDIO, format: "mp3" }, prompt: "hi" },
-          "azure.transcription",
-          "mai-transcribe-2",
-        ),
-      ).toThrow("Parameter 'prompt' is not supported by model 'mai-transcribe-2'");
-    });
-
-    test("should request verbose_json from Groq", () => {
-      expect(forwarded({ language: "en" }, "groq.transcription")).toEqual({
-        groq: { language: "en", responseFormat: "verbose_json" },
-      });
-    });
-
-    test("should map language and word timestamps for Vertex Gemini", () => {
-      expect(
-        forwarded(
-          { language: "en-US", timestamp_granularities: ["word"] },
-          "google.vertex.transcription",
-          "gemini-3.5-transcribe",
-        ),
-      ).toEqual({
-        vertex: { languageCodes: ["en-US"], wordTimestamp: true },
-      });
-    });
-
-    test("should not send a word timestamp toggle for Vertex Chirp", () => {
-      expect(
-        forwarded({ timestamp_granularities: ["word"] }, "google.vertex.transcription", "chirp_3"),
-      ).toEqual({});
-    });
-
-    test("should reject temperature for Vertex", () => {
-      expect(() =>
-        convertToTranscriptionCallOptions(
-          { input_audio: { data: AUDIO, format: "mp3" }, temperature: 0.5 },
-          "google.vertex.transcription",
-          "gemini-3.5-transcribe",
-        ),
-      ).toThrow("Parameter 'temperature' is not supported by provider 'vertex'");
-    });
-
-    test("should forward extra params as provider options", () => {
-      expect(forwarded({ chunking_strategy: "auto" }, "openai.transcription")).toEqual({
-        openai: { chunkingStrategy: "auto" },
+        openai: { language: "en", timestampGranularities: ["word"], chunkingStrategy: "auto" },
       });
     });
   });

@@ -63,7 +63,6 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemma-4-26b-a4b",
   "google/gemma-4-31b",
   // Microsoft
-  "microsoft/mai-transcribe-1.5",
   "microsoft/mai-transcribe-2",
   // Meta
   "meta/llama-3.1-8b",

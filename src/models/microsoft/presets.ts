@@ -11,15 +11,6 @@ const MAI_TRANSCRIBE_BASE = {
   providers: ["azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
-export const maiTranscribe15 = presetFor<CanonicalModelId, CatalogModel>()(
-  "microsoft/mai-transcribe-1.5" as const,
-  {
-    ...MAI_TRANSCRIBE_BASE,
-    name: "MAI-Transcribe 1.5",
-    created: "2026-06-02",
-  } satisfies CatalogModel,
-);
-
 export const maiTranscribe2 = presetFor<CanonicalModelId, CatalogModel>()(
   "microsoft/mai-transcribe-2" as const,
   {
@@ -30,12 +21,10 @@ export const maiTranscribe2 = presetFor<CanonicalModelId, CatalogModel>()(
 );
 
 const maiTranscribeAtomic = {
-  "v1.5": [maiTranscribe15],
   v2: [maiTranscribe2],
 } as const;
 
 const maiTranscribeGroups = {
-  "v1.x": [...maiTranscribeAtomic["v1.5"]],
   "v2.x": [...maiTranscribeAtomic["v2"]],
 } as const;
 

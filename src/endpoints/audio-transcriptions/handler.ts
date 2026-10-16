@@ -3,7 +3,8 @@ import * as z from "zod/mini";
 import { GatewayError } from "../../errors/gateway";
 import { winterCgHandler } from "../../lifecycle";
 import { logger } from "../../logger";
-import { forwardTranscriptionParams } from "../../middleware/common";
+import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { wrapTranscriptionModel } from "../../middleware/transcription";
 import { resolveProvider } from "../../providers/registry";
 import { getGenAiGeneralAttributes, recordTokenUsage } from "../../telemetry/gen-ai";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
@@ -116,44 +117,32 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
     // Convert inputs to AI SDK call options.
     const body = ctx.body;
     const { model: _model, trace: _trace, ...inputs } = body;
-    const forward = forwardTranscriptionParams(
-      transcriptionModel.provider,
-      transcriptionModel.modelId,
-    );
-    const transcriptionOptions = forward.transformParams(
-      convertToTranscriptionCallOptions(
-        inputs,
-        transcriptionModel.provider,
-        transcriptionModel.modelId,
-      ),
-    );
-    logger.trace(
-      {
-        requestId: ctx.requestId,
-        options: redacted(() => ({
-          ...transcriptionOptions,
-          audio: audioSize(transcriptionOptions.audio),
-        })),
-      },
-      "[transcriptions] AI SDK options",
-    );
+    const transcriptionOptions = convertToTranscriptionCallOptions(inputs);
     addSpanEvent("hebo.options.prepared");
     setSpanAttributes(getTranscriptionsRequestAttributes(body, ctx.trace));
+
+    // Build middleware chain (model -> forward params -> provider).
+    // Model / provider specific param mapping lives in their middleware.
+    const transcriptionModelWithMiddleware = wrapTranscriptionModel({
+      model: transcriptionModel,
+      middleware: modelMiddlewareMatcher.forTranscription(
+        ctx.resolvedModelId,
+        transcriptionModel.provider,
+      ),
+    });
 
     // Execute request. Calls `doGenerate` directly: `transcribe()` drops provider usage.
     // This also means no AI SDK retries (other endpoints retry twice by default): failed
     // uploads are not re-sent, so clients own retries for large, slow audio requests.
     const timeout = cfg.advanced.timeouts.normal;
     addSpanEvent("hebo.ai-sdk.started");
-    const result = forward.transformResult(
-      await transcriptionModel.doGenerate({
-        ...transcriptionOptions,
-        headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
-        abortSignal: timeout
-          ? AbortSignal.any([ctx.request.signal, AbortSignal.timeout(timeout)])
-          : ctx.request.signal,
-      }),
-    );
+    const result = await transcriptionModelWithMiddleware.doGenerate({
+      ...transcriptionOptions,
+      headers: prepareForwardHeaders(ctx.request, cfg.advanced.forwardHeaders),
+      abortSignal: timeout
+        ? AbortSignal.any([ctx.request.signal, AbortSignal.timeout(timeout)])
+        : ctx.request.signal,
+    });
     logger.trace(
       { requestId: ctx.requestId, result: { ...result, response: undefined } },
       "[transcriptions] AI SDK result",

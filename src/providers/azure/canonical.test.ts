@@ -34,7 +34,4 @@ test("withCanonicalIdsForAzure > maps transcription models", () => {
   expect(provider.transcriptionModel!("microsoft/mai-transcribe-2").modelId).toBe(
     "mai-transcribe-2",
   );
-  expect(provider.transcriptionModel!("microsoft/mai-transcribe-1.5").modelId).toBe(
-    "mai-transcribe-1.5",
-  );
 });

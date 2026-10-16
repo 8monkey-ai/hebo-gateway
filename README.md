@@ -265,7 +265,7 @@ Out-of-the-box model presets:
   Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Microsoft** — `@hebo-ai/gateway/models/microsoft`  
-  MAI-Transcribe: `maiTranscribe` (`v1.5`, `v2`, `v1.x`, `v2.x`, `latest`, `all`)
+  MAI-Transcribe: `maiTranscribe` (`v2`, `v2.x`, `latest`, `all`)
 
 - **MiniMax** — `@hebo-ai/gateway/models/minimax`  
   MiniMax: `minimax` (`v2`, `v3`, `v2.x`, `v3.x`, `latest`, `all`)
@@ -682,11 +682,11 @@ Official documentation: [OpenAI API Reference](https://developers.openai.com/api
 It supports:
 
 - OpenAI-style `multipart/form-data` uploads (`file`) and OpenRouter-style JSON with base64 `input_audio: { data, format }`.
-- `language`, `prompt`, `temperature` and `timestamp_granularities`, mapped to each provider's native options (a `400` is returned when the provider can't handle a value).
+- `language`, `prompt`, `temperature` and `timestamp_granularities`, mapped to each model's / provider's native options by transcription middleware (a `400` is returned when the model or provider can't handle a value). Custom mappings can be registered via `modelMiddlewareMatcher.useForModel` / `useForProvider` with a `transcription` entry.
 - `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration` and timestamped `segments`, built from the AI SDK's normalized result.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
-- Built-in presets for OpenAI / Azure (`openai/gpt-transcribe`), Azure Speech (`microsoft/mai-transcribe-2`, `microsoft/mai-transcribe-1.5`), xAI (`xai/grok-voice-transcribe-2.0`) and Vertex (`google/gemini-3.5-transcribe`).
+- Built-in presets for OpenAI / Azure (`openai/gpt-transcribe`), Azure Speech (`microsoft/mai-transcribe-2`), xAI (`xai/grok-voice-transcribe-2.0`) and Vertex (`google/gemini-3.5-transcribe`).
 
 ```ts
 import fs from "node:fs";
@@ -710,7 +710,6 @@ Transcription models use `modalities: { input: ["audio"], output: ["text"] }` in
 - **`stream`**: Streaming transcription (rejected with `400`).
 - **URL input**: `input_audio.url` / `source_url`.
 - **GPT Transcribe hints**: `languages` and `keywords` are not forwarded yet (the AI SDK's OpenAI provider drops them); `language` and `prompt` work. Only `json` output is returned, so `verbose_json` has no segments.
-- **Model middleware**: `modelMiddlewareMatcher` does not apply, since the AI SDK has no transcription model middleware. Hooks run as usual.
 - **Retries**: Upstream calls are not retried (other endpoints retry twice via the AI SDK), so large uploads are never re-sent automatically. Retry on the client if needed.
 
 ### `/models`

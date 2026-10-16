@@ -5,7 +5,6 @@ import type {
 } from "@ai-sdk/provider";
 
 import { GatewayError } from "../../errors/gateway";
-import { extractProviderNamespace, isMaiTranscribeModel } from "../../middleware/common";
 import { readJson, readRequestBody } from "../../utils/body";
 import { toResponse } from "../../utils/response";
 import type { InputAudioFormat } from "../shared/schema";
@@ -142,108 +141,22 @@ export type TranscriptionCallOptions = Omit<
   providerOptions: Record<string, JSONObject>;
 };
 
-const unsupportedParam = (param: string, provider: string) =>
-  new GatewayError(`Parameter '${param}' is not supported by provider '${provider}'`, 400);
-
-const unsupportedModelParam = (param: string, modelId: string) =>
-  new GatewayError(`Parameter '${param}' is not supported by model '${modelId}'`, 400);
-
 /**
- * Maps the OpenAI transcription params to the native options of each provider.
- * Keys are snake_case: `forwardTranscriptionParams` camelizes them.
+ * Converts the OpenAI transcription params to AI SDK call options.
+ * All params are passed as snake_case `unknown` provider options: model and provider
+ * middleware map them to native options, and `forwardTranscriptionParams` camelizes them.
  */
-function toProviderParams(
-  inputs: Pick<
-    TranscriptionsInputs,
-    "language" | "prompt" | "temperature" | "timestamp_granularities"
-  >,
-  namespace: string,
-  modelId: string,
-): Record<string, unknown> {
-  const { language, prompt, temperature, timestamp_granularities } = inputs;
-  const out: Record<string, unknown> = {};
-
-  const api = namespace === "azure" && isMaiTranscribeModel(modelId) ? "azure-speech" : namespace;
-  switch (api) {
-    case "xai":
-      if (prompt !== undefined) throw unsupportedParam("prompt", namespace);
-      if (temperature !== undefined) throw unsupportedParam("temperature", namespace);
-      // xAI always returns word timestamps, so `timestamp_granularities` needs no mapping.
-      if (language !== undefined) out["language"] = language;
-      return out;
-
-    case "vertex":
-      if (prompt !== undefined) throw unsupportedParam("prompt", namespace);
-      if (temperature !== undefined) throw unsupportedParam("temperature", namespace);
-      if (language !== undefined) out["language_codes"] = [language];
-      // Chirp always enables word offsets (its segments are built from them), so only
-      // Gemini Transcribe needs an explicit toggle.
-      if (modelId.startsWith("gemini") && timestamp_granularities?.includes("word")) {
-        out["word_timestamp"] = true;
-      }
-      return out;
-
-    // MAI-Transcribe runs on the Azure Speech API; other Azure deployments are Azure OpenAI.
-    case "azure-speech":
-      if (prompt !== undefined) throw unsupportedModelParam("prompt", modelId);
-      if (temperature !== undefined) throw unsupportedModelParam("temperature", modelId);
-      if (language !== undefined) out["locales"] = [language];
-      if (timestamp_granularities !== undefined) {
-        out["timestamps"] = timestamp_granularities.includes("word") ? "word" : "segment";
-      }
-      return out;
-
-    default:
-      if (language !== undefined) out["language"] = language;
-      if (prompt !== undefined) out["prompt"] = prompt;
-      if (temperature !== undefined) out["temperature"] = temperature;
-      if (modelId.startsWith("gpt-transcribe")) {
-        if (timestamp_granularities !== undefined) {
-          throw unsupportedModelParam("timestamp_granularities", modelId);
-        }
-        // GPT Transcribe only returns `json`. Without these, the AI SDK sends `verbose_json`
-        // and `timestamp_granularities[]=segment` as soon as any OpenAI option is set.
-        out["response_format"] = "json";
-        out["timestamp_granularities"] = [];
-        return out;
-      }
-      if (timestamp_granularities !== undefined) {
-        out["timestamp_granularities"] = timestamp_granularities;
-      }
-      // Groq only returns segments and duration with `verbose_json`.
-      if (namespace === "groq") out["response_format"] = "verbose_json";
-      return out;
-  }
-}
-
 export function convertToTranscriptionCallOptions(
   inputs: TranscriptionsInputs & Record<string, unknown>,
-  provider: string,
-  modelId: string,
 ): TranscriptionCallOptions {
-  const {
-    input_audio,
-    language,
-    prompt,
-    temperature,
-    timestamp_granularities,
-    response_format: _responseFormat,
-    stream: _stream,
-    ...rest
-  } = inputs;
+  const { input_audio, response_format: _responseFormat, stream: _stream, ...rest } = inputs;
 
-  const params = toProviderParams(
-    { language, prompt, temperature, timestamp_granularities },
-    extractProviderNamespace(provider),
-    modelId,
-  );
-
-  // Remaining body params (e.g. `diarize`, `chunking_strategy`) are provider-specific.
-  const unknown = { ...rest, ...params } as JSONObject;
+  const unknown = rest as JSONObject;
 
   return {
     audio: input_audio.data,
     mediaType: `audio/${input_audio.format}`,
+    // No params: no provider namespace, so providers keep their own defaults.
     providerOptions: Object.keys(unknown).length > 0 ? { unknown } : {},
   };
 }

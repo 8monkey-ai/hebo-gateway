@@ -9,6 +9,8 @@ import type {
 } from "../../endpoints/chat-completions/schema";
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
+import { rejectUnsupportedParams } from "../../middleware/utils";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -149,4 +151,32 @@ modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
 
 modelMiddlewareMatcher.useForModel("google/gemini-3*", {
   language: [geminiReasoningMiddleware, geminiPromptCachingMiddleware],
+});
+
+// Maps the OpenAI transcription params to Gemini Transcribe options.
+export const geminiTranscribeMiddleware: TranscriptionModelMiddleware = {
+  transformParams: ({ params, model }) => {
+    const unknown = params.providerOptions?.["unknown"];
+    if (!unknown) return params;
+
+    rejectUnsupportedParams(unknown, ["prompt", "temperature"], `model '${model.modelId}'`);
+
+    const language = unknown["language"];
+    if (language !== undefined) {
+      unknown["language_codes"] = [language];
+      delete unknown["language"];
+    }
+
+    const granularities = unknown["timestamp_granularities"] as string[] | undefined;
+    if (granularities !== undefined) {
+      if (granularities.includes("word")) unknown["word_timestamp"] = true;
+      delete unknown["timestamp_granularities"];
+    }
+
+    return params;
+  },
+};
+
+modelMiddlewareMatcher.useForModel("google/gemini-*-transcribe*", {
+  transcription: [geminiTranscribeMiddleware],
 });
