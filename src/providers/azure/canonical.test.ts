@@ -21,3 +21,14 @@ test("withCanonicalIdsForAzure > supports custom deployment names", () => {
   const model = provider.languageModel("openai/gpt-5.6-luna");
   expect(model.modelId).toBe("production-luna");
 });
+
+test("withCanonicalIdsForAzure > maps transcription deployments", () => {
+  const provider = withCanonicalIdsForAzure(azure, {
+    "openai/gpt-4o-transcribe": "production-transcribe",
+  });
+
+  expect(provider.transcriptionModel!("openai/whisper-1").modelId).toBe("whisper-1");
+  expect(provider.transcriptionModel!("openai/gpt-4o-transcribe").modelId).toBe(
+    "production-transcribe",
+  );
+});

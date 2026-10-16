@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createGroq } from "@ai-sdk/groq";
 import { createVoyage } from "voyage-ai-provider";
 
 import { claudeHaiku45 } from "../models/anthropic/presets";
-import { gpt56Sol } from "../models/openai/presets";
+import { gpt56Sol, whisperLargeV3Turbo } from "../models/openai/presets";
 import { voyage4Lite } from "../models/voyage/presets";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical";
+import { withCanonicalIdsForGroq } from "../providers/groq/canonical";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical";
 import { resolveProvider } from "./registry";
 
@@ -105,4 +107,39 @@ test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
   // Same Bedrock ID as on Converse, but served with the Anthropic request shape.
   expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
   expect(languageModel.provider).toBe("bedrock.anthropic.messages");
+});
+
+test("Whisper Large V3 Turbo resolves through Groq for transcriptions", () => {
+  const config = {
+    providers: {
+      groq: withCanonicalIdsForGroq(createGroq({ apiKey: "test-key" })),
+    },
+    models: {
+      ...whisperLargeV3Turbo(),
+    },
+  };
+
+  const modelId = "openai/whisper-large-v3-turbo";
+
+  const provider = resolveProvider({
+    providers: config.providers,
+    models: config.models,
+    modelId,
+    operation: "transcriptions",
+  });
+
+  const transcriptionModel = provider.transcriptionModel!(modelId);
+  expect(transcriptionModel.modelId).toBe("whisper-large-v3-turbo");
+  expect(transcriptionModel.provider).toBe("groq.transcription");
+});
+
+test("transcriptions reject models without audio input", () => {
+  expect(() =>
+    resolveProvider({
+      providers: {},
+      models: { ...gpt56Sol() },
+      modelId: "openai/gpt-5.6-sol",
+      operation: "transcriptions",
+    }),
+  ).toThrow("Model 'openai/gpt-5.6-sol' does not support 'audio' input");
 });

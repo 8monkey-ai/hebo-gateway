@@ -33,6 +33,14 @@ const GEMINI_EMBEDDINGS_BASE = {
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
+const TRANSCRIPTION_BASE = {
+  modalities: {
+    input: ["audio"] as const,
+    output: ["text"] as const,
+  },
+  providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
 export const geminiEmbedding2 = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-embedding-2" as const,
   {
@@ -46,6 +54,26 @@ export const geminiEmbedding2 = presetFor<CanonicalModelId, CatalogModel>()(
     context: 8192,
   } satisfies CatalogModel,
 );
+
+export const gemini35Transcribe = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-3.5-transcribe" as const,
+  {
+    ...TRANSCRIPTION_BASE,
+    name: "Gemini 3.5 Transcribe",
+    created: "2026-08-26",
+  } satisfies CatalogModel,
+);
+
+export const chirp2 = presetFor<CanonicalModelId, CatalogModel>()("google/chirp-2" as const, {
+  ...TRANSCRIPTION_BASE,
+  name: "Chirp 2",
+} satisfies CatalogModel);
+
+export const chirp3 = presetFor<CanonicalModelId, CatalogModel>()("google/chirp-3" as const, {
+  ...TRANSCRIPTION_BASE,
+  name: "Chirp 3",
+  created: "2025-10-13",
+} satisfies CatalogModel);
 
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3-flash-preview" as const,
@@ -270,6 +298,7 @@ const geminiAtomic = {
   "v3.8": [gemini38Flash],
   "v3-preview": [gemini3FlashPreview, gemini31ProPreview],
   embeddings: [geminiEmbedding2],
+  transcription: [gemini35Transcribe],
 } as const;
 
 const geminiGroups = {
@@ -289,5 +318,21 @@ export const gemini = {
   latest: [...geminiAtomic["v3.8"]],
   preview: [...geminiAtomic["v3-preview"]],
   embeddings: [...geminiAtomic["embeddings"]],
+  transcription: [...geminiAtomic["transcription"]],
   all: Object.values(geminiAtomic).flat(),
+} as const;
+
+// ---------------------------------------------------------------------------
+// Chirp groups
+// ---------------------------------------------------------------------------
+
+const chirpAtomic = {
+  v2: [chirp2],
+  v3: [chirp3],
+} as const;
+
+export const chirp = {
+  ...chirpAtomic,
+  latest: [...chirpAtomic["v3"]],
+  all: Object.values(chirpAtomic).flat(),
 } as const;

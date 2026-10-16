@@ -110,3 +110,24 @@ test("MaaS override falls back to GOOGLE_VERTEX_PROJECT when no project is confi
 
   expect(url).toContain("/projects/test-project/");
 });
+
+// ---------------------------------------------------------------------------
+// Transcription models
+// ---------------------------------------------------------------------------
+
+test("chirp transcription models map to Speech-to-Text model IDs", () => {
+  const provider = withCanonicalIdsForVertex(
+    createVertex({ project: "test-project", location: "us" }),
+  );
+  expect(provider.transcriptionModel("google/chirp-2").modelId).toBe("chirp_2");
+  expect(provider.transcriptionModel("google/chirp-3").modelId).toBe("chirp_3");
+});
+
+test("gemini-3.5-transcribe resolves without an explicit mapping", () => {
+  const provider = withCanonicalIdsForVertex(
+    createVertex({ project: "test-project", location: "global" }),
+  );
+  const model = provider.transcriptionModel("google/gemini-3.5-transcribe");
+  expect(model.modelId).toBe("gemini-3.5-transcribe");
+  expect(model.provider).toBe("google.vertex.transcription");
+});

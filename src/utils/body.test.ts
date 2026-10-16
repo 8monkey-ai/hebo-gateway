@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseRequestBody, DEFAULT_MAX_BODY_SIZE } from "./body";
+import { parseRequestBody, readRequestBody, DEFAULT_MAX_BODY_SIZE } from "./body";
 
 function jsonRequest(body: unknown, headers?: Record<string, string>): Request {
   return new Request("http://localhost/test", {
@@ -186,6 +186,56 @@ describe("parseRequestBody", () => {
     });
     try {
       await parseRequestBody(request);
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toMatchObject({ status: 400 });
+    }
+  });
+});
+
+describe("readRequestBody", () => {
+  const plainRequest = (body: BodyInit, headers?: Record<string, string>) =>
+    new Request("http://localhost/test", { method: "POST", headers, body });
+
+  test("reads plain bodies as bytes", async () => {
+    const bytes = await readRequestBody(plainRequest(new Uint8Array([1, 2, 3])));
+    expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  test("enforces maxBodySize on plain bodies", async () => {
+    try {
+      await readRequestBody(plainRequest(new Uint8Array(100)), 10);
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toMatchObject({ status: 413 });
+    }
+  });
+
+  test("enforces maxBodySize on streamed plain bodies without content-length", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(8));
+        controller.enqueue(new Uint8Array(8));
+        controller.close();
+      },
+    });
+    try {
+      await readRequestBody(plainRequest(stream), 10);
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toMatchObject({ status: 413 });
+    }
+  });
+
+  test("decompresses gzip bodies", async () => {
+    const payload = { hello: "world" };
+    const bytes = await readRequestBody(gzipRequest(await compress(payload, "gzip")));
+    expect(JSON.parse(new TextDecoder().decode(bytes))).toEqual(payload);
+  });
+
+  test("returns 400 for empty bodies", async () => {
+    try {
+      await readRequestBody(plainRequest(new Uint8Array(0)));
       expect.unreachable("should have thrown");
     } catch (err: unknown) {
       expect(err).toMatchObject({ status: 400 });

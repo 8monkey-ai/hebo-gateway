@@ -60,6 +60,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./endpoints/audio-transcriptions": {
+      "types": "./dist/endpoints/audio-transcriptions/index.d.ts",
+      "import": "./dist/endpoints/audio-transcriptions/index.js"
+    },
     "./endpoints/chat-completions": {
       "types": "./dist/endpoints/chat-completions/index.d.ts",
       "import": "./dist/endpoints/chat-completions/index.js"

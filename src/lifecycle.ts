@@ -89,7 +89,8 @@ export const winterCgHandler = (
         ctx.operation === "chat" ||
         ctx.operation === "embeddings" ||
         ctx.operation === "messages" ||
-        ctx.operation === "responses"
+        ctx.operation === "responses" ||
+        ctx.operation === "transcriptions"
       ) {
         recordRequestDuration(
           performance.now() - start,

@@ -48,7 +48,7 @@ export type ReasoningConfig = z.infer<typeof ReasoningConfigSchema>;
 export const ServiceTierSchema = z.enum(["auto", "default", "flex", "scale", "priority"]);
 export type ServiceTier = z.infer<typeof ServiceTierSchema>;
 
-const InputAudioFormatSchema = z.enum([
+export const InputAudioFormatSchema = z.enum([
   "x-aac",
   "flac",
   "mp3",
@@ -61,6 +61,7 @@ const InputAudioFormatSchema = z.enum([
   "wav",
   "webm",
 ]);
+export type InputAudioFormat = z.infer<typeof InputAudioFormatSchema>;
 
 const InputAudioSchema = z.object({
   data: z.string(),

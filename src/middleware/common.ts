@@ -1,4 +1,8 @@
-import type { JSONObject } from "@ai-sdk/provider";
+import type {
+  JSONObject,
+  TranscriptionModelV4CallOptions,
+  TranscriptionModelV4Result,
+} from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { ProviderId } from "../providers/types";
@@ -166,4 +170,30 @@ export function forwardParamsMiddleware(provider: string): LanguageModelMiddlewa
 
 export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
   return forwardEmbeddingParams(extractProviderNamespace(provider));
+}
+
+/**
+ * Transcription counterpart of `forwardParamsMiddleware`.
+ * The AI SDK has no transcription model middleware, so this transforms call options
+ * and results directly: snake_case params in providerOptions are converted to camelCase
+ * and moved into providerOptions[providerName], and providerMetadata is snakized.
+ */
+export function forwardTranscriptionParams(provider: string) {
+  const namespace = extractProviderNamespace(provider);
+  // Azure's OpenAI-backed transcription model only reads `openai` provider options.
+  const providerName = namespace === "azure" ? "openai" : namespace;
+
+  return {
+    transformParams: <T extends TranscriptionModelV4CallOptions>(params: T): T => {
+      // Skip empty options: some providers apply extra defaults once their namespace exists.
+      if (params.providerOptions && Object.keys(params.providerOptions).length > 0) {
+        processOptions(params.providerOptions, providerName);
+      }
+      return params;
+    },
+    transformResult: <T extends TranscriptionModelV4Result>(result: T): T => {
+      if (result.providerMetadata) processMetadata(result.providerMetadata);
+      return result;
+    },
+  };
 }

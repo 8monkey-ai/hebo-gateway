@@ -69,6 +69,21 @@ const EMBEDDINGS_BASE = {
   providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
+const TRANSCRIPTION_BASE = {
+  modalities: {
+    input: ["audio"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: ["temperature"] as const,
+  providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
+// Open-weight Whisper models, served by third-party inference providers.
+const WHISPER_OPEN_BASE = {
+  ...TRANSCRIPTION_BASE,
+  providers: ["groq"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
 export const gpt52 = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.2" as const, {
   ...GPT_BASE,
   name: "GPT-5.2",
@@ -224,6 +239,63 @@ export const textEmbedding3Large = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const whisper1 = presetFor<CanonicalModelId, CatalogModel>()("openai/whisper-1" as const, {
+  ...TRANSCRIPTION_BASE,
+  name: "Whisper",
+  created: "2023-03-01",
+} satisfies CatalogModel);
+
+export const whisperLargeV3 = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/whisper-large-v3" as const,
+  {
+    ...WHISPER_OPEN_BASE,
+    name: "Whisper Large V3",
+    created: "2023-11-06",
+  } satisfies CatalogModel,
+);
+
+export const whisperLargeV3Turbo = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/whisper-large-v3-turbo" as const,
+  {
+    ...WHISPER_OPEN_BASE,
+    name: "Whisper Large V3 Turbo",
+    created: "2024-10-01",
+  } satisfies CatalogModel,
+);
+
+export const gpt4oTranscribe = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-4o-transcribe" as const,
+  {
+    ...TRANSCRIPTION_BASE,
+    name: "GPT-4o Transcribe",
+    created: "2025-03-20",
+    knowledge: "2024-06",
+    context: 16000,
+  } satisfies CatalogModel,
+);
+
+export const gpt4oMiniTranscribe = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-4o-mini-transcribe" as const,
+  {
+    ...TRANSCRIPTION_BASE,
+    name: "GPT-4o Mini Transcribe",
+    created: "2025-03-20",
+    knowledge: "2024-06",
+    context: 16000,
+  } satisfies CatalogModel,
+);
+
+export const gpt4oTranscribeDiarize = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-4o-transcribe-diarize" as const,
+  {
+    ...TRANSCRIPTION_BASE,
+    name: "GPT-4o Transcribe Diarize",
+    created: "2025-10-15",
+    knowledge: "2024-06",
+    context: 16000,
+  } satisfies CatalogModel,
+);
+
 export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/gpt-oss-20b" as const,
   {
@@ -283,6 +355,20 @@ const textEmbeddingsGroups = {
   "v3.x": [...textEmbeddingsAtomic["v3"]],
 } as const;
 
+const whisperAtomic = {
+  v1: [whisper1],
+  v3: [whisperLargeV3, whisperLargeV3Turbo],
+} as const;
+
+const whisperGroups = {
+  "v1.x": [...whisperAtomic["v1"]],
+  "v3.x": [...whisperAtomic["v3"]],
+} as const;
+
+const gptTranscribeAtomic = {
+  v4o: [gpt4oTranscribe, gpt4oMiniTranscribe, gpt4oTranscribeDiarize],
+} as const;
+
 export const gptOss = {
   ...gptOssAtomic,
   ...gptOssGroups,
@@ -303,4 +389,17 @@ export const textEmbeddings = {
   ...textEmbeddingsGroups,
   latest: [...textEmbeddingsAtomic["v3"]],
   all: Object.values(textEmbeddingsAtomic).flat(),
+} as const;
+
+export const whisper = {
+  ...whisperAtomic,
+  ...whisperGroups,
+  latest: [...whisperAtomic["v3"]],
+  all: Object.values(whisperAtomic).flat(),
+} as const;
+
+export const gptTranscribe = {
+  ...gptTranscribeAtomic,
+  latest: [...gptTranscribeAtomic["v4o"]],
+  all: Object.values(gptTranscribeAtomic).flat(),
 } as const;

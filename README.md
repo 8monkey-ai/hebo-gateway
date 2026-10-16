@@ -12,7 +12,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 
 ## 🍌 Features
 
-- 🌐 OpenAI-compatible `/chat/completions`, `/embeddings` & `/models` endpoints.
+- 🌐 OpenAI-compatible `/chat/completions`, `/embeddings`, `/audio/transcriptions` & `/models` endpoints.
 - 💬 Open Responses `/responses` endpoint (stateless), including /conversations.
 - 🗨️ Anthropic-compatible `/messages` endpoint.
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
@@ -40,7 +40,7 @@ bun install @hebo-ai/gateway
 - Runtime Support
   - [Vercel Edge](#vercel-edge) | [Cloudflare Workers](#cloudflare-workers) | [Deno Deploy](#deno-deploy) | [AWS Lambda](#aws-lambda)
 - Endpoints
-  - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/models](#models) | [/responses](#responses) | [/messages](#messages) | [/conversations](#conversations)
+  - [/chat/completions](#chatcompletions) | [/embeddings](#embeddings) | [/audio/transcriptions](#audiotranscriptions) | [/models](#models) | [/responses](#responses) | [/messages](#messages) | [/conversations](#conversations)
 - OpenAI Extensions
   - [Reasoning](#reasoning) | [Service Tier](#service-tier) | [Prompt Caching](#prompt-caching) | [Compressed Requests](#compressed-requests)
 - Advanced Usage
@@ -210,7 +210,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini/Chirp`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS/Whisper`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
 
 #### Model Presets
 
@@ -258,8 +258,9 @@ Out-of-the-box model presets:
   DeepSeek: `deepseek` (`v4`, `v4.1`, `v4.x`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3-preview`, `v3.x`, `embeddings`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3-preview`, `v3.x`, `embeddings`, `transcription`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+  Chirp: `chirp` (`v2`, `v3`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
   Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
@@ -274,12 +275,14 @@ Out-of-the-box model presets:
   GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v6.1`, `v5.x`, `v6.x`, `codex`, `pro`, `latest`, `all`)
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
+  Whisper: `whisper` (`v1`, `v3`, `v1.x`, `v3.x`, `latest`, `all`)
+  GPT Transcribe: `gptTranscribe` (`v4o`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `v4.7`, `latest`, `all`)
+  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `v4.7`, `transcription`, `latest`, `all`)
 
 - **Z.ai** — `@hebo-ai/gateway/models/zai`  
   GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.x`, `latest`, `all`)
@@ -348,9 +351,9 @@ const gw = gateway({
      * @returns Replacement parsed body, or undefined to keep original body unchanged.
      */
     before: async (ctx: {
-      body: ChatCompletionsBody | EmbeddingsBody;
-      operation: "chat" | "embeddings";
-    }): Promise<ChatCompletionsBody | EmbeddingsBody | void> => {
+      body: ChatCompletionsBody | EmbeddingsBody | TranscriptionsBody;
+      operation: "chat" | "embeddings" | "transcriptions";
+    }): Promise<ChatCompletionsBody | EmbeddingsBody | TranscriptionsBody | void> => {
       // Example Use Cases:
       // - Transform request body
       // - Observability integration
@@ -363,7 +366,7 @@ const gw = gateway({
      * @returns Canonical model ID or undefined to keep original.
      */
     resolveModelId: async (ctx: {
-      body: ChatCompletionsBody | EmbeddingsBody;
+      body: ChatCompletionsBody | EmbeddingsBody | TranscriptionsBody;
       modelId: ModelId;
     }): Promise<ModelId | void> => {
       // Example Use Cases:
@@ -376,15 +379,15 @@ const gw = gateway({
      * @param ctx.models ModelCatalog from config.
      * @param ctx.body The parsed body object with all call parameters.
      * @param ctx.resolvedModelId Resolved model ID.
-     * @param ctx.operation Operation type ("chat" | "embeddings").
+     * @param ctx.operation Operation type ("chat" | "embeddings" | "transcriptions").
      * @returns ProviderV4 to override, or undefined to use default.
      */
     resolveProvider: async (ctx: {
       providers: ProviderRegistry;
       models: ModelCatalog;
-      body: ChatCompletionsBody | EmbeddingsBody;
+      body: ChatCompletionsBody | EmbeddingsBody | TranscriptionsBody;
       resolvedModelId: ModelId;
-      operation: "chat" | "embeddings";
+      operation: "chat" | "embeddings" | "transcriptions";
     }): Promise<ProviderV4 | void> => {
       // Example Use Cases:
       // - Routing logic between providers
@@ -397,8 +400,8 @@ const gw = gateway({
      * @returns Modified result, or undefined to keep original.
      */
     after: async (ctx: {
-      result: ChatCompletions | ChatCompletionsStream | Embeddings;
-    }): Promise<ChatCompletions | ChatCompletionsStream | Embeddings | void> => {
+      result: ChatCompletions | ChatCompletionsStream | Embeddings | Transcriptions;
+    }): Promise<ChatCompletions | ChatCompletionsStream | Embeddings | Transcriptions | void> => {
       // Example Use Cases:
       // - Transform result
       // - Result logging
@@ -669,6 +672,44 @@ It supports:
 > **Compatibility & Roadmap:**
 
 - **`encoding_format`**: `base64` results.
+
+### `/audio/transcriptions`
+
+Transcribes audio into text, compatible with OpenAI's and OpenRouter's transcription APIs.
+
+Official documentation: [OpenAI API Reference](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) | [OpenRouter API Reference](https://openrouter.ai/docs/api/api-reference/stt/create-transcription)
+
+It supports:
+
+- OpenAI-style `multipart/form-data` uploads (`file`) and OpenRouter-style JSON with base64 `input_audio: { data, format }`.
+- `language`, `prompt`, `temperature` and `timestamp_granularities`, mapped to each provider's native options (a `400` is returned when the provider can't handle a value).
+- `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration` and timestamped `segments`, built from the AI SDK's normalized result.
+- Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
+- Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
+- Built-in presets for OpenAI / Azure (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`, `gpt-4o-transcribe-diarize`), Groq (`whisper-large-v3`, `whisper-large-v3-turbo`), xAI (`grok-voice-transcribe-2.0`) and Vertex (`chirp-2`, `chirp-3`, `gemini-3.5-transcribe`).
+
+```ts
+import fs from "node:fs";
+
+import OpenAI from "openai";
+
+const client = new OpenAI({ baseURL: "http://localhost:3000/v1/gateway", apiKey: "..." });
+
+const { text, usage } = await client.audio.transcriptions.create({
+  model: "openai/whisper-large-v3-turbo",
+  file: fs.createReadStream("meeting.mp3"),
+});
+```
+
+Transcription models use `modalities: { input: ["audio"], output: ["text"] }` in the catalog. `advanced.maxBodySize` (default 10 MB) is enforced on all transcription request bodies, including plain multipart and JSON uploads; raise it for longer recordings (base64 adds ~33%).
+
+> [!IMPORTANT]
+> **Compatibility & Roadmap:**
+
+- **`response_format`**: `text`, `srt` and `vtt` (rejected with `400`).
+- **`stream`**: Streaming transcription (rejected with `400`).
+- **URL input**: `input_audio.url` / `source_url`.
+- **Model middleware**: `modelMiddlewareMatcher` does not apply, since the AI SDK has no transcription model middleware. Hooks run as usual.
 
 ### `/models`
 
@@ -981,7 +1022,7 @@ These attributes appear on the active span and on all metric instruments (reques
 
 You can override the global `telemetry.signals.gen_ai` level on a per-request basis using the `trace` body parameter. This is useful for selectively enabling detailed traces on specific requests without changing the gateway-wide configuration.
 
-The `trace` parameter is accepted on all endpoints (`/chat/completions`, `/embeddings`, `/messages`, `/responses`):
+The `trace` parameter is accepted on all endpoints (`/chat/completions`, `/embeddings`, `/audio/transcriptions`, `/messages`, `/responses`):
 
 ```json
 {
@@ -1021,6 +1062,8 @@ The Gateway also emits `gen_ai` metrics:
 - `gen_ai.server.time_per_output_token` (histogram, seconds)
 - `gen_ai.server.time_to_first_token` (histogram, seconds)
 - `gen_ai.client.token.usage` (histogram, tokens; tagged with `gen_ai.token.type=input|output|cached|reasoning`)
+
+Transcription spans use `gen_ai.operation.name=transcription` (OTel has no standard name yet) and record the audio duration as `gen_ai.usage.audio_seconds`.
 
 Metric names and attributes follow OpenTelemetry GenAI semantic conventions. Histogram bucket boundaries are tuned for practical dashboards and alerting rather than copied verbatim from upstream recommendations.
 
@@ -1131,6 +1174,8 @@ advanced: {
 #### Max Body Size
 
 Maximum _decompressed_ request body size in bytes for gzip/deflate-encoded requests. Protects against gzip bombs and oversized payloads. Default is `10_485_760` (10 MB). Set to `0` to disable.
+
+`/audio/transcriptions` also enforces this limit on plain (uncompressed) multipart and JSON bodies, since audio uploads are typically large.
 
 Compressed requests that exceed this limit after decompression receive an HTTP `413 Payload Too Large` response. Unsupported `Content-Encoding` values return HTTP `415 Unsupported Media Type`.
 
@@ -1265,7 +1310,7 @@ export async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `conversations`, `embeddings` and `models` endpoints.
+Non-streaming versions are available via `toChatCompletionsResponse`. Equivalent schemas and helpers are available in the `audio-transcriptions`, `conversations`, `embeddings` and `models` endpoints.
 
 > [!TIP]
 > Since Zod v4.3 you can generate a JSON Schema from any zod object by calling `z.toJSONSchema(...)`. This is useful for producing OpenAPI documentation from the same source of truth.
