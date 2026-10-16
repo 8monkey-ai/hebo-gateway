@@ -4,7 +4,7 @@ import { getTranscriptionsRequestAttributes, getTranscriptionsResponseAttributes
 import type { Transcriptions, TranscriptionsBody } from "./schema";
 
 const body: TranscriptionsBody = {
-  model: "openai/whisper-1",
+  model: "openai/gpt-transcribe",
   input_audio: { data: new Uint8Array([1, 2, 3]), format: "wav" },
   prompt: "Meeting notes",
   temperature: 0.2,

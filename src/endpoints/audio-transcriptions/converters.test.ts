@@ -10,7 +10,7 @@ import {
 const AUDIO = new Uint8Array([1, 2, 3]);
 
 const forwarded = (inputs: Record<string, unknown>, provider: string, modelId = "model") =>
-  forwardTranscriptionParams(provider).transformParams(
+  forwardTranscriptionParams(provider, modelId).transformParams(
     convertToTranscriptionCallOptions(
       { input_audio: { data: AUDIO, format: "mp3" }, ...inputs },
       provider,
@@ -22,7 +22,7 @@ describe("Audio Transcriptions Converters", () => {
   describe("convertFormDataToTranscriptionsBody", () => {
     test("should convert form fields and the file upload", async () => {
       const form = new FormData();
-      form.append("model", "openai/whisper-1");
+      form.append("model", "openai/gpt-transcribe");
       form.append("file", new File([AUDIO], "clip.M4A"));
       form.append("prompt", "123");
       form.append("temperature", "0");
@@ -30,7 +30,7 @@ describe("Audio Transcriptions Converters", () => {
       form.append("chunking_strategy", '{"type":"server_vad","threshold":0.5}');
 
       expect(await convertFormDataToTranscriptionsBody(form)).toEqual({
-        model: "openai/whisper-1",
+        model: "openai/gpt-transcribe",
         prompt: "123",
         temperature: 0,
         timestamp_granularities: ["word"],
@@ -80,7 +80,7 @@ describe("Audio Transcriptions Converters", () => {
           response_format: "verbose_json",
         },
         "openai.transcription",
-        "whisper-1",
+        "custom-whisper",
       );
 
       expect(options.audio).toBe(AUDIO);
@@ -92,6 +92,56 @@ describe("Audio Transcriptions Converters", () => {
       expect(forwarded({ prompt: "hi" }, "azure.transcription")).toEqual({
         openai: { prompt: "hi" },
       });
+    });
+
+    test("should force json and no timestamps for GPT Transcribe", () => {
+      expect(
+        forwarded(
+          { language: "en", prompt: "hi", temperature: 0.2 },
+          "openai.transcription",
+          "gpt-transcribe",
+        ),
+      ).toEqual({
+        openai: {
+          language: "en",
+          prompt: "hi",
+          temperature: 0.2,
+          responseFormat: "json",
+          timestampGranularities: [],
+        },
+      });
+    });
+
+    test("should reject timestamp granularities for GPT Transcribe", () => {
+      expect(() =>
+        convertToTranscriptionCallOptions(
+          { input_audio: { data: AUDIO, format: "mp3" }, timestamp_granularities: ["word"] },
+          "openai.transcription",
+          "gpt-transcribe",
+        ),
+      ).toThrow("Parameter 'timestamp_granularities' is not supported by model 'gpt-transcribe'");
+    });
+
+    test("should map MAI-Transcribe params into the azure namespace", () => {
+      expect(
+        forwarded(
+          { language: "en", timestamp_granularities: ["word"], diarization: { enabled: true } },
+          "azure.transcription",
+          "mai-transcribe-2",
+        ),
+      ).toEqual({
+        azure: { locales: ["en"], timestamps: "word", diarization: { enabled: true } },
+      });
+    });
+
+    test("should reject prompt for MAI-Transcribe", () => {
+      expect(() =>
+        convertToTranscriptionCallOptions(
+          { input_audio: { data: AUDIO, format: "mp3" }, prompt: "hi" },
+          "azure.transcription",
+          "mai-transcribe-2",
+        ),
+      ).toThrow("Parameter 'prompt' is not supported by model 'mai-transcribe-2'");
     });
 
     test("should request verbose_json from Groq", () => {
@@ -123,7 +173,7 @@ describe("Audio Transcriptions Converters", () => {
         convertToTranscriptionCallOptions(
           { input_audio: { data: AUDIO, format: "mp3" }, temperature: 0.5 },
           "google.vertex.transcription",
-          "chirp_3",
+          "gemini-3.5-transcribe",
         ),
       ).toThrow("Parameter 'temperature' is not supported by provider 'vertex'");
     });

@@ -210,7 +210,7 @@ const gw = gateway({
 
 Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini/Chirp`, `Meta Llama`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS/Whisper`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
+Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `Microsoft MAI-Transcribe`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
 
 #### Model Presets
 
@@ -260,10 +260,12 @@ Out-of-the-box model presets:
 - **Google** — `@hebo-ai/gateway/models/google`  
   Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3-preview`, `v3.x`, `embeddings`, `transcription`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
-  Chirp: `chirp` (`v2`, `v3`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
   Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+
+- **Microsoft** — `@hebo-ai/gateway/models/microsoft`  
+  MAI-Transcribe: `maiTranscribe` (`v1.5`, `v2`, `v1.x`, `v2.x`, `latest`, `all`)
 
 - **MiniMax** — `@hebo-ai/gateway/models/minimax`  
   MiniMax: `minimax` (`v2`, `v3`, `v2.x`, `v3.x`, `latest`, `all`)
@@ -272,11 +274,9 @@ Out-of-the-box model presets:
   Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k3`, `k2.x`, `k3.x`, `latest`, `all`)
 
 - **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v6.1`, `v5.x`, `v6.x`, `codex`, `pro`, `latest`, `all`)
+  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v6.1`, `v5.x`, `v6.x`, `codex`, `pro`, `transcription`, `latest`, `all`)
   GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
   Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
-  Whisper: `whisper` (`v1`, `v3`, `v1.x`, `v3.x`, `latest`, `all`)
-  GPT Transcribe: `gptTranscribe` (`v4o`, `latest`, `all`)
 
 - **Voyage** — `@hebo-ai/gateway/models/voyage`  
   Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
@@ -686,7 +686,7 @@ It supports:
 - `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration` and timestamped `segments`, built from the AI SDK's normalized result.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
-- Built-in presets for OpenAI / Azure (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`, `gpt-4o-transcribe-diarize`), Groq (`whisper-large-v3`, `whisper-large-v3-turbo`), xAI (`grok-voice-transcribe-2.0`) and Vertex (`chirp-2`, `chirp-3`, `gemini-3.5-transcribe`).
+- Built-in presets for OpenAI / Azure (`openai/gpt-transcribe`), Azure Speech (`microsoft/mai-transcribe-2`, `microsoft/mai-transcribe-1.5`), xAI (`xai/grok-voice-transcribe-2.0`) and Vertex (`google/gemini-3.5-transcribe`).
 
 ```ts
 import fs from "node:fs";
@@ -696,7 +696,7 @@ import OpenAI from "openai";
 const client = new OpenAI({ baseURL: "http://localhost:3000/v1/gateway", apiKey: "..." });
 
 const { text, usage } = await client.audio.transcriptions.create({
-  model: "openai/whisper-large-v3-turbo",
+  model: "openai/gpt-transcribe",
   file: fs.createReadStream("meeting.mp3"),
 });
 ```
@@ -709,6 +709,7 @@ Transcription models use `modalities: { input: ["audio"], output: ["text"] }` in
 - **`response_format`**: `text`, `srt` and `vtt` (rejected with `400`).
 - **`stream`**: Streaming transcription (rejected with `400`).
 - **URL input**: `input_audio.url` / `source_url`.
+- **GPT Transcribe hints**: `languages` and `keywords` are not forwarded yet (the AI SDK's OpenAI provider drops them); `language` and `prompt` work. Only `json` output is returned, so `verbose_json` has no segments.
 - **Model middleware**: `modelMiddlewareMatcher` does not apply, since the AI SDK has no transcription model middleware. Hooks run as usual.
 - **Retries**: Upstream calls are not retried (other endpoints retry twice via the AI SDK), so large uploads are never re-sent automatically. Retry on the client if needed.
 

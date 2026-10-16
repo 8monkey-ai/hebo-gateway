@@ -5,7 +5,7 @@ import type {
 } from "@ai-sdk/provider";
 
 import { GatewayError } from "../../errors/gateway";
-import { extractProviderNamespace } from "../../middleware/common";
+import { extractProviderNamespace, isMaiTranscribeModel } from "../../middleware/common";
 import { readJson, readRequestBody } from "../../utils/body";
 import { toResponse } from "../../utils/response";
 import type { InputAudioFormat } from "../shared/schema";
@@ -145,6 +145,9 @@ export type TranscriptionCallOptions = Omit<
 const unsupportedParam = (param: string, provider: string) =>
   new GatewayError(`Parameter '${param}' is not supported by provider '${provider}'`, 400);
 
+const unsupportedModelParam = (param: string, modelId: string) =>
+  new GatewayError(`Parameter '${param}' is not supported by model '${modelId}'`, 400);
+
 /**
  * Maps the OpenAI transcription params to the native options of each provider.
  * Keys are snake_case: `forwardTranscriptionParams` camelizes them.
@@ -160,7 +163,8 @@ function toProviderParams(
   const { language, prompt, temperature, timestamp_granularities } = inputs;
   const out: Record<string, unknown> = {};
 
-  switch (namespace) {
+  const api = namespace === "azure" && isMaiTranscribeModel(modelId) ? "azure-speech" : namespace;
+  switch (api) {
     case "xai":
       if (prompt !== undefined) throw unsupportedParam("prompt", namespace);
       if (temperature !== undefined) throw unsupportedParam("temperature", namespace);
@@ -179,10 +183,30 @@ function toProviderParams(
       }
       return out;
 
+    // MAI-Transcribe runs on the Azure Speech API; other Azure deployments are Azure OpenAI.
+    case "azure-speech":
+      if (prompt !== undefined) throw unsupportedModelParam("prompt", modelId);
+      if (temperature !== undefined) throw unsupportedModelParam("temperature", modelId);
+      if (language !== undefined) out["locales"] = [language];
+      if (timestamp_granularities !== undefined) {
+        out["timestamps"] = timestamp_granularities.includes("word") ? "word" : "segment";
+      }
+      return out;
+
     default:
       if (language !== undefined) out["language"] = language;
       if (prompt !== undefined) out["prompt"] = prompt;
       if (temperature !== undefined) out["temperature"] = temperature;
+      if (modelId.startsWith("gpt-transcribe")) {
+        if (timestamp_granularities !== undefined) {
+          throw unsupportedModelParam("timestamp_granularities", modelId);
+        }
+        // GPT Transcribe only returns `json`. Without these, the AI SDK sends `verbose_json`
+        // and `timestamp_granularities[]=segment` as soon as any OpenAI option is set.
+        out["response_format"] = "json";
+        out["timestamp_granularities"] = [];
+        return out;
+      }
       if (timestamp_granularities !== undefined) {
         out["timestamp_granularities"] = timestamp_granularities;
       }

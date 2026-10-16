@@ -6,7 +6,7 @@ import {
 } from "@ai-sdk/google-vertex/maas";
 import { customProvider } from "ai";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
+import type { ModelId } from "../../models/types";
 import { withCanonicalIds } from "../registry";
 
 /**
@@ -61,12 +61,6 @@ const createMaas = (provider: GoogleVertexProvider): GoogleVertexMaasProvider =>
   });
 };
 
-const MAPPING = {
-  // Cloud Speech-to-Text model IDs use underscores.
-  "google/chirp-2": "chirp_2",
-  "google/chirp-3": "chirp_3",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
-
 export const withCanonicalIdsForVertex = (
   provider: GoogleVertexProvider,
   extraMapping?: Record<ModelId, string>,
@@ -75,7 +69,7 @@ export const withCanonicalIdsForVertex = (
   let maas: GoogleVertexMaasProvider | undefined;
 
   const base = withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
+    mapping: extraMapping,
     options: {
       stripNamespace: true,
       normalizeDelimiters: ["anthropic"],

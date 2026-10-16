@@ -1,16 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
+import { createAzure } from "@ai-sdk/azure";
 import { createVertex } from "@ai-sdk/google-vertex";
-import { createGroq } from "@ai-sdk/groq";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import OpenAI, { APIError, toFile } from "openai";
 
 import type { ModelCatalog, ProviderRegistry } from "../../../src";
-import { chirp3, gemini35Transcribe } from "../../../src/models/google";
-import { gpt4oMiniTranscribe, whisper1, whisperLargeV3Turbo } from "../../../src/models/openai";
+import { gemini35Transcribe } from "../../../src/models/google";
+import { maiTranscribe2 } from "../../../src/models/microsoft";
+import { gptTranscribe } from "../../../src/models/openai";
 import { grokVoiceTranscribe20 } from "../../../src/models/xai";
-import { withCanonicalIdsForGroq } from "../../../src/providers/groq";
+import { withCanonicalIdsForAzure } from "../../../src/providers/azure";
 import { withCanonicalIdsForOpenAI } from "../../../src/providers/openai";
 import { withCanonicalIdsForVertex } from "../../../src/providers/vertex";
 import { withCanonicalIdsForXai } from "../../../src/providers/xai";
@@ -21,14 +22,16 @@ import { GOOGLE_VERTEX_PROJECT, createTestServer, type TestServer } from "../sha
 // ---------------------------------------------------------------------------
 
 const OPENAI_API_KEY = process.env["OPENAI_API_KEY"];
-const GROQ_API_KEY = process.env["GROQ_API_KEY"];
 const XAI_API_KEY = process.env["XAI_API_KEY"];
+// MAI-Transcribe uses the Azure Speech API of a Foundry resource in a supported region.
+const AZURE_RESOURCE_NAME = process.env["AZURE_RESOURCE_NAME"];
+const AZURE_API_KEY = process.env["AZURE_API_KEY"];
 // Vertex transcription rejects Express Mode API keys, so it needs Google Cloud credentials.
 const hasVertexCredentials = !!(
   GOOGLE_VERTEX_PROJECT &&
   (process.env["GOOGLE_APPLICATION_CREDENTIALS"] ?? process.env["GOOGLE_CLIENT_EMAIL"])
 );
-// Chirp 3 and Gemini 3.5 Transcribe are served from the `us` multi-region.
+// Gemini 3.5 Transcribe is served from the `us` multi-region.
 const VERTEX_TRANSCRIPTION_LOCATION = process.env["GOOGLE_VERTEX_TRANSCRIPTION_LOCATION"] ?? "us";
 
 const SPEECH = new Uint8Array(
@@ -171,36 +174,28 @@ function describeTranscriptions(options: SuiteOptions) {
 // Providers
 // ---------------------------------------------------------------------------
 
-const openaiProviders = () => ({
-  openai: withCanonicalIdsForOpenAI(createOpenAI({ apiKey: OPENAI_API_KEY })),
-});
-
 describeTranscriptions({
-  name: "OpenAI - whisper-1",
+  name: "OpenAI - gpt-transcribe",
   enabled: !!OPENAI_API_KEY,
-  providers: openaiProviders,
-  catalog: () => whisper1({ providers: ["openai"] }),
-  model: "openai/whisper-1",
+  providers: () => ({
+    openai: withCanonicalIdsForOpenAI(createOpenAI({ apiKey: OPENAI_API_KEY })),
+  }),
+  catalog: () => gptTranscribe({ providers: ["openai"] }),
+  model: "openai/gpt-transcribe",
   usage: "seconds",
-  segments: true,
-});
-
-describeTranscriptions({
-  name: "OpenAI - gpt-4o-mini-transcribe",
-  enabled: !!OPENAI_API_KEY,
-  providers: openaiProviders,
-  catalog: () => gpt4oMiniTranscribe({ providers: ["openai"] }),
-  model: "openai/gpt-4o-mini-transcribe",
-  usage: "tokens",
   segments: false,
 });
 
 describeTranscriptions({
-  name: "Groq - whisper-large-v3-turbo",
-  enabled: !!GROQ_API_KEY,
-  providers: () => ({ groq: withCanonicalIdsForGroq(createGroq({ apiKey: GROQ_API_KEY })) }),
-  catalog: () => whisperLargeV3Turbo(),
-  model: "openai/whisper-large-v3-turbo",
+  name: "Azure - mai-transcribe-2",
+  enabled: !!(AZURE_RESOURCE_NAME && AZURE_API_KEY),
+  providers: () => ({
+    azure: withCanonicalIdsForAzure(
+      createAzure({ resourceName: AZURE_RESOURCE_NAME, apiKey: AZURE_API_KEY }),
+    ),
+  }),
+  catalog: () => maiTranscribe2(),
+  model: "microsoft/mai-transcribe-2",
   usage: "seconds",
   segments: true,
 });
@@ -219,16 +214,6 @@ const vertexProviders = () => ({
   vertex: withCanonicalIdsForVertex(
     createVertex({ project: GOOGLE_VERTEX_PROJECT!, location: VERTEX_TRANSCRIPTION_LOCATION }),
   ),
-});
-
-describeTranscriptions({
-  name: "Vertex - chirp-3",
-  enabled: hasVertexCredentials,
-  providers: vertexProviders,
-  catalog: () => chirp3(),
-  model: "google/chirp-3",
-  usage: "seconds",
-  segments: true,
 });
 
 describeTranscriptions({

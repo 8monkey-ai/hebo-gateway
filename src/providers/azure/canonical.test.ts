@@ -22,13 +22,19 @@ test("withCanonicalIdsForAzure > supports custom deployment names", () => {
   expect(model.modelId).toBe("production-luna");
 });
 
-test("withCanonicalIdsForAzure > maps transcription deployments", () => {
+test("withCanonicalIdsForAzure > maps transcription models", () => {
   const provider = withCanonicalIdsForAzure(azure, {
-    "openai/gpt-4o-transcribe": "production-transcribe",
+    "openai/gpt-transcribe": "production-transcribe",
   });
 
-  expect(provider.transcriptionModel!("openai/whisper-1").modelId).toBe("whisper-1");
-  expect(provider.transcriptionModel!("openai/gpt-4o-transcribe").modelId).toBe(
+  expect(provider.transcriptionModel!("openai/gpt-transcribe").modelId).toBe(
     "production-transcribe",
+  );
+  // MAI-Transcribe IDs must stay MAI model names: the Azure SDK routes them to the Speech API.
+  expect(provider.transcriptionModel!("microsoft/mai-transcribe-2").modelId).toBe(
+    "mai-transcribe-2",
+  );
+  expect(provider.transcriptionModel!("microsoft/mai-transcribe-1.5").modelId).toBe(
+    "mai-transcribe-1.5",
   );
 });

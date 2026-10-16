@@ -35,12 +35,7 @@ export const CANONICAL_MODEL_IDS = [
   "openai/gpt-6.1-sol",
   "openai/text-embedding-3-small",
   "openai/text-embedding-3-large",
-  "openai/whisper-1",
-  "openai/whisper-large-v3",
-  "openai/whisper-large-v3-turbo",
-  "openai/gpt-4o-transcribe",
-  "openai/gpt-4o-mini-transcribe",
-  "openai/gpt-4o-transcribe-diarize",
+  "openai/gpt-transcribe",
   // Amazon
   "amazon/nova-micro",
   "amazon/nova-lite",
@@ -59,8 +54,6 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemini-3.8-flash",
   "google/gemini-embedding-2",
   "google/gemini-3.5-transcribe",
-  "google/chirp-2",
-  "google/chirp-3",
   "google/gemma-3-1b",
   "google/gemma-3-4b",
   "google/gemma-3-12b",
@@ -69,6 +62,9 @@ export const CANONICAL_MODEL_IDS = [
   "google/gemma-4-e4b",
   "google/gemma-4-26b-a4b",
   "google/gemma-4-31b",
+  // Microsoft
+  "microsoft/mai-transcribe-1.5",
+  "microsoft/mai-transcribe-2",
   // Meta
   "meta/llama-3.1-8b",
   "meta/llama-3.1-70b",

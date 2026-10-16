@@ -143,6 +143,10 @@
       "types": "./dist/models/meta/index.d.ts",
       "import": "./dist/models/meta/index.js"
     },
+    "./models/microsoft": {
+      "types": "./dist/models/microsoft/index.d.ts",
+      "import": "./dist/models/microsoft/index.js"
+    },
     "./models/minimax": {
       "types": "./dist/models/minimax/index.d.ts",
       "import": "./dist/models/minimax/index.js"

@@ -116,7 +116,10 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
     // Convert inputs to AI SDK call options.
     const body = ctx.body;
     const { model: _model, trace: _trace, ...inputs } = body;
-    const forward = forwardTranscriptionParams(transcriptionModel.provider);
+    const forward = forwardTranscriptionParams(
+      transcriptionModel.provider,
+      transcriptionModel.modelId,
+    );
     const transcriptionOptions = forward.transformParams(
       convertToTranscriptionCallOptions(
         inputs,

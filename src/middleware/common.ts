@@ -172,16 +172,22 @@ export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingMod
   return forwardEmbeddingParams(extractProviderNamespace(provider));
 }
 
+// The Azure SDK routes these model IDs to the Speech API (matched case-insensitively).
+export const isMaiTranscribeModel = (modelId: string) =>
+  modelId.toLowerCase().startsWith("mai-transcribe");
+
 /**
  * Transcription counterpart of `forwardParamsMiddleware`.
  * The AI SDK has no transcription model middleware, so this transforms call options
  * and results directly: snake_case params in providerOptions are converted to camelCase
  * and moved into providerOptions[providerName], and providerMetadata is snakized.
  */
-export function forwardTranscriptionParams(provider: string) {
+export function forwardTranscriptionParams(provider: string, modelId: string) {
   const namespace = extractProviderNamespace(provider);
-  // Azure's OpenAI-backed transcription model only reads `openai` provider options.
-  const providerName = namespace === "azure" ? "openai" : namespace;
+  // Azure OpenAI deployments only read `openai` provider options; MAI-Transcribe models
+  // go to the Azure Speech API, which reads `azure` options.
+  const providerName =
+    namespace === "azure" && !isMaiTranscribeModel(modelId) ? "openai" : namespace;
 
   return {
     transformParams: <T extends TranscriptionModelV4CallOptions>(params: T): T => {

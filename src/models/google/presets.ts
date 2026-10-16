@@ -64,17 +64,6 @@ export const gemini35Transcribe = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
-export const chirp2 = presetFor<CanonicalModelId, CatalogModel>()("google/chirp-2" as const, {
-  ...TRANSCRIPTION_BASE,
-  name: "Chirp 2",
-} satisfies CatalogModel);
-
-export const chirp3 = presetFor<CanonicalModelId, CatalogModel>()("google/chirp-3" as const, {
-  ...TRANSCRIPTION_BASE,
-  name: "Chirp 3",
-  created: "2025-10-13",
-} satisfies CatalogModel);
-
 export const gemini3FlashPreview = presetFor<CanonicalModelId, CatalogModel>()(
   "google/gemini-3-flash-preview" as const,
   {
@@ -320,19 +309,4 @@ export const gemini = {
   embeddings: [...geminiAtomic["embeddings"]],
   transcription: [...geminiAtomic["transcription"]],
   all: Object.values(geminiAtomic).flat(),
-} as const;
-
-// ---------------------------------------------------------------------------
-// Chirp groups
-// ---------------------------------------------------------------------------
-
-const chirpAtomic = {
-  v2: [chirp2],
-  v3: [chirp3],
-} as const;
-
-export const chirp = {
-  ...chirpAtomic,
-  latest: [...chirpAtomic["v3"]],
-  all: Object.values(chirpAtomic).flat(),
 } as const;

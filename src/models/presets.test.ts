@@ -6,11 +6,12 @@ import { claude } from "./anthropic/presets";
 import { defineModelCatalog } from "./catalog";
 import { command, embed, north } from "./cohere/presets";
 import { deepseek } from "./deepseek/presets";
-import { chirp, gemini, gemma } from "./google/presets";
+import { gemini, gemma } from "./google/presets";
 import { llama } from "./meta/presets";
+import { maiTranscribe } from "./microsoft/presets";
 import { minimax } from "./minimax/presets";
 import { kimi } from "./moonshot/presets";
-import { gpt, gptOss, gptTranscribe, textEmbeddings, whisper } from "./openai/presets";
+import { gpt, gptOss, textEmbeddings } from "./openai/presets";
 import { CANONICAL_MODEL_IDS } from "./types";
 import { voyage } from "./voyage/presets";
 import { grok } from "./xai/presets";
@@ -26,15 +27,13 @@ const catalog = defineModelCatalog(
   deepseek.all,
   gemini.all,
   gemma.all,
-  chirp.all,
   llama.all,
+  maiTranscribe.all,
   minimax.all,
   kimi.all,
   gpt.all,
   gptOss.all,
   textEmbeddings.all,
-  whisper.all,
-  gptTranscribe.all,
   voyage.all,
   grok.all,
   glm.all,
