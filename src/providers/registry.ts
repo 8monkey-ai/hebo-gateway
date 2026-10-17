@@ -1,5 +1,10 @@
 import type { ProviderV3, ProviderV4 } from "@ai-sdk/provider";
-import { customProvider, type EmbeddingModel, type LanguageModel } from "ai";
+import {
+  customProvider,
+  type EmbeddingModel,
+  type LanguageModel,
+  type TranscriptionModel,
+} from "ai";
 
 import { GatewayError } from "../errors/gateway";
 import { logger } from "../logger";
@@ -10,7 +15,7 @@ export const resolveProvider = (args: {
   providers: ProviderRegistry;
   models: ModelCatalog;
   modelId: ModelId;
-  operation: "chat" | "embeddings" | "messages" | "responses";
+  operation: "chat" | "embeddings" | "messages" | "responses" | "transcriptions";
 }): ProviderV4 => {
   const { providers, models, modelId, operation } = args;
 
@@ -24,6 +29,18 @@ export const resolveProvider = (args: {
   if (catalogModel.modalities && !catalogModel.modalities.output.includes(modality)) {
     throw new GatewayError(
       `Model '${modelId}' does not support '${modality}' output`,
+      422,
+      "MODEL_UNSUPPORTED_OPERATION",
+    );
+  }
+
+  if (
+    operation === "transcriptions" &&
+    catalogModel.modalities &&
+    !catalogModel.modalities.input.includes("audio")
+  ) {
+    throw new GatewayError(
+      `Model '${modelId}' does not support 'audio' input`,
       422,
       "MODEL_UNSUPPORTED_OPERATION",
     );
@@ -120,6 +137,9 @@ export const withCanonicalIds = (
 
   const languageModel: (id: string) => LanguageModel = (id) => provider.languageModel(id);
   const embeddingModel: (id: string) => EmbeddingModel = (id) => provider.embeddingModel(id);
+  // Optional in the provider spec: only wrapped when the provider supports transcription.
+  const transcriptionModel: ((id: string) => TranscriptionModel) | undefined =
+    provider.transcriptionModel && ((id) => provider.transcriptionModel!(id));
 
   const fallbackProvider = needsFallbackWrap
     ? ({
@@ -139,13 +159,20 @@ export const withCanonicalIds = (
           logger.debug(`[canonical] mapped ${id} to ${mapped}`);
           return embeddingModel(mapped);
         },
+        ...(transcriptionModel && {
+          transcriptionModel: (id: string) => {
+            const mapped = applyFallbackAffixes(normalizeId(id));
+            logger.debug(`[canonical] mapped ${id} to ${mapped}`);
+            return transcriptionModel(mapped);
+          },
+        }),
       } as ProviderV3 | ProviderV4)
     : provider;
 
   const mapModels = <T>(fn?: (id: string) => T) => {
     const out = {} as Record<string, T>;
 
-    // Some providers don't have languageModel / embeddingModel
+    // Some providers don't have languageModel / embeddingModel / transcriptionModel
     if (fn === undefined) return out;
 
     for (const [k, v] of Object.entries(mapping ?? {})) {
@@ -166,6 +193,7 @@ export const withCanonicalIds = (
   return customProvider({
     languageModels: mapModels(languageModel),
     embeddingModels: mapModels(embeddingModel),
+    transcriptionModels: mapModels(transcriptionModel),
     fallbackProvider,
   });
 };

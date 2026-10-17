@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createAzure } from "@ai-sdk/azure";
 import { createVoyage } from "voyage-ai-provider";
 
 import { claudeHaiku45 } from "../models/anthropic/presets";
+import { maiTranscribe2 } from "../models/microsoft/presets";
 import { gpt56Sol } from "../models/openai/presets";
 import { voyage4Lite } from "../models/voyage/presets";
+import { withCanonicalIdsForAzure } from "../providers/azure/canonical";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical";
 import { resolveProvider } from "./registry";
@@ -105,4 +108,39 @@ test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
   // Same Bedrock ID as on Converse, but served with the Anthropic request shape.
   expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
   expect(languageModel.provider).toBe("bedrock.anthropic.messages");
+});
+
+test("MAI-Transcribe 2 resolves through Azure for transcriptions", () => {
+  const config = {
+    providers: {
+      azure: withCanonicalIdsForAzure(createAzure({ resourceName: "test", apiKey: "test-key" })),
+    },
+    models: {
+      ...maiTranscribe2(),
+    },
+  };
+
+  const modelId = "microsoft/mai-transcribe-2";
+
+  const provider = resolveProvider({
+    providers: config.providers,
+    models: config.models,
+    modelId,
+    operation: "transcriptions",
+  });
+
+  const transcriptionModel = provider.transcriptionModel!(modelId);
+  expect(transcriptionModel.modelId).toBe("mai-transcribe-2");
+  expect(transcriptionModel.provider).toBe("azure.transcription");
+});
+
+test("transcriptions reject models without audio input", () => {
+  expect(() =>
+    resolveProvider({
+      providers: {},
+      models: { ...gpt56Sol() },
+      modelId: "openai/gpt-5.6-sol",
+      operation: "transcriptions",
+    }),
+  ).toThrow("Model 'openai/gpt-5.6-sol' does not support 'audio' input");
 });

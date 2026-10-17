@@ -8,6 +8,7 @@ import { command, embed, north } from "./cohere/presets";
 import { deepseek } from "./deepseek/presets";
 import { gemini, gemma } from "./google/presets";
 import { llama } from "./meta/presets";
+import { maiTranscribe } from "./microsoft/presets";
 import { minimax } from "./minimax/presets";
 import { kimi } from "./moonshot/presets";
 import { gpt, gptOss, textEmbeddings } from "./openai/presets";
@@ -27,6 +28,7 @@ const catalog = defineModelCatalog(
   gemini.all,
   gemma.all,
   llama.all,
+  maiTranscribe.all,
   minimax.all,
   kimi.all,
   gpt.all,

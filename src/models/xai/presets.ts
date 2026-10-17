@@ -72,6 +72,18 @@ export const grok47 = presetFor<CanonicalModelId, CatalogModel>()("xai/grok-4.7"
   context: 500000,
 } satisfies CatalogModel);
 
+export const grokVoiceTranscribe20 = presetFor<CanonicalModelId, CatalogModel>()(
+  "xai/grok-voice-transcribe-2.0" as const,
+  {
+    name: "Grok Voice Transcribe 2.0",
+    modalities: {
+      input: ["audio"] as const,
+      output: ["text"] as const,
+    },
+    providers: ["xai"] as const satisfies readonly CanonicalProviderId[],
+  } satisfies CatalogModel,
+);
+
 const grokAtomic = {
   "v4.2": [grok42],
   "v4.3": [grok43],
@@ -79,6 +91,7 @@ const grokAtomic = {
   "v4.5": [grok45],
   "v4.6": [grok46],
   "v4.7": [grok47],
+  transcription: [grokVoiceTranscribe20],
 } as const;
 
 const grokGroups = {} as const;
@@ -87,5 +100,6 @@ export const grok = {
   ...grokAtomic,
   ...grokGroups,
   latest: [...grokAtomic["v4.7"]],
+  transcription: [...grokAtomic["transcription"]],
   all: Object.values(grokAtomic).flat(),
 } as const;

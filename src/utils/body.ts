@@ -11,6 +11,10 @@ const SUPPORTED_ENCODINGS = new Set(["gzip", "deflate"]);
  */
 export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024;
 
+/** Parses a body stream as JSON (for use with `readRequestBody`). */
+export const readJson = (body: ReadableStream<Uint8Array>): Promise<unknown> =>
+  new Response(body).json();
+
 /**
  * Parse a request body as JSON, handling Content-Encoding decompression
  * and enforcing a decompressed body size limit for compressed requests.
@@ -41,7 +45,13 @@ export function parseRequestBody(
     throw new GatewayError(`Unsupported Content-Encoding: ${encoding}`, 415);
   }
 
-  return parseCompressedBody(request, encoding as CompressionFormat, maxBodySize);
+  return readCompressedBody(
+    request,
+    encoding as CompressionFormat,
+    maxBodySize,
+    readJson,
+    "Invalid JSON",
+  );
 }
 
 async function parsePlainBody(request: Request): Promise<unknown> {
@@ -52,11 +62,66 @@ async function parsePlainBody(request: Request): Promise<unknown> {
   }
 }
 
-async function parseCompressedBody(
+/**
+ * Read a request body through `read`, handling Content-Encoding decompression and
+ * enforcing `maxBodySize` on both plain and decompressed bodies.
+ *
+ * Unlike `parseRequestBody`, the limit also applies to plain bodies: endpoints that
+ * accept binary uploads (e.g. audio) use this so oversized payloads are rejected
+ * even when the framework does not enforce a request size limit.
+ *
+ * The limit is enforced on the stream itself, so the body is never buffered
+ * separately from what `read` (e.g. `Response.json()` / `.formData()`) holds.
+ *
+ * @param request - Incoming Web API Request
+ * @param maxBodySize - Maximum body size in bytes. `0` disables the limit.
+ * @param read - Consumes the (decompressed) body stream, e.g. `readJson`
+ * @param invalidMessage - 400 message when `read` fails on a fully received body
+ */
+export function readRequestBody<T>(
+  request: Request,
+  maxBodySize: number,
+  read: (body: ReadableStream<Uint8Array>) => Promise<T>,
+  invalidMessage: string,
+): Promise<T> {
+  const encoding = request.headers.get("content-encoding");
+
+  if (!encoding || encoding === "identity") {
+    // Cheap early rejection when the client declares an oversized body.
+    const contentLength = Number(request.headers.get("content-length"));
+    if (maxBodySize > 0 && contentLength > maxBodySize) {
+      throw new GatewayError(`Request body too large (exceeds ${maxBodySize} byte limit)`, 413);
+    }
+    if (!request.body) {
+      throw new GatewayError("Empty request body", 400);
+    }
+    return readLimited(request.body, maxBodySize, read, {
+      tooLarge: `Request body too large (exceeds ${maxBodySize} byte limit)`,
+      invalidStream: "Invalid request body",
+      invalidContent: invalidMessage,
+    });
+  }
+
+  if (!SUPPORTED_ENCODINGS.has(encoding)) {
+    throw new GatewayError(`Unsupported Content-Encoding: ${encoding}`, 415);
+  }
+
+  return readCompressedBody(
+    request,
+    encoding as CompressionFormat,
+    maxBodySize,
+    read,
+    invalidMessage,
+  );
+}
+
+function readCompressedBody<T>(
   request: Request,
   encoding: CompressionFormat,
   maxBodySize: number,
-): Promise<unknown> {
+  read: (body: ReadableStream<Uint8Array>) => Promise<T>,
+  invalidMessage: string,
+): Promise<T> {
   if (!request.body) {
     throw new GatewayError("Empty request body", 400);
   }
@@ -68,49 +133,48 @@ async function parseCompressedBody(
     throw new GatewayError("Invalid compressed body", 400);
   }
 
-  // Read decompressed bytes with size enforcement.
-  const chunks: Uint8Array[] = [];
-  let totalSize = 0;
+  return readLimited(decompressedStream, maxBodySize, read, {
+    tooLarge: `Decompressed body too large (exceeds ${maxBodySize} byte limit)`,
+    invalidStream: "Invalid compressed body",
+    invalidContent: invalidMessage,
+  });
+}
+
+async function readLimited<T>(
+  stream: ReadableStream<Uint8Array>,
+  maxBodySize: number,
+  read: (body: ReadableStream<Uint8Array>) => Promise<T>,
+  messages: { tooLarge: string; invalidStream: string; invalidContent: string },
+): Promise<T> {
+  // Failures are classified with flags rather than error identity: runtimes may wrap
+  // stream errors surfaced through `Response.json()` / `.formData()`.
+  let size = 0;
+  let tooLarge = false;
+  let complete = false;
+
+  const limited = stream.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        size += chunk.byteLength;
+        if (maxBodySize > 0 && size > maxBodySize) {
+          tooLarge = true;
+          controller.error(new Error(messages.tooLarge));
+        } else {
+          controller.enqueue(chunk);
+        }
+      },
+      flush() {
+        complete = true;
+      },
+    }),
+  );
 
   try {
-    const reader = decompressedStream.getReader();
-    // oxlint-disable-next-line no-await-in-loop -- sequential stream reads
-    for (let r = await reader.read(); !r.done; r = await reader.read()) {
-      totalSize += r.value.byteLength;
-      if (maxBodySize > 0 && totalSize > maxBodySize) {
-        void reader.cancel();
-        throw new GatewayError(
-          `Decompressed body too large (exceeds ${maxBodySize} byte limit)`,
-          413,
-        );
-      }
-      chunks.push(r.value);
-    }
-  } catch (error) {
-    if (error instanceof GatewayError) throw error;
-    throw new GatewayError("Invalid compressed body", 400);
-  }
-
-  if (totalSize === 0) {
-    throw new GatewayError("Empty request body", 400);
-  }
-
-  // Concatenate chunks and parse JSON.
-  try {
-    let text: string;
-    if (chunks.length === 1) {
-      text = new TextDecoder().decode(chunks[0]);
-    } else {
-      const combined = new Uint8Array(totalSize);
-      let offset = 0;
-      for (const chunk of chunks) {
-        combined.set(chunk, offset);
-        offset += chunk.byteLength;
-      }
-      text = new TextDecoder().decode(combined);
-    }
-    return JSON.parse(text);
+    return await read(limited);
   } catch {
-    throw new GatewayError("Invalid JSON", 400);
+    if (tooLarge) throw new GatewayError(messages.tooLarge, 413);
+    if (!complete) throw new GatewayError(messages.invalidStream, 400);
+    if (size === 0) throw new GatewayError("Empty request body", 400);
+    throw new GatewayError(messages.invalidContent, 400);
   }
 }

@@ -1,6 +1,7 @@
 import type { ProviderV4 } from "@ai-sdk/provider";
 import type { Attributes, Tracer } from "@opentelemetry/api";
 
+import type { Transcriptions, TranscriptionsBody } from "./endpoints/audio-transcriptions/schema";
 import type {
   ChatCompletions,
   ChatCompletionsBody,
@@ -21,7 +22,8 @@ export type GatewayOperation =
   | "messages"
   | "responses"
   | "models"
-  | "conversations";
+  | "conversations"
+  | "transcriptions";
 
 /**
  * Per-request context shared across handlers and hooks.
@@ -55,7 +57,7 @@ export type GatewayContext = {
   /**
    * Parsed body from the request.
    */
-  body?: ChatCompletionsBody | EmbeddingsBody | MessagesBody | ResponsesBody;
+  body?: ChatCompletionsBody | EmbeddingsBody | MessagesBody | ResponsesBody | TranscriptionsBody;
   /**
    * Incoming model ID.
    */
@@ -88,7 +90,8 @@ export type GatewayContext = {
     | Model
     | ModelList
     | Responses
-    | ResponsesStream;
+    | ResponsesStream
+    | Transcriptions;
   /**
    * Response object returned by the handler.
    * Handlers may set this to a `ResponseInit` containing upstream response
@@ -149,7 +152,8 @@ export type GatewayHooks = {
    */
   onRequest?: (ctx: OnRequestHookContext) => void | Response | Promise<void | Response>;
   /**
-   * Runs after request JSON is parsed and validated for chat completions / embeddings / responses.
+   * Runs after the request body is parsed and validated for chat completions / embeddings /
+   * messages / responses / transcriptions.
    * @returns Replacement parsed body, or undefined to keep original.
    */
   before?: (
@@ -160,7 +164,15 @@ export type GatewayHooks = {
     | EmbeddingsBody
     | MessagesBody
     | ResponsesBody
-    | Promise<void | ChatCompletionsBody | EmbeddingsBody | MessagesBody | ResponsesBody>;
+    | TranscriptionsBody
+    | Promise<
+        | void
+        | ChatCompletionsBody
+        | EmbeddingsBody
+        | MessagesBody
+        | ResponsesBody
+        | TranscriptionsBody
+      >;
   /**
    * Maps a user-provided model ID or alias to a canonical ID.
    * @returns Canonical model ID or undefined to keep original.
@@ -190,6 +202,7 @@ export type GatewayHooks = {
     | ModelList
     | Responses
     | ResponsesStream
+    | Transcriptions
     | Promise<
         | void
         | ChatCompletions
@@ -201,6 +214,7 @@ export type GatewayHooks = {
         | ModelList
         | Responses
         | ResponsesStream
+        | Transcriptions
       >;
   /**
    * Runs after the lifecycle has produced the final Response.
@@ -300,6 +314,7 @@ export type GatewayConfig = {
      * Maximum *decompressed* request body size in bytes for gzip/deflate-encoded requests.
      * Plain (uncompressed) request body size limits should be configured at the
      * framework or server level (e.g. Hono `bodyLimit` middleware, Bun `maxRequestBodySize`).
+     * `/audio/transcriptions` also enforces it on plain JSON and multipart bodies.
      * Set to `0` to disable the decompressed size limit.
      * Defaults to 10 MB (10,485,760 bytes).
      */

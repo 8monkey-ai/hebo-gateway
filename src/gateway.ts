@@ -1,4 +1,5 @@
 import { parseConfig } from "./config";
+import { audioTranscriptions } from "./endpoints/audio-transcriptions/handler";
 import { chatCompletions } from "./endpoints/chat-completions/handler";
 import { conversations } from "./endpoints/conversations/handler";
 import { embeddings } from "./endpoints/embeddings/handler";
@@ -22,6 +23,7 @@ export function gateway(config: GatewayConfig) {
 
   const routes = {
     ["/chat/completions"]: chatCompletions(parsedConfig),
+    ["/audio/transcriptions"]: audioTranscriptions(parsedConfig),
     ["/embeddings"]: embeddings(parsedConfig),
     ["/models"]: models(parsedConfig),
     ["/conversations"]: conversations(parsedConfig),

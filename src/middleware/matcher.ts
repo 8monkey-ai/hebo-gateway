@@ -4,13 +4,25 @@ import { logger } from "../logger";
 import type { ModelId } from "../models/types";
 import type { ProviderId } from "../providers/types";
 import { addSpanEvent } from "../telemetry/span";
-import { forwardParamsEmbeddingMiddleware, forwardParamsMiddleware } from "./common";
-import { debugEmbeddingFinalParamsMiddleware, debugFinalParamsMiddleware } from "./debug";
+import {
+  forwardParamsEmbeddingMiddleware,
+  forwardParamsMiddleware,
+  forwardParamsTranscriptionMiddleware,
+} from "./common";
+import {
+  debugEmbeddingFinalParamsMiddleware,
+  debugFinalParamsMiddleware,
+  debugTranscriptionFinalParamsMiddleware,
+} from "./debug";
+import type { TranscriptionModelMiddleware } from "./transcription";
 
 type MiddlewareEntries = {
   language?: LanguageModelMiddleware[];
   embedding?: EmbeddingModelMiddleware[];
+  transcription?: TranscriptionModelMiddleware[];
 };
+
+type MiddlewareKind = "text" | "embedding" | "transcription";
 
 type Rule = {
   pattern: string;
@@ -18,7 +30,10 @@ type Rule = {
   stored: MiddlewareEntries;
 };
 
-type ModelMiddleware = LanguageModelMiddleware | EmbeddingModelMiddleware;
+type ModelMiddleware =
+  | LanguageModelMiddleware
+  | EmbeddingModelMiddleware
+  | TranscriptionModelMiddleware;
 
 class SimpleMatcher {
   private rules: Rule[] = [];
@@ -27,6 +42,7 @@ class SimpleMatcher {
     const stored: MiddlewareEntries = {
       language: entry.language ? [...entry.language] : undefined,
       embedding: entry.embedding ? [...entry.embedding] : undefined,
+      transcription: entry.transcription ? [...entry.transcription] : undefined,
     };
 
     this.rules.push({ pattern, test: compilePattern(pattern), stored });
@@ -87,8 +103,18 @@ class ModelMiddlewareMatcher {
     }) as EmbeddingModelMiddleware[];
   }
 
+  forTranscription(modelId: ModelId, providerId: ProviderId): TranscriptionModelMiddleware[] {
+    return this.resolve({
+      kind: "transcription",
+      modelId,
+      providerId,
+      forward: () => forwardParamsTranscriptionMiddleware(providerId),
+      debug: debugTranscriptionFinalParamsMiddleware,
+    }) as TranscriptionModelMiddleware[];
+  }
+
   resolve(options: {
-    kind: "text" | "embedding";
+    kind: MiddlewareKind;
     modelId?: ModelId;
     providerId?: ProviderId;
     forward?: ModelMiddleware | (() => ModelMiddleware);
@@ -133,11 +159,12 @@ class ModelMiddlewareMatcher {
     return out;
   }
 
-  private collect(entries: MiddlewareEntries[], kind: "text" | "embedding"): ModelMiddleware[] {
+  private collect(entries: MiddlewareEntries[], kind: MiddlewareKind): ModelMiddleware[] {
     const out: ModelMiddleware[] = [];
     for (const s of entries) {
       if (kind === "text") out.push(...(s.language ?? []));
-      else out.push(...(s.embedding ?? []));
+      else if (kind === "embedding") out.push(...(s.embedding ?? []));
+      else out.push(...(s.transcription ?? []));
     }
     return out;
   }
