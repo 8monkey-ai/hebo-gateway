@@ -110,3 +110,16 @@ test("MaaS override falls back to GOOGLE_VERTEX_PROJECT when no project is confi
 
   expect(url).toContain("/projects/test-project/");
 });
+
+// ---------------------------------------------------------------------------
+// Transcription models
+// ---------------------------------------------------------------------------
+
+test("gemini-3.5-transcribe resolves without an explicit mapping", () => {
+  const provider = withCanonicalIdsForVertex(
+    createVertex({ project: "test-project", location: "global" }),
+  );
+  const model = provider.transcriptionModel("google/gemini-3.5-transcribe");
+  expect(model.modelId).toBe("gemini-3.5-transcribe");
+  expect(model.provider).toBe("google.vertex.transcription");
+});

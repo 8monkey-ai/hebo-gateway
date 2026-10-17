@@ -6,6 +6,7 @@ import type {
   ChatCompletionsReasoningEffort,
 } from "../../endpoints/chat-completions/schema";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
 export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -168,4 +169,24 @@ modelMiddlewareMatcher.useForModel("openai/text-embedding-*", {
 
 modelMiddlewareMatcher.useForModel("openai/gpt-*", {
   language: [openAIReasoningMiddleware, openAIPromptCachingMiddleware],
+});
+
+// GPT Transcribe only returns `json`. Without these, the AI SDK sends `verbose_json` and
+// `timestamp_granularities[]=segment` as soon as any OpenAI option is set.
+// Explicit `timestamp_granularities` are forwarded as-is for upstream to validate.
+// FUTURE: Remove this middleware when the SDK stops adding unsupported defaults:
+// https://github.com/vercel/ai/issues/23495
+export const openAITranscribeMiddleware: TranscriptionModelMiddleware = {
+  transformParams: ({ params }) => {
+    const unknown = ((params.providerOptions ??= {})["unknown"] ??= {});
+
+    unknown["response_format"] = "json";
+    unknown["timestamp_granularities"] ??= [];
+
+    return params;
+  },
+};
+
+modelMiddlewareMatcher.useForModel("openai/gpt-transcribe*", {
+  transcription: [openAITranscribeMiddleware],
 });

@@ -1,13 +1,16 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { CANONICAL_MODEL_IDS } from "../../models/types";
+import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware";
 import {
   openAIDimensionsMiddleware,
   openAIPromptCachingMiddleware,
   openAIReasoningMiddleware,
+  openAITranscribeMiddleware,
 } from "./middleware";
 
 test("openAI middleware > matching patterns", () => {
@@ -367,5 +370,59 @@ test("openAIReasoningMiddleware > should default reasoning effort when enabled w
       openai: {},
       unknown: {},
     },
+  });
+});
+
+describe("openAITranscribeMiddleware", () => {
+  test("should match GPT Transcribe for transcriptions only", () => {
+    expect(
+      modelMiddlewareMatcher.resolve({ kind: "transcription", modelId: "openai/gpt-transcribe" }),
+    ).toContain(openAITranscribeMiddleware);
+    expect(
+      modelMiddlewareMatcher.resolve({ kind: "text", modelId: "openai/gpt-transcribe" }),
+    ).not.toContain(openAITranscribeMiddleware);
+  });
+
+  test("should force json and no timestamps", async () => {
+    expect(
+      await transcriptionProviderOptions({
+        modelId: "openai/gpt-transcribe",
+        provider: "openai.transcription",
+        providerModelId: "gpt-transcribe",
+        inputs: { language: "en", prompt: "hi", temperature: 0.2 },
+      }),
+    ).toEqual({
+      openai: {
+        language: "en",
+        prompt: "hi",
+        temperature: 0.2,
+        responseFormat: "json",
+        timestampGranularities: [],
+      },
+    });
+  });
+
+  test("should apply to custom Azure deployment names", async () => {
+    expect(
+      modelMiddlewareMatcher.forTranscription("openai/gpt-transcribe", "azure.transcription"),
+    ).toContain(azureTranscriptionOptionsMiddleware);
+    expect(
+      await transcriptionProviderOptions({
+        modelId: "openai/gpt-transcribe",
+        provider: "azure.transcription",
+        providerModelId: "production-transcribe",
+      }),
+    ).toEqual({ openai: { responseFormat: "json", timestampGranularities: [] } });
+  });
+
+  test("should forward explicit timestamp granularities for upstream to validate", async () => {
+    expect(
+      await transcriptionProviderOptions({
+        modelId: "openai/gpt-transcribe",
+        provider: "openai.transcription",
+        providerModelId: "gpt-transcribe",
+        inputs: { timestamp_granularities: ["word"] },
+      }),
+    ).toEqual({ openai: { responseFormat: "json", timestampGranularities: ["word"] } });
   });
 });

@@ -69,6 +69,15 @@ const EMBEDDINGS_BASE = {
   providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
+const TRANSCRIPTION_BASE = {
+  modalities: {
+    input: ["audio"] as const,
+    output: ["text"] as const,
+  },
+  capabilities: ["temperature"] as const,
+  providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],
+} satisfies DeepPartial<CatalogModel>;
+
 export const gpt52 = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-5.2" as const, {
   ...GPT_BASE,
   name: "GPT-5.2",
@@ -224,6 +233,15 @@ export const textEmbedding3Large = presetFor<CanonicalModelId, CatalogModel>()(
   } satisfies CatalogModel,
 );
 
+export const gptTranscribe = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-transcribe" as const,
+  {
+    ...TRANSCRIPTION_BASE,
+    name: "GPT Transcribe",
+    created: "2026-07-29",
+  } satisfies CatalogModel,
+);
+
 export const gptOss20b = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/gpt-oss-20b" as const,
   {
@@ -262,6 +280,7 @@ const gptAtomic = {
   "v6.1": [gpt61Sol],
   codex: [gpt53CodexSpark],
   pro: [gpt52Pro, gpt54Pro, gpt55Pro],
+  transcription: [gptTranscribe],
 } as const;
 
 const gptGroups = {

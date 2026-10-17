@@ -252,4 +252,10 @@ describe("getGenAiGeneralAttributes", () => {
     const attrs = getGenAiGeneralAttributes(baseCtx, "required");
     expect(attrs["gen_ai.request.service_tier"]).toBeUndefined();
   });
+
+  test("names the transcriptions operation 'transcription'", () => {
+    const ctx: GatewayContext = { ...baseCtx, operation: "transcriptions" };
+    const attrs = getGenAiGeneralAttributes(ctx, "required");
+    expect(attrs["gen_ai.operation.name"]).toBe("transcription");
+  });
 });

@@ -2,6 +2,7 @@ import type { JSONObject } from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { ProviderId } from "../providers/types";
+import type { TranscriptionModelMiddleware } from "./transcription";
 
 function snakeToCamel(key: string): string {
   // oxlint-disable-next-line prefer-includes
@@ -166,4 +167,32 @@ export function forwardParamsMiddleware(provider: string): LanguageModelMiddlewa
 
 export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingModelMiddleware {
   return forwardEmbeddingParams(extractProviderNamespace(provider));
+}
+
+/**
+ * Transcription counterpart of `forwardLanguageParams`: snake_case params in providerOptions
+ * are converted to camelCase and moved into providerOptions[providerName], and
+ * providerMetadata is snakized.
+ */
+export function forwardTranscriptionParams(providerName: ProviderId): TranscriptionModelMiddleware {
+  return {
+    transformParams: ({ params }) => {
+      // Skip empty options: some providers apply extra defaults once their namespace exists.
+      if (params.providerOptions && Object.keys(params.providerOptions).length > 0) {
+        processOptions(params.providerOptions, providerName);
+      }
+      return params;
+    },
+    wrapGenerate: async ({ doGenerate }) => {
+      const result = await doGenerate();
+      if (result.providerMetadata) processMetadata(result.providerMetadata);
+      return result;
+    },
+  };
+}
+
+export function forwardParamsTranscriptionMiddleware(
+  provider: string,
+): TranscriptionModelMiddleware {
+  return forwardTranscriptionParams(extractProviderNamespace(provider));
 }

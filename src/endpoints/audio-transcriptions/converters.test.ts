@@ -1,0 +1,194 @@
+import { describe, expect, test } from "bun:test";
+
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
+import {
+  convertFormDataToTranscriptionsBody,
+  convertToTranscriptionCallOptions,
+  toTranscriptions,
+  toTranscriptionsUsage,
+} from "./converters";
+
+const AUDIO = new Uint8Array([1, 2, 3]);
+
+describe("Audio Transcriptions Converters", () => {
+  describe("convertFormDataToTranscriptionsBody", () => {
+    test("should convert form fields and the file upload", async () => {
+      const form = new FormData();
+      form.append("model", "openai/gpt-transcribe");
+      form.append("file", new File([AUDIO], "clip.M4A"));
+      form.append("prompt", "123");
+      form.append("temperature", "0");
+      form.append("timestamp_granularities[]", "word");
+      form.append("chunking_strategy", '{"type":"server_vad","threshold":0.5}');
+
+      expect(await convertFormDataToTranscriptionsBody(form)).toEqual({
+        model: "openai/gpt-transcribe",
+        prompt: "123",
+        temperature: 0,
+        timestamp_granularities: ["word"],
+        chunking_strategy: { type: "server_vad", threshold: 0.5 },
+        input_audio: { data: AUDIO, format: "m4a" },
+      });
+    });
+
+    test("should ignore __proto__ fields", async () => {
+      const form = new FormData();
+      form.append("__proto__", '{"model":"injected"}');
+      form.append("__proto__[]", "x");
+      form.append("file", new File([AUDIO], "clip.mp3"));
+
+      const body = await convertFormDataToTranscriptionsBody(form);
+      expect(Object.getPrototypeOf(body)).toBe(Object.prototype);
+      expect(body["model"]).toBeUndefined();
+    });
+
+    test("should truncate long filenames in format errors", async () => {
+      const form = new FormData();
+      form.append("file", new File([AUDIO], `${"a".repeat(500)}.xyz`));
+
+      try {
+        await convertFormDataToTranscriptionsBody(form);
+        expect.unreachable("should have thrown");
+      } catch (err: unknown) {
+        expect((err as Error).message).toContain(`'${"a".repeat(100)}…'`);
+      }
+    });
+
+    test("should derive the format from the media type when the filename has no extension", async () => {
+      const form = new FormData();
+      form.append("file", new File([AUDIO], "blob", { type: "audio/x-wav" }));
+
+      const body = await convertFormDataToTranscriptionsBody(form);
+      expect(body["input_audio"]).toEqual({ data: AUDIO, format: "wav" });
+    });
+  });
+
+  describe("convertToTranscriptionCallOptions", () => {
+    test("should pass params as unknown provider options", () => {
+      const options = convertToTranscriptionCallOptions({
+        input_audio: { data: AUDIO, format: "mp3" },
+        language: "en",
+        response_format: "verbose_json",
+        chunking_strategy: "auto",
+      });
+
+      expect(options.audio).toBe(AUDIO);
+      expect(options.mediaType).toBe("audio/mpeg");
+      expect(options.providerOptions).toEqual({
+        unknown: { language: "en", chunking_strategy: "auto" },
+      });
+    });
+
+    test("should send no provider options without params", () => {
+      const options = convertToTranscriptionCallOptions({
+        input_audio: { data: AUDIO, format: "mp3" },
+      });
+
+      expect(options.providerOptions).toEqual({});
+    });
+
+    test("should forward params into the provider namespace", async () => {
+      expect(
+        await transcriptionProviderOptions({
+          modelId: "custom/transcribe",
+          provider: "openai.transcription",
+          inputs: { language: "en", timestamp_granularities: ["word"], chunking_strategy: "auto" },
+        }),
+      ).toEqual({
+        openai: { language: "en", timestampGranularities: ["word"], chunkingStrategy: "auto" },
+      });
+    });
+
+    test.each([
+      ["mp3", "audio/mpeg"],
+      ["mpga", "audio/mpeg"],
+      ["m4a", "audio/mp4"],
+      ["x-aac", "audio/aac"],
+      ["flac", "audio/flac"],
+      ["wav", "audio/wav"],
+    ] as const)("should map format '%s' to media type '%s'", (format, mediaType) => {
+      expect(
+        convertToTranscriptionCallOptions({ input_audio: { data: AUDIO, format } }).mediaType,
+      ).toBe(mediaType);
+    });
+  });
+
+  describe("toTranscriptions", () => {
+    const result = {
+      text: "hello world",
+      segments: [{ text: "hello world", startSecond: 0, endSecond: 1 }],
+      language: "en",
+      durationInSeconds: 1,
+      warnings: [],
+      response: { timestamp: new Date(0), modelId: "transcribe-1" },
+    };
+
+    test("should return words separately from segments in verbose_json", () => {
+      const words = [
+        { text: "hello", startSecond: 0, endSecond: 0.5 },
+        { text: "world", startSecond: 0.5, endSecond: 1 },
+      ];
+
+      expect(toTranscriptions({ ...result, segments: [], words }, "verbose_json")).toMatchObject({
+        segments: [],
+        words: [
+          { word: "hello", start: 0, end: 0.5 },
+          { word: "world", start: 0.5, end: 1 },
+        ],
+      });
+    });
+
+    test("should omit words when the provider reports none", () => {
+      const transcriptions = toTranscriptions(result, "verbose_json");
+      expect(transcriptions.segments).toEqual([{ id: 0, start: 0, end: 1, text: "hello world" }]);
+      expect(transcriptions).not.toHaveProperty("words");
+    });
+
+    test("should omit segments and words in json", () => {
+      expect(toTranscriptions({ ...result, words: [] })).toEqual({
+        text: "hello world",
+        usage: { seconds: 1 },
+      });
+    });
+  });
+
+  describe("toTranscriptionsUsage", () => {
+    test("should map OpenAI token usage", () => {
+      expect(
+        toTranscriptionsUsage({
+          type: "tokens",
+          input_tokens: 14,
+          output_tokens: 45,
+          total_tokens: 59,
+        }),
+      ).toEqual({ input_tokens: 14, output_tokens: 45, total_tokens: 59, seconds: undefined });
+    });
+
+    test("should map OpenAI duration usage", () => {
+      expect(toTranscriptionsUsage({ type: "duration", seconds: 3 }, 2.9)).toEqual({
+        input_tokens: undefined,
+        output_tokens: undefined,
+        total_tokens: undefined,
+        seconds: 3,
+      });
+    });
+
+    test("should map Gemini usage metadata", () => {
+      expect(toTranscriptionsUsage({ promptTokenCount: 10, candidatesTokenCount: 5 })).toEqual({
+        input_tokens: 10,
+        output_tokens: 5,
+        total_tokens: 15,
+        seconds: undefined,
+      });
+    });
+
+    test("should fall back to the audio duration", () => {
+      expect(toTranscriptionsUsage(undefined, 4.2)).toEqual({
+        input_tokens: undefined,
+        output_tokens: undefined,
+        total_tokens: undefined,
+        seconds: 4.2,
+      });
+    });
+  });
+});

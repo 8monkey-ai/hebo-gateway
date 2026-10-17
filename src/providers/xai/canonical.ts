@@ -11,6 +11,7 @@ const MAPPING = {
   "xai/grok-4.5": "grok-4.5",
   "xai/grok-4.6": "grok-4.6",
   "xai/grok-4.7": "grok-4.7",
+  "xai/grok-voice-transcribe-2.0": "grok-voice-transcribe-2.0",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForXai = (

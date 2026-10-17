@@ -2,7 +2,12 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
-import { type ModelCatalog, defineModelCatalog, gateway } from "../../../src";
+import {
+  type ModelCatalog,
+  type ProviderRegistry,
+  defineModelCatalog,
+  gateway,
+} from "../../../src";
 import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
 import { withCanonicalIdsForVertex } from "../../../src/providers/vertex";
 
@@ -92,6 +97,31 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
     providers: {
       vertex: withCanonicalIdsForVertex(vertex),
     },
+    models: defineModelCatalog(...presets),
+    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+  });
+
+  const server = Bun.serve({
+    port: 0,
+    maxRequestBodySize: 10 * 1024 * 1024,
+    fetch: (request) => gw.handler(request),
+  });
+
+  return { server, baseUrl: `http://localhost:${server.port}` };
+}
+
+// ---------------------------------------------------------------------------
+// Generic
+// ---------------------------------------------------------------------------
+
+export function createTestServer(
+  providers: ProviderRegistry,
+  ...presets: ModelCatalogInput[]
+): TestServer {
+  const gw = gateway({
+    basePath: "/v1",
+    logger: { level: "warn" },
+    providers,
     models: defineModelCatalog(...presets),
     advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
   });

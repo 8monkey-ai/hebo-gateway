@@ -15,7 +15,13 @@ import { z } from "zod";
 
 import { GatewayError } from "../../errors/gateway";
 import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url";
-import type { ReasoningConfig, ReasoningEffort, CacheControl, ServiceTier } from "./schema";
+import type {
+  ReasoningConfig,
+  ReasoningEffort,
+  CacheControl,
+  InputAudioFormat,
+  ServiceTier,
+} from "./schema";
 
 /**
  * Runtime context type parameter for the AI SDK result types.
@@ -69,6 +75,24 @@ export function parseBase64(base64: string): Uint8Array {
  * (`data:application/pdf;base64,...`) or as bare base64. Returns the base64
  * payload plus the declared media type when the data URL carried one.
  */
+// Maps `input_audio.format` to the standard media type (`audio/${format}` is not always valid).
+const AUDIO_MEDIA_TYPES: Record<InputAudioFormat, string> = {
+  "x-aac": "audio/aac",
+  flac: "audio/flac",
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  mpeg: "audio/mpeg",
+  mpga: "audio/mpeg",
+  mp4: "audio/mp4",
+  ogg: "audio/ogg",
+  pcm: "audio/pcm",
+  wav: "audio/wav",
+  webm: "audio/webm",
+};
+
+export const toAudioMediaType = (format: InputAudioFormat): string =>
+  AUDIO_MEDIA_TYPES[format] ?? `audio/${format}`;
+
 export function parseFileInput(data: string): { data: string; mediaType?: string } {
   if (isDataUrl(data)) {
     const { mimeType, dataStart } = parseDataUrl(data);

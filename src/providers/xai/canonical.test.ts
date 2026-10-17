@@ -61,3 +61,11 @@ test("withCanonicalIdsForXai > supports extra mapping override", () => {
   const model = provider.languageModel("xai/custom-model");
   expect(model.modelId).toBe("custom-native-id");
 });
+
+test("withCanonicalIdsForXai > maps grok-voice-transcribe-2.0 transcription model", () => {
+  const provider = withCanonicalIdsForXai(xai);
+
+  const model = provider.transcriptionModel!("xai/grok-voice-transcribe-2.0");
+  expect(model.modelId).toBe("grok-voice-transcribe-2.0");
+  expect(model.provider).toBe("xai.transcription");
+});
