@@ -165,6 +165,8 @@ const toNumber = (value: unknown) => (typeof value === "number" ? value : undefi
  * Normalizes the provider-native usage object into a flat shape.
  * Handles OpenAI (`input_tokens` / `seconds`) and Gemini (`promptTokenCount`) usage,
  * and falls back to the audio duration when the provider reports no usage.
+ * FUTURE: Replace provider field-name fallbacks with standard SDK usage counters:
+ * https://github.com/vercel/ai/issues/23484
  */
 export function toTranscriptionsUsage(
   usage?: JSONObject,
@@ -196,6 +198,8 @@ export function toTranscriptions(
 
   if (responseFormat === "verbose_json") {
     transcriptions.task = "transcribe";
+    // Upstream language parsing/contract fixes should flow through without model-specific mapping:
+    // https://github.com/vercel/ai/issues/23490 and https://github.com/vercel/ai/issues/23492
     transcriptions.language = result.language;
     transcriptions.duration = result.durationInSeconds;
     transcriptions.segments = result.segments.map((segment, id) => ({

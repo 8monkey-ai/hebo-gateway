@@ -132,6 +132,8 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
     });
 
     // Execute request. Calls `doGenerate` directly: `transcribe()` drops provider usage.
+    // FUTURE: Revisit using `transcribe()` once it returns usage; preserve headers and no retries:
+    // https://github.com/vercel/ai/issues/23484
     // This also means no AI SDK retries (other endpoints retry twice by default): failed
     // uploads are not re-sent, so clients own retries for large, slow audio requests.
     const timeout = cfg.advanced.timeouts.normal;

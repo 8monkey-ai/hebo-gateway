@@ -3,6 +3,8 @@ import type { TranscriptionModelMiddleware } from "../../middleware/transcriptio
 
 // Azure OpenAI transcription deployments only read `openai` provider options, while the
 // Azure Speech / MAI APIs (selected via `api`) read `azure` options.
+// FUTURE: Remove this remapping once Azure OpenAI accepts `azure` options:
+// https://github.com/vercel/ai/issues/23488
 export const azureTranscriptionOptionsMiddleware: TranscriptionModelMiddleware = {
   transformParams: ({ params }) => {
     const { azure, ...providerOptions } = params.providerOptions ?? {};

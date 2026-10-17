@@ -7,6 +7,7 @@ import type {
 /**
  * Transcription counterpart of the AI SDK's `LanguageModelMiddleware`.
  * The AI SDK has no transcription model middleware, so the gateway defines a minimal one.
+ * FUTURE: Use the SDK wrapper when available: https://github.com/vercel/ai/issues/23491
  */
 export type TranscriptionModelMiddleware = {
   transformParams?: (options: {
@@ -31,6 +32,8 @@ export type TranscriptionResult = TranscriptionModelV4Result & { words?: Transcr
 /**
  * For models whose AI SDK `segments` are single words (e.g. xAI, Vertex Gemini):
  * moves them to `words`, matching OpenAI's `words` / `segments` split.
+ * FUTURE: Use SDK word timings and retire this mapping and the custom result extension:
+ * https://github.com/vercel/ai/issues/23486
  */
 export const wordSegmentsMiddleware: TranscriptionModelMiddleware = {
   wrapGenerate: async ({ doGenerate }) => {

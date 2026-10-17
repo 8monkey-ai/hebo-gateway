@@ -25,11 +25,15 @@ export type TranscriptionsInputAudio = z.infer<typeof TranscriptionsInputAudioSc
 
 export const TranscriptionsInputsSchema = z.object({
   input_audio: TranscriptionsInputAudioSchema,
+  // FUTURE: Add typed `languages`/`keywords` once the SDK forwards GPT Transcribe's hints:
+  // https://github.com/vercel/ai/issues/23487
   language: z.string().optional(),
   prompt: z.string().optional(),
   temperature: z.number().min(0).max(1).optional(),
   response_format: TranscriptionsResponseFormatSchema.optional(),
   timestamp_granularities: z.array(TranscriptionsTimestampGranularitySchema).optional(),
+  // FUTURE: Add a streaming response path once SDK file-upload streaming is available:
+  // https://github.com/vercel/ai/issues/23493
   stream: z.literal(false, { error: "Streaming transcription is not supported" }).optional(),
 });
 export type TranscriptionsInputs = z.infer<typeof TranscriptionsInputsSchema>;

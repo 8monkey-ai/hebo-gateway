@@ -15,6 +15,7 @@ export const maiTranscribeMiddleware: TranscriptionModelMiddleware = {
       delete unknown["language"];
     }
 
+    // FUTURE: Use shared SDK timing options instead: https://github.com/vercel/ai/issues/23486
     const granularities = unknown["timestamp_granularities"] as string[] | undefined;
     if (granularities !== undefined) {
       unknown["timestamps"] = granularities.includes("word") ? "word" : "segment";

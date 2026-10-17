@@ -167,6 +167,7 @@ export const geminiTranscribeMiddleware: TranscriptionModelMiddleware = {
       delete unknown["language"];
     }
 
+    // FUTURE: Use shared SDK timing options instead: https://github.com/vercel/ai/issues/23486
     const granularities = unknown["timestamp_granularities"] as string[] | undefined;
     if (granularities !== undefined) {
       if (granularities.includes("word")) unknown["word_timestamp"] = true;
