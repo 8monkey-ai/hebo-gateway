@@ -5,7 +5,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 const VOYAGE_BASE = {
   modalities: {
     input: ["text"] as const,
-    output: ["embedding"] as const,
+    output: ["embeddings"] as const,
   },
   providers: ["voyage"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;

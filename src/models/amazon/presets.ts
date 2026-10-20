@@ -13,7 +13,7 @@ const NOVA_TEXT_BASE = {
 
 const NOVA_MULTIMODAL_BASE = {
   modalities: {
-    input: ["text", "image", "video", "pdf"] as const,
+    input: ["text", "image", "video", "file"] as const,
     output: ["text"] as const,
   },
   capabilities: ["attachments", "tool_call", "temperature"] as const,
@@ -22,8 +22,8 @@ const NOVA_MULTIMODAL_BASE = {
 
 const NOVA_EMBEDDINGS_BASE = {
   modalities: {
-    input: ["text", "image", "audio", "video", "pdf"] as const,
-    output: ["embedding"] as const,
+    input: ["text", "image", "audio", "video", "file"] as const,
+    output: ["embeddings"] as const,
   },
   providers: ["bedrock"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;

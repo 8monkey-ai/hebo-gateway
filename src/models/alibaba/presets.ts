@@ -355,7 +355,7 @@ export const qwen38_27b = presetFor<CanonicalModelId, CatalogModel>()(
 const QWEN3_EMBEDDING_BASE = {
   modalities: {
     input: ["text"] as const,
-    output: ["embedding"] as const,
+    output: ["embeddings"] as const,
   },
   context: 32768,
   providers: ["alibaba", "azure", "deepinfra"] as const satisfies readonly CanonicalProviderId[],

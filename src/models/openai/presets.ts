@@ -64,7 +64,7 @@ const GPT_PRO_BASE = {
 const EMBEDDINGS_BASE = {
   modalities: {
     input: ["text"] as const,
-    output: ["embedding"] as const,
+    output: ["embeddings"] as const,
   },
   providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
@@ -72,7 +72,7 @@ const EMBEDDINGS_BASE = {
 const TRANSCRIPTION_BASE = {
   modalities: {
     input: ["audio"] as const,
-    output: ["text"] as const,
+    output: ["transcription"] as const,
   },
   capabilities: ["temperature"] as const,
   providers: ["openai", "azure"] as const satisfies readonly CanonicalProviderId[],

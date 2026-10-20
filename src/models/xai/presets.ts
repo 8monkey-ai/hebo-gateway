@@ -78,7 +78,7 @@ export const grokVoiceTranscribe20 = presetFor<CanonicalModelId, CatalogModel>()
     name: "Grok Voice Transcribe 2.0",
     modalities: {
       input: ["audio"] as const,
-      output: ["text"] as const,
+      output: ["transcription"] as const,
     },
     providers: ["xai"] as const satisfies readonly CanonicalProviderId[],
   } satisfies CatalogModel,

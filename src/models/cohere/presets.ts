@@ -34,15 +34,15 @@ const NORTH_BASE = {
 const EMBED_V3_BASE = {
   modalities: {
     input: ["text", "image"] as const,
-    output: ["embedding"] as const,
+    output: ["embeddings"] as const,
   },
   providers: ["cohere", "azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
 const EMBED_V4_BASE = {
   modalities: {
-    input: ["text", "image", "pdf"] as const,
-    output: ["embedding"] as const,
+    input: ["text", "image", "file"] as const,
+    output: ["embeddings"] as const,
   },
   providers: ["cohere", "azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;

@@ -81,9 +81,9 @@ Determine these attributes:
 
 | Attribute             | Values                                                                      | Notes                      |
 | --------------------- | --------------------------------------------------------------------------- | -------------------------- |
-| **Type**              | `text-generation` or `embedding`                                            | Determines output modality |
-| **Input modalities**  | `text`, `image`, `file`, `audio`, `video`, `pdf`                            | What the model accepts     |
-| **Output modalities** | `text`, `image`, `audio`, `video`, `embedding`                              | What the model produces    |
+| **Type**              | `text-generation`, `embeddings`, or `transcription`                         | Determines output modality |
+| **Input modalities**  | `text`, `image`, `file`, `audio`, `video`                                   | What the model accepts     |
+| **Output modalities** | `text`, `image`, `audio`, `video`, `embeddings`, `transcription`            | What the model produces    |
 | **Capabilities**      | `attachments`, `reasoning`, `tool_call`, `structured_output`, `temperature` | Feature flags              |
 
 ## Step 3: Choose the Canonical ID
@@ -147,7 +147,7 @@ export const embeddingModel = presetFor<CanonicalModelId, CatalogModel>()(
     context: 8192,
     modalities: {
       input: ["text"] as const,
-      output: ["embedding"] as const,
+      output: ["embeddings"] as const,
     },
     providers: ["provider-id"] as const,
   } satisfies CatalogModel,
@@ -156,16 +156,16 @@ export const embeddingModel = presetFor<CanonicalModelId, CatalogModel>()(
 
 ### Key fields
 
-| Field               | Type                | Required     | Description                              |
-| ------------------- | ------------------- | ------------ | ---------------------------------------- |
-| `name`              | `string`            | Optional     | Human-readable display name              |
-| `created`           | `string`            | Optional     | Release date (YYYY-MM-DD format)         |
-| `knowledge`         | `string`            | Optional     | Knowledge cutoff (YYYY-MM format)        |
-| `modalities.input`  | `readonly string[]` | Optional     | Supported input types                    |
-| `modalities.output` | `readonly string[]` | Optional     | Output types (`"text"` or `"embedding"`) |
-| `context`           | `number`            | Optional     | Context window in tokens                 |
-| `capabilities`      | `readonly string[]` | Optional     | Feature flags                            |
-| `providers`         | `readonly string[]` | **Required** | Which providers serve this model         |
+| Field               | Type                | Required     | Description                                                   |
+| ------------------- | ------------------- | ------------ | ------------------------------------------------------------- |
+| `name`              | `string`            | Optional     | Human-readable display name                                   |
+| `created`           | `string`            | Optional     | Release date (YYYY-MM-DD format)                              |
+| `knowledge`         | `string`            | Optional     | Knowledge cutoff (YYYY-MM format)                             |
+| `modalities.input`  | `readonly string[]` | Optional     | Supported input types                                         |
+| `modalities.output` | `readonly string[]` | Optional     | Output types (`"text"`, `"embeddings"`, or `"transcription"`) |
+| `context`           | `number`            | Optional     | Context window in tokens                                      |
+| `capabilities`      | `readonly string[]` | Optional     | Feature flags                                                 |
+| `providers`         | `readonly string[]` | **Required** | Which providers serve this model                              |
 
 ## Step 5: Update Grouped Exports
 

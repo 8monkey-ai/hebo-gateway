@@ -70,12 +70,12 @@ describe("Audio Transcriptions Handler", () => {
     models: {
       "transcribe-1": {
         name: "Transcribe",
-        modalities: { input: ["audio"], output: ["text"] },
+        modalities: { input: ["audio"], output: ["transcription"] },
         providers: ["openai"],
       },
       "grok-voice-transcribe-2.0": {
         name: "Grok Voice Transcribe",
-        modalities: { input: ["audio"], output: ["text"] },
+        modalities: { input: ["audio"], output: ["transcription"] },
         providers: ["xai"],
       },
       "gpt-oss-20b": {
@@ -85,7 +85,7 @@ describe("Audio Transcriptions Handler", () => {
       },
       "text-embedding-3-small": {
         name: "OpenAI Embedding Model",
-        modalities: { input: ["text"], output: ["embedding"] },
+        modalities: { input: ["text"], output: ["embeddings"] },
         providers: ["openai"],
       },
     },
@@ -236,7 +236,7 @@ describe("Audio Transcriptions Handler", () => {
     expect(res.status).toBe(413);
   });
 
-  test("should return 422 for models without audio input", async () => {
+  test("should return 422 for chat models", async () => {
     const res = await endpoint.handler(
       postJson(baseUrl, {
         model: "gpt-oss-20b",
@@ -247,12 +247,12 @@ describe("Audio Transcriptions Handler", () => {
     expect(await parseResponse(res)).toMatchObject({
       error: {
         code: "model_unsupported_operation",
-        message: "Model 'gpt-oss-20b' does not support 'audio' input",
+        message: "Model 'gpt-oss-20b' does not support 'transcription' output",
       },
     });
   });
 
-  test("should return 422 for models without text output", async () => {
+  test("should return 422 for embedding models", async () => {
     const res = await endpoint.handler(
       postJson(baseUrl, {
         model: "text-embedding-3-small",
@@ -273,7 +273,7 @@ describe("Audio Transcriptions Handler", () => {
       },
       models: {
         "transcribe-1": {
-          modalities: { input: ["audio"], output: ["text"] },
+          modalities: { input: ["audio"], output: ["transcription"] },
           providers: ["openai"],
         },
       },

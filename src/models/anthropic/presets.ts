@@ -17,18 +17,10 @@ const CLAUDE_BASE = {
   ] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
-const CLAUDE_PDF_MODALITIES = {
-  modalities: {
-    input: ["text", "image", "pdf", "file"] as const,
-    output: ["text"] as const,
-  },
-} satisfies DeepPartial<CatalogModel>;
-
 export const claudeHaiku45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-haiku-4.5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Haiku 4.5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     created: "2025-10-01",
@@ -40,7 +32,6 @@ export const claudeHaiku55 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-haiku-5.5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Haiku 5.5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -53,7 +44,6 @@ export const claudeSonnet55 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-5.5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Sonnet 5.5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -66,7 +56,6 @@ export const claudeSonnet5 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Sonnet 5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -79,7 +68,6 @@ export const claudeSonnet46 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-sonnet-4.6" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Sonnet 4.6",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     created: "2026-02-17",
@@ -91,7 +79,6 @@ export const claudeOpus45 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-4.5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Opus 4.5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     created: "2025-11-01",
@@ -103,7 +90,6 @@ export const claudeOpus55 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-5.5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Opus 5.5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -116,7 +102,6 @@ export const claudeOpus5 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Opus 5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -129,7 +114,6 @@ export const claudeOpus48 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-4.8" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Opus 4.8",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -142,7 +126,6 @@ export const claudeFable51 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-fable-5.1" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Fable 5.1",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -155,7 +138,6 @@ export const claudeFable5 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-fable-5" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Fable 5",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -168,7 +150,6 @@ export const claudeOpus47 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-4.7" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Opus 4.7",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     context: 1_000_000,
@@ -181,7 +162,6 @@ export const claudeOpus46 = presetFor<CanonicalModelId, CatalogModel>()(
   "anthropic/claude-opus-4.6" as const,
   {
     ...CLAUDE_BASE,
-    ...CLAUDE_PDF_MODALITIES,
     name: "Claude Opus 4.6",
     capabilities: [...CLAUDE_BASE.capabilities, "reasoning"],
     created: "2026-02-05",

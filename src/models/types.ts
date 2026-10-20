@@ -164,8 +164,8 @@ export type CatalogModel = {
   created?: string;
   knowledge?: string;
   modalities?: {
-    input: readonly ("text" | "image" | "file" | "audio" | "video" | "pdf")[];
-    output: readonly ("text" | "image" | "audio" | "video" | "embedding")[];
+    input: readonly ("text" | "image" | "file" | "audio" | "video")[];
+    output: readonly ("text" | "image" | "audio" | "video" | "embeddings" | "transcription")[];
   };
   context?: number;
   capabilities?: readonly (

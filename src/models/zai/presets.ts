@@ -80,7 +80,7 @@ export const glm53Flash = presetFor<CanonicalModelId, CatalogModel>()(
     context: 1_000_000,
     created: "2026-08-26",
     modalities: {
-      input: ["text", "image", "video", "pdf"] as const,
+      input: ["text", "image", "video", "file"] as const,
       output: ["text"] as const,
     },
     capabilities: [...GLM_5_BASE.capabilities, "attachments"],
