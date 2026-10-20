@@ -4,7 +4,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 
 const GEMINI_BASE = {
   modalities: {
-    input: ["text", "image", "pdf", "file", "audio", "video"] as const,
+    input: ["text", "image", "file", "audio", "video"] as const,
     output: ["text"] as const,
   },
   capabilities: [
@@ -28,7 +28,7 @@ const GEMINI_3X_BASE = {
 const GEMINI_EMBEDDINGS_BASE = {
   modalities: {
     input: ["text"] as const,
-    output: ["embedding"] as const,
+    output: ["embeddings"] as const,
   },
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
@@ -36,7 +36,7 @@ const GEMINI_EMBEDDINGS_BASE = {
 const TRANSCRIPTION_BASE = {
   modalities: {
     input: ["audio"] as const,
-    output: ["text"] as const,
+    output: ["transcription"] as const,
   },
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
@@ -46,8 +46,8 @@ export const geminiEmbedding2 = presetFor<CanonicalModelId, CatalogModel>()(
   {
     ...GEMINI_EMBEDDINGS_BASE,
     modalities: {
-      input: ["text", "image", "video", "audio", "pdf"] as const,
-      output: ["embedding"] as const,
+      input: ["text", "image", "video", "audio", "file"] as const,
+      output: ["embeddings"] as const,
     },
     name: "Gemini Embedding 2",
     created: "2026-04-23",

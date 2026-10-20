@@ -134,7 +134,7 @@ test("MAI-Transcribe 2 resolves through Azure for transcriptions", () => {
   expect(transcriptionModel.provider).toBe("azure.transcription");
 });
 
-test("transcriptions reject models without audio input", () => {
+test("transcriptions reject models without transcription output", () => {
   expect(() =>
     resolveProvider({
       providers: {},
@@ -142,5 +142,5 @@ test("transcriptions reject models without audio input", () => {
       modelId: "openai/gpt-5.6-sol",
       operation: "transcriptions",
     }),
-  ).toThrow("Model 'openai/gpt-5.6-sol' does not support 'audio' input");
+  ).toThrow("Model 'openai/gpt-5.6-sol' does not support 'transcription' output");
 });

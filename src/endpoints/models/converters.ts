@@ -19,10 +19,7 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
     owned_by: id.split("/")[0] ?? "system",
     architecture: {
       input_modalities: modalities?.input ?? [],
-      modality:
-        modalities?.input &&
-        modalities?.output &&
-        `${modalities.input?.[0]}->${modalities.output?.[0]}`,
+      modality: modalities && `${modalities.input.join("+")}->${modalities.output.join("+")}`,
       output_modalities: modalities?.output ?? [],
     },
     endpoints:

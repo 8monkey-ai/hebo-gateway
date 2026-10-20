@@ -18,7 +18,7 @@ test("gemini38Flash > should expose Gemini 3.8 Flash metadata", () => {
       name: "Gemini 3.8 Flash",
       created: "2026-09-02",
       modalities: {
-        input: ["text", "image", "pdf", "file", "audio", "video"],
+        input: ["text", "image", "file", "audio", "video"],
         output: ["text"],
       },
       capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
@@ -35,7 +35,7 @@ test("gemini37Flash > should expose Gemini 3.7 Flash metadata", () => {
       created: "2026-08-13",
       knowledge: "2026-03",
       modalities: {
-        input: ["text", "image", "pdf", "file", "audio", "video"],
+        input: ["text", "image", "file", "audio", "video"],
         output: ["text"],
       },
       capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
@@ -52,7 +52,7 @@ test("gemini36Flash > should expose Gemini 3.6 Flash metadata", () => {
       created: "2026-07-21",
       knowledge: "2026-03",
       modalities: {
-        input: ["text", "image", "pdf", "file", "audio", "video"],
+        input: ["text", "image", "file", "audio", "video"],
         output: ["text"],
       },
       capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
@@ -69,7 +69,7 @@ test("gemini35FlashLite > should expose Gemini 3.5 Flash-Lite metadata", () => {
       created: "2026-07-21",
       knowledge: "2026-03",
       modalities: {
-        input: ["text", "image", "pdf", "file", "audio", "video"],
+        input: ["text", "image", "file", "audio", "video"],
         output: ["text"],
       },
       capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
@@ -99,8 +99,8 @@ test("geminiEmbedding2 > should expose GA embedding metadata with multimodal inp
       created: "2026-04-23",
       context: 8192,
       modalities: {
-        input: ["text", "image", "video", "audio", "pdf"],
-        output: ["embedding"],
+        input: ["text", "image", "video", "audio", "file"],
+        output: ["embeddings"],
       },
       providers: ["vertex"],
     },

@@ -58,7 +58,7 @@ describe("Models Handler", () => {
           context: 200000,
           capabilities: ["reasoning", "tool_call"],
           architecture: {
-            modality: "text->text",
+            modality: "text+image->text",
             input_modalities: ["text", "image"],
             output_modalities: ["text"],
           },
@@ -72,7 +72,7 @@ describe("Models Handler", () => {
           name: "Gemini 3 Flash",
           context: 128000,
           architecture: {
-            modality: "text->text",
+            modality: "text+video->text",
             input_modalities: ["text", "video"],
             output_modalities: ["text"],
           },
@@ -98,11 +98,43 @@ describe("Models Handler", () => {
       context: 200000,
       capabilities: ["reasoning", "tool_call"],
       architecture: {
-        modality: "text->text",
+        modality: "text+image->text",
         input_modalities: ["text", "image"],
         output_modalities: ["text"],
       },
       endpoints: [{ tag: "anthropic" }],
+    });
+  });
+
+  describe("architecture.modality", () => {
+    const modalityOf = async (modalities: {
+      input: ("text" | "image" | "file" | "audio" | "video")[];
+      output: ("text" | "image" | "audio" | "video" | "embeddings" | "transcription")[];
+    }) => {
+      const res = await models({
+        providers: { openai: new MockProviderV4() },
+        models: { "test/model": { modalities, providers: ["openai"] } },
+      }).handler(new Request(`${baseUrl}/test/model`, { method: "GET" }));
+      const data = (await parseResponse(res)) as { architecture: { modality?: string } };
+      return data.architecture.modality;
+    };
+
+    test("joins all inputs and outputs", async () => {
+      expect(
+        await modalityOf({ input: ["text", "image", "file"], output: ["text", "image"] }),
+      ).toBe("text+image+file->text+image");
+    });
+
+    test("describes embeddings models", async () => {
+      expect(await modalityOf({ input: ["text"], output: ["embeddings"] })).toBe(
+        "text->embeddings",
+      );
+    });
+
+    test("describes transcription models", async () => {
+      expect(await modalityOf({ input: ["audio"], output: ["transcription"] })).toBe(
+        "audio->transcription",
+      );
     });
   });
 

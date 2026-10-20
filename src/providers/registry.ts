@@ -25,22 +25,15 @@ export const resolveProvider = (args: {
     throw new GatewayError(`Model '${modelId}' not found in catalog`, 422, "MODEL_NOT_FOUND");
   }
 
-  const modality = operation === "embeddings" ? "embedding" : "text";
+  const modality =
+    operation === "embeddings"
+      ? "embeddings"
+      : operation === "transcriptions"
+        ? "transcription"
+        : "text";
   if (catalogModel.modalities && !catalogModel.modalities.output.includes(modality)) {
     throw new GatewayError(
       `Model '${modelId}' does not support '${modality}' output`,
-      422,
-      "MODEL_UNSUPPORTED_OPERATION",
-    );
-  }
-
-  if (
-    operation === "transcriptions" &&
-    catalogModel.modalities &&
-    !catalogModel.modalities.input.includes("audio")
-  ) {
-    throw new GatewayError(
-      `Model '${modelId}' does not support 'audio' input`,
       422,
       "MODEL_UNSUPPORTED_OPERATION",
     );

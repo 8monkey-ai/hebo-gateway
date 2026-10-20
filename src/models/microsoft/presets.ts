@@ -6,7 +6,7 @@ import type { CanonicalModelId, CatalogModel } from "../types";
 const MAI_TRANSCRIBE_BASE = {
   modalities: {
     input: ["audio"] as const,
-    output: ["text"] as const,
+    output: ["transcription"] as const,
   },
   providers: ["azure"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
