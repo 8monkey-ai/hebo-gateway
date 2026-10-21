@@ -1064,7 +1064,7 @@ The Gateway also emits `gen_ai` metrics:
 - `gen_ai.server.time_to_first_token` (histogram, seconds)
 - `gen_ai.client.token.usage` (histogram, tokens; tagged with `gen_ai.token.type=input|output|cached|reasoning`)
 
-Transcription spans use `gen_ai.operation.name=transcription` (OTel has no standard name yet) and record the audio duration as `gen_ai.usage.audio_seconds`.
+Transcription spans use `gen_ai.operation.name=transcriptions` and record the audio duration as `gen_ai.usage.audio_seconds`.
 
 Metric names and attributes follow OpenTelemetry GenAI semantic conventions. Histogram bucket boundaries are tuned for practical dashboards and alerting rather than copied verbatim from upstream recommendations.
 
