@@ -37,7 +37,7 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
 
   const handler = async (ctx: GatewayContext, cfg: GatewayConfigParsed) => {
     ctx.operation = "transcriptions";
-    setSpanAttributes({ "gen_ai.operation.name": "transcription" });
+    setSpanAttributes({ "gen_ai.operation.name": ctx.operation });
     addSpanEvent("hebo.handler.started");
 
     // Guard: enforce HTTP method early.

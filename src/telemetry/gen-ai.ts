@@ -77,8 +77,7 @@ export const getGenAiGeneralAttributes = (
   const serviceTier = typeof ctx.body?.service_tier === "string" ? ctx.body.service_tier : "auto";
 
   const attrs: Attributes = {
-    // OTel has no standard name for speech-to-text yet.
-    "gen_ai.operation.name": ctx.operation === "transcriptions" ? "transcription" : ctx.operation,
+    "gen_ai.operation.name": ctx.operation,
     "gen_ai.request.model": requestModel,
     "gen_ai.response.model": ctx.resolvedModelId,
     "gen_ai.provider.name": ctx.resolvedProviderId,
