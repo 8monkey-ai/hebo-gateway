@@ -536,6 +536,7 @@ export function mapStopReason(reason: FinishReason): MessagesStopReason {
       return "end_turn";
     case "error":
     case "other":
+    case "interrupted":
       return null;
     default:
       return null;

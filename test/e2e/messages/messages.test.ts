@@ -734,14 +734,15 @@ describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   test(
     "temperature: temperature 0 produces valid response",
     async () => {
-      const message = await client.messages.create({
-        model: MODEL,
-        max_tokens: 32,
-        // Exercise forwarding of this deprecated client parameter.
-        // oxlint-disable-next-line typescript/no-deprecated
-        temperature: 0,
-        messages: [{ role: "user", content: "What is 1+1? Reply with just the number." }],
-      });
+      // The gateway still accepts temperature after its removal from the SDK types.
+      const request: Anthropic.Messages.MessageCreateParamsNonStreaming & { temperature: number } =
+        {
+          model: MODEL,
+          max_tokens: 32,
+          temperature: 0,
+          messages: [{ role: "user", content: "What is 1+1? Reply with just the number." }],
+        };
+      const message = await client.messages.create(request);
 
       expect(message.type).toBe("message");
       const text = (message.content[0] as Anthropic.Messages.TextBlock).text;

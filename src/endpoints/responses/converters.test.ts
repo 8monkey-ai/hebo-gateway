@@ -704,6 +704,21 @@ describe("Responses Converters", () => {
       expect(result.completed_at).toBeNull();
     });
 
+    test("should mark interrupted output as incomplete", () => {
+      const result = toResponses(
+        mockGenerateTextResult({
+          finishReason: "interrupted",
+          text: "Partial...",
+          content: [{ type: "text", text: "Partial..." }],
+        }),
+        "openai/gpt-5",
+      );
+
+      expect(result.status).toBe("incomplete");
+      expect(result.incomplete_details).toEqual({ reason: "unknown" });
+      expect(result.completed_at).toBeNull();
+    });
+
     test("should set failed status for error finish reason", () => {
       const result = toResponses(
         mockGenerateTextResult({

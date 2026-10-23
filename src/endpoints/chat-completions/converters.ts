@@ -976,7 +976,7 @@ export function toChatCompletionsToolCall(
 export const toChatCompletionsFinishReason = (
   finishReason: FinishReason,
 ): ChatCompletionsFinishReason => {
-  if (finishReason === "error" || finishReason === "other") {
+  if (finishReason === "error" || finishReason === "other" || finishReason === "interrupted") {
     return "stop";
   }
   return (finishReason as string).replaceAll("-", "_") as ChatCompletionsFinishReason;

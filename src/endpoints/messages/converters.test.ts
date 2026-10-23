@@ -687,6 +687,10 @@ describe("Messages Converters", () => {
       expect(mapStopReason("other")).toBeNull();
     });
 
+    test("should map interrupted to null", () => {
+      expect(mapStopReason("interrupted")).toBeNull();
+    });
+
     test("should map unknown to null", () => {
       expect(mapStopReason("unknown" as never)).toBeNull();
     });

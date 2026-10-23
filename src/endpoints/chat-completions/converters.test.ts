@@ -19,10 +19,15 @@ import {
   toChatCompletionsAssistantMessage,
   toChatCompletionsToolCall,
   toChatCompletionsUsage,
+  toChatCompletionsFinishReason,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
 } from "./converters";
 import type { ChatCompletionsAssistantMessageDelta, ChatCompletionsToolMessage } from "./schema";
+
+test("interrupted output uses a supported chat completion finish reason", () => {
+  expect(toChatCompletionsFinishReason("interrupted")).toBe("stop");
+});
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({

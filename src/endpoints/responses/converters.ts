@@ -747,6 +747,7 @@ function toResponsesStatus(finishReason: FinishReason): ResponsesStatus {
       return "completed";
     case "length":
     case "content-filter":
+    case "interrupted":
       return "incomplete";
     case "error":
     case "other":
