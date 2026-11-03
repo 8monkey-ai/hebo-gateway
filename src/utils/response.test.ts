@@ -8,6 +8,15 @@ describe("toResponse", () => {
 
     expect(await response.text()).toBe('{"hello":"world"}');
     expect(response.headers.get("content-type")).toBe("application/json");
+    expect(response.status).toBe(200);
+    expect(response.statusText).toBe("OK");
+  });
+
+  test("does not label error statuses as OK", () => {
+    const response = toResponse({ error: "x" }, { status: 404 });
+
+    expect(response.status).toBe(404);
+    expect(response.statusText).not.toBe("OK");
   });
 });
 

@@ -56,7 +56,8 @@ export const toResponse = (
 
   if (!responseInit?.statusText) {
     const status = responseInit?.status ?? 200;
-    const statusText = "OK";
+    // Only default to "OK" for success responses; never label errors as "OK".
+    const statusText = status >= 200 && status < 300 ? "OK" : "";
     const headers = responseInit?.headers;
 
     responseInit = headers ? { status, statusText, headers } : { status, statusText };

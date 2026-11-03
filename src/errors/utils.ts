@@ -45,13 +45,42 @@ export function getErrorMeta(error: unknown): ErrorMeta {
     if (normalized) {
       ({ status, statusText, headers } = normalized);
     } else {
-      status = 500;
+      // Honor `status` on foreign HTTP errors (e.g. framework NotFound errors), else 500.
+      const foreign = (error as { status?: unknown } | null | undefined)?.status;
+      status = isErrorStatus(foreign) ? foreign : 500;
       statusText = STATUS_TEXT(status);
       headers = {};
     }
   }
 
   return { status, statusText, headers: headers ?? {} };
+}
+
+const isErrorStatus = (status: unknown): status is number =>
+  typeof status === "number" && Number.isInteger(status) && status >= 400 && status <= 599;
+
+/**
+ * Resolves the `ResponseInit` for an error response so that the HTTP status always
+ * matches the error body: explicit `init.status` (if 4xx/5xx) → error status → 500.
+ */
+export function resolveErrorResponseInit(
+  error: unknown,
+  init?: ResponseInit,
+): ResponseInit & { status: number; statusText: string } {
+  let status: number;
+  let statusText: string;
+
+  if (isErrorStatus(init?.status)) {
+    status = init.status;
+    statusText =
+      init.statusText === undefined || init.statusText === ""
+        ? STATUS_TEXT(status)
+        : init.statusText;
+  } else {
+    ({ status, statusText } = getErrorMeta(error));
+  }
+
+  return init?.headers ? { status, statusText, headers: init.headers } : { status, statusText };
 }
 
 export function maybeMaskMessage(message: string, status: number, requestId?: string): string {
