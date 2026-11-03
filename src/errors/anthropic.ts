@@ -2,7 +2,7 @@ import * as z from "zod";
 
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta, maybeMaskMessage } from "./utils";
+import { getErrorMeta, maybeMaskMessage, resolveErrorInit } from "./utils";
 
 export const AnthropicErrorSchema = z.object({
   type: z.literal("error"),
@@ -66,16 +66,18 @@ export function toAnthropicError(error: unknown, requestId?: string): AnthropicE
   return anthropicError;
 }
 
-export function toAnthropicErrorResponse(error: unknown, init: ResponseInit): Response {
+export function toAnthropicErrorResponse(error: unknown, init?: ResponseInit): Response {
+  const resolved = resolveErrorInit(error, init);
+
   return toResponse(
     new AnthropicError(
       maybeMaskMessage(
         error instanceof Error ? error.message : String(error),
-        init.status ?? 500,
-        resolveRequestId(init),
+        resolved.status,
+        resolveRequestId(resolved),
       ),
-      mapType(init.status ?? 500),
+      mapType(resolved.status),
     ),
-    init,
+    resolved,
   );
 }

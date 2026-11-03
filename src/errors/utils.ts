@@ -54,6 +54,23 @@ export function getErrorMeta(error: unknown): ErrorMeta {
   return { status, statusText, headers: headers ?? {} };
 }
 
+/**
+ * Resolves the status of an error response so it always matches its body.
+ * Uses `init.status` when it is an error status (>= 400), otherwise derives it from the error.
+ */
+export function resolveErrorInit(
+  error: unknown,
+  init?: ResponseInit,
+): ResponseInit & { status: number; statusText: string } {
+  const status = init?.status;
+  if (status === undefined || status < 400) {
+    const meta = getErrorMeta(error);
+    return { ...init, status: meta.status, statusText: meta.statusText };
+  }
+
+  return { ...init, status, statusText: init?.statusText ?? STATUS_TEXT(status) };
+}
+
 export function maybeMaskMessage(message: string, status: number, requestId?: string): string {
   // FUTURE: consider masking all upstream errors, also 4xx
   if (!(isProduction() && status >= 500)) {

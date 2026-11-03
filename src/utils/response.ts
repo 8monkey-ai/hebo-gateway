@@ -1,3 +1,4 @@
+import { STATUS_TEXT } from "../errors/utils";
 import { buildRetryHeaders, filterResponseHeaders, REQUEST_ID_HEADER } from "./headers";
 import type { SseFrame } from "./stream";
 import { toSseStream } from "./stream";
@@ -56,7 +57,7 @@ export const toResponse = (
 
   if (!responseInit?.statusText) {
     const status = responseInit?.status ?? 200;
-    const statusText = "OK";
+    const statusText = status < 400 ? "OK" : STATUS_TEXT(status);
     const headers = responseInit?.headers;
 
     responseInit = headers ? { status, statusText, headers } : { status, statusText };

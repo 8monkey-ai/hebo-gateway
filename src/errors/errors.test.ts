@@ -3,7 +3,9 @@ import { describe, expect, test } from "bun:test";
 import { APICallError, RetryError } from "ai";
 
 import { normalizeAiSdkError } from "./ai-sdk";
+import { type AnthropicError, toAnthropicErrorResponse } from "./anthropic";
 import { GatewayError } from "./gateway";
+import { type OpenAIError, toOpenAIErrorResponse } from "./openai";
 import { getErrorMeta } from "./utils";
 
 describe("GatewayError", () => {
@@ -140,5 +142,73 @@ describe("getErrorMeta", () => {
     const error = new GatewayError("Model not found", 422, "MODEL_NOT_FOUND");
     const meta = getErrorMeta(error);
     expect(meta.headers).toEqual({ "x-should-retry": "false" });
+  });
+});
+
+describe("error response helpers", () => {
+  test("openai falls back to 500 when no status is passed", async () => {
+    const res = toOpenAIErrorResponse(new Error("boom"), {});
+    expect(res.status).toBe(500);
+    expect(res.statusText).toBe("INTERNAL_SERVER_ERROR");
+    expect(await res.json()).toEqual({
+      error: {
+        message: "boom",
+        type: "server_error",
+        code: "internal_server_error",
+        param: "",
+      },
+    });
+  });
+
+  test("anthropic falls back to 500 when no init is passed", async () => {
+    const res = toAnthropicErrorResponse(new Error("boom"));
+    expect(res.status).toBe(500);
+    expect(res.statusText).toBe("INTERNAL_SERVER_ERROR");
+    expect(await res.json()).toEqual({
+      type: "error",
+      error: { type: "api_error", message: "boom" },
+    });
+  });
+
+  test("derives status from the error when init has no status", async () => {
+    const error = new GatewayError("missing", 404);
+    const openai = toOpenAIErrorResponse(error, {});
+    expect(openai.status).toBe(404);
+    expect(openai.statusText).toBe("NOT_FOUND");
+    expect(((await openai.json()) as OpenAIError).error).toMatchObject({
+      type: "invalid_request_error",
+      code: "not_found",
+    });
+
+    const anthropic = toAnthropicErrorResponse(error, {});
+    expect(anthropic.status).toBe(404);
+    expect(((await anthropic.json()) as AnthropicError).error.type).toBe("not_found_error");
+  });
+
+  test("derives statusText and code from init.status", async () => {
+    const res = toOpenAIErrorResponse(new Error("x"), { status: 404 });
+    expect(res.status).toBe(404);
+    expect(res.statusText).toBe("NOT_FOUND");
+    expect(((await res.json()) as OpenAIError).error).toMatchObject({
+      type: "invalid_request_error",
+      code: "not_found",
+    });
+  });
+
+  test("keeps explicit statusText and headers", async () => {
+    const res = toOpenAIErrorResponse(new Error("x"), {
+      status: 502,
+      statusText: "UPSTREAM_BAD_GATEWAY",
+      headers: { "x-request-id": "req_1" },
+    });
+    expect(res.status).toBe(502);
+    expect(res.statusText).toBe("UPSTREAM_BAD_GATEWAY");
+    expect(res.headers.get("x-request-id")).toBe("req_1");
+    expect(((await res.json()) as OpenAIError).error.code).toBe("upstream_bad_gateway");
+  });
+
+  test("never returns a 2xx status", () => {
+    expect(toOpenAIErrorResponse(new Error("x"), { status: 200 }).status).toBe(500);
+    expect(toAnthropicErrorResponse(new Error("x"), { status: 200 }).status).toBe(500);
   });
 });

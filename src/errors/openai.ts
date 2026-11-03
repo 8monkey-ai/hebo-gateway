@@ -2,7 +2,7 @@ import * as z from "zod";
 
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta, maybeMaskMessage } from "./utils";
+import { getErrorMeta, maybeMaskMessage, resolveErrorInit } from "./utils";
 
 export const OpenAIErrorSchema = z.object({
   error: z.object({
@@ -44,17 +44,19 @@ export function toOpenAIError(error: unknown, requestId?: string): OpenAIError {
   return openAIError;
 }
 
-export function toOpenAIErrorResponse(error: unknown, init: ResponseInit): Response {
+export function toOpenAIErrorResponse(error: unknown, init?: ResponseInit): Response {
+  const resolved = resolveErrorInit(error, init);
+
   return toResponse(
     new OpenAIError(
       maybeMaskMessage(
         error instanceof Error ? error.message : String(error),
-        init.status ?? 500,
-        resolveRequestId(init),
+        resolved.status,
+        resolveRequestId(resolved),
       ),
-      mapType(init.status ?? 500),
-      init.statusText ?? "INTERNAL_SERVER_ERROR",
+      mapType(resolved.status),
+      resolved.statusText,
     ),
-    init,
+    resolved,
   );
 }
