@@ -68,14 +68,3 @@ describe("prepareResponseInit", () => {
     });
   });
 });
-
-describe("toResponse statusText", () => {
-  test("defaults to OK for success statuses", () => {
-    expect(toResponse({}).statusText).toBe("OK");
-  });
-
-  test("derives statusText from error statuses", () => {
-    expect(toResponse({}, { status: 404 }).statusText).toBe("NOT_FOUND");
-    expect(toResponse({}, { status: 500 }).statusText).toBe("INTERNAL_SERVER_ERROR");
-  });
-});

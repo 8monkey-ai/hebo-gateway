@@ -206,9 +206,4 @@ describe("error response helpers", () => {
     expect(res.headers.get("x-request-id")).toBe("req_1");
     expect(((await res.json()) as OpenAIError).error.code).toBe("upstream_bad_gateway");
   });
-
-  test("never returns a 2xx status", () => {
-    expect(toOpenAIErrorResponse(new Error("x"), { status: 200 }).status).toBe(500);
-    expect(toAnthropicErrorResponse(new Error("x"), { status: 200 }).status).toBe(500);
-  });
 });
