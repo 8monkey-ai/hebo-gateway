@@ -2,7 +2,7 @@ import * as z from "zod";
 
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta, maybeMaskMessage, STATUS_TEXT } from "./utils";
+import { type ErrorMeta, getErrorMeta, maybeMaskMessage, STATUS_TEXT } from "./utils";
 
 export const AnthropicErrorSchema = z.object({
   type: z.literal("error"),
@@ -50,9 +50,11 @@ const mapType = (status: number): string => {
   }
 };
 
-export function toAnthropicError(error: unknown, requestId?: string): AnthropicError {
-  const meta = getErrorMeta(error);
-
+export function toAnthropicError(
+  error: unknown,
+  requestId?: string,
+  meta: Pick<ErrorMeta, "status" | "statusText"> = getErrorMeta(error),
+): AnthropicError {
   const anthropicError = new AnthropicError(
     maybeMaskMessage(
       error instanceof Error ? error.message : String(error),
@@ -69,15 +71,9 @@ export function toAnthropicError(error: unknown, requestId?: string): AnthropicE
 export function toAnthropicErrorResponse(error: unknown, init: ResponseInit = {}): Response {
   const { status = getErrorMeta(error).status, statusText = STATUS_TEXT(status) } = init;
 
-  return toResponse(
-    new AnthropicError(
-      maybeMaskMessage(
-        error instanceof Error ? error.message : String(error),
-        status,
-        resolveRequestId(init),
-      ),
-      mapType(status),
-    ),
-    { ...init, status, statusText },
-  );
+  return toResponse(toAnthropicError(error, resolveRequestId(init), { status, statusText }), {
+    ...init,
+    status,
+    statusText,
+  });
 }

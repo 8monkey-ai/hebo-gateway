@@ -2,7 +2,7 @@ import * as z from "zod";
 
 import { resolveRequestId } from "../utils/headers";
 import { toResponse } from "../utils/response";
-import { getErrorMeta, maybeMaskMessage, STATUS_TEXT } from "./utils";
+import { type ErrorMeta, getErrorMeta, maybeMaskMessage, STATUS_TEXT } from "./utils";
 
 export const OpenAIErrorSchema = z.object({
   error: z.object({
@@ -27,9 +27,11 @@ export class OpenAIError {
 
 const mapType = (status: number) => (status < 500 ? "invalid_request_error" : "server_error");
 
-export function toOpenAIError(error: unknown, requestId?: string): OpenAIError {
-  const meta = getErrorMeta(error);
-
+export function toOpenAIError(
+  error: unknown,
+  requestId?: string,
+  meta: Pick<ErrorMeta, "status" | "statusText"> = getErrorMeta(error),
+): OpenAIError {
   const openAIError = new OpenAIError(
     maybeMaskMessage(
       error instanceof Error ? error.message : String(error),
@@ -47,16 +49,9 @@ export function toOpenAIError(error: unknown, requestId?: string): OpenAIError {
 export function toOpenAIErrorResponse(error: unknown, init: ResponseInit = {}): Response {
   const { status = getErrorMeta(error).status, statusText = STATUS_TEXT(status) } = init;
 
-  return toResponse(
-    new OpenAIError(
-      maybeMaskMessage(
-        error instanceof Error ? error.message : String(error),
-        status,
-        resolveRequestId(init),
-      ),
-      mapType(status),
-      statusText,
-    ),
-    { ...init, status, statusText },
-  );
+  return toResponse(toOpenAIError(error, resolveRequestId(init), { status, statusText }), {
+    ...init,
+    status,
+    statusText,
+  });
 }
