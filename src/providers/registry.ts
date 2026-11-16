@@ -6,10 +6,10 @@ import {
   type TranscriptionModel,
 } from "ai";
 
-import { GatewayError } from "../errors/gateway";
-import { logger } from "../logger";
-import type { ModelCatalog, ModelId } from "../models/types";
-import type { ProviderRegistry } from "./types";
+import { GatewayError } from "../errors/gateway.ts";
+import { logger } from "../logger/index.ts";
+import type { ModelCatalog, ModelId } from "../models/types.ts";
+import type { ProviderRegistry } from "./types.ts";
 
 export const resolveProvider = (args: {
   providers: ProviderRegistry;

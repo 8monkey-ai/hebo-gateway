@@ -10,7 +10,7 @@ import {
   parseJson,
   toMilliseconds,
   mergeData,
-} from "./utils";
+} from "./utils.ts";
 
 describe("SQL Dialect Utilities", () => {
   describe("Atomic Parameter Mappers", () => {

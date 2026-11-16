@@ -1,13 +1,13 @@
 import * as z from "zod/mini";
 
-import { GatewayError } from "../../errors/gateway";
-import { winterCgHandler } from "../../lifecycle";
-import { logger } from "../../logger";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { wrapTranscriptionModel } from "../../middleware/transcription";
-import { resolveProvider } from "../../providers/registry";
-import { getGenAiGeneralAttributes, recordTokenUsage } from "../../telemetry/gen-ai";
-import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+import { GatewayError } from "../../errors/gateway.ts";
+import { winterCgHandler } from "../../lifecycle.ts";
+import { logger } from "../../logger/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { wrapTranscriptionModel } from "../../middleware/transcription.ts";
+import { resolveProvider } from "../../providers/registry.ts";
+import { getGenAiGeneralAttributes, recordTokenUsage } from "../../telemetry/gen-ai.ts";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span.ts";
 import type {
   AfterHookContext,
   BeforeHookContext,
@@ -17,15 +17,15 @@ import type {
   GatewayContext,
   ResolveModelHookContext,
   ResolveProviderHookContext,
-} from "../../types";
-import { prepareForwardHeaders } from "../../utils/request";
+} from "../../types.ts";
+import { prepareForwardHeaders } from "../../utils/request.ts";
 import {
   convertToTranscriptionCallOptions,
   parseTranscriptionsRequest,
   toTranscriptions,
-} from "./converters";
-import { getTranscriptionsRequestAttributes, getTranscriptionsResponseAttributes } from "./otel";
-import { TranscriptionsBodySchema, type TranscriptionsBody } from "./schema";
+} from "./converters.ts";
+import { getTranscriptionsRequestAttributes, getTranscriptionsResponseAttributes } from "./otel.ts";
+import { TranscriptionsBodySchema, type TranscriptionsBody } from "./schema.ts";
 
 // Trace logs show the audio size instead of raw bytes. Redaction is deferred to
 // serialization (`toJSON`), so nothing is copied when trace logging is disabled.

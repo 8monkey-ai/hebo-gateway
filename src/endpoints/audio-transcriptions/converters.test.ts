@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription.ts";
 import {
   convertFormDataToTranscriptionsBody,
   convertToTranscriptionCallOptions,
   toTranscriptions,
   toTranscriptionsUsage,
-} from "./converters";
+} from "./converters.ts";
 
 const AUDIO = new Uint8Array([1, 2, 3]);
 

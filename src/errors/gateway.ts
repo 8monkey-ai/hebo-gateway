@@ -1,5 +1,5 @@
-import { X_SHOULD_RETRY_HEADER } from "../utils/headers";
-import { STATUS_TEXT } from "./utils";
+import { X_SHOULD_RETRY_HEADER } from "../utils/headers.ts";
+import { STATUS_TEXT } from "./utils.ts";
 
 export class GatewayError extends Error {
   readonly status: number;

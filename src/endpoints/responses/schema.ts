@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream.ts";
 
 export const ResponsesMetadataSchema = z
   .record(z.string().min(1).max(64), z.string().max(512))
@@ -222,7 +222,7 @@ import {
   ContentPartAudioSchema as ResponsesInputAudioSchema,
   type ContentPartAudio as ResponsesInputAudio,
   TraceSchema,
-} from "../shared/schema";
+} from "../shared/schema.ts";
 
 export {
   ResponsesCacheControlSchema,

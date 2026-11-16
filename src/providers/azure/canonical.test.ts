@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createAzure } from "@ai-sdk/azure";
 
-import { withCanonicalIdsForAzure } from "./canonical";
+import { withCanonicalIdsForAzure } from "./canonical.ts";
 
 const azure = createAzure({ apiKey: "test-key", resourceName: "test-resource" });
 

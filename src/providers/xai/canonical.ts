@@ -1,7 +1,7 @@
 import { type XaiProvider } from "@ai-sdk/xai";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   "xai/grok-4.2": "grok-4.20-0309-non-reasoning",

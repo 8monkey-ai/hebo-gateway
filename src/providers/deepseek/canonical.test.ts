@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { deepseek } from "@ai-sdk/deepseek";
 
-import { withCanonicalIdsForDeepSeek } from "./canonical";
+import { withCanonicalIdsForDeepSeek } from "./canonical.ts";
 
 test("withCanonicalIdsForDeepSeek > strips namespace for deepseek-v4-pro", () => {
   const provider = withCanonicalIdsForDeepSeek(deepseek);

@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import { MockProviderV4 } from "ai/test";
 
-import { parseResponse, postJson } from "../../../test/helpers/http";
-import { defineModelCatalog } from "../../models/catalog";
-import { type GatewayConfig } from "../../types";
-import { type ResponsesInputItem } from "../responses/schema";
-import { conversations } from "./handler";
+import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
+import { type GatewayConfig } from "../../types.ts";
+import { type ResponsesInputItem } from "../responses/schema.ts";
+import { conversations } from "./handler.ts";
 import {
   type Conversation,
   type ConversationDeleted,
   type ConversationItem,
   type ConversationItemList,
-} from "./schema";
-import { InMemoryStorage } from "./storage/memory";
+} from "./schema.ts";
+import { InMemoryStorage } from "./storage/memory.ts";
 
 describe("Conversations Handler", () => {
   let config: GatewayConfig;

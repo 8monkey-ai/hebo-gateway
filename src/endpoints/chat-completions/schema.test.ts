@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { ChatCompletionsBodySchema } from "./schema";
+import { ChatCompletionsBodySchema } from "./schema.ts";
 
 describe("ChatCompletionsBodySchema", () => {
   test("accepts assistant message with nullable extension fields (round-trip echo)", () => {

@@ -20,9 +20,9 @@ import type {
 } from "ai";
 import { Output, jsonSchema, tool } from "ai";
 
-import { GatewayError } from "../../errors/gateway";
-import { toResponse } from "../../utils/response";
-import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import { GatewayError } from "../../errors/gateway.ts";
+import { toResponse } from "../../utils/response.ts";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream.ts";
 import {
   parseJsonOrText,
   parseReasoningOptions,
@@ -40,7 +40,7 @@ import {
   type RuntimeContext,
   type TextCallOptions,
   type ToolChoiceOptions,
-} from "../shared/converters";
+} from "../shared/converters.ts";
 import type {
   ChatCompletionsToolCall,
   ChatCompletionsTool,
@@ -65,7 +65,7 @@ import type {
   ChatCompletionsResponseFormat,
   ChatCompletionsContentPartText,
   ChatCompletionsCacheControl,
-} from "./schema";
+} from "./schema.ts";
 
 /** Fallback when a file part does not declare its media type. */
 const DEFAULT_FILE_MEDIA_TYPE = "application/octet-stream";

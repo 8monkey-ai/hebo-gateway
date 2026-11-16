@@ -1,8 +1,8 @@
 import type { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 // Anthropic knows two tiers: `auto` (priority capacity allowed) and `standard_only`.
 // `flex` / `priority` / `scale` have no equivalent and would fail the provider-options

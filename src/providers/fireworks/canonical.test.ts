@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createFireworks } from "@ai-sdk/fireworks";
 
-import { withCanonicalIdsForFireworks } from "./canonical";
+import { withCanonicalIdsForFireworks } from "./canonical.ts";
 
 const provider = withCanonicalIdsForFireworks(createFireworks({ apiKey: "test-key" }));
 

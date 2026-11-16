@@ -6,8 +6,8 @@ import {
 } from "@ai-sdk/google-vertex/maas";
 import { customProvider } from "ai";
 
-import type { ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 /**
  * `createVertex` keeps `project` and `googleAuthOptions` in a closure, so the resolved

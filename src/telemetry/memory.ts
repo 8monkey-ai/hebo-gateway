@@ -1,6 +1,6 @@
 import { metrics } from "@opentelemetry/api";
 
-import type { TelemetrySignalLevel } from "../types";
+import type { TelemetrySignalLevel } from "../types.ts";
 
 const getMeter = () => metrics.getMeter("@hebo/gateway");
 const defaultHeapSpaceAttrs = { "v8js.heap.space.name": "total" } as const;

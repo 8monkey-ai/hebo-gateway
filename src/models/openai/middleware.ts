@@ -4,9 +4,9 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
+} from "../../endpoints/chat-completions/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { TranscriptionModelMiddleware } from "../../middleware/transcription.ts";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
 export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {

@@ -6,13 +6,13 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema";
-import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+} from "../../endpoints/chat-completions/schema.ts";
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import {
   type TranscriptionModelMiddleware,
   wordSegmentsMiddleware,
-} from "../../middleware/transcription";
+} from "../../middleware/transcription.ts";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
 export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {

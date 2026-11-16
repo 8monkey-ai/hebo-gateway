@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { qwenReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { qwenReasoningMiddleware } from "./middleware.ts";
 
 test("qwenReasoningMiddleware > matching patterns", () => {
   const matching = [

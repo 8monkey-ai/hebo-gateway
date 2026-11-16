@@ -1,7 +1,7 @@
 import type { ProviderV4 } from "@ai-sdk/provider";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   "minimax/m2.5": "MiniMax-M2.5",

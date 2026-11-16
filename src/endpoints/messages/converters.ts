@@ -29,8 +29,8 @@ import {
   parseJsonOrText,
   type RuntimeContext,
   type TextCallOptions,
-} from "../shared/converters";
-import type { ReasoningConfig, ServiceTier } from "../shared/schema";
+} from "../shared/converters.ts";
+import type { ReasoningConfig, ServiceTier } from "../shared/schema.ts";
 import type {
   MessagesInputs,
   MessagesMessage,
@@ -49,7 +49,7 @@ import type {
   MessagesServiceTier,
   ContentBlockStartEvent,
   SystemBlock,
-} from "./schema";
+} from "./schema.ts";
 
 // --- Request Flow ---
 

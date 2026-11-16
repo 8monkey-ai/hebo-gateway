@@ -3,8 +3,8 @@ import type { LanguageModelMiddleware } from "ai";
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsServiceTier,
-} from "../../endpoints/chat-completions";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+} from "../../endpoints/chat-completions/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 const VERTEX_REQUEST_TYPE_HEADER = "x-vertex-ai-llm-request-type";
 const VERTEX_SHARED_REQUEST_TYPE_HEADER = "x-vertex-ai-llm-shared-request-type";

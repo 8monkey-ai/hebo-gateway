@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { MessagesBodySchema } from "./schema";
+import { MessagesBodySchema } from "./schema.ts";
 
 describe("MessagesBodySchema", () => {
   test("accepts text/image blocks with null cache_control", () => {

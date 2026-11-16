@@ -3,13 +3,14 @@
     // Environment setup & latest features
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "target": "ES2022",
-    "module": "Preserve",
+    "module": "NodeNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
 
-    // Bundler mode
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": false,
+    // Node.js ESM resolution: relative imports use explicit `.ts` extensions,
+    // rewritten to `.js` on emit so `dist/` loads natively in Node.js.
+    "moduleResolution": "NodeNext",
+    "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
 

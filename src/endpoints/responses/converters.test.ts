@@ -10,14 +10,14 @@ import type {
   ToolModelMessage,
 } from "ai";
 
-import type { RuntimeContext } from "../shared/converters";
+import type { RuntimeContext } from "../shared/converters.ts";
 import {
   convertToTextCallOptions,
   convertToModelMessages,
   toResponses,
   toResponsesUsage,
   ResponsesTransformStream,
-} from "./converters";
+} from "./converters.ts";
 import {
   type ResponsesInputItem,
   type ResponsesStreamEvent,
@@ -31,7 +31,7 @@ import {
   type ResponsesFunctionCall,
   type ResponsesOutputMessage,
   type ResponsesReasoningItem,
-} from "./schema";
+} from "./schema.ts";
 
 const mockUsage = (overrides: Partial<LanguageModelUsage> = {}): LanguageModelUsage =>
   ({

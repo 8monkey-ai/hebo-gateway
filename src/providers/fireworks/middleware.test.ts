@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { fireworksReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { fireworksReasoningMiddleware } from "./middleware.ts";
 
 test("fireworks middlewares > matching provider resolves reasoning middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({

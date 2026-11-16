@@ -1,15 +1,15 @@
-import { parseConfig } from "./config";
-import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic";
-import { GatewayError } from "./errors/gateway";
-import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai";
-import { getErrorMeta } from "./errors/utils";
-import { logger } from "./logger";
-import { getBaggageAttributes } from "./telemetry/baggage";
-import { instrumentFetch } from "./telemetry/fetch";
-import { recordRequestDuration } from "./telemetry/gen-ai";
-import { getRequestAttributes, getResponseAttributes } from "./telemetry/http";
-import { observeV8jsMemoryMetrics } from "./telemetry/memory";
-import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span";
+import { parseConfig } from "./config.ts";
+import { toAnthropicError, toAnthropicErrorResponse } from "./errors/anthropic.ts";
+import { GatewayError } from "./errors/gateway.ts";
+import { toOpenAIError, toOpenAIErrorResponse } from "./errors/openai.ts";
+import { getErrorMeta } from "./errors/utils.ts";
+import { logger } from "./logger/index.ts";
+import { getBaggageAttributes } from "./telemetry/baggage.ts";
+import { instrumentFetch } from "./telemetry/fetch.ts";
+import { recordRequestDuration } from "./telemetry/gen-ai.ts";
+import { getRequestAttributes, getResponseAttributes } from "./telemetry/http.ts";
+import { observeV8jsMemoryMetrics } from "./telemetry/memory.ts";
+import { addSpanEvent, setSpanEventsEnabled, setSpanTracer, startSpan } from "./telemetry/span.ts";
 import type {
   GatewayConfig,
   GatewayConfigParsed,
@@ -17,10 +17,10 @@ import type {
   OnErrorHookContext,
   OnRequestHookContext,
   OnResponseHookContext,
-} from "./types";
-import { resolveOrCreateRequestId } from "./utils/request";
-import { prepareResponseInit, toResponse } from "./utils/response";
-import type { SseFrame } from "./utils/stream";
+} from "./types.ts";
+import { resolveOrCreateRequestId } from "./utils/request.ts";
+import { prepareResponseInit, toResponse } from "./utils/response.ts";
+import type { SseFrame } from "./utils/stream.ts";
 
 export const winterCgHandler = (
   run: (

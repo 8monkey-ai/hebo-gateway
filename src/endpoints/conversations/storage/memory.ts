@@ -8,7 +8,7 @@ import type {
   ConversationMetadata,
   ConversationItemInput,
   ConversationQueryOptions,
-} from "./types";
+} from "./types.ts";
 
 export class InMemoryStorage implements ConversationStorage {
   private conversations = new Map<string, ConversationEntity>();

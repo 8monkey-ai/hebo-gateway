@@ -1,1 +1,1 @@
-export * from "./canonical";
+export * from "./canonical.ts";

@@ -13,15 +13,15 @@ import {
 } from "ai";
 import { z } from "zod";
 
-import { GatewayError } from "../../errors/gateway";
-import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url";
+import { GatewayError } from "../../errors/gateway.ts";
+import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url.ts";
 import type {
   ReasoningConfig,
   ReasoningEffort,
   CacheControl,
   InputAudioFormat,
   ServiceTier,
-} from "./schema";
+} from "./schema.ts";
 
 /**
  * Runtime context type parameter for the AI SDK result types.

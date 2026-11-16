@@ -1,7 +1,7 @@
-import { GatewayError } from "../../errors/gateway";
-import { winterCgHandler } from "../../lifecycle";
-import type { GatewayConfig, Endpoint, GatewayContext, GatewayConfigParsed } from "../../types";
-import { toModels, toModel } from "./converters";
+import { GatewayError } from "../../errors/gateway.ts";
+import { winterCgHandler } from "../../lifecycle.ts";
+import type { GatewayConfig, Endpoint, GatewayContext, GatewayConfigParsed } from "../../types.ts";
+import { toModels, toModel } from "./converters.ts";
 
 // eslint-disable-next-line require-await
 const handler = async (ctx: GatewayContext, _cfg: GatewayConfigParsed) => {

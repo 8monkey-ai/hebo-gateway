@@ -1,8 +1,8 @@
 import * as z from "zod";
 
-import { resolveRequestId } from "../utils/headers";
-import { toResponse } from "../utils/response";
-import { getErrorMeta, maybeMaskMessage } from "./utils";
+import { resolveRequestId } from "../utils/headers.ts";
+import { toResponse } from "../utils/response.ts";
+import { getErrorMeta, maybeMaskMessage } from "./utils.ts";
 
 export const OpenAIErrorSchema = z.object({
   error: z.object({

@@ -1,15 +1,15 @@
-import { parseConfig } from "./config";
-import { audioTranscriptions } from "./endpoints/audio-transcriptions/handler";
-import { chatCompletions } from "./endpoints/chat-completions/handler";
-import { conversations } from "./endpoints/conversations/handler";
-import { embeddings } from "./endpoints/embeddings/handler";
-import { messages } from "./endpoints/messages/handler";
-import { models } from "./endpoints/models/handler";
-import { responses } from "./endpoints/responses/handler";
-import { GatewayError } from "./errors/gateway";
-import { winterCgHandler } from "./lifecycle";
-import { logger } from "./logger";
-import type { Endpoint, GatewayConfig, HeboGateway } from "./types";
+import { parseConfig } from "./config.ts";
+import { audioTranscriptions } from "./endpoints/audio-transcriptions/handler.ts";
+import { chatCompletions } from "./endpoints/chat-completions/handler.ts";
+import { conversations } from "./endpoints/conversations/handler.ts";
+import { embeddings } from "./endpoints/embeddings/handler.ts";
+import { messages } from "./endpoints/messages/handler.ts";
+import { models } from "./endpoints/models/handler.ts";
+import { responses } from "./endpoints/responses/handler.ts";
+import { GatewayError } from "./errors/gateway.ts";
+import { winterCgHandler } from "./lifecycle.ts";
+import { logger } from "./logger/index.ts";
+import type { Endpoint, GatewayConfig, HeboGateway } from "./types.ts";
 
 let inflight = 0;
 

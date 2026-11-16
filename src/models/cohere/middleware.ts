@@ -1,10 +1,10 @@
 import type { CohereEmbeddingModelOptions, CohereLanguageModelOptions } from "@ai-sdk/cohere";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
-import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Cohere)
 export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {

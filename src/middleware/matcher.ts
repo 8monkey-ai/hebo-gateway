@@ -1,20 +1,20 @@
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import { logger } from "../logger";
-import type { ModelId } from "../models/types";
-import type { ProviderId } from "../providers/types";
-import { addSpanEvent } from "../telemetry/span";
+import { logger } from "../logger/index.ts";
+import type { ModelId } from "../models/types.ts";
+import type { ProviderId } from "../providers/types.ts";
+import { addSpanEvent } from "../telemetry/span.ts";
 import {
   forwardParamsEmbeddingMiddleware,
   forwardParamsMiddleware,
   forwardParamsTranscriptionMiddleware,
-} from "./common";
+} from "./common.ts";
 import {
   debugEmbeddingFinalParamsMiddleware,
   debugFinalParamsMiddleware,
   debugTranscriptionFinalParamsMiddleware,
-} from "./debug";
-import type { TranscriptionModelMiddleware } from "./transcription";
+} from "./debug.ts";
+import type { TranscriptionModelMiddleware } from "./transcription.ts";
 
 type MiddlewareEntries = {
   language?: LanguageModelMiddleware[];

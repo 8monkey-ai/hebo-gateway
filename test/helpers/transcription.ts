@@ -1,13 +1,13 @@
 import type { TranscriptionModelV4CallOptions, TranscriptionModelV4Result } from "@ai-sdk/provider";
 import { MockTranscriptionModelV4 } from "ai/test";
 
-import { convertToTranscriptionCallOptions } from "../../src/endpoints/audio-transcriptions/converters";
-import { modelMiddlewareMatcher } from "../../src/middleware/matcher";
+import { convertToTranscriptionCallOptions } from "../../src/endpoints/audio-transcriptions/converters.ts";
+import { modelMiddlewareMatcher } from "../../src/middleware/matcher.ts";
 import {
   type TranscriptionResult,
   wrapTranscriptionModel,
-} from "../../src/middleware/transcription";
-import type { ModelId } from "../../src/models/types";
+} from "../../src/middleware/transcription.ts";
+import type { ModelId } from "../../src/models/types.ts";
 
 const AUDIO = new Uint8Array([1, 2, 3]);
 

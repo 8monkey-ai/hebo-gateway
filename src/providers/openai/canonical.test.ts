@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createOpenAI } from "@ai-sdk/openai";
 
-import { withCanonicalIdsForOpenAI } from "./canonical";
+import { withCanonicalIdsForOpenAI } from "./canonical.ts";
 
 const openai = createOpenAI({ apiKey: "test-key" });
 

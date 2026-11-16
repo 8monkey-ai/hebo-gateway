@@ -11,7 +11,7 @@ import type {
   TextStreamPart,
 } from "ai";
 
-import type { RuntimeContext } from "../shared/converters";
+import type { RuntimeContext } from "../shared/converters.ts";
 import {
   ChatCompletionsTransformStream,
   convertToTextCallOptions,
@@ -22,8 +22,8 @@ import {
   toChatCompletionsFinishReason,
   fromChatCompletionsAssistantMessage,
   fromChatCompletionsToolResultMessage,
-} from "./converters";
-import type { ChatCompletionsAssistantMessageDelta, ChatCompletionsToolMessage } from "./schema";
+} from "./converters.ts";
+import type { ChatCompletionsAssistantMessageDelta, ChatCompletionsToolMessage } from "./schema.ts";
 
 test("interrupted output uses a supported chat completion finish reason", () => {
   expect(toChatCompletionsFinishReason("interrupted")).toBe("stop");

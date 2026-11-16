@@ -5,12 +5,12 @@ import { type LanguageModelV4CallOptions, type LanguageModelV4TextPart } from "@
 import { wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 // Also registers the model-level Claude middlewares the full chain below relies on.
-import { claudeReasoningMiddleware } from "../../models/anthropic/middleware";
+import { claudeReasoningMiddleware } from "../../models/anthropic/middleware.ts";
 // Also registers the model-level GPT middlewares the full chain below relies on.
-import { openAIReasoningMiddleware } from "../../models/openai/middleware";
-import { withCanonicalIdsForBedrock } from "./canonical";
+import { openAIReasoningMiddleware } from "../../models/openai/middleware.ts";
+import { withCanonicalIdsForBedrock } from "./canonical.ts";
 import {
   bedrockAnthropicBetaMiddleware,
   bedrockAnthropicServiceTierMiddleware,
@@ -19,7 +19,7 @@ import {
   bedrockMantleReasoningMiddleware,
   bedrockPromptCachingMiddleware,
   bedrockServiceTierMiddleware,
-} from "./middleware";
+} from "./middleware.ts";
 
 /** A fetch that records the JSON request body and throws, so no request leaves the process. */
 const capturingFetch = (

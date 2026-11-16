@@ -4,14 +4,14 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createAzure } from "@ai-sdk/azure";
 import { createVoyage } from "voyage-ai-provider";
 
-import { claudeHaiku45 } from "../models/anthropic/presets";
-import { maiTranscribe2 } from "../models/microsoft/presets";
-import { gpt56Sol } from "../models/openai/presets";
-import { voyage4Lite } from "../models/voyage/presets";
-import { withCanonicalIdsForAzure } from "../providers/azure/canonical";
-import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical";
-import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical";
-import { resolveProvider } from "./registry";
+import { claudeHaiku45 } from "../models/anthropic/presets.ts";
+import { maiTranscribe2 } from "../models/microsoft/presets.ts";
+import { gpt56Sol } from "../models/openai/presets.ts";
+import { voyage4Lite } from "../models/voyage/presets.ts";
+import { withCanonicalIdsForAzure } from "../providers/azure/canonical.ts";
+import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical.ts";
+import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical.ts";
+import { resolveProvider } from "./registry.ts";
 
 test("Voyage 4 Lite ID transformation in gateway config", () => {
   const config = {

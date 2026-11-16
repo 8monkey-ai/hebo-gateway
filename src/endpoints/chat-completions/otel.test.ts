@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
-import type { ChatCompletions, ChatCompletionsBody } from "./schema";
+import { getChatRequestAttributes, getChatResponseAttributes } from "./otel.ts";
+import type { ChatCompletions, ChatCompletionsBody } from "./schema.ts";
 
 describe("Chat Completions OTEL", () => {
   test("should map request metadata into per-key attributes", () => {

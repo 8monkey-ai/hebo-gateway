@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { GenerateTextResult, ToolSet, Output, LanguageModelUsage, TextStreamPart } from "ai";
 
-import type { RuntimeContext } from "../shared/converters";
+import type { RuntimeContext } from "../shared/converters.ts";
 import {
   convertToTextCallOptions,
   convertToModelMessages,
@@ -12,8 +12,8 @@ import {
   mapStopReason,
   mapUsage,
   MessagesTransformStream,
-} from "./converters";
-import type { MessagesStreamEvent } from "./schema";
+} from "./converters.ts";
+import type { MessagesStreamEvent } from "./schema.ts";
 
 async function collectStreamEvents(
   stream: ReadableStream<MessagesStreamEvent>,

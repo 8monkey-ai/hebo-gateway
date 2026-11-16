@@ -1,5 +1,5 @@
-import type { Conversation, ConversationItem, ConversationDeleted } from "./schema";
-import type { ConversationEntity, ConversationItemEntity } from "./storage/types";
+import type { Conversation, ConversationItem, ConversationDeleted } from "./schema.ts";
+import type { ConversationEntity, ConversationItemEntity } from "./storage/types.ts";
 
 export function toConversation(entity: ConversationEntity): Conversation {
   return {

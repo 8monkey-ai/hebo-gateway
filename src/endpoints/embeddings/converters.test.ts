@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { convertToEmbedCallOptions } from "./converters";
+import { convertToEmbedCallOptions } from "./converters.ts";
 
 describe("Embeddings Converters", () => {
   test("should map metadata into providerOptions.unknown", () => {

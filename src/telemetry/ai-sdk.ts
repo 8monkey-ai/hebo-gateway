@@ -1,8 +1,8 @@
 import type { LogWarningsFunction } from "ai";
 
-import { logger } from "../logger";
-import type { TelemetrySignalLevel } from "../types";
-import { addSpanEvent, setSpanAttributes } from "./span";
+import { logger } from "../logger/index.ts";
+import type { TelemetrySignalLevel } from "../types.ts";
+import { addSpanEvent, setSpanAttributes } from "./span.ts";
 
 type GlobalWithAiSdkWarningLogger = typeof globalThis & {
   AI_SDK_LOG_WARNINGS?: LogWarningsFunction | false;

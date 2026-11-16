@@ -1,2 +1,2 @@
-export * from "./canonical";
-export * from "./middleware";
+export * from "./canonical.ts";
+export * from "./middleware.ts";

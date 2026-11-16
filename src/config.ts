@@ -1,16 +1,16 @@
-import { InMemoryStorage } from "./endpoints/conversations/storage/memory";
-import { isLogger, logger, setLoggerInstance } from "./logger";
-import { createDefaultLogger } from "./logger/default";
-import { installAiSdkWarningLogger } from "./telemetry/ai-sdk";
+import { InMemoryStorage } from "./endpoints/conversations/storage/memory.ts";
+import { createDefaultLogger } from "./logger/default.ts";
+import { isLogger, logger, setLoggerInstance } from "./logger/index.ts";
+import { installAiSdkWarningLogger } from "./telemetry/ai-sdk.ts";
 import {
   DEFAULT_CHAT_TIMEOUT_MS,
   kParsed,
   type GatewayConfig,
   type GatewayConfigParsed,
   type TelemetrySignalLevel,
-} from "./types";
-import { DEFAULT_MAX_BODY_SIZE } from "./utils/body";
-import { FORWARD_HEADER_ALLOWLIST } from "./utils/request";
+} from "./types.ts";
+import { DEFAULT_MAX_BODY_SIZE } from "./utils/body.ts";
+import { FORWARD_HEADER_ALLOWLIST } from "./utils/request.ts";
 
 export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
   // If it has been parsed before, just return.

@@ -1,4 +1,4 @@
-import { type TelemetrySignalLevel } from "../types";
+import { type TelemetrySignalLevel } from "../types.ts";
 
 const headerArr = (h: Headers, k: string) => (h.has(k) ? [h.get(k)!] : undefined);
 

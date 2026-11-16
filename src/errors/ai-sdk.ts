@@ -36,8 +36,8 @@ import {
   UnsupportedFunctionalityError,
 } from "ai";
 
-import { GatewayError } from "./gateway";
-import { STATUS_TEXT } from "./utils";
+import { GatewayError } from "./gateway.ts";
+import { STATUS_TEXT } from "./utils.ts";
 
 const normalizeApiCallError = (error: APICallError): GatewayError => {
   const status = error.statusCode ?? (error.isRetryable ? 502 : 422);

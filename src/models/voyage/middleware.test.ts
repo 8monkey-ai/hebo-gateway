@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { voyageDimensionsMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { voyageDimensionsMiddleware } from "./middleware.ts";
 
 test("voyageDimensionsMiddleware > matching patterns", () => {
   const matching = [

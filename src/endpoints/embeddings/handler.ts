@@ -1,17 +1,17 @@
 import { embedMany, wrapEmbeddingModel } from "ai";
 import * as z from "zod/mini";
 
-import { GatewayError } from "../../errors/gateway";
-import { winterCgHandler } from "../../lifecycle";
-import { logger } from "../../logger";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { resolveProvider } from "../../providers/registry";
+import { GatewayError } from "../../errors/gateway.ts";
+import { winterCgHandler } from "../../lifecycle.ts";
+import { logger } from "../../logger/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { resolveProvider } from "../../providers/registry.ts";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
   recordTokenUsage,
-} from "../../telemetry/gen-ai";
-import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+} from "../../telemetry/gen-ai.ts";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span.ts";
 import type {
   AfterHookContext,
   BeforeHookContext,
@@ -21,12 +21,12 @@ import type {
   ResolveProviderHookContext,
   ResolveModelHookContext,
   GatewayConfigParsed,
-} from "../../types";
-import { parseRequestBody } from "../../utils/body";
-import { prepareForwardHeaders } from "../../utils/request";
-import { convertToEmbedCallOptions, toEmbeddings } from "./converters";
-import { getEmbeddingsRequestAttributes, getEmbeddingsResponseAttributes } from "./otel";
-import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema";
+} from "../../types.ts";
+import { parseRequestBody } from "../../utils/body.ts";
+import { prepareForwardHeaders } from "../../utils/request.ts";
+import { convertToEmbedCallOptions, toEmbeddings } from "./converters.ts";
+import { getEmbeddingsRequestAttributes, getEmbeddingsResponseAttributes } from "./otel.ts";
+import { EmbeddingsBodySchema, type EmbeddingsBody } from "./schema.ts";
 
 export const embeddings = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;

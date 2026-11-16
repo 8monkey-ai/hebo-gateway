@@ -2,10 +2,10 @@ import { describe, expect, mock, test } from "bun:test";
 
 import { MockProviderV4 } from "ai/test";
 
-import { parseConfig } from "./config";
-import type { Logger } from "./logger";
-import type { GatewayConfig } from "./types";
-import { FORWARD_HEADER_ALLOWLIST } from "./utils/request";
+import { parseConfig } from "./config.ts";
+import type { Logger } from "./logger/index.ts";
+import type { GatewayConfig } from "./types.ts";
+import { FORWARD_HEADER_ALLOWLIST } from "./utils/request.ts";
 
 const minimalConfig: GatewayConfig = {
   providers: { mock: new MockProviderV4() },

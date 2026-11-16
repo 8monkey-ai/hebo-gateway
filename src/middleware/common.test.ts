@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { extractProviderNamespace, forwardParamsMiddleware } from "./common";
+import { extractProviderNamespace, forwardParamsMiddleware } from "./common.ts";
 
 describe("extractProviderNamespace", () => {
   test("should handle Google Vertex AI (google.vertex -> vertex)", () => {

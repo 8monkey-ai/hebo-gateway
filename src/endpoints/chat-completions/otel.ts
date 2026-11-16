@@ -1,7 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import { type TelemetrySignalLevel } from "../../types";
-import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url";
+import { type TelemetrySignalLevel } from "../../types.ts";
+import { hasUrlScheme, isDataUrl, parseDataUrl } from "../../utils/url.ts";
 import type {
   ChatCompletionsAssistantMessage,
   ChatCompletions,
@@ -9,7 +9,7 @@ import type {
   ChatCompletionsContentPart,
   ChatCompletionsContentPartText,
   ChatCompletionsMessage,
-} from "./schema";
+} from "./schema.ts";
 
 const toTextParts = (content: string | ChatCompletionsContentPart[] | null | undefined) => {
   if (typeof content === "string") {

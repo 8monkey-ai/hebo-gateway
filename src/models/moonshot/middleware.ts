@@ -1,8 +1,8 @@
 import type { MoonshotAILanguageModelOptions } from "@ai-sdk/moonshotai";
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 export const moonshotReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",

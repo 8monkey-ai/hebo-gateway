@@ -1,7 +1,7 @@
 import { type FireworksProvider } from "@ai-sdk/fireworks";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   "meta/llama-3.1-8b": "accounts/fireworks/models/llama-v3p1-8b-instruct",

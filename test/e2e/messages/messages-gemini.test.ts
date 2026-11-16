@@ -2,14 +2,14 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
-import { gemini3FlashPreview } from "../../../src/models/google";
+import { gemini3FlashPreview } from "../../../src/models/google/index.ts";
 import {
   createVertexTestServer,
   GOOGLE_VERTEX_API_KEY,
   GOOGLE_VERTEX_PROJECT,
   type TestServer,
-} from "../shared/server";
-import { MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
+} from "../shared/server.ts";
+import { MESSAGE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools.ts";
 
 // ---------------------------------------------------------------------------
 // Environment

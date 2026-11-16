@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { MockEmbeddingModelV4, MockProviderV4 } from "ai/test";
 
-import { parseResponse, postJson } from "../../../test/helpers/http";
-import { embeddings } from "./handler";
+import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { embeddings } from "./handler.ts";
 
 const baseUrl = "http://localhost/embeddings";
 

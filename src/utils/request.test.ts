@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { FORWARD_HEADER_ALLOWLIST, prepareForwardHeaders } from "./request";
+import { FORWARD_HEADER_ALLOWLIST, prepareForwardHeaders } from "./request.ts";
 
 describe("prepareForwardHeaders", () => {
   test("always appends gateway user-agent suffix", () => {

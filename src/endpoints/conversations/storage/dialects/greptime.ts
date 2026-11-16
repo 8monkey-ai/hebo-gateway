@@ -5,9 +5,9 @@ import {
   type PostgresJsSql,
   isBunSql,
   isPgPool,
-} from "./postgres";
-import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
-import { createParamsMapper, dateToBigInt, escapeSqlString, jsonStringify } from "./utils";
+} from "./postgres.ts";
+import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types.ts";
+import { createParamsMapper, dateToBigInt, escapeSqlString, jsonStringify } from "./utils.ts";
 
 const GrepTimeBase: Pick<DialectConfig, "types"> = {
   types: {

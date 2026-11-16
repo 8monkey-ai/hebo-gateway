@@ -1,7 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 import type { FinishReason } from "ai";
 
-import { type TelemetrySignalLevel } from "../../types";
+import { type TelemetrySignalLevel } from "../../types.ts";
 import type {
   AssistantContentBlock,
   Messages,
@@ -10,7 +10,7 @@ import type {
   MessagesResponseContentBlock,
   SystemBlock,
   UserContentBlock,
-} from "./schema";
+} from "./schema.ts";
 
 const toBlobPart = (modality: string, mimeType?: string) => {
   const part: Record<string, unknown> = {

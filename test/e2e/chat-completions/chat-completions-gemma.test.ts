@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import OpenAI from "openai";
 
-import { gemma426bA4b } from "../../../src/models/google";
-import { GOOGLE_VERTEX_PROJECT } from "../shared/server";
-import { createVertexTestServer, type TestServer } from "../shared/server";
+import { gemma426bA4b } from "../../../src/models/google/index.ts";
+import { GOOGLE_VERTEX_PROJECT } from "../shared/server.ts";
+import { createVertexTestServer, type TestServer } from "../shared/server.ts";
 
 // ---------------------------------------------------------------------------
 // Environment

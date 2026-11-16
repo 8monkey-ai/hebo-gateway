@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import type { SseErrorFrame, SseFrame } from "../../utils/stream";
+import type { SseErrorFrame, SseFrame } from "../../utils/stream.ts";
 import {
   CacheControlSchema as ChatCompletionsCacheControlSchema,
   type CacheControl as ChatCompletionsCacheControl,
@@ -15,7 +15,7 @@ import {
   ContentPartAudioSchema as ChatCompletionsContentPartAudioSchema,
   type ContentPartAudio as ChatCompletionsContentPartAudio,
   TraceSchema,
-} from "../shared/schema";
+} from "../shared/schema.ts";
 
 export {
   ChatCompletionsCacheControlSchema,

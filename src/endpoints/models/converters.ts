@@ -1,6 +1,6 @@
-import type { ModelCatalog, CatalogModel } from "../../models/types";
-import { toResponse } from "../../utils/response";
-import type { ModelList, Model } from "./schema";
+import type { ModelCatalog, CatalogModel } from "../../models/types.ts";
+import { toResponse } from "../../utils/response.ts";
+import type { ModelList, Model } from "./schema.ts";
 
 export function toModel(id: string, catalogModel: CatalogModel): Model {
   const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;

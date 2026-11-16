@@ -1,5 +1,5 @@
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { TranscriptionModelMiddleware } from "../../middleware/transcription.ts";
 
 // Azure OpenAI transcription deployments only read `openai` provider options, while the
 // Azure Speech / MAI APIs (selected via `api`) read `azure` options.

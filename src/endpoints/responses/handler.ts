@@ -8,18 +8,18 @@ import {
 } from "ai";
 import * as z from "zod";
 
-import { GatewayError } from "../../errors/gateway";
-import { winterCgHandler } from "../../lifecycle";
-import { logger } from "../../logger";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { resolveProvider } from "../../providers/registry";
+import { GatewayError } from "../../errors/gateway.ts";
+import { winterCgHandler } from "../../lifecycle.ts";
+import { logger } from "../../logger/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { resolveProvider } from "../../providers/registry.ts";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
   recordTimeToFirstToken,
   recordTokenUsage,
-} from "../../telemetry/gen-ai";
-import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+} from "../../telemetry/gen-ai.ts";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span.ts";
 import type {
   AfterHookContext,
   BeforeHookContext,
@@ -29,13 +29,13 @@ import type {
   ResolveProviderHookContext,
   ResolveModelHookContext,
   GatewayConfigParsed,
-} from "../../types";
-import { parseRequestBody } from "../../utils/body";
-import { prepareForwardHeaders } from "../../utils/request";
-import type { RuntimeContext } from "../shared/converters";
-import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters";
-import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
-import { ResponsesBodySchema, type ResponsesBody } from "./schema";
+} from "../../types.ts";
+import { parseRequestBody } from "../../utils/body.ts";
+import { prepareForwardHeaders } from "../../utils/request.ts";
+import type { RuntimeContext } from "../shared/converters.ts";
+import { convertToTextCallOptions, toResponses, toResponsesStream } from "./converters.ts";
+import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel.ts";
+import { ResponsesBodySchema, type ResponsesBody } from "./schema.ts";
 
 export const responses = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;

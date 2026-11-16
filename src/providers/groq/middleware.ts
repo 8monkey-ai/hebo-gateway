@@ -1,8 +1,8 @@
 import type { GroqProviderOptions } from "@ai-sdk/groq";
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { ChatCompletionsServiceTier } from "../../endpoints/chat-completions/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 // https://console.groq.com/docs/service-tiers
 export const groqServiceTierMiddleware: LanguageModelMiddleware = {

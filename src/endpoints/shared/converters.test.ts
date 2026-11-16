@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { GatewayError } from "../../errors/gateway";
+import { GatewayError } from "../../errors/gateway.ts";
 import {
   parseJsonOrText,
   parseBase64,
@@ -12,7 +12,7 @@ import {
   normalizeToolName,
   stripEmptyKeys,
   extractReasoningMetadata,
-} from "./converters";
+} from "./converters.ts";
 
 describe("Shared Converters", () => {
   describe("parseJsonOrText", () => {

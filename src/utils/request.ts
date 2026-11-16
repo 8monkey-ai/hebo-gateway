@@ -1,5 +1,5 @@
 import pkg from "../../package.json" with { type: "json" };
-import { resolveRequestId } from "./headers";
+import { resolveRequestId } from "./headers.ts";
 
 const GATEWAY_VERSION = pkg.version;
 

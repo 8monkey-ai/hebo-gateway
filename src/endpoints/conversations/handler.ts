@@ -1,14 +1,14 @@
 import * as z from "zod";
 
-import { parseConfig } from "../../config";
-import { GatewayError } from "../../errors/gateway";
-import { winterCgHandler } from "../../lifecycle";
-import { logger } from "../../logger";
-import { addSpanEvent } from "../../telemetry/span";
-import type { Endpoint, GatewayConfig, GatewayContext } from "../../types";
-import { parseRequestBody } from "../../utils/body";
-import type { ResponsesInputItem } from "../responses/schema";
-import { toConversation, toConversationItem, toConversationDeleted } from "./converters";
+import { parseConfig } from "../../config.ts";
+import { GatewayError } from "../../errors/gateway.ts";
+import { winterCgHandler } from "../../lifecycle.ts";
+import { logger } from "../../logger/index.ts";
+import { addSpanEvent } from "../../telemetry/span.ts";
+import type { Endpoint, GatewayConfig, GatewayContext } from "../../types.ts";
+import { parseRequestBody } from "../../utils/body.ts";
+import type { ResponsesInputItem } from "../responses/schema.ts";
+import { toConversation, toConversationItem, toConversationDeleted } from "./converters.ts";
 import {
   ConversationCreateParamsSchema,
   ConversationItemsAddBodySchema,
@@ -20,8 +20,8 @@ import {
   type ConversationDeleted,
   type ConversationItemList,
   type ConversationList,
-} from "./schema";
-import type { ConversationItemInput, ConversationMetadata } from "./storage/types";
+} from "./schema.ts";
+import type { ConversationItemInput, ConversationMetadata } from "./storage/types.ts";
 
 // Codex-shaped clients echo absent optional fields back as literal null; the
 // request schema accepts that, but the storage layer uses `id?: string`, so

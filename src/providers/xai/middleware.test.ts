@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
 
-import { runTranscriptionChain } from "../../../test/helpers/transcription";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { wordSegmentsMiddleware } from "../../middleware/transcription";
+import { runTranscriptionChain } from "../../../test/helpers/transcription.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { wordSegmentsMiddleware } from "../../middleware/transcription.ts";
 // Registers the xAI transcription middleware.
 // oxlint-disable-next-line import/no-unassigned-import
-import "./middleware";
+import "./middleware.ts";
 
 test("xai transcription > matching patterns", () => {
   expect(
