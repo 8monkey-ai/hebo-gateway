@@ -219,7 +219,11 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
             id: toolCall.id,
             type: "function" as const,
             function: toolCall.function,
-            extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
+            // Turn 1 returns both keys, and the AI SDK reads `googleVertex` before `vertex`.
+            extra_content: {
+              googleVertex: { thought_signature: "invalid-corrupted-signature" },
+              vertex: { thought_signature: "invalid-corrupted-signature" },
+            },
           },
         ],
       };

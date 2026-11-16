@@ -134,7 +134,11 @@ describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature
         id: toolUseBlock!.id,
         name: toolUseBlock!.name,
         input: toolUseBlock!.input,
-        extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
+        // Turn 1 returns both keys, and the AI SDK reads `googleVertex` before `vertex`.
+        extra_content: {
+          googleVertex: { thought_signature: "invalid-corrupted-signature" },
+          vertex: { thought_signature: "invalid-corrupted-signature" },
+        },
       };
       const assistantMsg: Anthropic.Messages.MessageParam = {
         role: "assistant",

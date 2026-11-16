@@ -66,11 +66,13 @@ function processOptions(options: Record<string, JSONObject>, providerName: Provi
 
   for (const namespace in options) {
     if (namespace === providerName) continue;
-    Object.assign(
-      target,
-      remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>,
-    );
+    // Providers can read more than one namespace (Vertex reads `googleVertex` before
+    // `vertex`), so camelize each namespace in place as well as merging it into the target.
+    const camelized = remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>;
+    Object.assign(target, camelized);
     if (namespace === "unknown") delete options[namespace];
+    // `@ai-sdk/openai-compatible` copies this namespace to the wire unchanged.
+    else if (namespace !== "openaiCompatible") options[namespace] = camelized;
   }
 }
 
