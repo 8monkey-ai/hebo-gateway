@@ -266,7 +266,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions!["unknown"]).toBeUndefined();
   });
 
-  test("should merge all providerOptions into target providerName and camelize other provider namespaces in place", async () => {
+  test("should merge all providerOptions into target providerName and reserve others", async () => {
     const middleware = forwardParamsMiddleware("anthropic.messages");
     const params = {
       prompt: [],

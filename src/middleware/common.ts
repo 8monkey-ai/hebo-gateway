@@ -83,8 +83,8 @@ function processMetadata(metadata: Record<string, JSONObject>) {
 }
 
 /**
- * Converts snake_case keys in every providerOptions namespace except `openaiCompatible`
- * to camelCase and merges all namespaces into providerOptions[providerName].
+ * Converts snake_case params in providerOptions to camelCase
+ * and moves all of them into providerOptions[providerName].
  * Also snakizes values in providerMetadata for OpenAI compatibility.
  */
 export function forwardLanguageParams(providerName: ProviderId): LanguageModelMiddleware {
@@ -172,8 +172,9 @@ export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingMod
 }
 
 /**
- * Transcription counterpart of `forwardLanguageParams`: providerOptions are converted
- * and merged the same way, and providerMetadata is snakized.
+ * Transcription counterpart of `forwardLanguageParams`: snake_case params in providerOptions
+ * are converted to camelCase and moved into providerOptions[providerName], and
+ * providerMetadata is snakized.
  */
 export function forwardTranscriptionParams(providerName: ProviderId): TranscriptionModelMiddleware {
   return {
