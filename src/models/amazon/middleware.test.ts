@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware.ts";
 
 test("nova middleware > matching patterns", () => {
   const languageMatching = ["amazon/nova-2-lite"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];

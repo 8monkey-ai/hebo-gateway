@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createGroq } from "@ai-sdk/groq";
 
-import { withCanonicalIdsForGroq } from "./canonical";
+import { withCanonicalIdsForGroq } from "./canonical.ts";
 
 const groq = createGroq({ apiKey: "test-key" });
 

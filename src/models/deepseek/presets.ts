@@ -1,6 +1,6 @@
-import type { CanonicalProviderId } from "../../providers/types";
-import { presetFor, type DeepPartial } from "../../utils/preset";
-import type { CanonicalModelId, CatalogModel } from "../types";
+import type { CanonicalProviderId } from "../../providers/types.ts";
+import { presetFor, type DeepPartial } from "../../utils/preset.ts";
+import type { CanonicalModelId, CatalogModel } from "../types.ts";
 
 const DEEPSEEK_BASE = {
   modalities: {

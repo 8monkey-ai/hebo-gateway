@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test";
 import type { TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 import { MockProviderV4, MockTranscriptionModelV4 } from "ai/test";
 
-import { parseResponse, postJson } from "../../../test/helpers/http";
-import { audioTranscriptions } from "./handler";
+import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { audioTranscriptions } from "./handler.ts";
 
 const baseUrl = "http://localhost/audio/transcriptions";
 

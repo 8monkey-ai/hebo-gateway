@@ -1,7 +1,7 @@
 import { type GroqProvider } from "@ai-sdk/groq";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   "meta/llama-3.1-8b": "llama-3.1-8b-instant",

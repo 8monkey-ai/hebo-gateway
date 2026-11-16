@@ -1,7 +1,7 @@
 import { v4 as uuidv4, v7 as uuidv7 } from "uuid";
 
-import type { SqlDialect, QueryExecutor } from "./dialects/types";
-import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils";
+import type { SqlDialect, QueryExecutor } from "./dialects/types.ts";
+import { createRowMapper, mergeData, parseJson, toMilliseconds } from "./dialects/utils.ts";
 import type {
   ConversationStorage,
   ConversationEntity,
@@ -9,7 +9,7 @@ import type {
   ConversationMetadata,
   ConversationItemInput,
   ConversationQueryOptions,
-} from "./types";
+} from "./types.ts";
 
 const rowMapper = createRowMapper<Record<string, unknown>>([
   parseJson("data"),
@@ -417,8 +417,8 @@ export class SqlStorage implements ConversationStorage {
   }
 }
 
-export * from "./dialects/greptime";
-export * from "./dialects/mysql";
-export * from "./dialects/postgres";
-export * from "./dialects/sqlite";
-export * from "./dialects/types";
+export * from "./dialects/greptime.ts";
+export * from "./dialects/mysql.ts";
+export * from "./dialects/postgres.ts";
+export * from "./dialects/sqlite.ts";
+export * from "./dialects/types.ts";

@@ -1,15 +1,15 @@
 import type { Attributes } from "@opentelemetry/api";
 import type { FinishReason } from "ai";
 
-import { type TelemetrySignalLevel } from "../../types";
-import { isDataUrl, parseDataUrl } from "../../utils/url";
+import { type TelemetrySignalLevel } from "../../types.ts";
+import { isDataUrl, parseDataUrl } from "../../utils/url.ts";
 import type {
   Responses,
   ResponsesBody,
   ResponsesInputContent,
   ResponsesInputItem,
   ResponsesMessageItem,
-} from "./schema";
+} from "./schema.ts";
 
 type TelemetryPart = {
   type: string;

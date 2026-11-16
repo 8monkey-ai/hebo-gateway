@@ -1,7 +1,7 @@
 import * as z from "zod";
 
-import { parseBase64 } from "../shared/converters";
-import { InputAudioFormatSchema, TraceSchema } from "../shared/schema";
+import { parseBase64 } from "../shared/converters.ts";
+import { InputAudioFormatSchema, TraceSchema } from "../shared/schema.ts";
 
 // `text`, `srt` and `vtt` are not supported: the AI SDK only returns normalized JSON.
 export const TranscriptionsResponseFormatSchema = z.enum(["json", "verbose_json"]);

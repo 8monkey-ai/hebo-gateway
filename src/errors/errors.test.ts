@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 
 import { APICallError, RetryError } from "ai";
 
-import { normalizeAiSdkError } from "./ai-sdk";
-import { GatewayError } from "./gateway";
-import { getErrorMeta } from "./utils";
+import { normalizeAiSdkError } from "./ai-sdk.ts";
+import { GatewayError } from "./gateway.ts";
+import { getErrorMeta } from "./utils.ts";
 
 describe("GatewayError", () => {
   test("carries headers when provided", () => {

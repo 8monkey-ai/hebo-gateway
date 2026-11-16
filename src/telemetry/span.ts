@@ -1,7 +1,7 @@
 import type { Attributes, SpanOptions, Tracer } from "@opentelemetry/api";
 import { INVALID_SPAN_CONTEXT, SpanKind, SpanStatusCode, context, trace } from "@opentelemetry/api";
 
-import type { TelemetrySignalLevel } from "../types";
+import type { TelemetrySignalLevel } from "../types.ts";
 
 const DEFAULT_TRACER_NAME = "@hebo/gateway";
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel";
-import type { Responses, ResponsesBody } from "./schema";
+import { getResponsesRequestAttributes, getResponsesResponseAttributes } from "./otel.ts";
+import type { Responses, ResponsesBody } from "./schema.ts";
 
 describe("Responses OTEL", () => {
   test("should map request metadata into per-key attributes", () => {

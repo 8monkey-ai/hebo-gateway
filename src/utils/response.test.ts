@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { prepareResponseInit, toResponse } from "./response";
+import { prepareResponseInit, toResponse } from "./response.ts";
 
 describe("toResponse", () => {
   test("serializes JSON objects", async () => {

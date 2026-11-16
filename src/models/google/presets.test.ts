@@ -10,7 +10,7 @@ import {
   gemma4E4b,
   gemma,
   gemini,
-} from "./presets";
+} from "./presets.ts";
 
 test("gemini38Flash > should expose Gemini 3.8 Flash metadata", () => {
   expect(gemini38Flash()).toEqual({

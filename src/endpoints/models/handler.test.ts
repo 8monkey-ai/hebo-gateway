@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { MockProviderV4 } from "ai/test";
 
-import { parseResponse } from "../../../test/helpers/http";
-import { models } from "./handler";
+import { parseResponse } from "../../../test/helpers/http.ts";
+import { models } from "./handler.ts";
 
 const baseUrl = "http://localhost/models";
 

@@ -1,7 +1,7 @@
 import { type CohereProvider } from "@ai-sdk/cohere";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   "cohere/command-a": "command-a-03-2025",

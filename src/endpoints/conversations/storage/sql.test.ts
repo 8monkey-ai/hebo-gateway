@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 
-import { SqliteDialect } from "./dialects/sqlite";
-import { SqlStorage } from "./sql";
+import { SqliteDialect } from "./dialects/sqlite.ts";
+import { SqlStorage } from "./sql.ts";
 
 describe("SQLite Storage (In-Memory)", () => {
   test("should handle full lifecycle and complex queries", async () => {

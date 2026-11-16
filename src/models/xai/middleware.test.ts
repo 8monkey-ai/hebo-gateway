@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { xaiReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { xaiReasoningMiddleware } from "./middleware.ts";
 
 test("xai middleware > matching patterns", () => {
   const languageMatching = [

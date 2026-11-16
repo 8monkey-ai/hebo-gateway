@@ -3,13 +3,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import OpenAI, { APIError } from "openai";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 
-import { claudeSonnet46 } from "../../../src/models/anthropic";
-import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server";
-import { createBedrockTestServer, type TestServer } from "../shared/server";
+import { claudeSonnet46 } from "../../../src/models/anthropic/index.ts";
+import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server.ts";
+import { createBedrockTestServer, type TestServer } from "../shared/server.ts";
 import {
   CHAT_CALCULATOR_TOOL as CALCULATOR_TOOL,
   CHAT_WEATHER_TOOL as WEATHER_TOOL,
-} from "../shared/tools";
+} from "../shared/tools.ts";
 
 // ---------------------------------------------------------------------------
 // Environment

@@ -2,8 +2,8 @@ import type { Client as LibsqlClient } from "@libsql/client";
 import type { Database as BetterSqlite3Database, Statement } from "better-sqlite3";
 import { LRUCache } from "lru-cache";
 
-import type { BunSql, DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { createParamsMapper, dateToNumber, escapeSqlString, jsonStringify } from "./utils";
+import type { BunSql, DialectConfig, QueryExecutor, SqlDialect } from "./types.ts";
+import { createParamsMapper, dateToNumber, escapeSqlString, jsonStringify } from "./utils.ts";
 
 const mapParams = createParamsMapper([dateToNumber, jsonStringify]);
 

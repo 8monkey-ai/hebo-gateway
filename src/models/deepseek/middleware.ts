@@ -4,8 +4,8 @@ import type { LanguageModelMiddleware } from "ai";
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+} from "../../endpoints/chat-completions/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 // DeepSeek V4 knows three thinking strengths; `medium` has no level of its own.
 // https://api-docs.deepseek.com/guides/reasoning_model

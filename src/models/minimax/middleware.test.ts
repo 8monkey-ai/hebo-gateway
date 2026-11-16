@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { minimaxReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { minimaxReasoningMiddleware } from "./middleware.ts";
 
 test("minimax middlewares > matching model resolves reasoning middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({

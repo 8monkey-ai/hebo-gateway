@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { getEmbeddingsRequestAttributes } from "./otel";
-import type { EmbeddingsBody } from "./schema";
+import { getEmbeddingsRequestAttributes } from "./otel.ts";
+import type { EmbeddingsBody } from "./schema.ts";
 
 describe("Embeddings OTEL", () => {
   test("should map request metadata into per-key attributes", () => {

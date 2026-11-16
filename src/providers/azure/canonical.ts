@@ -1,7 +1,7 @@
 import type { AzureOpenAIProvider } from "@ai-sdk/azure";
 
-import type { ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 export const withCanonicalIdsForAzure = (
   provider: AzureOpenAIProvider,

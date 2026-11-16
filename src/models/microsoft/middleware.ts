@@ -1,5 +1,5 @@
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import type { TranscriptionModelMiddleware } from "../../middleware/transcription";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { TranscriptionModelMiddleware } from "../../middleware/transcription.ts";
 
 // MAI-Transcribe is served by the Azure Speech API (not Azure OpenAI deployments), so it
 // selects that API explicitly and maps the OpenAI transcription params to its options.

@@ -2,16 +2,16 @@ import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware.ts";
 import {
   openAIDimensionsMiddleware,
   openAIPromptCachingMiddleware,
   openAIReasoningMiddleware,
   openAITranscribeMiddleware,
-} from "./middleware";
+} from "./middleware.ts";
 
 test("openAI middleware > matching patterns", () => {
   const languageMatching = [

@@ -3,11 +3,11 @@ import { describe, expect, test } from "bun:test";
 import type { LanguageModelV4CallOptions, LanguageModelV4FilePart } from "@ai-sdk/provider";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
-import { postJson } from "../../../test/helpers/http";
-import { defineModelCatalog } from "../../models/catalog";
-import { chatCompletions } from "../chat-completions/handler";
-import { messages } from "../messages/handler";
-import { responses } from "../responses/handler";
+import { postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
+import { chatCompletions } from "../chat-completions/handler.ts";
+import { messages } from "../messages/handler.ts";
+import { responses } from "../responses/handler.ts";
 
 /**
  * v7 unified the deprecated `ImagePart` into `FilePart`, so images and non-image

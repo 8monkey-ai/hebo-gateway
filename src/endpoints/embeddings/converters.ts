@@ -1,8 +1,8 @@
 import type { SharedV4ProviderOptions } from "@ai-sdk/provider";
 import type { EmbedManyResult } from "ai";
 
-import { toResponse } from "../../utils/response";
-import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema";
+import { toResponse } from "../../utils/response.ts";
+import type { EmbeddingsInputs, EmbeddingsData, EmbeddingsUsage, Embeddings } from "./schema.ts";
 
 export type EmbedCallOptions = {
   values: string[];

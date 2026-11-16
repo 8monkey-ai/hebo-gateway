@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "paths": {
       "@hebo-ai/gateway": ["../../src/"],
       "@hebo-ai/gateway/*": ["../../src/*"]

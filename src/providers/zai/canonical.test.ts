@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createZhipu } from "zhipu-ai-provider";
 
-import { withCanonicalIdsForZai } from "./canonical";
+import { withCanonicalIdsForZai } from "./canonical.ts";
 
 const provider = withCanonicalIdsForZai(createZhipu({ apiKey: "test-key" }));
 

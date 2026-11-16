@@ -1,5 +1,5 @@
-import { isProduction, isTest } from "../utils/env";
-import type { LogArgs, LogFn, LogLevel, Logger } from "./index";
+import { isProduction, isTest } from "../utils/env.ts";
+import type { LogArgs, LogFn, LogLevel, Logger } from "./index.ts";
 
 const getDefaultLogLevel = (): LogLevel =>
   isTest() ? "silent" : isProduction() ? "info" : "debug";

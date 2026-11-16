@@ -6,16 +6,16 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import OpenAI, { APIError, toFile } from "openai";
 
-import type { ModelCatalog, ProviderRegistry } from "../../../src";
-import { gemini35Transcribe } from "../../../src/models/google";
-import { maiTranscribe2 } from "../../../src/models/microsoft";
-import { gptTranscribe } from "../../../src/models/openai";
-import { grokVoiceTranscribe20 } from "../../../src/models/xai";
-import { withCanonicalIdsForAzure } from "../../../src/providers/azure";
-import { withCanonicalIdsForOpenAI } from "../../../src/providers/openai";
-import { withCanonicalIdsForVertex } from "../../../src/providers/vertex";
-import { withCanonicalIdsForXai } from "../../../src/providers/xai";
-import { GOOGLE_VERTEX_PROJECT, createTestServer, type TestServer } from "../shared/server";
+import type { ModelCatalog, ProviderRegistry } from "../../../src/index.ts";
+import { gemini35Transcribe } from "../../../src/models/google/index.ts";
+import { maiTranscribe2 } from "../../../src/models/microsoft/index.ts";
+import { gptTranscribe } from "../../../src/models/openai/index.ts";
+import { grokVoiceTranscribe20 } from "../../../src/models/xai/index.ts";
+import { withCanonicalIdsForAzure } from "../../../src/providers/azure/index.ts";
+import { withCanonicalIdsForOpenAI } from "../../../src/providers/openai/index.ts";
+import { withCanonicalIdsForVertex } from "../../../src/providers/vertex/index.ts";
+import { withCanonicalIdsForXai } from "../../../src/providers/xai/index.ts";
+import { GOOGLE_VERTEX_PROJECT, createTestServer, type TestServer } from "../shared/server.ts";
 
 // ---------------------------------------------------------------------------
 // Environment

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { hasUrlScheme, isDataUrl, parseDataUrl } from "./url";
+import { hasUrlScheme, isDataUrl, parseDataUrl } from "./url.ts";
 
 describe("isDataUrl", () => {
   test.each(["data:application/pdf;base64,aGk=", "DATA:application/pdf;base64,aGk=", "Data:,x"])(

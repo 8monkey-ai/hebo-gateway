@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { RETRY_AFTER_MS_HEADER, buildRetryHeaders, filterResponseHeaders } from "./headers";
+import { RETRY_AFTER_MS_HEADER, buildRetryHeaders, filterResponseHeaders } from "./headers.ts";
 
 describe("filterResponseHeaders", () => {
   test("returns empty object for undefined input", () => {

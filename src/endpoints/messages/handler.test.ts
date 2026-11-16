@@ -3,10 +3,10 @@ import { describe, expect, test } from "bun:test";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
-import { parseResponse, postJson } from "../../../test/helpers/http";
-import { defineModelCatalog } from "../../models/catalog";
-import { messages } from "./handler";
-import type { Messages } from "./schema";
+import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
+import { messages } from "./handler.ts";
+import type { Messages } from "./schema.ts";
 
 const baseUrl = "http://localhost/messages";
 

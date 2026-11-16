@@ -4,8 +4,8 @@ import type { LanguageModelMiddleware } from "ai";
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+} from "../../endpoints/chat-completions/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 /**
  * The Grok 4.20 line rejects `reasoning_effort` outright, dated variants included, while its

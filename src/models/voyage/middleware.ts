@@ -1,8 +1,8 @@
 import type { EmbeddingModelMiddleware } from "ai";
 import type { VoyageEmbeddingOptions } from "voyage-ai-provider";
 
-import type { EmbeddingsDimensions } from "../../endpoints/embeddings";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Voyage)
 export const voyageDimensionsMiddleware: EmbeddingModelMiddleware = {

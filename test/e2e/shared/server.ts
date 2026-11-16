@@ -7,9 +7,9 @@ import {
   type ProviderRegistry,
   defineModelCatalog,
   gateway,
-} from "../../../src";
-import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock";
-import { withCanonicalIdsForVertex } from "../../../src/providers/vertex";
+} from "../../../src/index.ts";
+import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock/index.ts";
+import { withCanonicalIdsForVertex } from "../../../src/providers/vertex/index.ts";
 
 // ---------------------------------------------------------------------------
 // Bedrock credentials

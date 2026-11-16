@@ -1,21 +1,21 @@
 import { expect, test } from "bun:test";
 
-import { qwen } from "./alibaba/presets";
-import { nova } from "./amazon/presets";
-import { claude } from "./anthropic/presets";
-import { defineModelCatalog } from "./catalog";
-import { command, embed, north } from "./cohere/presets";
-import { deepseek } from "./deepseek/presets";
-import { gemini, gemma } from "./google/presets";
-import { llama } from "./meta/presets";
-import { maiTranscribe } from "./microsoft/presets";
-import { minimax } from "./minimax/presets";
-import { kimi } from "./moonshot/presets";
-import { gpt, gptOss, textEmbeddings } from "./openai/presets";
-import { CANONICAL_MODEL_IDS } from "./types";
-import { voyage } from "./voyage/presets";
-import { grok } from "./xai/presets";
-import { glm } from "./zai/presets";
+import { qwen } from "./alibaba/presets.ts";
+import { nova } from "./amazon/presets.ts";
+import { claude } from "./anthropic/presets.ts";
+import { defineModelCatalog } from "./catalog.ts";
+import { command, embed, north } from "./cohere/presets.ts";
+import { deepseek } from "./deepseek/presets.ts";
+import { gemini, gemma } from "./google/presets.ts";
+import { llama } from "./meta/presets.ts";
+import { maiTranscribe } from "./microsoft/presets.ts";
+import { minimax } from "./minimax/presets.ts";
+import { kimi } from "./moonshot/presets.ts";
+import { gpt, gptOss, textEmbeddings } from "./openai/presets.ts";
+import { CANONICAL_MODEL_IDS } from "./types.ts";
+import { voyage } from "./voyage/presets.ts";
+import { grok } from "./xai/presets.ts";
+import { glm } from "./zai/presets.ts";
 
 const catalog = defineModelCatalog(
   qwen.all,

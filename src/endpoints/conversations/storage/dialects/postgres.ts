@@ -2,8 +2,8 @@ import { LRUCache } from "lru-cache";
 import type { Pool as PgPool } from "pg";
 import type { Sql as PostgresJsSql, TransactionSql } from "postgres";
 
-import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types";
-import { createParamsMapper, dateToNumber, escapeSqlString } from "./utils";
+import { type BunSql, type DialectConfig, type QueryExecutor, type SqlDialect } from "./types.ts";
+import { createParamsMapper, dateToNumber, escapeSqlString } from "./utils.ts";
 
 export type { PostgresJsSql, PgPool };
 

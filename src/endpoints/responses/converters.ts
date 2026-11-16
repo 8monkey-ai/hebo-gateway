@@ -20,9 +20,9 @@ import type {
 import { Output, isStepCount, jsonSchema, tool } from "ai";
 import { v7 as uuidv7 } from "uuid";
 
-import { GatewayError } from "../../errors/gateway";
-import { toResponse } from "../../utils/response";
-import type { SseErrorFrame } from "../../utils/stream";
+import { GatewayError } from "../../errors/gateway.ts";
+import { toResponse } from "../../utils/response.ts";
+import type { SseErrorFrame } from "../../utils/stream.ts";
 import {
   parseJsonOrText,
   parseReasoningOptions,
@@ -37,7 +37,7 @@ import {
   type RuntimeContext,
   type TextCallOptions,
   type ToolChoiceOptions,
-} from "../shared/converters";
+} from "../shared/converters.ts";
 import type {
   ResponsesInputItem,
   ResponsesMessageItem,
@@ -62,7 +62,7 @@ import type {
   ResponsesTextConfig,
   ResponsesSummaryText,
   ResponsesReasoningText,
-} from "./schema";
+} from "./schema.ts";
 
 // --- Helpers ---
 

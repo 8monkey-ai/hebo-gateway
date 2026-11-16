@@ -1,6 +1,6 @@
-import { buildRetryHeaders, filterResponseHeaders, REQUEST_ID_HEADER } from "./headers";
-import type { SseFrame } from "./stream";
-import { toSseStream } from "./stream";
+import { buildRetryHeaders, filterResponseHeaders, REQUEST_ID_HEADER } from "./headers.ts";
+import type { SseFrame } from "./stream.ts";
+import { toSseStream } from "./stream.ts";
 
 const TEXT_ENCODER = new TextEncoder();
 

@@ -1,8 +1,8 @@
 import type { Attributes } from "@opentelemetry/api";
 
-import { type TelemetrySignalLevel } from "../../types";
-import { toAudioMediaType } from "../shared/converters";
-import type { Transcriptions, TranscriptionsBody } from "./schema";
+import { type TelemetrySignalLevel } from "../../types.ts";
+import { toAudioMediaType } from "../shared/converters.ts";
+import type { Transcriptions, TranscriptionsBody } from "./schema.ts";
 
 export const getTranscriptionsRequestAttributes = (
   body: TranscriptionsBody,

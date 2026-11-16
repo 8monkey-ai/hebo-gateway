@@ -10,8 +10,8 @@ import {
   type HistogramMetricData,
 } from "@opentelemetry/sdk-metrics";
 
-import type { GatewayContext } from "../types";
-import { getGenAiGeneralAttributes, recordTokenUsage } from "./gen-ai";
+import type { GatewayContext } from "../types.ts";
+import { getGenAiGeneralAttributes, recordTokenUsage } from "./gen-ai.ts";
 
 type Point = {
   value: number;

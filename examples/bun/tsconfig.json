@@ -6,6 +6,8 @@
     /* Modules */
     "module": "Preserve",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "types": ["bun-types"],
 
     "paths": {

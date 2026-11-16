@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createAlibaba } from "@ai-sdk/alibaba";
 
-import { withCanonicalIdsForAlibaba } from "./canonical";
+import { withCanonicalIdsForAlibaba } from "./canonical.ts";
 
 const provider = withCanonicalIdsForAlibaba(createAlibaba({ apiKey: "test-key" }));
 

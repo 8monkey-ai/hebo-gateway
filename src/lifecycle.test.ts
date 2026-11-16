@@ -9,8 +9,8 @@ import {
 } from "@opentelemetry/sdk-trace-base";
 import { MockProviderV4 } from "ai/test";
 
-import { models } from "./endpoints/models/handler";
-import { winterCgHandler } from "./lifecycle";
+import { models } from "./endpoints/models/handler.ts";
+import { winterCgHandler } from "./lifecycle.ts";
 
 describe("winterCgHandler", () => {
   afterEach(() => {

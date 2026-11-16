@@ -1,4 +1,4 @@
-import { GatewayError } from "../errors/gateway";
+import { GatewayError } from "../errors/gateway.ts";
 
 /**
  * Supported Content-Encoding values for request body decompression.

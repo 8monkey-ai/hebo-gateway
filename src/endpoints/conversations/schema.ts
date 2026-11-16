@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { ResponsesMetadataSchema, ResponsesInputItemSchema } from "../responses/schema";
+import { ResponsesMetadataSchema, ResponsesInputItemSchema } from "../responses/schema.ts";
 
 /**
  * --- Entities ---

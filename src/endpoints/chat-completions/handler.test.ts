@@ -3,10 +3,10 @@ import { describe, expect, test } from "bun:test";
 import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
-import { parseResponse, postJson } from "../../../test/helpers/http";
-import { defineModelCatalog } from "../../models/catalog";
-import { chatCompletions } from "./handler";
-import { type ChatCompletions } from "./schema";
+import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
+import { chatCompletions } from "./handler.ts";
+import { type ChatCompletions } from "./schema.ts";
 
 const baseUrl = "http://localhost/chat/completions";
 

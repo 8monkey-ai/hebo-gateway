@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 
-import { transcriptionProviderOptions } from "../../../test/helpers/transcription";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { azureTranscriptionOptionsMiddleware } from "./middleware";
+import { transcriptionProviderOptions } from "../../../test/helpers/transcription.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { azureTranscriptionOptionsMiddleware } from "./middleware.ts";
 
 test("azureTranscriptionOptionsMiddleware > matching patterns", () => {
   expect(

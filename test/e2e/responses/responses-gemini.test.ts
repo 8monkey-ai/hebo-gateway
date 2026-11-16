@@ -7,10 +7,10 @@ import type {
   ResponseOutputText,
 } from "openai/resources/responses/responses";
 
-import { gemini3FlashPreview } from "../../../src/models/google";
-import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server";
-import { createVertexTestServer, type TestServer } from "../shared/server";
-import { RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools";
+import { gemini3FlashPreview } from "../../../src/models/google/index.ts";
+import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server.ts";
+import { createVertexTestServer, type TestServer } from "../shared/server.ts";
+import { RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers

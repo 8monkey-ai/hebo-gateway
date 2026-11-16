@@ -1,6 +1,6 @@
-import { isProduction } from "../utils/env";
-import { normalizeAiSdkError } from "./ai-sdk";
-import { GatewayError } from "./gateway";
+import { isProduction } from "../utils/env.ts";
+import { normalizeAiSdkError } from "./ai-sdk.ts";
+import { GatewayError } from "./gateway.ts";
 
 export const STATUS_CODES = {
   400: "BAD_REQUEST",

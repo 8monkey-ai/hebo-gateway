@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { anthropicServiceTierMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { anthropicServiceTierMiddleware } from "./middleware.ts";
 
 test("anthropic middlewares > matching provider resolves the service tier middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({

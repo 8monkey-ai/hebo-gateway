@@ -1,4 +1,4 @@
-import type { ChatCompletionsReasoningEffort } from "../endpoints/chat-completions/schema";
+import type { ChatCompletionsReasoningEffort } from "../endpoints/chat-completions/schema.ts";
 
 export function calculateReasoningBudgetFromEffort(
   effort: ChatCompletionsReasoningEffort,

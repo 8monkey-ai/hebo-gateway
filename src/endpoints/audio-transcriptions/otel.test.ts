@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { getTranscriptionsRequestAttributes, getTranscriptionsResponseAttributes } from "./otel";
-import type { Transcriptions, TranscriptionsBody } from "./schema";
+import { getTranscriptionsRequestAttributes, getTranscriptionsResponseAttributes } from "./otel.ts";
+import type { Transcriptions, TranscriptionsBody } from "./schema.ts";
 
 const body: TranscriptionsBody = {
   model: "openai/gpt-transcribe",

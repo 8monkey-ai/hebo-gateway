@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { TraceSchema } from "../shared/schema";
+import { TraceSchema } from "../shared/schema.ts";
 
 export const EmbeddingsDimensionsSchema = z.int().nonnegative().max(65536);
 export type EmbeddingsDimensions = z.infer<typeof EmbeddingsDimensionsSchema>;

@@ -1,7 +1,7 @@
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import { logger } from "../logger";
-import type { TranscriptionModelMiddleware } from "./transcription";
+import { logger } from "../logger/index.ts";
+import type { TranscriptionModelMiddleware } from "./transcription.ts";
 
 export const debugFinalParamsMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",

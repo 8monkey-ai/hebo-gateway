@@ -1,4 +1,4 @@
-import type { ProviderId } from "../providers/types";
+import type { ProviderId } from "../providers/types.ts";
 
 export const CANONICAL_MODEL_IDS = [
   // Anthropic

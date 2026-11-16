@@ -1,7 +1,7 @@
 import { type MoonshotAIProvider } from "@ai-sdk/moonshotai";
 
-import type { ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 export const withCanonicalIdsForMoonshot = (
   provider: MoonshotAIProvider,

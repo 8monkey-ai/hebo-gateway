@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { xai } from "@ai-sdk/xai";
 
-import { withCanonicalIdsForXai } from "./canonical";
+import { withCanonicalIdsForXai } from "./canonical.ts";
 
 test("withCanonicalIdsForXai > maps grok-4.2 via explicit mapping", () => {
   const provider = withCanonicalIdsForXai(xai);

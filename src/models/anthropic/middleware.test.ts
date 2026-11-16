@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
-import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./middleware.ts";
 
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [

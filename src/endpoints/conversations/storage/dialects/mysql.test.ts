@@ -1,7 +1,7 @@
 import { describe, expect, test, mock } from "bun:test";
 
-import { SqlStorage } from "../sql";
-import { MysqlDialect, MySQLDialectConfig, type Mysql2Pool } from "./mysql";
+import { SqlStorage } from "../sql.ts";
+import { MysqlDialect, MySQLDialectConfig, type Mysql2Pool } from "./mysql.ts";
 
 describe("MySQL Dialect (Mocked)", () => {
   const createMockPool = () => {

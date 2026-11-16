@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseRequestBody, readJson, readRequestBody, DEFAULT_MAX_BODY_SIZE } from "./body";
+import { parseRequestBody, readJson, readRequestBody, DEFAULT_MAX_BODY_SIZE } from "./body.ts";
 
 function jsonRequest(body: unknown, headers?: Record<string, string>): Request {
   return new Request("http://localhost/test", {

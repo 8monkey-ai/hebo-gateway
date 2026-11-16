@@ -11,10 +11,10 @@ import type {
   ChatCompletionsCacheControl,
   ChatCompletionsReasoningEffort,
   ChatCompletionsServiceTier,
-} from "../../endpoints/chat-completions/schema";
-import { logger } from "../../logger";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+} from "../../endpoints/chat-completions/schema.ts";
+import { logger } from "../../logger/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
 
 const BEDROCK_EFFORT_CAPABLE = ["-4-6", "-4-7"] as const;
 const isBedrockEffortCapable = (modelId: string) =>

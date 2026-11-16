@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { getMessagesRequestAttributes, getMessagesResponseAttributes } from "./otel";
-import type { Messages, MessagesBody } from "./schema";
+import { getMessagesRequestAttributes, getMessagesResponseAttributes } from "./otel.ts";
+import type { Messages, MessagesBody } from "./schema.ts";
 
 describe("Messages OTEL", () => {
   test("should return empty for off signal level", () => {

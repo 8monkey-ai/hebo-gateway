@@ -1,4 +1,4 @@
-import type { ModelCatalog } from "./types";
+import type { ModelCatalog } from "./types.ts";
 
 type ModelCatalogInput =
   | ModelCatalog

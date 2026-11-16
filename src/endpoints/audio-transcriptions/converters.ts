@@ -1,17 +1,17 @@
 import type { JSONObject, TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 
-import { GatewayError } from "../../errors/gateway";
-import type { TranscriptionResult } from "../../middleware/transcription";
-import { readJson, readRequestBody } from "../../utils/body";
-import { toResponse } from "../../utils/response";
-import { toAudioMediaType } from "../shared/converters";
-import type { InputAudioFormat } from "../shared/schema";
+import { GatewayError } from "../../errors/gateway.ts";
+import type { TranscriptionResult } from "../../middleware/transcription.ts";
+import { readJson, readRequestBody } from "../../utils/body.ts";
+import { toResponse } from "../../utils/response.ts";
+import { toAudioMediaType } from "../shared/converters.ts";
+import type { InputAudioFormat } from "../shared/schema.ts";
 import type {
   Transcriptions,
   TranscriptionsInputs,
   TranscriptionsResponseFormat,
   TranscriptionsUsage,
-} from "./schema";
+} from "./schema.ts";
 
 // Multipart fields that must stay strings (all other fields are JSON-coerced).
 const STRING_FORM_FIELDS = new Set(["model", "language", "prompt", "response_format"]);

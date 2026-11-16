@@ -1,6 +1,6 @@
-import type { CanonicalProviderId } from "../../providers/types";
-import { presetFor, type DeepPartial } from "../../utils/preset";
-import type { CanonicalModelId, CatalogModel } from "../types";
+import type { CanonicalProviderId } from "../../providers/types.ts";
+import { presetFor, type DeepPartial } from "../../utils/preset.ts";
+import type { CanonicalModelId, CatalogModel } from "../types.ts";
 
 // MAI-Transcribe models are served by Azure's Speech API (not Azure OpenAI deployments).
 const MAI_TRANSCRIBE_BASE = {

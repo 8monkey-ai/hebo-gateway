@@ -1,7 +1,7 @@
 import type { Pool as Mysql2Pool, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import type { BunSql, DialectConfig, QueryExecutor, SqlDialect } from "./types";
-import { createParamsMapper, dateToNumber, escapeSqlString, jsonStringify } from "./utils";
+import type { BunSql, DialectConfig, QueryExecutor, SqlDialect } from "./types.ts";
+import { createParamsMapper, dateToNumber, escapeSqlString, jsonStringify } from "./utils.ts";
 
 export type { Mysql2Pool };
 

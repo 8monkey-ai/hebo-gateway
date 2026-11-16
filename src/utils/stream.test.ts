@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { toSseStream, type SseFrame } from "./stream";
+import { toSseStream, type SseFrame } from "./stream.ts";
 
 describe("stream utils", () => {
   test("serializes frames as SSE and appends done", async () => {

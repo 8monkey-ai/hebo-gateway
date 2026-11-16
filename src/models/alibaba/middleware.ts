@@ -1,9 +1,9 @@
 import type { AlibabaLanguageModelOptions } from "@ai-sdk/alibaba";
 import type { LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
 
 const QWEN_DEFAULT_MAX_OUTPUT_TOKENS = 16384;
 

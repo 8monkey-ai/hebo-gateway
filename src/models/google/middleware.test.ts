@@ -5,16 +5,16 @@ import { MockLanguageModelV4 } from "ai/test";
 import {
   runTranscriptionChain,
   transcriptionProviderOptions,
-} from "../../../test/helpers/transcription";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { wordSegmentsMiddleware } from "../../middleware/transcription";
-import { CANONICAL_MODEL_IDS } from "../../models/types";
+} from "../../../test/helpers/transcription.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { wordSegmentsMiddleware } from "../../middleware/transcription.ts";
+import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import {
   geminiDimensionsMiddleware,
   geminiPromptCachingMiddleware,
   geminiReasoningMiddleware,
   geminiTranscribeMiddleware,
-} from "./middleware";
+} from "./middleware.ts";
 
 test("geminiReasoningMiddleware > matching patterns", () => {
   const matching = [

@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { groqServiceTierMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { groqServiceTierMiddleware } from "./middleware.ts";
 
 test("groq middlewares > matching provider resolves service tier middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({

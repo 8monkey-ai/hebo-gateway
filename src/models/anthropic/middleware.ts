@@ -5,9 +5,9 @@ import type {
   ChatCompletionsCacheControl,
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils";
+} from "../../endpoints/chat-completions/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
 
 const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
   const dashed = version.replace(".", "-");

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { moonshotai } from "@ai-sdk/moonshotai";
 
-import { withCanonicalIdsForMoonshot } from "./canonical";
+import { withCanonicalIdsForMoonshot } from "./canonical.ts";
 
 test("withCanonicalIdsForMoonshot > strips namespace for kimi-k2.5", () => {
   const provider = withCanonicalIdsForMoonshot(moonshotai);

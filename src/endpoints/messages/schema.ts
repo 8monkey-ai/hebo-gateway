@@ -1,8 +1,8 @@
 import * as z from "zod";
 
-import type { SseFrame } from "../../utils/stream";
-import { CacheControlSchema, ProviderMetadataSchema, TraceSchema } from "../shared/schema";
-import type { ProviderMetadata } from "../shared/schema";
+import type { SseFrame } from "../../utils/stream.ts";
+import { CacheControlSchema, ProviderMetadataSchema, TraceSchema } from "../shared/schema.ts";
+import type { ProviderMetadata } from "../shared/schema.ts";
 
 // --- Content Block Schemas ---
 

@@ -3,8 +3,8 @@ import { expect, test } from "bun:test";
 import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { vertexGemma4ThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { vertexGemma4ThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware.ts";
 
 const vertexServiceTierCases = [
   {

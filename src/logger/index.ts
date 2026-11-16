@@ -1,4 +1,4 @@
-import { isTest } from "../utils/env";
+import { isTest } from "../utils/env.ts";
 
 export type LogArgs =
   | [msg: string]

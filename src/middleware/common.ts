@@ -1,8 +1,8 @@
 import type { JSONObject } from "@ai-sdk/provider";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { ProviderId } from "../providers/types";
-import type { TranscriptionModelMiddleware } from "./transcription";
+import type { ProviderId } from "../providers/types.ts";
+import type { TranscriptionModelMiddleware } from "./transcription.ts";
 
 function snakeToCamel(key: string): string {
   // oxlint-disable-next-line prefer-includes

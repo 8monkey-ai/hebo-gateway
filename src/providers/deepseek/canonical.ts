@@ -1,7 +1,7 @@
 import { type DeepSeekProvider } from "@ai-sdk/deepseek";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   // DeepSeek serves its newest Flash release from the undated `deepseek-flash` alias.

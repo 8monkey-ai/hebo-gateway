@@ -12,9 +12,9 @@ import {
 import type { LanguageModelV4, ProviderV4 } from "@ai-sdk/provider";
 import { customProvider, type LanguageModel } from "ai";
 
-import { logger } from "../../logger";
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import { logger } from "../../logger/index.ts";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 // For a list of all models with their IDs and InferenceTypes check:
 //   https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html

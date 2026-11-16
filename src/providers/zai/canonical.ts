@@ -1,7 +1,7 @@
 import type { ZhipuProvider } from "zhipu-ai-provider";
 
-import type { CanonicalModelId, ModelId } from "../../models/types";
-import { withCanonicalIds } from "../registry";
+import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
   "zhipu/glm-5": "glm-5-20260211",

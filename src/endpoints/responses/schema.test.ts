@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { ResponsesBodySchema } from "./schema";
+import { ResponsesBodySchema } from "./schema.ts";
 
 describe("ResponsesBodySchema", () => {
   test("accepts reasoning items with nullable fields (Codex follow-up payload)", () => {

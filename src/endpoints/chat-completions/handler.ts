@@ -8,18 +8,18 @@ import {
 } from "ai";
 import * as z from "zod/mini";
 
-import { GatewayError } from "../../errors/gateway";
-import { winterCgHandler } from "../../lifecycle";
-import { logger } from "../../logger";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { resolveProvider } from "../../providers/registry";
+import { GatewayError } from "../../errors/gateway.ts";
+import { winterCgHandler } from "../../lifecycle.ts";
+import { logger } from "../../logger/index.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { resolveProvider } from "../../providers/registry.ts";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
   recordTimeToFirstToken,
   recordTokenUsage,
-} from "../../telemetry/gen-ai";
-import { addSpanEvent, setSpanAttributes } from "../../telemetry/span";
+} from "../../telemetry/gen-ai.ts";
+import { addSpanEvent, setSpanAttributes } from "../../telemetry/span.ts";
 import type {
   AfterHookContext,
   BeforeHookContext,
@@ -29,13 +29,17 @@ import type {
   ResolveProviderHookContext,
   ResolveModelHookContext,
   GatewayConfigParsed,
-} from "../../types";
-import { parseRequestBody } from "../../utils/body";
-import { prepareForwardHeaders } from "../../utils/request";
-import type { RuntimeContext } from "../shared/converters";
-import { convertToTextCallOptions, toChatCompletions, toChatCompletionsStream } from "./converters";
-import { getChatRequestAttributes, getChatResponseAttributes } from "./otel";
-import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema";
+} from "../../types.ts";
+import { parseRequestBody } from "../../utils/body.ts";
+import { prepareForwardHeaders } from "../../utils/request.ts";
+import type { RuntimeContext } from "../shared/converters.ts";
+import {
+  convertToTextCallOptions,
+  toChatCompletions,
+  toChatCompletionsStream,
+} from "./converters.ts";
+import { getChatRequestAttributes, getChatResponseAttributes } from "./otel.ts";
+import { ChatCompletionsBodySchema, type ChatCompletionsBody } from "./schema.ts";
 
 export const chatCompletions = (config: GatewayConfig): Endpoint => {
   const hooks = config.hooks;

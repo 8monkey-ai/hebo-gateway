@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 
-import { withCanonicalIdsForBedrock } from "./canonical";
+import { withCanonicalIdsForBedrock } from "./canonical.ts";
 
 test("withCanonicalIdsForBedrock > maps Claude Opus 5.5 to inference profile without version postfix", () => {
   const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));

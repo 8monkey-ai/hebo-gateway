@@ -1,20 +1,23 @@
 import type { ProviderV4 } from "@ai-sdk/provider";
 import type { Attributes, Tracer } from "@opentelemetry/api";
 
-import type { Transcriptions, TranscriptionsBody } from "./endpoints/audio-transcriptions/schema";
+import type {
+  Transcriptions,
+  TranscriptionsBody,
+} from "./endpoints/audio-transcriptions/schema.ts";
 import type {
   ChatCompletions,
   ChatCompletionsBody,
   ChatCompletionsStream,
-} from "./endpoints/chat-completions/schema";
-import type { ConversationStorage } from "./endpoints/conversations/storage/types";
-import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema";
-import type { Messages, MessagesBody, MessagesStream } from "./endpoints/messages/schema";
-import type { Model, ModelList } from "./endpoints/models";
-import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema";
-import type { Logger, LoggerConfig } from "./logger";
-import type { ModelCatalog, ModelId } from "./models/types";
-import type { ProviderId, ProviderRegistry } from "./providers/types";
+} from "./endpoints/chat-completions/schema.ts";
+import type { ConversationStorage } from "./endpoints/conversations/storage/types.ts";
+import type { Embeddings, EmbeddingsBody } from "./endpoints/embeddings/schema.ts";
+import type { Messages, MessagesBody, MessagesStream } from "./endpoints/messages/schema.ts";
+import type { Model, ModelList } from "./endpoints/models/index.ts";
+import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema.ts";
+import type { Logger, LoggerConfig } from "./logger/index.ts";
+import type { ModelCatalog, ModelId } from "./models/types.ts";
+import type { ProviderId, ProviderRegistry } from "./providers/types.ts";
 
 export type GatewayOperation =
   | "chat"

@@ -7,9 +7,9 @@ import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 import type {
   ChatCompletionsReasoningConfig,
   ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema";
-import type { EmbeddingsDimensions } from "../../endpoints/embeddings/schema";
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
+} from "../../endpoints/chat-completions/schema.ts";
+import type { EmbeddingsDimensions } from "../../endpoints/embeddings/schema.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 // Convert `dimensions` (OpenAI) to `embeddingDimension` (Nova)
 export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {

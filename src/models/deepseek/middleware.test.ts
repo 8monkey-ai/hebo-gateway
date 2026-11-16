@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import type { CANONICAL_MODEL_IDS } from "../../models/types";
-import { deepseekReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import { deepseekReasoningMiddleware } from "./middleware.ts";
 
 test("deepseek middleware > matching patterns", () => {
   const languageMatching = [

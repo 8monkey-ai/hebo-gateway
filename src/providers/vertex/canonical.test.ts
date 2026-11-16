@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createVertex } from "@ai-sdk/google-vertex";
 
-import { withCanonicalIdsForVertex } from "./canonical";
+import { withCanonicalIdsForVertex } from "./canonical.ts";
 
 process.env["GOOGLE_VERTEX_PROJECT"] = "test-project";
 

@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
-import { modelMiddlewareMatcher } from "../../middleware/matcher";
-import { moonshotReasoningMiddleware } from "./middleware";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { moonshotReasoningMiddleware } from "./middleware.ts";
 
 test("moonshot middlewares > matching model resolves reasoning middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
