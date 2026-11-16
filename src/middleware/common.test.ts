@@ -217,6 +217,44 @@ describe("forwardParamsMiddleware", () => {
     });
   });
 
+  test("should point vertex priority namespaces at the merged options", async () => {
+    const middleware = forwardParamsMiddleware("google.vertex.chat");
+    // Shape of a Vertex tool call's extra_content, echoed back by the client verbatim.
+    const params = {
+      prompt: [],
+      providerOptions: {
+        googleVertex: { thought_signature: "sig" },
+        vertex: { thought_signature: "sig" },
+        unknown: { cache_control: { type: "ephemeral" } },
+      },
+    };
+
+    const result = await middleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId: "google/gemini-3.7-flash" }),
+    });
+
+    const merged = { thoughtSignature: "sig", cacheControl: { type: "ephemeral" } };
+    expect(result.providerOptions).toEqual({ googleVertex: merged, vertex: merged });
+  });
+
+  test("should not add vertex priority namespaces that were not sent", async () => {
+    const middleware = forwardParamsMiddleware("google.vertex.chat");
+    const params = {
+      prompt: [],
+      providerOptions: { unknown: { thought_signature: "sig" } },
+    };
+
+    const result = await middleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId: "google/gemini-3.7-flash" }),
+    });
+
+    expect(result.providerOptions).toEqual({ vertex: { thoughtSignature: "sig" } });
+  });
+
   test("should merge unknown.reasoning_effort into openai.reasoningEffort for gpt-5", async () => {
     const middleware = forwardParamsMiddleware("openai.chat");
     const params = {

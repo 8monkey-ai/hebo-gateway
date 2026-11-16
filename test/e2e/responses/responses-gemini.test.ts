@@ -160,7 +160,11 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
               name: fnCall!.name,
               arguments: fnCall!.arguments,
               // @ts-expect-error — gateway extension
-              extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
+              // Corrupt every namespace the gateway emits, as a client echoing it back would.
+              extra_content: {
+                googleVertex: { thought_signature: "invalid-corrupted-signature" },
+                vertex: { thought_signature: "invalid-corrupted-signature" },
+              },
             },
             {
               type: "function_call_output",

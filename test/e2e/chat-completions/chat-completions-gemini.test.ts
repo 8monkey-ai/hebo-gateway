@@ -219,7 +219,11 @@ describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_s
             id: toolCall.id,
             type: "function" as const,
             function: toolCall.function,
-            extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
+            // Corrupt every namespace the gateway emits, as a client echoing it back would.
+            extra_content: {
+              googleVertex: { thought_signature: "invalid-corrupted-signature" },
+              vertex: { thought_signature: "invalid-corrupted-signature" },
+            },
           },
         ],
       };

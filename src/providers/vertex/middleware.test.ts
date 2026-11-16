@@ -1,8 +1,12 @@
 import { expect, test } from "bun:test";
 
+import { createVertex } from "@ai-sdk/google-vertex";
 import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
+import { wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
+import { fromChatCompletionsAssistantMessage } from "../../endpoints/chat-completions/converters";
+import { forwardParamsMiddleware } from "../../middleware/common";
 import { modelMiddlewareMatcher } from "../../middleware/matcher";
 import { vertexGemma4ThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware";
 
@@ -169,4 +173,70 @@ test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", as
   expect(params.providerOptions).toEqual({
     vertex: { chat_template_kwargs: { enable_thinking: true } },
   });
+});
+
+// ---------------------------------------------------------------------------
+// Gemini 3 thought signatures replayed from a tool call's extra_content (#283)
+// ---------------------------------------------------------------------------
+
+/** Sends a replayed tool call through the real Vertex Gemini provider and captures the body. */
+async function captureReplayedFunctionCall(extraContent: Record<string, Record<string, string>>) {
+  type Body = { contents: { role: string; parts: Record<string, unknown>[] }[] };
+  let body: Body | undefined;
+  const vertex = createVertex({
+    apiKey: "test-key",
+    fetch: ((_input: RequestInfo | URL, init?: RequestInit) => {
+      body = JSON.parse(init?.body as string) as Body;
+      throw new Error("captured");
+    }) as unknown as typeof fetch,
+  });
+  const model = wrapLanguageModel({
+    model: vertex.languageModel("gemini-3-flash-preview"),
+    middleware: forwardParamsMiddleware("google.vertex.chat"),
+  });
+
+  const assistant = fromChatCompletionsAssistantMessage({
+    role: "assistant",
+    content: null,
+    tool_calls: [
+      {
+        id: "call_1",
+        type: "function",
+        function: { name: "get_weather", arguments: '{"city":"Paris"}' },
+        extra_content: extraContent,
+      },
+    ],
+  });
+
+  try {
+    await model.doGenerate({
+      prompt: [
+        { role: "user", content: [{ type: "text", text: "Weather in Paris?" }] },
+        assistant as LanguageModelV4CallOptions["prompt"][number],
+      ],
+    });
+  } catch {
+    // expected
+  }
+
+  return body!.contents.find((c) => c.role === "model")!.parts[0]!;
+}
+
+test("vertex Gemini 3 > forwards the thought signature echoed back in extra_content", async () => {
+  // The exact shape the gateway emits on a Vertex tool call.
+  const part = await captureReplayedFunctionCall({
+    googleVertex: { thought_signature: "real-sig" },
+    vertex: { thought_signature: "real-sig" },
+  });
+
+  expect(part["thoughtSignature"]).toBe("real-sig");
+});
+
+test("vertex Gemini 3 > forwards an invalid signature instead of the skip sentinel", async () => {
+  const part = await captureReplayedFunctionCall({
+    googleVertex: { thought_signature: "invalid" },
+    vertex: { thought_signature: "invalid" },
+  });
+
+  expect(part["thoughtSignature"]).toBe("invalid");
 });
