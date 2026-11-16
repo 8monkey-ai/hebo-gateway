@@ -217,7 +217,7 @@ describe("forwardParamsMiddleware", () => {
     });
   });
 
-  test("should point vertex priority namespaces at the merged options", async () => {
+  test("should point every sent namespace at the merged options", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     // Shape of a Vertex tool call's extra_content, echoed back by the client verbatim.
     const params = {
@@ -239,7 +239,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions).toEqual({ googleVertex: merged, vertex: merged });
   });
 
-  test("should not add vertex priority namespaces that were not sent", async () => {
+  test("should not add namespaces that were not sent", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     const params = {
       prompt: [],
@@ -276,7 +276,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions!["unknown"]).toBeUndefined();
   });
 
-  test("should merge all providerOptions into target providerName and reserve others", async () => {
+  test("should merge all providerOptions into target providerName and alias others", async () => {
     const middleware = forwardParamsMiddleware("anthropic.messages");
     const params = {
       prompt: [],
@@ -293,14 +293,29 @@ describe("forwardParamsMiddleware", () => {
       model: new MockLanguageModelV4({ modelId: "anthropic/claude-3-5-sonnet" }),
     });
 
-    expect(result.providerOptions).toEqual({
-      anthropic: {
-        someOption: "value1",
-        otherOption: "value2",
-        existingOption: "value3",
-      },
-      openai: { other_option: "value2" },
-    });
+    const merged = { someOption: "value1", otherOption: "value2", existingOption: "value3" };
+    expect(result.providerOptions).toEqual({ anthropic: merged, openai: merged });
     expect(result.providerOptions!["unknown"]).toBeUndefined();
+  });
+
+  test("should not let a namespace the provider reads first shadow the merged options", async () => {
+    // Bedrock reads `amazonBedrock` before `bedrock`, and emits metadata under both.
+    const middleware = forwardParamsMiddleware("amazon-bedrock");
+    const params = {
+      prompt: [],
+      providerOptions: {
+        amazonBedrock: { redacted_content: "data" },
+        bedrock: { redacted_content: "data" },
+      },
+    };
+
+    const result = await middleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+    });
+
+    const merged = { redactedContent: "data" };
+    expect(result.providerOptions).toEqual({ amazonBedrock: merged, bedrock: merged });
   });
 });

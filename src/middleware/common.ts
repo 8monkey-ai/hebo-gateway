@@ -59,14 +59,11 @@ function remapDeep(value: unknown, mapKey: (k: string) => string): unknown {
 }
 
 /**
- * Namespaces a provider reads ahead of the one we merge into. They must point at the
- * merged options, or a client echoing them back verbatim (e.g. Vertex `extra_content`
- * carrying `googleVertex.thought_signature`) shadows the camelized target.
+ * Merges every namespace into a camelized `providerName` namespace. Namespaces the client sent
+ * (except `unknown`) are kept as aliases of the merged options: providers often read several
+ * keys and take the first one present (e.g. Vertex `googleVertex` before `vertex`, Bedrock
+ * `amazonBedrock` before `bedrock`), so a verbatim echo of response metadata must not shadow it.
  */
-const PRIORITY_NAMESPACES: Partial<Record<string, readonly string[]>> = {
-  vertex: ["googleVertex"],
-};
-
 function processOptions(options: Record<string, JSONObject>, providerName: ProviderId) {
   const target = (options[providerName] = remapDeep(
     options[providerName] ?? {},
@@ -80,13 +77,7 @@ function processOptions(options: Record<string, JSONObject>, providerName: Provi
       remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>,
     );
     if (namespace === "unknown") delete options[namespace];
-  }
-
-  const priority = PRIORITY_NAMESPACES[providerName];
-  if (priority) {
-    for (const namespace of priority) {
-      if (namespace in options) options[namespace] = target;
-    }
+    else options[namespace] = target;
   }
 }
 
