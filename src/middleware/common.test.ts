@@ -217,6 +217,34 @@ describe("forwardParamsMiddleware", () => {
     });
   });
 
+  test("should keep openaiCompatible keys as sent, because the provider copies them to the wire", async () => {
+    const middleware = forwardParamsMiddleware("deepinfra.chat");
+    const params = {
+      prompt: [
+        {
+          role: "user" as const,
+          content: [
+            {
+              type: "text" as const,
+              text: "hi",
+              providerOptions: { openaiCompatible: { some_field: "value" } },
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = await middleware.transformParams!({
+      type: "generate",
+      params,
+      model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
+    });
+
+    expect(result.prompt[0]!.content[0]).toMatchObject({
+      providerOptions: { openaiCompatible: { some_field: "value" } },
+    });
+  });
+
   test("should merge unknown.reasoning_effort into openai.reasoningEffort for gpt-5", async () => {
     const middleware = forwardParamsMiddleware("openai.chat");
     const params = {
@@ -238,7 +266,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions!["unknown"]).toBeUndefined();
   });
 
-  test("should merge all providerOptions into target providerName and reserve others", async () => {
+  test("should merge all providerOptions into target providerName and camelize other provider namespaces in place", async () => {
     const middleware = forwardParamsMiddleware("anthropic.messages");
     const params = {
       prompt: [],
@@ -261,7 +289,7 @@ describe("forwardParamsMiddleware", () => {
         otherOption: "value2",
         existingOption: "value3",
       },
-      openai: { other_option: "value2" },
+      openai: { otherOption: "value2" },
     });
     expect(result.providerOptions!["unknown"]).toBeUndefined();
   });

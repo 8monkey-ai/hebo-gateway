@@ -66,11 +66,13 @@ function processOptions(options: Record<string, JSONObject>, providerName: Provi
 
   for (const namespace in options) {
     if (namespace === providerName) continue;
-    Object.assign(
-      target,
-      remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>,
-    );
+    // Providers can read more than one namespace (Vertex reads `googleVertex` before
+    // `vertex`), so camelize each namespace in place as well as merging it into the target.
+    const camelized = remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>;
+    Object.assign(target, camelized);
     if (namespace === "unknown") delete options[namespace];
+    // `@ai-sdk/openai-compatible` copies this namespace to the wire unchanged.
+    else if (namespace !== "openaiCompatible") options[namespace] = camelized;
   }
 }
 
@@ -81,8 +83,8 @@ function processMetadata(metadata: Record<string, JSONObject>) {
 }
 
 /**
- * Converts snake_case params in providerOptions to camelCase
- * and moves all of them into providerOptions[providerName].
+ * Converts snake_case keys in every providerOptions namespace except `openaiCompatible`
+ * to camelCase and merges all namespaces into providerOptions[providerName].
  * Also snakizes values in providerMetadata for OpenAI compatibility.
  */
 export function forwardLanguageParams(providerName: ProviderId): LanguageModelMiddleware {
@@ -170,9 +172,8 @@ export function forwardParamsEmbeddingMiddleware(provider: string): EmbeddingMod
 }
 
 /**
- * Transcription counterpart of `forwardLanguageParams`: snake_case params in providerOptions
- * are converted to camelCase and moved into providerOptions[providerName], and
- * providerMetadata is snakized.
+ * Transcription counterpart of `forwardLanguageParams`: providerOptions are converted
+ * and merged the same way, and providerMetadata is snakized.
  */
 export function forwardTranscriptionParams(providerName: ProviderId): TranscriptionModelMiddleware {
   return {

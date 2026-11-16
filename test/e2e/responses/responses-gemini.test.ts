@@ -159,8 +159,12 @@ describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signatur
               call_id: fnCall!.call_id,
               name: fnCall!.name,
               arguments: fnCall!.arguments,
+              // Turn 1 returns both keys, and the AI SDK reads `googleVertex` before `vertex`.
               // @ts-expect-error — gateway extension
-              extra_content: { vertex: { thought_signature: "invalid-corrupted-signature" } },
+              extra_content: {
+                googleVertex: { thought_signature: "invalid-corrupted-signature" },
+                vertex: { thought_signature: "invalid-corrupted-signature" },
+              },
             },
             {
               type: "function_call_output",
