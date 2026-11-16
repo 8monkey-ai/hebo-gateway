@@ -217,7 +217,7 @@ describe("forwardParamsMiddleware", () => {
     });
   });
 
-  test("should point every sent namespace at the merged options", async () => {
+  test("should merge every sent namespace and drop the raw ones", async () => {
     const middleware = forwardParamsMiddleware("google.vertex.chat");
     // Shape of a Vertex tool call's extra_content, echoed back by the client verbatim.
     const params = {
@@ -235,8 +235,10 @@ describe("forwardParamsMiddleware", () => {
       model: new MockLanguageModelV4({ modelId: "google/gemini-3.7-flash" }),
     });
 
-    const merged = { thoughtSignature: "sig", cacheControl: { type: "ephemeral" } };
-    expect(result.providerOptions).toEqual({ googleVertex: merged, vertex: merged });
+    // `googleVertex` is read first by the provider, so it must not survive in raw snake_case.
+    expect(result.providerOptions).toEqual({
+      vertex: { thoughtSignature: "sig", cacheControl: { type: "ephemeral" } },
+    });
   });
 
   test("should not add namespaces that were not sent", async () => {
@@ -276,7 +278,7 @@ describe("forwardParamsMiddleware", () => {
     expect(result.providerOptions!["unknown"]).toBeUndefined();
   });
 
-  test("should merge all providerOptions into target providerName and alias others", async () => {
+  test("should merge all providerOptions into target providerName and drop others", async () => {
     const middleware = forwardParamsMiddleware("anthropic.messages");
     const params = {
       prompt: [],
@@ -293,9 +295,9 @@ describe("forwardParamsMiddleware", () => {
       model: new MockLanguageModelV4({ modelId: "anthropic/claude-3-5-sonnet" }),
     });
 
-    const merged = { someOption: "value1", otherOption: "value2", existingOption: "value3" };
-    expect(result.providerOptions).toEqual({ anthropic: merged, openai: merged });
-    expect(result.providerOptions!["unknown"]).toBeUndefined();
+    expect(result.providerOptions).toEqual({
+      anthropic: { someOption: "value1", otherOption: "value2", existingOption: "value3" },
+    });
   });
 
   test("should not let a namespace the provider reads first shadow the merged options", async () => {
@@ -315,7 +317,6 @@ describe("forwardParamsMiddleware", () => {
       model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
     });
 
-    const merged = { redactedContent: "data" };
-    expect(result.providerOptions).toEqual({ amazonBedrock: merged, bedrock: merged });
+    expect(result.providerOptions).toEqual({ bedrock: { redactedContent: "data" } });
   });
 });

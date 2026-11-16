@@ -59,26 +59,23 @@ function remapDeep(value: unknown, mapKey: (k: string) => string): unknown {
 }
 
 /**
- * Merges every namespace into a camelized `providerName` namespace. Namespaces the client sent
- * (except `unknown`) are kept as aliases of the merged options: providers often read several
- * keys and take the first one present (e.g. Vertex `googleVertex` before `vertex`, Bedrock
- * `amazonBedrock` before `bedrock`), so a verbatim echo of response metadata must not shadow it.
+ * Merges every namespace into a single camelized `providerName` namespace and drops the rest.
+ * Providers often read several keys and take the first one present (e.g. Vertex `googleVertex`
+ * before `vertex`, Bedrock `amazonBedrock` before `bedrock`), so a raw namespace echoed back
+ * from response metadata must not survive to shadow the merged options.
  */
-function processOptions(options: Record<string, JSONObject>, providerName: ProviderId) {
-  const target = (options[providerName] = remapDeep(
-    options[providerName] ?? {},
-    snakeToCamel,
-  ) as JSONObject) as Record<string, JSONObject>;
+function processOptions(
+  options: Record<string, JSONObject>,
+  providerName: ProviderId,
+): Record<string, JSONObject> {
+  const target = remapDeep(options[providerName] ?? {}, snakeToCamel) as JSONObject;
 
   for (const namespace in options) {
     if (namespace === providerName) continue;
-    Object.assign(
-      target,
-      remapDeep(options[namespace], snakeToCamel) as Record<string, JSONObject>,
-    );
-    if (namespace === "unknown") delete options[namespace];
-    else options[namespace] = target;
+    Object.assign(target, remapDeep(options[namespace], snakeToCamel) as JSONObject);
   }
+
+  return { [providerName]: target };
 }
 
 function processMetadata(metadata: Record<string, JSONObject>) {
@@ -97,16 +94,18 @@ export function forwardLanguageParams(providerName: ProviderId): LanguageModelMi
     specificationVersion: "v3",
     // oxlint-disable-next-line require-await
     transformParams: async ({ params }) => {
-      if (params.providerOptions) processOptions(params.providerOptions, providerName);
+      if (params.providerOptions) {
+        params.providerOptions = processOptions(params.providerOptions, providerName);
+      }
 
       for (const message of params.prompt) {
         if (message.providerOptions) {
-          processOptions(message.providerOptions, providerName);
+          message.providerOptions = processOptions(message.providerOptions, providerName);
         }
         if (message.content && Array.isArray(message.content)) {
           for (const part of message.content) {
             if ("providerOptions" in part && part.providerOptions) {
-              processOptions(part.providerOptions, providerName);
+              part.providerOptions = processOptions(part.providerOptions, providerName);
             }
           }
         }
@@ -144,7 +143,9 @@ export function forwardEmbeddingParams(providerName: ProviderId): EmbeddingModel
     specificationVersion: "v3",
     // oxlint-disable-next-line require-await
     transformParams: async ({ params }) => {
-      if (params.providerOptions) processOptions(params.providerOptions, providerName);
+      if (params.providerOptions) {
+        params.providerOptions = processOptions(params.providerOptions, providerName);
+      }
       return params;
     },
     wrapEmbed: async ({ doEmbed }) => {
@@ -186,7 +187,7 @@ export function forwardTranscriptionParams(providerName: ProviderId): Transcript
     transformParams: ({ params }) => {
       // Skip empty options: some providers apply extra defaults once their namespace exists.
       if (params.providerOptions && Object.keys(params.providerOptions).length > 0) {
-        processOptions(params.providerOptions, providerName);
+        params.providerOptions = processOptions(params.providerOptions, providerName);
       }
       return params;
     },
