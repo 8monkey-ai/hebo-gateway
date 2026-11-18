@@ -18,7 +18,7 @@ const GEMINI_BASE = {
   providers: ["vertex"] as const satisfies readonly CanonicalProviderId[],
 } satisfies DeepPartial<CatalogModel>;
 
-// Gemini 3.x models manage sampling internally on Vertex; custom temperature,
+// Gemini 3.x and 4 models manage sampling internally on Vertex; custom temperature,
 // top-K, and top-P values are ignored, so we drop the `temperature` capability.
 const GEMINI_3X_BASE = {
   ...GEMINI_BASE,
@@ -140,6 +140,36 @@ export const gemini35Flash = presetFor<CanonicalModelId, CatalogModel>()(
     name: "Gemini 3.5 Flash",
     created: "2026-05-19",
     knowledge: "2025-01",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemini4Hydrogen = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-4-hydrogen" as const,
+  {
+    ...GEMINI_3X_BASE,
+    name: "Gemini 4 Hydrogen",
+    created: "2026-11-12",
+    knowledge: "2026-03",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemini4Argon = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-4-argon" as const,
+  {
+    ...GEMINI_3X_BASE,
+    name: "Gemini 4 Argon",
+    created: "2026-10-13",
+    knowledge: "2026-03",
+  } satisfies DeepPartial<CatalogModel>,
+);
+
+export const gemini4Carbon = presetFor<CanonicalModelId, CatalogModel>()(
+  "google/gemini-4-carbon" as const,
+  {
+    ...GEMINI_3X_BASE,
+    name: "Gemini 4 Carbon",
+    created: "2026-11-10",
+    knowledge: "2026-03",
   } satisfies DeepPartial<CatalogModel>,
 );
 
@@ -285,6 +315,7 @@ const geminiAtomic = {
   "v3.6": [gemini36Flash],
   "v3.7": [gemini37Flash],
   "v3.8": [gemini38Flash],
+  v4: [gemini4Hydrogen, gemini4Argon, gemini4Carbon],
   "v3-preview": [gemini3FlashPreview, gemini31ProPreview],
   embeddings: [geminiEmbedding2],
   transcription: [gemini35Transcribe],
@@ -299,12 +330,13 @@ const geminiGroups = {
     ...geminiAtomic["v3.7"],
     ...geminiAtomic["v3.8"],
   ],
+  "v4.x": [...geminiAtomic["v4"]],
 } as const;
 
 export const gemini = {
   ...geminiAtomic,
   ...geminiGroups,
-  latest: [...geminiAtomic["v3.8"]],
+  latest: [...geminiAtomic["v4"]],
   preview: [...geminiAtomic["v3-preview"]],
   embeddings: [...geminiAtomic["embeddings"]],
   transcription: [...geminiAtomic["transcription"]],

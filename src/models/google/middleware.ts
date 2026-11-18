@@ -33,25 +33,40 @@ export const geminiDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-/**
- * Flash dropped the `minimal` thinking level after 3.6 (3.7 onwards starts at `low`), and
- * sending a level a model does not list is rejected, so it collapses to `low` there.
- */
-const supportsMinimalLevel = (modelId: string) => {
+/** `3.8-flash` -> 3.8, `3-flash-preview` -> 3, `4-argon` -> 4, a missing version -> NaN. */
+const geminiVersion = (modelId: string) => {
   const start = modelId.indexOf("gemini-");
-  if (start === -1) return true;
+  if (start === -1) return Number.NaN;
 
   const rest = modelId.slice(start + "gemini-".length);
   const end = rest.indexOf("-");
-  // `3.8-flash` -> 3.8, `3-flash-preview` -> 3, a missing version -> NaN, never `>= 3.7`.
-  return !(Number(end === -1 ? rest : rest.slice(0, end)) >= 3.7);
+  return Number(end === -1 ? rest : rest.slice(0, end));
 };
 
 // https://ai.google.dev/gemini-api/docs/thinking#thinking-levels
 export function mapGeminiReasoningEffort(
   effort: ChatCompletionsReasoningEffort,
   modelId: string,
-): "minimal" | "low" | "medium" | "high" | undefined {
+): "minimal" | "low" | "medium" | "high" | "xhigh" | undefined {
+  const version = geminiVersion(modelId);
+
+  // Gemini 4 always thinks and rejects `minimal` with a 400; only Hydrogen lists `xhigh`.
+  if (version >= 4) {
+    switch (effort) {
+      case "none":
+      case "minimal":
+      case "low":
+        return "low";
+      case "medium":
+        return "medium";
+      case "high":
+        return "high";
+      case "xhigh":
+      case "max":
+        return modelId.includes("hydrogen") ? "xhigh" : "high";
+    }
+  }
+
   if (modelId.includes("pro")) {
     switch (effort) {
       case "none":
@@ -67,11 +82,12 @@ export function mapGeminiReasoningEffort(
     }
   }
 
-  // Flash
+  // Flash dropped the `minimal` thinking level after 3.6 (3.7 onwards starts at `low`), and
+  // sending a level a model does not list is rejected, so it collapses to `low` there.
   switch (effort) {
     case "none":
     case "minimal":
-      return supportsMinimalLevel(modelId) ? "minimal" : "low";
+      return version >= 3.7 ? "low" : "minimal";
     case "low":
       return "low";
     case "medium":
@@ -102,7 +118,8 @@ export const geminiReasoningMiddleware: LanguageModelMiddleware = {
     const modelId = model.modelId;
 
     if (reasoning.effort) {
-      if (reasoning.effort === "none") {
+      // Gemini 4 rejects `thinkingBudget` with a 400, so `none` maps to its lowest level.
+      if (reasoning.effort === "none" && !(geminiVersion(modelId) >= 4)) {
         // thinkingBudget: 0 fully disables thinking (thinkingLevel: "minimal" still allows some)
         target.thinkingConfig = { thinkingBudget: 0 };
       } else {
@@ -153,6 +170,11 @@ modelMiddlewareMatcher.useForModel("google/gemini-*embedding-*", {
 
 modelMiddlewareMatcher.useForModel("google/gemini-3*", {
   language: [geminiReasoningMiddleware, geminiPromptCachingMiddleware],
+});
+
+// Gemini 4 supports implicit caching only; explicit `cachedContent` is not supported.
+modelMiddlewareMatcher.useForModel("google/gemini-4*", {
+  language: [geminiReasoningMiddleware],
 });
 
 // Maps the OpenAI transcription params to Gemini Transcribe options.

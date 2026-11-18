@@ -110,7 +110,11 @@ test("built-in presets > latest groups point at the newest release of each famil
     "deepseek/deepseek-v4-pro",
     "deepseek/deepseek-v4.1-flash",
   ]);
-  expect(ids(gemini.latest)).toEqual(["google/gemini-3.8-flash"]);
+  expect(ids(gemini.latest)).toEqual([
+    "google/gemini-4-hydrogen",
+    "google/gemini-4-argon",
+    "google/gemini-4-carbon",
+  ]);
   expect(ids(gpt.latest)).toEqual([
     "openai/gpt-6.2-astra",
     "openai/gpt-6.2-sol",
