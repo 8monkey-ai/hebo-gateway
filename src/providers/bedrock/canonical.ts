@@ -72,6 +72,8 @@ const MANTLE_MAPPING = {
   "openai/gpt-6-sol": "openai.gpt-6-sol",
   "openai/gpt-6-luna": "openai.gpt-6-luna",
   "openai/gpt-6.1-sol": "openai.gpt-6.1-sol",
+  "openai/gpt-6.2-astra": "openai.gpt-6.2-astra",
+  "openai/gpt-6.2-sol": "openai.gpt-6.2-sol",
 } as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;

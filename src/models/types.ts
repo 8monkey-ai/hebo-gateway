@@ -33,6 +33,8 @@ export const CANONICAL_MODEL_IDS = [
   "openai/gpt-6-sol",
   "openai/gpt-6-luna",
   "openai/gpt-6.1-sol",
+  "openai/gpt-6.2-astra",
+  "openai/gpt-6.2-sol",
   "openai/text-embedding-3-small",
   "openai/text-embedding-3-large",
   "openai/gpt-transcribe",

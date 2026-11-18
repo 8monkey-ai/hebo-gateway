@@ -213,6 +213,31 @@ export const gpt61Sol = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-
   context: 1050000,
 } satisfies CatalogModel);
 
+// GPT-6.2 rejects `temperature`, so it is left out of the capabilities.
+const GPT_62_BASE = {
+  ...GPT_MULTI_CLOUD_BASE,
+  capabilities: ["attachments", "reasoning", "tool_call", "structured_output"] as const,
+} satisfies DeepPartial<CatalogModel>;
+
+export const gpt62Astra = presetFor<CanonicalModelId, CatalogModel>()(
+  "openai/gpt-6.2-astra" as const,
+  {
+    ...GPT_62_BASE,
+    name: "GPT-6.2 Astra",
+    created: "2026-11-17",
+    knowledge: "2026-05",
+    context: 1050000,
+  } satisfies CatalogModel,
+);
+
+export const gpt62Sol = presetFor<CanonicalModelId, CatalogModel>()("openai/gpt-6.2-sol" as const, {
+  ...GPT_62_BASE,
+  name: "GPT-6.2 Sol",
+  created: "2026-11-17",
+  knowledge: "2026-06",
+  context: 1050000,
+} satisfies CatalogModel);
+
 export const textEmbedding3Small = presetFor<CanonicalModelId, CatalogModel>()(
   "openai/text-embedding-3-small" as const,
   {
@@ -278,6 +303,7 @@ const gptAtomic = {
   "v5.6": [gpt56Sol, gpt56Terra, gpt56Luna],
   v6: [gpt6Astra, gpt6Sol, gpt6Luna],
   "v6.1": [gpt61Sol],
+  "v6.2": [gpt62Astra, gpt62Sol],
   codex: [gpt53CodexSpark],
   pro: [gpt52Pro, gpt54Pro, gpt55Pro],
   transcription: [gptTranscribe],
@@ -291,7 +317,7 @@ const gptGroups = {
     ...gptAtomic["v5.5"],
     ...gptAtomic["v5.6"],
   ],
-  "v6.x": [...gptAtomic["v6"], ...gptAtomic["v6.1"]],
+  "v6.x": [...gptAtomic["v6"], ...gptAtomic["v6.1"], ...gptAtomic["v6.2"]],
 } as const;
 
 const textEmbeddingsAtomic = {
@@ -313,7 +339,7 @@ export const gpt = {
   ...gptAtomic,
   ...gptGroups,
   // Astra/Sol/Luna span the frontier/balanced/cheap tiers; 5.5 Pro is still the newest Pro.
-  latest: [gpt6Astra, gpt61Sol, gpt6Luna, gpt55Pro],
+  latest: [gpt62Astra, gpt62Sol, gpt6Luna, gpt55Pro],
   all: Object.values(gptAtomic).flat(),
 } as const;
 
