@@ -112,8 +112,8 @@ test("built-in presets > latest groups point at the newest release of each famil
   ]);
   expect(ids(gemini.latest)).toEqual(["google/gemini-3.8-flash"]);
   expect(ids(gpt.latest)).toEqual([
-    "openai/gpt-6-astra",
-    "openai/gpt-6.1-sol",
+    "openai/gpt-6.2-astra",
+    "openai/gpt-6.2-sol",
     "openai/gpt-6-luna",
     "openai/gpt-5.5-pro",
   ]);

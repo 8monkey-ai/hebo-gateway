@@ -197,6 +197,8 @@ const mantleCases = [
   { canonical: "openai/gpt-6-sol", native: "openai.gpt-6-sol" },
   { canonical: "openai/gpt-6-luna", native: "openai.gpt-6-luna" },
   { canonical: "openai/gpt-6.1-sol", native: "openai.gpt-6.1-sol" },
+  { canonical: "openai/gpt-6.2-astra", native: "openai.gpt-6.2-astra" },
+  { canonical: "openai/gpt-6.2-sol", native: "openai.gpt-6.2-sol" },
 ] as const;
 
 for (const { canonical, native } of mantleCases) {
