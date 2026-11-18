@@ -68,25 +68,28 @@ describe("Audio Transcriptions Handler", () => {
       xai: new MockProviderV4({ transcriptionModels: { "grok-voice-transcribe-2.0": grok } }),
     },
     models: {
-      "transcribe-1": {
-        name: "Transcribe",
-        modalities: { input: ["audio"], output: ["transcription"] },
-        providers: ["openai"],
-      },
-      "grok-voice-transcribe-2.0": {
-        name: "Grok Voice Transcribe",
-        modalities: { input: ["audio"], output: ["transcription"] },
-        providers: ["xai"],
-      },
-      "gpt-oss-20b": {
-        name: "GPT-OSS 20B",
-        modalities: { input: ["text"], output: ["text"] },
-        providers: ["openai"],
-      },
-      "text-embedding-3-small": {
-        name: "OpenAI Embedding Model",
-        modalities: { input: ["text"], output: ["embeddings"] },
-        providers: ["openai"],
+      include: [],
+      overrides: {
+        "transcribe-1": {
+          name: "Transcribe",
+          modalities: { input: ["audio"], output: ["transcription"] },
+          providers: ["openai"],
+        },
+        "grok-voice-transcribe-2.0": {
+          name: "Grok Voice Transcribe",
+          modalities: { input: ["audio"], output: ["transcription"] },
+          providers: ["xai"],
+        },
+        "gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text"], output: ["text"] },
+          providers: ["openai"],
+        },
+        "text-embedding-3-small": {
+          name: "OpenAI Embedding Model",
+          modalities: { input: ["text"], output: ["embeddings"] },
+          providers: ["openai"],
+        },
       },
     },
     advanced: { maxBodySize: 1024 },
@@ -272,9 +275,12 @@ describe("Audio Transcriptions Handler", () => {
         openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
       },
       models: {
-        "transcribe-1": {
-          modalities: { input: ["audio"], output: ["transcription"] },
-          providers: ["openai"],
+        include: [],
+        overrides: {
+          "transcribe-1": {
+            modalities: { input: ["audio"], output: ["transcription"] },
+            providers: ["openai"],
+          },
         },
       },
       hooks: {

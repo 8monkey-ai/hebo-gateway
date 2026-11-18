@@ -7,14 +7,14 @@ import { withCanonicalIdsForDeepSeek } from "./canonical.ts";
 test("withCanonicalIdsForDeepSeek > strips namespace for deepseek-v4-pro", () => {
   const provider = withCanonicalIdsForDeepSeek(deepseek);
 
-  const model = provider.languageModel("deepseek/deepseek-v4-pro");
+  const model = provider.languageModel("deepseek/deepseek-v4-pro-0813");
   expect(model.modelId).toBe("deepseek-v4-pro");
 });
 
 test("withCanonicalIdsForDeepSeek > maps deepseek-v4.1-flash to the flash alias", () => {
   const provider = withCanonicalIdsForDeepSeek(deepseek);
 
-  const model = provider.languageModel("deepseek/deepseek-v4.1-flash");
+  const model = provider.languageModel("deepseek/deepseek-v4.1-flash-1017");
   expect(model.modelId).toBe("deepseek-flash");
 });
 

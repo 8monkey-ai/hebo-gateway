@@ -9,6 +9,7 @@ export const withCanonicalIdsForOpenAI = (
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
+    namespaces: ["openai"],
     options: {
       stripNamespace: true,
     },

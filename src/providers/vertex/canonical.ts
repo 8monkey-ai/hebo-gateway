@@ -7,7 +7,17 @@ import {
 import { customProvider } from "ai";
 
 import type { ModelId } from "../../models/types.ts";
-import { withCanonicalIds } from "../registry.ts";
+import {
+  getCanonicalIdsResolver,
+  withCanonicalIds,
+  withCanonicalIdsResolver,
+} from "../registry.ts";
+
+// Dated Claude snapshots use Vertex's `@` version separator.
+const MAPPING = {
+  "anthropic/claude-haiku-4-5-20251001": "claude-haiku-4-5@20251001",
+  "anthropic/claude-opus-4-5-20251101": "claude-opus-4-5@20251101",
+} as const satisfies Record<ModelId, string>;
 
 /**
  * `createVertex` keeps `project` and `googleAuthOptions` in a closure, so the resolved
@@ -69,20 +79,22 @@ export const withCanonicalIdsForVertex = (
   let maas: GoogleVertexMaasProvider | undefined;
 
   const base = withCanonicalIds(provider, {
-    mapping: extraMapping,
+    mapping: { ...MAPPING, ...extraMapping },
+    namespaces: ["google", "anthropic"],
     options: {
       stripNamespace: true,
-      normalizeDelimiters: ["anthropic"],
     },
   });
 
-  return customProvider({
+  const wrapped = customProvider({
     languageModels: {
-      get "google/gemma-4-26b-a4b"() {
+      get "google/gemma-4-26b-a4b-it"() {
         maas ??= createMaas(provider);
         return maas.languageModel("google/gemma-4-26b-a4b-it-maas");
       },
     },
     fallbackProvider: base,
   });
+
+  return withCanonicalIdsResolver(wrapped, getCanonicalIdsResolver(base)!);
 };

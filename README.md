@@ -18,7 +18,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with any Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
-- 🗂️ Model catalog with extensible metadata capabilities.
+- 🗂️ Model catalog sourced from models.dev at startup, with filters and overrides.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
@@ -50,12 +50,11 @@ bun install @hebo-ai/gateway
 
 ### Setup A Gateway Instance
 
-Start by creating a gateway instance with at least one provider and a few models.
+Start by creating a gateway instance with at least one provider. Models come from [models.dev](https://models.dev), filtered down to the providers you configured.
 
 ```ts
 import { createGroq } from "@ai-sdk/groq";
-import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
-import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/openai";
+import { gateway } from "@hebo-ai/gateway";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 export const gw = gateway({
@@ -69,13 +68,10 @@ export const gw = gateway({
     ),
   },
 
-  // MODEL CATALOG
-  models: defineModelCatalog(
-    // Choose a pre-configured preset
-    gptOss20b,
-    // Or add a whole model family
-    gptOss["all"],
-  ),
+  // MODEL CATALOG (optional): limit the models exposed
+  models: {
+    include: ["openai/gpt-oss-*"],
+  },
 });
 ```
 
@@ -147,6 +143,14 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
+Each adapter only serves the catalog models whose provider-native ID it knows: the first-party adapters (Anthropic, OpenAI, Cohere, …) derive it from the canonical ID of their own lab, Azure derives it for every model (it is the deployment name), and the hosting providers (Bedrock, DeepInfra, Fireworks, …) rely on an explicit mapping. Pass `extraMapping` to serve more models:
+
+```ts
+const deepinfra = withCanonicalIdsForDeepInfra(createDeepInfra(), {
+  "moonshotai/kimi-k3.1-pro": "moonshotai/Kimi-K3.1-Pro",
+});
+```
+
 `withCanonicalIdsForBedrock` nests two further Bedrock endpoints. Claude models resolve through [`InvokeModel`](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages.html), which takes the Anthropic request shape verbatim — mid-conversation `system` turns (what Claude Code sends), `anthropic_beta` features and native `cache_control` are all unavailable on Converse. It inherits the base URL, custom headers **and** credentials of the wrapped provider, because `InvokeModel` signs for the same service and host as Converse, so no extra configuration is needed. Pass `anthropic` settings to override any of that, or `anthropic: false` to keep Claude on Converse. A forwarded `anthropic-beta` header is filtered to the [betas Bedrock implements](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html), since Bedrock rejects the first-party-only ones Claude Code sends by default; the betas a request actually needs are still added by the provider.
 
 ```ts
@@ -191,7 +195,7 @@ const myProvider = withCanonicalIds(
   {
     mapping: {
       "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
-      "anthropic/claude-sonnet-4.6": "claude-sonnet-4-6",
+      "anthropic/claude-sonnet-4-6": "claude-sonnet-4-6",
     },
   },
 );
@@ -201,95 +205,19 @@ const gw = gateway({
     myProvider,
   },
   models: {
-    // ...your models pointing at canonical IDs above
+    overrides: {
+      // ...route catalog models (or your own) to the custom provider
+      "anthropic/claude-sonnet-4-6": { providers: ["myProvider"] },
+    },
   },
 });
 ```
 
 ### Models
 
-Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
+The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the snapshot bundled with the installed release if that fails (or times out after 5 seconds). There is no need to upgrade the gateway to pick up new models.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `Microsoft MAI-Transcribe`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
-
-#### Model Presets
-
-Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
-
-Presets come in two forms:
-
-- Individual presets (e.g. `gptOss20b`, `claudeSonnet46`) for a single model.
-- Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, `vX` (e.g. `claude["v4.5"]`).
-
-```ts
-import { defineModelCatalog } from "@hebo-ai/gateway";
-import { claudeSonnet46, claude } from "@hebo-ai/gateway/models/anthropic";
-import { gptOss20b } from "@hebo-ai/gateway/models/openai";
-
-// Individual preset
-const models = defineModelCatalog(
-  gptOss20b({ providers: ["groq"] }),
-  claudeSonnet46({ providers: ["bedrock"] }),
-);
-
-// Family preset (pick a group and apply the same override to each)
-const modelsFromFamily = defineModelCatalog(
-  claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
-);
-```
-
-Out-of-the-box model presets:
-
-- **Alibaba** — `@hebo-ai/gateway/models/alibaba`  
-  Qwen: `qwen` (`v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3.x`, `embedding`, `embeddings`, `latest`, `all`)
-
-- **Amazon** — `@hebo-ai/gateway/models/amazon`  
-  Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
-
-- **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v5.5`, `v5.1`, `v5`, `v4.8`, `v4.7`, `v4.6`, `v4.5`, `v5.x`, `v4.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
-
-- **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Command: `command` (`A`, `R`, `latest`, `all`)
-  Embed: `embed` (`v4`, `v3`, `latest`, `all`)
-  North: `north` (`v1`, `v1.x`, `latest`, `all`)
-
-- **DeepSeek** — `@hebo-ai/gateway/models/deepseek`  
-  DeepSeek: `deepseek` (`v4`, `v4.1`, `v4.x`, `latest`, `all`)
-
-- **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v4`, `v3-preview`, `v3.x`, `v4.x`, `embeddings`, `transcription`, `latest`, `preview`, `all`)
-  Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
-
-- **Meta** — `@hebo-ai/gateway/models/meta`  
-  Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
-
-- **Microsoft** — `@hebo-ai/gateway/models/microsoft`  
-  MAI-Transcribe: `maiTranscribe` (`v2`, `v2.x`, `latest`, `all`)
-
-- **MiniMax** — `@hebo-ai/gateway/models/minimax`  
-  MiniMax: `minimax` (`v2`, `v3`, `v2.x`, `v3.x`, `latest`, `all`)
-
-- **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
-  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k3`, `k2.x`, `k3.x`, `latest`, `all`)
-
-- **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v6.1`, `v6.2`, `v5.x`, `v6.x`, `codex`, `pro`, `transcription`, `latest`, `all`)
-  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
-  Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
-
-- **Voyage** — `@hebo-ai/gateway/models/voyage`  
-  Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
-
-- **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `v4.7`, `transcription`, `latest`, `all`)
-
-- **Z.ai** — `@hebo-ai/gateway/models/zai`  
-  GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.x`, `latest`, `all`)
-
-#### User-defined Models
-
-If a built-in preset does not exist yet, you can always register your own model entries by following the `CatalogModel` type.
+Models are keyed by the canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`), and only list the configured providers that can serve them. Models whose lab has no model middleware in the gateway are left out.
 
 ```ts
 const gw = gateway({
@@ -297,29 +225,66 @@ const gw = gateway({
     // ...
   },
   models: {
-    "openai/gpt-5.2": {
-      name: "GPT 5.2",
-      created: "2025-12-11",
-      knowledge: "2025-08",
-      modalities: {
-        input: ["text", "image", "file"],
-        output: ["text"],
-      },
-      context: 400000,
-      capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-      providers: ["openai"],
-      // Additional properties are merged into the model object
-      additionalProperties: {
-        customProperty: "customValue",
+    // Only expose models matching these IDs or `*` patterns (default: all)
+    include: ["anthropic/claude-*", "openai/gpt-6*", "google/gemini-4-argon"],
+    // Hide models matching these IDs or `*` patterns
+    exclude: ["*-preview"],
+    // Change catalog entries, or add your own (arrays are replaced)
+    overrides: {
+      "openai/gpt-6-sol": { providers: ["azure", "openai"] },
+      "acme/support-bot": { name: "Support Bot", providers: ["openai"] },
+    },
+    // Where the catalog is loaded from (default: "https://models.dev/api.json").
+    // Any URL serving the models.dev `api.json` shape works; `false` only uses the bundled snapshot.
+    source: false,
+  },
+});
+```
+
+- **New models only show up within your `include` patterns.** Use exact IDs to pin the catalog, or `*` patterns to let new releases of a family in.
+- **`include: []`** exposes only the models declared in `overrides`, and skips loading the catalog.
+- **`providers` order matters**: the first configured provider serves the request. The lab's own provider comes first, then the others in a fixed preference order. Use `overrides` to change it.
+- **Providers that cannot serve a model are dropped**. Each built-in adapter knows which canonical IDs it can translate into provider-native IDs (see [Providers](#providers)); e.g. Bedrock only serves Nova by default, and every other model through its explicit mapping. Providers listed in `overrides` are always kept.
+
+> [!TIP]
+> On runtimes with tight per-request CPU limits (e.g. Cloudflare Workers free plan), parsing the full models.dev catalog on the first request can be too expensive. Use `source: false`, or point `source` at a smaller, self-hosted copy.
+
+The bundled snapshot lives in `src/models/models-dev.json` and is refreshed with `bun run models:sync` before every release.
+
+#### Catalog Entries
+
+Each catalog entry follows the `CatalogModel` type, which is also what `overrides` accept:
+
+```ts
+const gw = gateway({
+  providers: {
+    // ...
+  },
+  models: {
+    overrides: {
+      "openai/gpt-5.2": {
+        name: "GPT 5.2",
+        created: "2025-12-11",
+        knowledge: "2025-08",
+        modalities: {
+          input: ["text", "image", "file"],
+          output: ["text"],
+        },
+        context: 400000,
+        capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+        providers: ["openai"],
+        // Additional properties are merged into the model object
+        additionalProperties: {
+          customProperty: "customValue",
+        },
       },
     },
-    // ...
   },
 });
 ```
 
 > [!NOTE]
-> The only mandatory property is the `providers` array, everything else is optional metadata.
+> The only mandatory property of a new model is the `providers` array, everything else is optional metadata.
 
 ### Hooks
 
@@ -686,7 +651,7 @@ It supports:
 - `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration`, timestamped `segments` and, for providers that return word timings (xAI, Vertex Gemini with `timestamp_granularities: ["word"]`), OpenAI-style `words: [{ word, start, end }]`. Built from the AI SDK's normalized result; word-level providers return an empty `segments` array rather than one segment per word.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
-- Built-in presets for OpenAI / Azure (`openai/gpt-transcribe`), Azure Speech (`microsoft/mai-transcribe-2`), xAI (`xai/grok-voice-transcribe-2.0`) and Vertex (`google/gemini-3.5-transcribe`).
+- Transcription middleware for OpenAI (`openai/gpt-transcribe`), xAI (`xai/grok-voice-transcribe-2.0`), Vertex (`google/gemini-3.5-transcribe`) and Azure Speech (`microsoft/mai-transcribe-*`, not on models.dev: add it through `models.overrides`).
 
 ```ts
 import fs from "node:fs";
@@ -808,7 +773,7 @@ In addition to the official `reasoning_effort` parameter, the chat completions e
 
 ```json
 {
-  "model": "anthropic/claude-4-sonnet",
+  "model": "anthropic/claude-sonnet-4-6",
   "messages": [{ "role": "user", "content": "Explain the tradeoffs." }],
   "reasoning": { "effort": "medium" }
 }
@@ -904,7 +869,7 @@ Accepted request fields:
 
 ```json
 {
-  "model": "anthropic/claude-sonnet-4.6",
+  "model": "anthropic/claude-sonnet-4-6",
   "messages": [
     {
       "role": "system",

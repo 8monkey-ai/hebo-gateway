@@ -8,7 +8,7 @@ import { minimaxReasoningMiddleware } from "./middleware.ts";
 test("minimax middlewares > matching model resolves reasoning middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "minimax/m2.7",
+    modelId: "minimax/MiniMax-M2.7",
   });
 
   expect(middleware).toContain(minimaxReasoningMiddleware);
@@ -38,7 +38,7 @@ for (const { effort, expected } of reasoningEffortCases) {
     const result = await minimaxReasoningMiddleware.transformParams!({
       type: "generate",
       params,
-      model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
+      model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
     });
 
     expect(result.providerOptions!["unknown"]).toEqual({
@@ -60,7 +60,7 @@ test("minimaxReasoningMiddleware > should map enabled:false to effort none", asy
   const result = await minimaxReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
   });
 
   expect(result.providerOptions!["unknown"]).toEqual({
@@ -81,7 +81,7 @@ test("minimaxReasoningMiddleware > should pass through when no reasoning", async
   const result = await minimaxReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "minimax/m2.5" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.5" }),
   });
 
   expect(result.providerOptions!["unknown"]).toEqual({

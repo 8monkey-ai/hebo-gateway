@@ -3,18 +3,17 @@ import { expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware.ts";
 
 test("nova middleware > matching patterns", () => {
-  const languageMatching = ["amazon/nova-2-lite"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const languageMatching = ["amazon/nova-2-lite"];
 
   const languageNonMatching = [
     "amazon/nova-micro",
     "amazon/nova-lite",
     "amazon/nova-pro",
     "amazon/nova-premier",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  ];
 
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -26,13 +25,9 @@ test("nova middleware > matching patterns", () => {
     expect(middleware).not.toContain(novaReasoningMiddleware);
   }
 
-  const embeddingMatching = [
-    "amazon/nova-2-multimodal-embeddings",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingMatching = ["amazon/nova-2-multimodal-embeddings"];
 
-  const embeddingNonMatching = [
-    "amazon/nova-2-lite",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingNonMatching = ["amazon/nova-2-lite"];
 
   for (const id of embeddingMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });

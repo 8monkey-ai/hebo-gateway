@@ -6,13 +6,13 @@ import { withCanonicalIdsForBedrock } from "./canonical.ts";
 
 test("withCanonicalIdsForBedrock > maps Claude Opus 5.5 to inference profile without version postfix", () => {
   const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
-  const model = provider.languageModel("anthropic/claude-opus-5.5");
+  const model = provider.languageModel("anthropic/claude-opus-5-5");
   expect(model.modelId).toBe("us.anthropic.claude-opus-5-5");
 });
 
 test("withCanonicalIdsForBedrock > maps Claude Fable 5.1 to inference profile without version postfix", () => {
   const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
-  const model = provider.languageModel("anthropic/claude-fable-5.1");
+  const model = provider.languageModel("anthropic/claude-fable-5-1");
   expect(model.modelId).toBe("us.anthropic.claude-fable-5-1");
 });
 
@@ -66,11 +66,11 @@ async function captureRequest(
 // ---------------------------------------------------------------------------
 
 const anthropicCases = [
-  { canonical: "anthropic/claude-opus-5.5", native: "us.anthropic.claude-opus-5-5" },
-  { canonical: "anthropic/claude-sonnet-5.5", native: "us.anthropic.claude-sonnet-5-5" },
-  { canonical: "anthropic/claude-haiku-5.5", native: "us.anthropic.claude-haiku-5-5" },
+  { canonical: "anthropic/claude-opus-5-5", native: "us.anthropic.claude-opus-5-5" },
+  { canonical: "anthropic/claude-sonnet-5-5", native: "us.anthropic.claude-sonnet-5-5" },
+  { canonical: "anthropic/claude-haiku-5-5", native: "us.anthropic.claude-haiku-5-5" },
   {
-    canonical: "anthropic/claude-haiku-4.5",
+    canonical: "anthropic/claude-haiku-4-5-20251001",
     native: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   },
   // Not in the mapping: resolved by the fallback affixes, same as on Converse.
@@ -92,7 +92,7 @@ test("withCanonicalIdsForBedrock > keeps Claude on Converse when the nested prov
   const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
     anthropic: false,
   });
-  const model = provider.languageModel("anthropic/claude-haiku-4.5");
+  const model = provider.languageModel("anthropic/claude-haiku-4-5-20251001");
 
   expect(model.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
   expect(model.provider).toBe("amazon-bedrock");
@@ -112,7 +112,7 @@ test("withCanonicalIdsForBedrock > reuses the Anthropic model instance across lo
 
 /** Captures the request the Claude model would send, without hitting the network. */
 const captureAnthropicRequest = (settings: BedrockSettings, config: CanonicalConfig = {}) =>
-  captureRequest("anthropic/claude-haiku-4.5", (fetch) =>
+  captureRequest("anthropic/claude-haiku-4-5-20251001", (fetch) =>
     withCanonicalIdsForBedrock(createAmazonBedrock({ ...settings, fetch }), {
       ...config,
       // Own settings put the nested provider on its own transport, so it needs the capture too.

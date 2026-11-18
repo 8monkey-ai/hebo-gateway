@@ -198,11 +198,11 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
 
 modelMiddlewareMatcher.useForModel(
   [
-    "anthropic/claude-haiku-4.5",
-    "anthropic/claude-opus-4.5",
-    "anthropic/claude-*4.6*",
-    "anthropic/claude-opus-4.7*",
-    "anthropic/claude-opus-4.8*",
+    "anthropic/claude-haiku-4-5*",
+    "anthropic/claude-opus-4-5*",
+    "anthropic/claude-*4-6*",
+    "anthropic/claude-opus-4-7*",
+    "anthropic/claude-opus-4-8*",
     "anthropic/claude-opus-5*",
     "anthropic/claude-sonnet-5*",
     "anthropic/claude-haiku-5*",

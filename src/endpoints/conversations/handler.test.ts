@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http.ts";
-import { defineModelCatalog } from "../../models/catalog.ts";
 import { type GatewayConfig } from "../../types.ts";
 import { type ResponsesInputItem } from "../responses/schema.ts";
 import { conversations } from "./handler.ts";
@@ -23,13 +22,16 @@ describe("Conversations Handler", () => {
       providers: {
         groq: new MockProviderV4(),
       },
-      models: defineModelCatalog({
-        "openai/gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text", "file"], output: ["text"] },
-          providers: ["groq"],
+      models: {
+        include: [],
+        overrides: {
+          "openai/gpt-oss-20b": {
+            name: "GPT-OSS 20B",
+            modalities: { input: ["text", "file"], output: ["text"] },
+            providers: ["groq"],
+          },
         },
-      }),
+      },
       storage: new InMemoryStorage(),
     };
   });

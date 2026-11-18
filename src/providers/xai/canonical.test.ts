@@ -7,7 +7,7 @@ import { withCanonicalIdsForXai } from "./canonical.ts";
 test("withCanonicalIdsForXai > maps grok-4.2 via explicit mapping", () => {
   const provider = withCanonicalIdsForXai(xai);
 
-  const model = provider.languageModel("xai/grok-4.2");
+  const model = provider.languageModel("xai/grok-4.20-0309-non-reasoning");
   expect(model.modelId).toBe("grok-4.20-0309-non-reasoning");
 });
 
@@ -21,14 +21,14 @@ test("withCanonicalIdsForXai > maps grok-4.3 via explicit mapping", () => {
 test("withCanonicalIdsForXai > maps grok-4.20 via explicit mapping", () => {
   const provider = withCanonicalIdsForXai(xai);
 
-  const model = provider.languageModel("xai/grok-4.20");
+  const model = provider.languageModel("xai/grok-4.20-0309-reasoning");
   expect(model.modelId).toBe("grok-4.20-0309-reasoning");
 });
 
 test("withCanonicalIdsForXai > maps grok-4.20-multi-agent via explicit mapping", () => {
   const provider = withCanonicalIdsForXai(xai);
 
-  const model = provider.languageModel("xai/grok-4.20-multi-agent");
+  const model = provider.languageModel("xai/grok-4.20-multi-agent-0309");
   expect(model.modelId).toBe("grok-4.20-multi-agent-0309");
 });
 

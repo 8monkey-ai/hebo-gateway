@@ -13,8 +13,12 @@ import type { LanguageModelV4, ProviderV4 } from "@ai-sdk/provider";
 import { customProvider, type LanguageModel } from "ai";
 
 import { logger } from "../../logger/index.ts";
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
-import { withCanonicalIds } from "../registry.ts";
+import type { ModelId } from "../../models/types.ts";
+import {
+  getCanonicalIdsResolver,
+  withCanonicalIds,
+  withCanonicalIdsResolver,
+} from "../registry.ts";
 
 // For a list of all models with their IDs and InferenceTypes check:
 //   https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
@@ -24,40 +28,33 @@ import { withCanonicalIds } from "../registry.ts";
 //     --output table
 const MAPPING = {
   // Require Inference Profiles and can't be resolved from standard name mapping
-  "anthropic/claude-opus-5.5": "{ip}anthropic.claude-opus-5-5",
-  "anthropic/claude-sonnet-5.5": "{ip}anthropic.claude-sonnet-5-5",
-  "anthropic/claude-haiku-5.5": "{ip}anthropic.claude-haiku-5-5",
+  "anthropic/claude-opus-5-5": "{ip}anthropic.claude-opus-5-5",
+  "anthropic/claude-sonnet-5-5": "{ip}anthropic.claude-sonnet-5-5",
+  "anthropic/claude-haiku-5-5": "{ip}anthropic.claude-haiku-5-5",
   "anthropic/claude-opus-5": "{ip}anthropic.claude-opus-5",
   "anthropic/claude-sonnet-5": "{ip}anthropic.claude-sonnet-5",
-  "anthropic/claude-haiku-4.5": "{ip}anthropic.claude-haiku-4-5-20251001-v1:0",
-  "anthropic/claude-fable-5.1": "{ip}anthropic.claude-fable-5-1",
+  "anthropic/claude-haiku-4-5-20251001": "{ip}anthropic.claude-haiku-4-5-20251001-v1:0",
+  "anthropic/claude-fable-5-1": "{ip}anthropic.claude-fable-5-1",
   "anthropic/claude-fable-5": "{ip}anthropic.claude-fable-5",
-  "anthropic/claude-opus-4.8": "{ip}anthropic.claude-opus-4-8",
-  "anthropic/claude-opus-4.7": "{ip}anthropic.claude-opus-4-7",
-  "anthropic/claude-sonnet-4.6": "{ip}anthropic.claude-sonnet-4-6",
-  "anthropic/claude-opus-4.6": "{ip}anthropic.claude-opus-4-6-v1",
-  "anthropic/claude-opus-4.5": "{ip}anthropic.claude-opus-4-5-20251101-v1:0",
+  "anthropic/claude-opus-4-8": "{ip}anthropic.claude-opus-4-8",
+  "anthropic/claude-opus-4-7": "{ip}anthropic.claude-opus-4-7",
+  "anthropic/claude-sonnet-4-6": "{ip}anthropic.claude-sonnet-4-6",
+  "anthropic/claude-opus-4-6": "{ip}anthropic.claude-opus-4-6-v1",
+  "anthropic/claude-opus-4-5-20251101": "{ip}anthropic.claude-opus-4-5-20251101-v1:0",
   "cohere/embed-v4.0": "{ip}cohere.embed-v4:0",
-  "meta/llama-3.1-70b": "{ip}meta.llama3-1-70b-instruct-v1:0",
-  "meta/llama-3.1-405b": "{ip}meta.llama3-1-405b-instruct-v1:0",
-  "meta/llama-3.2-1b": "{ip}meta.llama3-2-1b-instruct-v1:0",
-  "meta/llama-3.2-3b": "{ip}meta.llama3-2-3b-instruct-v1:0",
-  "meta/llama-3.2-11b": "{ip}meta.llama3-2-11b-instruct-v1:0",
-  "meta/llama-3.2-90b": "{ip}meta.llama3-2-90b-instruct-v1:0",
-  "meta/llama-4-scout": "{ip}meta.llama4-scout-17b-instruct-v1:0",
-  "meta/llama-4-maverick": "{ip}meta.llama4-maverick-17b-instruct-v1:0",
+  "meta/llama-4-scout-17b-instruct": "{ip}meta.llama4-scout-17b-instruct-v1:0",
   // On-demand only models, ensure that {ip} is never added
-  "amazon/nova-2-multimodal-embeddings": "amazon.nova-2-multimodal-embeddings-v1:0",
-  "cohere/embed-english-v3.0": "cohere.embed-english-v3",
-  "cohere/embed-multilingual-v3.0": "cohere.embed-multilingual-v3",
-  "meta/llama-3.3-70b": "meta.llama3-3-70b-instruct-v1:0",
-  "meta/llama-3.1-8b": "meta.llama3-1-8b-instruct-v1:0",
-  "google/gemma-3-4b": "google.gemma-3-4b-it",
-  "google/gemma-3-12b": "google.gemma-3-12b-it",
-  "google/gemma-3-27b": "google.gemma-3-27b-it",
+  "meta/llama-3.3-70b-instruct": "meta.llama3-3-70b-instruct-v1:0",
+  "google/gemma-3-4b-it": "google.gemma-3-4b-it",
+  "google/gemma-3-12b-it": "google.gemma-3-12b-it",
+  "google/gemma-3-27b-it": "google.gemma-3-27b-it",
+  "google/gemma-4-E2B-it": "google.gemma-4-e2b",
+  "google/gemma-4-26b-a4b-it": "google.gemma-4-26b-a4b",
+  "google/gemma-4-31b-it": "google.gemma-4-31b",
+  "minimax/MiniMax-M2.5": "minimax.minimax-m2.5",
   "openai/gpt-oss-20b": "openai.gpt-oss-20b-1:0",
   "openai/gpt-oss-120b": "openai.gpt-oss-120b-1:0",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
+} as const satisfies Record<ModelId, string>;
 
 // Served only from the OpenAI-compatible Mantle endpoint, never from Converse/Invoke on
 // `bedrock-runtime`. Their IDs keep the dotted version, take no inference profile prefix
@@ -74,7 +71,7 @@ const MANTLE_MAPPING = {
   "openai/gpt-6.1-sol": "openai.gpt-6.1-sol",
   "openai/gpt-6.2-astra": "openai.gpt-6.2-astra",
   "openai/gpt-6.2-sol": "openai.gpt-6.2-sol",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
+} as const satisfies Record<ModelId, string>;
 
 type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;
 
@@ -304,6 +301,8 @@ export const withCanonicalIdsForBedrock = (
       ...MAPPING,
       ...config.extraMapping,
     },
+    // Only Nova IDs follow the default scheme; every other model needs a mapping.
+    namespaces: ["amazon"],
     options: {
       stripNamespace: false,
       namespaceSeparator: ".",
@@ -348,5 +347,9 @@ export const withCanonicalIdsForBedrock = (
   const fallbackProvider =
     config.anthropic === false ? base : nestAnthropic(base, provider, config.anthropic);
 
-  return customProvider({ languageModels, fallbackProvider });
+  const resolveBase = getCanonicalIdsResolver(base)!;
+  return withCanonicalIdsResolver(
+    customProvider({ languageModels, fallbackProvider }),
+    (modelId, kind) => modelId in MANTLE_MAPPING || resolveBase(modelId, kind),
+  );
 };

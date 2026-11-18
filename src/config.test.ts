@@ -10,10 +10,13 @@ import { FORWARD_HEADER_ALLOWLIST } from "./utils/request.ts";
 const minimalConfig: GatewayConfig = {
   providers: { mock: new MockProviderV4() },
   models: {
-    "mock/model": {
-      name: "Mock",
-      providers: ["mock"],
-      modalities: { input: ["text"], output: ["text"] },
+    include: [],
+    overrides: {
+      "mock/model": {
+        name: "Mock",
+        providers: ["mock"],
+        modalities: { input: ["text"], output: ["text"] },
+      },
     },
   },
 };

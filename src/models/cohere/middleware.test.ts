@@ -3,21 +3,20 @@ import { expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { cohereDimensionsMiddleware, cohereReasoningMiddleware } from "./middleware.ts";
 
 test("cohere middleware > matching patterns", () => {
   const languageMatching = [
-    "cohere/command-a-reasoning",
-    "cohere/command-a-plus",
-    "cohere/north-mini-code",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+    "cohere/command-a-reasoning-08-2025",
+    "cohere/command-a-plus-05-2026",
+    "cohere/north-mini-code-1-0",
+  ];
 
   const languageNonMatching = [
-    "cohere/command-a",
-    "cohere/command-r7b",
-    "cohere/north-small-translate",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+    "cohere/command-a-03-2025",
+    "cohere/command-r7b-12-2024",
+    "cohere/north-small-translate-1-0",
+  ];
 
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -29,14 +28,9 @@ test("cohere middleware > matching patterns", () => {
     expect(middleware).not.toContain(cohereReasoningMiddleware);
   }
 
-  const embeddingMatching = [
-    "cohere/embed-v4.0",
-    "cohere/embed-english-v3.0",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingMatching = ["cohere/embed-v4.0", "cohere/embed-english-v3.0"];
 
-  const embeddingNonMatching = [
-    "cohere/command-a",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingNonMatching = ["cohere/command-a-03-2025"];
 
   for (const id of embeddingMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });

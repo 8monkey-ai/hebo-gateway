@@ -9,6 +9,7 @@ export const withCanonicalIdsForVoyage = (
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
+    namespaces: ["voyageai"],
     options: {
       stripNamespace: true,
     },

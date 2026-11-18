@@ -1,20 +1,12 @@
 import { expect, test } from "bun:test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { voyageDimensionsMiddleware } from "./middleware.ts";
 
 test("voyageDimensionsMiddleware > matching patterns", () => {
-  const matching = [
-    "voyage/voyage-2-code",
-    "voyage/voyage-3.5",
-    "voyage/voyage-4",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const matching = ["voyageai/voyage-4-lite", "voyageai/voyage-4", "voyageai/voyage-4-large"];
 
-  const nonMatching = [
-    "openai/text-embedding-3-small",
-    "cohere/embed-v4.0",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const nonMatching = ["openai/text-embedding-3-small", "cohere/embed-v4.0"];
 
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });

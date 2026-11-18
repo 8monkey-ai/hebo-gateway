@@ -30,10 +30,13 @@ describe("winterCgHandler", () => {
         openai: new MockProviderV4(),
       },
       models: {
-        "openai/gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text"], output: ["text"] },
-          providers: ["openai"],
+        include: [],
+        overrides: {
+          "openai/gpt-oss-20b": {
+            name: "GPT-OSS 20B",
+            modalities: { input: ["text"], output: ["text"] },
+            providers: ["openai"],
+          },
         },
       },
       telemetry: {
@@ -75,10 +78,13 @@ describe("winterCgHandler", () => {
       {
         providers: { openai: new MockProviderV4() },
         models: {
-          "openai/gpt-oss-20b": {
-            name: "GPT-OSS 20B",
-            modalities: { input: ["text"], output: ["text"] },
-            providers: ["openai"],
+          include: [],
+          overrides: {
+            "openai/gpt-oss-20b": {
+              name: "GPT-OSS 20B",
+              modalities: { input: ["text"], output: ["text"] },
+              providers: ["openai"],
+            },
           },
         },
       },
@@ -106,10 +112,13 @@ describe("winterCgHandler", () => {
         openai: new MockProviderV4(),
       },
       models: {
-        "openai/gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text"], output: ["text"] },
-          providers: ["openai"],
+        include: [],
+        overrides: {
+          "openai/gpt-oss-20b": {
+            name: "GPT-OSS 20B",
+            modalities: { input: ["text"], output: ["text"] },
+            providers: ["openai"],
+          },
         },
       },
       telemetry: {
@@ -157,10 +166,13 @@ describe("winterCgHandler", () => {
       {
         providers: { openai: new MockProviderV4() },
         models: {
-          "openai/gpt-oss-20b": {
-            name: "GPT-OSS 20B",
-            modalities: { input: ["text"], output: ["text"] },
-            providers: ["openai"],
+          include: [],
+          overrides: {
+            "openai/gpt-oss-20b": {
+              name: "GPT-OSS 20B",
+              modalities: { input: ["text"], output: ["text"] },
+              providers: ["openai"],
+            },
           },
         },
         telemetry: { enabled: true, tracer: tracerProvider.getTracer("test") },

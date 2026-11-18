@@ -3,9 +3,9 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 import {
-  type ModelCatalog,
+  type ModelCatalogConfig,
+  type ModelId,
   type ProviderRegistry,
-  defineModelCatalog,
   gateway,
 } from "../../../src/index.ts";
 import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock/index.ts";
@@ -27,11 +27,11 @@ export const GOOGLE_VERTEX_API_KEY = process.env["GOOGLE_VERTEX_API_KEY"];
 export const GOOGLE_VERTEX_PROJECT = process.env["GOOGLE_VERTEX_PROJECT"];
 export const GOOGLE_VERTEX_LOCATION = process.env["GOOGLE_VERTEX_LOCATION"] ?? "us-central1";
 
+// Every server uses the bundled models.dev snapshot, so runs do not depend on the live catalog.
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type ModelCatalogInput = ModelCatalog | (() => ModelCatalog);
 
 export interface TestServer {
   server: ReturnType<typeof Bun.serve>;
@@ -42,7 +42,7 @@ export interface TestServer {
 // Bedrock
 // ---------------------------------------------------------------------------
 
-export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestServer {
+export function createBedrockTestServer(...models: ModelId[]): TestServer {
   // Prevent @ai-sdk/amazon-bedrock from inheriting CI's AWS_SESSION_TOKEN,
   // which conflicts with the static BEDROCK_* credentials.
   delete process.env["AWS_SESSION_TOKEN"];
@@ -67,7 +67,7 @@ export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestSe
     providers: {
       bedrock: withCanonicalIdsForBedrock(bedrock),
     },
-    models: defineModelCatalog(...presets),
+    models: { source: false, include: models },
     advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
@@ -84,7 +84,7 @@ export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestSe
 // Vertex
 // ---------------------------------------------------------------------------
 
-export function createVertexTestServer(...presets: ModelCatalogInput[]): TestServer {
+export function createVertexTestServer(...models: ModelId[]): TestServer {
   const vertex = createVertex({
     apiKey: GOOGLE_VERTEX_API_KEY!,
     project: GOOGLE_VERTEX_PROJECT!,
@@ -97,7 +97,7 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
     providers: {
       vertex: withCanonicalIdsForVertex(vertex),
     },
-    models: defineModelCatalog(...presets),
+    models: { source: false, include: models },
     advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
@@ -116,13 +116,13 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
 
 export function createTestServer(
   providers: ProviderRegistry,
-  ...presets: ModelCatalogInput[]
+  models: ModelCatalogConfig,
 ): TestServer {
   const gw = gateway({
     basePath: "/v1",
     logger: { level: "warn" },
     providers,
-    models: defineModelCatalog(...presets),
+    models: { source: false, ...models },
     advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
   });
 

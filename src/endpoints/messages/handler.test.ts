@@ -4,7 +4,6 @@ import { simulateReadableStream } from "ai";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http.ts";
-import { defineModelCatalog } from "../../models/catalog.ts";
 import { messages } from "./handler.ts";
 import type { Messages } from "./schema.ts";
 
@@ -80,13 +79,16 @@ describe("Messages Handler", () => {
         },
       }),
     },
-    models: defineModelCatalog({
-      "openai/gpt-oss-20b": {
-        name: "GPT-OSS 20B",
-        modalities: { input: ["text", "file"], output: ["text"] },
-        providers: ["groq"],
+    models: {
+      include: [],
+      overrides: {
+        "openai/gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text", "file"], output: ["text"] },
+          providers: ["groq"],
+        },
       },
-    }),
+    },
   });
 
   test("should return 405 for non-POST requests", async () => {
@@ -448,13 +450,16 @@ describe("Messages Handler", () => {
           },
         }),
       },
-      models: defineModelCatalog({
-        "openai/gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text", "file"], output: ["text"] },
-          providers: ["groq"],
+      models: {
+        include: [],
+        overrides: {
+          "openai/gpt-oss-20b": {
+            name: "GPT-OSS 20B",
+            modalities: { input: ["text", "file"], output: ["text"] },
+            providers: ["groq"],
+          },
         },
-      }),
+      },
       hooks: {
         resolveModelId: () => "openai/gpt-oss-20b",
       },

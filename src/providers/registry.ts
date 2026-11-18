@@ -58,8 +58,32 @@ export const resolveProvider = (args: {
   return provider;
 };
 
+/** Kind of model a catalog entry is served as. */
+export type CanonicalModelKind = "text" | "embeddings" | "transcription";
+
+/** Whether a provider can serve a canonical model ID, i.e. knows its provider-native ID. */
+export type CanonicalIdsResolver = (modelId: ModelId, kind: CanonicalModelKind) => boolean;
+
+const kResolver = Symbol.for("hebo.gateway.canonical-ids");
+
+/** Attaches a resolver to a provider, read back with `getCanonicalIdsResolver`. */
+export const withCanonicalIdsResolver = <P extends ProviderV4>(
+  provider: P,
+  resolver: CanonicalIdsResolver,
+): P => Object.assign(provider, { [kResolver]: resolver });
+
+/** Resolver of a provider wrapped with `withCanonicalIds`, if any. */
+export const getCanonicalIdsResolver = (provider: ProviderV4) =>
+  (provider as { [kResolver]?: CanonicalIdsResolver })[kResolver];
+
 export type CanonicalIdsOptions = {
   mapping?: Partial<Record<ModelId, string>>;
+  /**
+   * Canonical namespaces (e.g. `"anthropic"`) whose provider-native IDs the default
+   * transform below produces. Other IDs are only served through `mapping`, so the catalog
+   * does not route them to this provider. Defaults to every namespace.
+   */
+  namespaces?: readonly string[];
   options?: {
     /** @default true */
     stripNamespace?: boolean;
@@ -84,6 +108,7 @@ export const withCanonicalIds = (
 ): ProviderV4 => {
   const {
     mapping,
+    namespaces,
     options: {
       stripNamespace = true,
       normalizeDelimiters = false,
@@ -183,10 +208,16 @@ export const withCanonicalIds = (
     return out;
   };
 
-  return customProvider({
+  const wrapped = customProvider({
     languageModels: mapModels(languageModel),
     embeddingModels: mapModels(embeddingModel),
     transcriptionModels: mapModels(transcriptionModel),
     fallbackProvider,
+  });
+
+  return withCanonicalIdsResolver(wrapped, (modelId, kind) => {
+    if (kind === "transcription" && !transcriptionModel) return false;
+    if (mapping?.[modelId] !== undefined) return true;
+    return !namespaces || namespaces.includes(modelId.split("/", 1)[0]!);
   });
 };

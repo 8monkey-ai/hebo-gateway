@@ -57,6 +57,6 @@ export const deepseekReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel(["deepseek/deepseek-v4-pro", "deepseek/deepseek-v4.1-flash"], {
+modelMiddlewareMatcher.useForModel(["deepseek/deepseek-v4-pro*", "deepseek/deepseek-v4.1-flash*"], {
   language: [deepseekReasoningMiddleware],
 });

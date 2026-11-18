@@ -4,7 +4,6 @@ import { MockLanguageModelV4 } from "ai/test";
 
 import { transcriptionProviderOptions } from "../../../test/helpers/transcription.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware.ts";
 import {
   openAIDimensionsMiddleware,
@@ -26,11 +25,9 @@ test("openAI middleware > matching patterns", () => {
     "openai/gpt-6.2-astra",
     "openai/gpt-6.2-sol",
     "openai/gpt-oss-20b",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  ];
 
-  const languageNonMatching = [
-    "openai/text-embedding-3-small",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const languageNonMatching = ["openai/text-embedding-3-small"];
 
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -43,14 +40,9 @@ test("openAI middleware > matching patterns", () => {
     expect(middleware).not.toContain(openAIReasoningMiddleware);
   }
 
-  const embeddingMatching = [
-    "openai/text-embedding-3-small",
-    "openai/text-embedding-3-large",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingMatching = ["openai/text-embedding-3-small", "openai/text-embedding-3-large"];
 
-  const embeddingNonMatching = [
-    "openai/gpt-5.4-mini",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const embeddingNonMatching = ["openai/gpt-5.4-mini"];
 
   for (const id of embeddingMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });

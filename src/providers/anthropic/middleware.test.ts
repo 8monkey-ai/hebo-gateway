@@ -8,7 +8,7 @@ import { anthropicServiceTierMiddleware } from "./middleware.ts";
 test("anthropic middlewares > matching provider resolves the service tier middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
+    modelId: "anthropic/claude-opus-4-6",
     providerId: "anthropic.messages",
   });
 

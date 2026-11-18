@@ -14,27 +14,30 @@ describe("Models Handler", () => {
       google: new MockProviderV4(),
     },
     models: {
-      "anthropic/claude-opus-4.5": {
-        name: "Claude Opus 4.5",
-        created: "2025-09-29T10:00:00.000Z",
-        knowledge: "2025-07",
-        modalities: {
-          input: ["text", "image"],
-          output: ["text"],
+      include: [],
+      overrides: {
+        "anthropic/claude-opus-4-5-20251101": {
+          name: "Claude Opus 4.5",
+          created: "2025-09-29T10:00:00.000Z",
+          knowledge: "2025-07",
+          modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+          },
+          context: 200000,
+          capabilities: ["reasoning", "tool_call"],
+          providers: ["anthropic"],
         },
-        context: 200000,
-        capabilities: ["reasoning", "tool_call"],
-        providers: ["anthropic"],
-      },
-      "google/gemini-3-flash": {
-        name: "Gemini 3 Flash",
-        created: "2025-10-01T08:30:00.000Z",
-        modalities: {
-          input: ["text", "video"],
-          output: ["text"],
+        "google/gemini-3-flash": {
+          name: "Gemini 3 Flash",
+          created: "2025-10-01T08:30:00.000Z",
+          modalities: {
+            input: ["text", "video"],
+            output: ["text"],
+          },
+          context: 128000,
+          providers: ["google"],
         },
-        context: 128000,
-        providers: ["google"],
       },
     },
   });
@@ -49,7 +52,7 @@ describe("Models Handler", () => {
       object: "list",
       data: [
         {
-          id: "anthropic/claude-opus-4.5",
+          id: "anthropic/claude-opus-4-5-20251101",
           object: "model",
           created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
           owned_by: "anthropic",
@@ -83,13 +86,13 @@ describe("Models Handler", () => {
   });
 
   test("should return a single model by ID", async () => {
-    const request = new Request(`${baseUrl}/anthropic/claude-opus-4.5`, { method: "GET" });
+    const request = new Request(`${baseUrl}/anthropic/claude-opus-4-5-20251101`, { method: "GET" });
 
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
     expect(data).toEqual({
-      id: "anthropic/claude-opus-4.5",
+      id: "anthropic/claude-opus-4-5-20251101",
       object: "model",
       created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
       owned_by: "anthropic",
@@ -113,7 +116,7 @@ describe("Models Handler", () => {
     }) => {
       const res = await models({
         providers: { openai: new MockProviderV4() },
-        models: { "test/model": { modalities, providers: ["openai"] } },
+        models: { include: [], overrides: { "test/model": { modalities, providers: ["openai"] } } },
       }).handler(new Request(`${baseUrl}/test/model`, { method: "GET" }));
       const data = (await parseResponse(res)) as { architecture: { modality?: string } };
       return data.architecture.modality;

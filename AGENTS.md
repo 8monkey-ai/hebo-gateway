@@ -9,7 +9,7 @@ This file gives coding agents a fast, reliable workflow for contributing to `@he
 - Runtime: Bun + TypeScript (ESM).
 - Library type: Embeddable AI gateway framework with OpenAI-compatible endpoints.
 - Core domains:
-  - Model catalog + presets
+  - Model catalog (models.dev, loaded at startup, bundled snapshot fallback)
   - Provider canonicalization and routing
   - OpenAI-compatible endpoint handlers (`/chat/completions`, `/embeddings`, `/models`)
   - Middleware, telemetry, and framework integration examples
@@ -51,8 +51,11 @@ If priorities conflict, apply this order:
 
 - `src/index.ts`: public entrypoint.
 - `src/gateway.ts`: gateway construction and core lifecycle.
-- `src/models/types.ts`: canonical model ID union and catalog shape.
-- `src/models/*/presets.ts`: model preset definitions and grouped preset exports.
+- `src/models/types.ts`: catalog shape.
+- `src/models/models-dev.ts`: models.dev → catalog conversion (labs, provider hosts).
+- `src/models/catalog.ts`: catalog loading, filters (`include` / `exclude` / `overrides`) and fallback.
+- `src/models/models-dev.json`: bundled models.dev snapshot (`bun run models:sync`).
+- `src/models/*/middleware.ts`: model-family middleware.
 - `src/providers/*/canonical.ts`: provider-specific canonical model ID mappings.
 - `src/providers/registry.ts`: canonical ID adapter wrapper and provider resolution logic.
 - `src/endpoints/*`: OpenAI-compatible schema/converter/handler layers.
@@ -84,7 +87,7 @@ If priorities conflict, apply this order:
 
 ## Model & Provider Changes
 
-For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.agents/skills/add-model/SKILL.md`). It covers research sources, classification, preset definitions, grouped exports, provider canonical mappings, and testing.
+For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.agents/skills/add-model/SKILL.md`). It covers the models.dev catalog snapshot, provider canonical mappings, model middleware, and testing.
 
 ## Testing Expectations
 
@@ -99,12 +102,11 @@ For detailed instructions on adding or updating models and providers, use the **
 - Preserve OpenAI-compatible response contracts unless explicitly changing API behavior.
 - If public exports or API contracts change, update `README.md` and the related endpoint/provider tests in the same change.
 - Keep comments concise and only where intent is non-obvious.
-- Avoid speculative metadata; follow the **add-model** skill when touching model presets.
+- Avoid speculative metadata: model metadata comes from models.dev; follow the **add-model** skill.
 
 ## PR/Commit Checklist
 
 - [ ] Change is scoped to requested behavior.
 - [ ] Types compile (`bun run typecheck`).
 - [ ] Tests pass (`bun run test`) or failures are documented.
-- [ ] Model metadata (`created`, `knowledge`) follows the **add-model** skill when touched.
-- [ ] New canonical IDs are reflected in both model presets and provider mappings.
+- [ ] Canonical IDs follow models.dev, and providers that list them can resolve them (mappings / `namespaces`).

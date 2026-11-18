@@ -8,7 +8,6 @@ import {
 } from "../../../test/helpers/transcription.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { wordSegmentsMiddleware } from "../../middleware/transcription.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import {
   geminiDimensionsMiddleware,
   geminiPromptCachingMiddleware,
@@ -23,7 +22,7 @@ test("geminiReasoningMiddleware > matching patterns", () => {
     "google/gemini-3.1-pro-preview",
     "google/gemini-3.7-flash",
     "google/gemini-3.8-flash",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  ];
 
   const nonMatching = [
     "google/gemini-1.5-pro",
@@ -45,11 +44,7 @@ test("geminiReasoningMiddleware > matching patterns", () => {
 });
 
 test("geminiReasoningMiddleware > matches Gemini 4 without explicit prompt caching", () => {
-  const ids = [
-    "google/gemini-4-hydrogen",
-    "google/gemini-4-argon",
-    "google/gemini-4-carbon",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const ids = ["google/gemini-4-hydrogen", "google/gemini-4-argon", "google/gemini-4-carbon"];
 
   for (const id of ids) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -82,10 +77,8 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
 });
 
 test("geminiDimensionsMiddleware > matching patterns", () => {
-  const matching = ["google/gemini-embedding-2"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
-  const nonMatching = [
-    "google/gemini-3-flash-preview",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const matching = ["google/gemini-embedding-2"];
+  const nonMatching = ["google/gemini-3-flash-preview"];
 
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });

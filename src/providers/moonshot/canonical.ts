@@ -9,5 +9,6 @@ export const withCanonicalIdsForMoonshot = (
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
+    namespaces: ["moonshotai"],
     options: { stripNamespace: true },
   });

@@ -28,6 +28,6 @@ export const moonshotReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("moonshot/*", {
+modelMiddlewareMatcher.useForModel("moonshotai/*", {
   language: [moonshotReasoningMiddleware],
 });

@@ -4,7 +4,7 @@ import type { LanguageModelV4CallOptions, LanguageModelV4FilePart } from "@ai-sd
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { postJson } from "../../../test/helpers/http.ts";
-import { defineModelCatalog } from "../../models/catalog.ts";
+import type { ModelCatalogConfig } from "../../models/catalog.ts";
 import { chatCompletions } from "../chat-completions/handler.ts";
 import { messages } from "../messages/handler.ts";
 import { responses } from "../responses/handler.ts";
@@ -29,13 +29,16 @@ const HELLO_BYTES = [104, 101, 108, 108, 111];
 const MODEL_ID = "openai/gpt-oss-20b";
 const REMOTE_URL = "https://example.com/photo";
 
-const models = defineModelCatalog({
-  [MODEL_ID]: {
-    name: "GPT-OSS 20B",
-    modalities: { input: ["text", "image", "file"], output: ["text"] },
-    providers: ["groq"],
+const models = {
+  include: [],
+  overrides: {
+    [MODEL_ID]: {
+      name: "GPT-OSS 20B",
+      modalities: { input: ["text", "image", "file"], output: ["text"] },
+      providers: ["groq"],
+    },
   },
-});
+} satisfies ModelCatalogConfig;
 
 /**
  * Builds an endpoint whose provider records the prompt it was called with, so

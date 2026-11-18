@@ -4,14 +4,17 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createAzure } from "@ai-sdk/azure";
 import { createVoyage } from "voyage-ai-provider";
 
-import { claudeHaiku45 } from "../models/anthropic/presets.ts";
-import { maiTranscribe2 } from "../models/microsoft/presets.ts";
-import { gpt56Sol } from "../models/openai/presets.ts";
-import { voyage4Lite } from "../models/voyage/presets.ts";
+import { BUNDLED_MODEL_CATALOG } from "../models/catalog.ts";
+import type { CatalogModel, ModelCatalog } from "../models/types.ts";
 import { withCanonicalIdsForAzure } from "../providers/azure/canonical.ts";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical.ts";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical.ts";
-import { resolveProvider } from "./registry.ts";
+import { getCanonicalIdsResolver, resolveProvider } from "./registry.ts";
+
+/** A bundled catalog entry, served by the given providers. */
+const bundled = (id: string, providers: CatalogModel["providers"]): ModelCatalog => ({
+  [id]: { ...BUNDLED_MODEL_CATALOG[id]!, providers },
+});
 
 test("Voyage 4 Lite ID transformation in gateway config", () => {
   const config = {
@@ -22,14 +25,10 @@ test("Voyage 4 Lite ID transformation in gateway config", () => {
         }),
       ),
     },
-    models: {
-      ...voyage4Lite({
-        providers: ["voyage"],
-      }),
-    },
+    models: bundled("voyageai/voyage-4-lite", ["voyage"]),
   };
 
-  const modelId = "voyage/voyage-4-lite";
+  const modelId = "voyageai/voyage-4-lite";
 
   // 1. Resolve the provider for embeddings
   const provider = resolveProvider({
@@ -58,11 +57,7 @@ test("GPT-5.6 Sol resolves through Bedrock's Mantle endpoint in gateway config",
         createAmazonBedrock({ region: "us-east-1", apiKey: "test-key" }),
       ),
     },
-    models: {
-      ...gpt56Sol({
-        providers: ["bedrock"],
-      }),
-    },
+    models: bundled("openai/gpt-5.6-sol", ["bedrock"]),
   };
 
   const modelId = "openai/gpt-5.6-sol";
@@ -87,14 +82,10 @@ test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
         createAmazonBedrock({ region: "us-east-1", apiKey: "test-key" }),
       ),
     },
-    models: {
-      ...claudeHaiku45({
-        providers: ["bedrock"],
-      }),
-    },
+    models: bundled("anthropic/claude-haiku-4-5-20251001", ["bedrock"]),
   };
 
-  const modelId = "anthropic/claude-haiku-4.5";
+  const modelId = "anthropic/claude-haiku-4-5-20251001";
 
   const provider = resolveProvider({
     providers: config.providers,
@@ -116,8 +107,11 @@ test("MAI-Transcribe 2 resolves through Azure for transcriptions", () => {
       azure: withCanonicalIdsForAzure(createAzure({ resourceName: "test", apiKey: "test-key" })),
     },
     models: {
-      ...maiTranscribe2(),
-    },
+      "microsoft/mai-transcribe-2": {
+        modalities: { input: ["audio"], output: ["transcription"] },
+        providers: ["azure"],
+      },
+    } satisfies ModelCatalog,
   };
 
   const modelId = "microsoft/mai-transcribe-2";
@@ -138,9 +132,28 @@ test("transcriptions reject models without transcription output", () => {
   expect(() =>
     resolveProvider({
       providers: {},
-      models: { ...gpt56Sol() },
+      models: bundled("openai/gpt-5.6-sol", ["openai"]),
       modelId: "openai/gpt-5.6-sol",
       operation: "transcriptions",
     }),
   ).toThrow("Model 'openai/gpt-5.6-sol' does not support 'transcription' output");
+});
+
+test("canonical adapters only claim the models whose native IDs they know", () => {
+  const bedrock = getCanonicalIdsResolver(
+    withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1", apiKey: "test-key" })),
+  )!;
+  // Default transform (Nova), explicit mapping, and Mantle.
+  expect(bedrock("amazon/nova-pro", "text")).toBe(true);
+  expect(bedrock("anthropic/claude-sonnet-4-6", "text")).toBe(true);
+  expect(bedrock("openai/gpt-5.6-sol", "text")).toBe(true);
+  expect(bedrock("anthropic/claude-unmapped-9", "text")).toBe(false);
+
+  const voyage = getCanonicalIdsResolver(
+    withCanonicalIdsForVoyage(createVoyage({ apiKey: "test-key" })),
+  )!;
+  expect(voyage("voyageai/voyage-9", "embeddings")).toBe(true);
+  expect(voyage("openai/text-embedding-3-small", "embeddings")).toBe(false);
+  // Voyage serves no transcription models.
+  expect(voyage("voyageai/voyage-9", "transcription")).toBe(false);
 });

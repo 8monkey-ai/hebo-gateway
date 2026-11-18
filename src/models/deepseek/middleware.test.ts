@@ -3,14 +3,10 @@ import { expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import type { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { deepseekReasoningMiddleware } from "./middleware.ts";
 
 test("deepseek middleware > matching patterns", () => {
-  const languageMatching = [
-    "deepseek/deepseek-v4-pro",
-    "deepseek/deepseek-v4.1-flash",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const languageMatching = ["deepseek/deepseek-v4-pro-0813", "deepseek/deepseek-v4.1-flash-1017"];
 
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });

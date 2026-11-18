@@ -1,6 +1,5 @@
 import { groq } from "@ai-sdk/groq";
-import { defineModelCatalog, gateway } from "@hebo-ai/gateway";
-import { gptOss } from "@hebo-ai/gateway/models/openai";
+import { gateway } from "@hebo-ai/gateway";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -9,7 +8,7 @@ const gw = gateway({
   providers: {
     groq: withCanonicalIdsForGroq(groq),
   },
-  models: defineModelCatalog(gptOss["all"]),
+  models: { include: ["openai/gpt-oss-*"] },
 });
 
 export const Route = createFileRoute("/api/$")({

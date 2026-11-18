@@ -47,7 +47,7 @@ test("bedrock middlewares > matching provider resolves GPT middleware", () => {
 test("bedrock middlewares > matching provider resolves Claude middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
+    modelId: "anthropic/claude-opus-4-6",
     providerId: "amazon-bedrock",
   });
 
@@ -87,7 +87,7 @@ for (const { tier, expected } of bedrockServiceTierCases) {
 test("bedrock middlewares > matching provider resolves prompt caching middleware for Claude", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
+    modelId: "anthropic/claude-opus-4-6",
     providerId: "amazon-bedrock",
   });
 
@@ -145,7 +145,7 @@ test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
   const result = await bedrockGptReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -396,7 +396,7 @@ test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async (
 test("bedrock middlewares > matching provider resolves Claude middleware for Opus 4.7", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.7",
+    modelId: "anthropic/claude-opus-4-7",
     providerId: "amazon-bedrock",
   });
 
@@ -453,7 +453,7 @@ test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for C
   const result = await bedrockClaudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-5-20251101" }),
   });
 
   expect(result).toEqual({
@@ -558,7 +558,7 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
   const result = await bedrockPromptCachingMiddleware.transformParams!({
     type: "generate",
     params: params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -709,7 +709,7 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
 test("bedrock middlewares > the Anthropic provider keeps none of the Converse translations", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
+    modelId: "anthropic/claude-opus-4-6",
     providerId: "bedrock.anthropic.messages",
   });
 
@@ -822,7 +822,7 @@ const anthropicModel = (canonicalId: string) => {
 };
 
 test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape through the chain", async () => {
-  const modelId = "anthropic/claude-opus-4.6";
+  const modelId = "anthropic/claude-opus-4-6";
   const { model, captured } = anthropicModel(modelId);
   const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
   const wrapped = wrapLanguageModel({ model, middleware });
@@ -852,7 +852,7 @@ test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape thro
 });
 
 test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic", async () => {
-  const modelId = "anthropic/claude-opus-4.6";
+  const modelId = "anthropic/claude-opus-4-6";
   const { model, captured } = anthropicModel(modelId);
   const wrapped = wrapLanguageModel({
     model,
@@ -889,7 +889,7 @@ test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic",
 });
 
 test("bedrock middlewares > unsupported client betas never reach InvokeModel", async () => {
-  const modelId = "anthropic/claude-opus-4.6";
+  const modelId = "anthropic/claude-opus-4-6";
   const { model, captured } = anthropicModel(modelId);
   const wrapped = wrapLanguageModel({
     model,
@@ -915,7 +915,7 @@ test("bedrock middlewares > unsupported client betas never reach InvokeModel", a
 });
 
 test("bedrock middlewares > mid-conversation system turns reach InvokeModel", async () => {
-  const { model, captured } = anthropicModel("anthropic/claude-haiku-4.5");
+  const { model, captured } = anthropicModel("anthropic/claude-haiku-4-5-20251001");
 
   try {
     // The Claude Code shape: a top-level system prompt plus a later `system` turn, which
@@ -952,7 +952,7 @@ test("bedrockClaudeReasoningMiddleware > rejects unsupported between_tools think
         prompt: [],
         providerOptions: { bedrock: { thinking: { type: "between_tools" } } },
       },
-      model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+      model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
     }),
   ).rejects.toThrow("Bedrock reasoningConfig does not support between_tools thinking.");
 });

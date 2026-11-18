@@ -27,6 +27,6 @@ export const glmReasoningMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("zhipu/glm-*", {
+modelMiddlewareMatcher.useForModel("zhipuai/glm-*", {
   language: [glmReasoningMiddleware],
 });

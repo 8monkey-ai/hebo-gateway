@@ -3,20 +3,19 @@ import { expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { xaiReasoningMiddleware } from "./middleware.ts";
 
 test("xai middleware > matching patterns", () => {
   const languageMatching = [
-    "xai/grok-4.20",
-    "xai/grok-4.20-multi-agent",
+    "xai/grok-4.20-0309-reasoning",
+    "xai/grok-4.20-multi-agent-0309",
     "xai/grok-4.3",
     "xai/grok-4.5",
     "xai/grok-4.6",
     "xai/grok-4.7",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  ];
 
-  const languageNonMatching = ["xai/grok-4.2"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const languageNonMatching = ["xai/grok-4.20-0309-non-reasoning"];
 
   for (const id of languageMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
@@ -280,7 +279,7 @@ test("xaiReasoningMiddleware > should map max effort to xhigh on Grok 4.6", asyn
   });
 });
 
-// `xai/grok-4.20` resolves to this native ID, and the 4.20 line rejects the parameter
+// `xai/grok-4.20-0309-reasoning` resolves to this native ID, and the 4.20 line rejects the parameter
 // outright, so nothing may be sent for it — not even `none`.
 for (const modelId of [
   "grok-4.20-0309-reasoning",

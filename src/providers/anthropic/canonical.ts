@@ -9,8 +9,8 @@ export const withCanonicalIdsForAnthropic = (
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
+    namespaces: ["anthropic"],
     options: {
       stripNamespace: true,
-      normalizeDelimiters: true,
     },
   });

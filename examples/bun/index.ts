@@ -1,7 +1,6 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
-import { defineModelCatalog, gateway } from "@hebo-ai/gateway";
-import { claude } from "@hebo-ai/gateway/models/anthropic";
+import { gateway } from "@hebo-ai/gateway";
 import { withCanonicalIdsForBedrock } from "@hebo-ai/gateway/providers/bedrock";
 
 const gw = gateway({
@@ -15,7 +14,7 @@ const gw = gateway({
       }),
     ),
   },
-  models: defineModelCatalog(claude["all"]),
+  models: { include: ["anthropic/claude-*"] },
 });
 
 const server = Bun.serve({

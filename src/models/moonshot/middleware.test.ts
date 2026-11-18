@@ -8,7 +8,7 @@ import { moonshotReasoningMiddleware } from "./middleware.ts";
 test("moonshot middlewares > matching model resolves reasoning middleware", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "moonshot/kimi-k2.5",
+    modelId: "moonshotai/kimi-k2.5",
   });
 
   expect(middleware).toContain(moonshotReasoningMiddleware);
@@ -27,7 +27,7 @@ test("moonshotReasoningMiddleware > should enable thinking without forwarding un
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.5" }),
+    model: new MockLanguageModelV4({ modelId: "moonshotai/kimi-k2.5" }),
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
@@ -50,7 +50,7 @@ test("moonshotReasoningMiddleware > should enable thinking without forwarding un
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.5" }),
+    model: new MockLanguageModelV4({ modelId: "moonshotai/kimi-k2.5" }),
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
@@ -72,7 +72,7 @@ test("moonshotReasoningMiddleware > should map enabled:false to disabled thinkin
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.6" }),
+    model: new MockLanguageModelV4({ modelId: "moonshotai/kimi-k2.6" }),
   });
 
   expect(result.providerOptions!["moonshotai"]).toEqual({
@@ -94,7 +94,7 @@ test("moonshotReasoningMiddleware > should pass through when no reasoning", asyn
   const result = await moonshotReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "moonshot/kimi-k2.5" }),
+    model: new MockLanguageModelV4({ modelId: "moonshotai/kimi-k2.5" }),
   });
 
   expect(result.providerOptions!["unknown"]).toEqual({

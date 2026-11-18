@@ -121,7 +121,7 @@ for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
   });
 }
 
-const nonGemmaModelIds = ["openai/gpt-oss-120b-maas", "google/gemma-3-27b"] as const;
+const nonGemmaModelIds = ["openai/gpt-oss-120b-maas", "google/gemma-3-27b-it"] as const;
 
 for (const modelId of nonGemmaModelIds) {
   test(`vertexGemma4ThinkingMiddleware > leaves ${modelId} untouched`, async () => {
@@ -138,16 +138,16 @@ for (const modelId of nonGemmaModelIds) {
 }
 
 test("vertexGemma4ThinkingMiddleware > is registered only for the maas endpoint", () => {
-  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat")).toContain(
+  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b-it", "vertex.maas.chat")).toContain(
     vertexGemma4ThinkingMiddleware,
   );
-  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "google.vertex.chat")).not.toContain(
-    vertexGemma4ThinkingMiddleware,
-  );
+  expect(
+    modelMiddlewareMatcher.for("google/gemma-4-26b-a4b-it", "google.vertex.chat"),
+  ).not.toContain(vertexGemma4ThinkingMiddleware);
 });
 
 test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", async () => {
-  const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat");
+  const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b-it", "vertex.maas.chat");
   const model = new MockLanguageModelV4({
     modelId: "google/gemma-4-26b-a4b-it-maas",
     provider: "vertex.maas.chat",

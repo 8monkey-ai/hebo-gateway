@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import OpenAI, { APIError } from "openai";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 
-import { claudeSonnet46 } from "../../../src/models/anthropic/index.ts";
 import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server.ts";
 import { createBedrockTestServer, type TestServer } from "../shared/server.ts";
 import {
@@ -16,7 +15,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY);
-const MODEL = "anthropic/claude-sonnet-4.6";
+const MODEL = "anthropic/claude-sonnet-4-6";
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
@@ -32,7 +31,7 @@ let baseUrl: string;
 
 describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - Claude Sonnet 4.6)", () => {
   beforeAll(() => {
-    testServer = createBedrockTestServer(claudeSonnet46());
+    testServer = createBedrockTestServer("anthropic/claude-sonnet-4-6");
     baseUrl = testServer.baseUrl;
     client = new OpenAI({
       apiKey: "not-needed",

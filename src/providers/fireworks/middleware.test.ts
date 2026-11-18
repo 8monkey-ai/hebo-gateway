@@ -28,7 +28,7 @@ test("fireworksReasoningMiddleware > should enable thinking with budget from eff
   const result = await fireworksReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
   });
 
   expect(result.providerOptions!["fireworks"]).toEqual({
@@ -49,7 +49,7 @@ test("fireworksReasoningMiddleware > should enable thinking with explicit max_to
   const result = await fireworksReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
   });
 
   expect(result.providerOptions!["fireworks"]).toEqual({
@@ -70,7 +70,7 @@ test("fireworksReasoningMiddleware > should disable thinking", async () => {
   const result = await fireworksReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
   });
 
   expect(result.providerOptions!["fireworks"]).toEqual({
@@ -91,7 +91,7 @@ test("fireworksReasoningMiddleware > should pass through when no reasoning", asy
   const result = await fireworksReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "minimax/m2.7" }),
+    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
   });
 
   expect(result.providerOptions!["fireworks"]).toEqual({

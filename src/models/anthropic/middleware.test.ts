@@ -3,32 +3,33 @@ import { expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
 import { claudePromptCachingMiddleware, claudeReasoningMiddleware } from "./middleware.ts";
 
 test("claudeReasoningMiddleware > matching patterns", () => {
   const matching = [
-    "anthropic/claude-opus-5.5",
-    "anthropic/claude-sonnet-5.5",
-    "anthropic/claude-haiku-5.5",
+    "anthropic/claude-opus-5-5",
+    "anthropic/claude-sonnet-5-5",
+    "anthropic/claude-haiku-5-5",
     "anthropic/claude-opus-5",
     "anthropic/claude-sonnet-5",
-    "anthropic/claude-fable-5.1",
-    "anthropic/claude-opus-4.8",
-    "anthropic/claude-opus-4.7",
-    "anthropic/claude-opus-4.6",
-    "anthropic/claude-sonnet-4.6",
-    "anthropic/claude-opus-4.5",
-    "anthropic/claude-haiku-4.5",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+    "anthropic/claude-fable-5-1",
+    "anthropic/claude-opus-4-8",
+    "anthropic/claude-opus-4-7",
+    "anthropic/claude-opus-4-6",
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-5-20251101",
+    "anthropic/claude-opus-4-5",
+    "anthropic/claude-haiku-4-5-20251001",
+    "anthropic/claude-haiku-4-5",
+  ];
 
   const nonMatching = [
-    "anthropic/claude-sonnet-3.7",
-    "anthropic/claude-sonnet-4",
-    "anthropic/claude-sonnet-4.5",
-    "anthropic/claude-opus-4",
-    "anthropic/claude-opus-4.1",
-    "anthropic/claude-haiku-3.5",
+    "anthropic/claude-3-7-sonnet-20250219",
+    "anthropic/claude-sonnet-4-0",
+    "anthropic/claude-sonnet-4-5",
+    "anthropic/claude-opus-4-0",
+    "anthropic/claude-opus-4-1",
+    "anthropic/claude-3-5-haiku-20241022",
   ];
 
   for (const id of matching) {
@@ -54,7 +55,7 @@ test("claudePromptCachingMiddleware > should not auto-enable top-level cache con
   const result = await claudePromptCachingMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4-6" }),
   });
 
   expect(result.providerOptions).toEqual({
@@ -75,7 +76,7 @@ test("claudePromptCachingMiddleware > should map cache_control ttl", async () =>
   const result = await claudePromptCachingMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4-6" }),
   });
 
   expect(result.providerOptions).toEqual({
@@ -100,7 +101,7 @@ test("claudePromptCachingMiddleware > should clamp the 24h retention ttl", async
   const result = await claudePromptCachingMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4-6" }),
   });
 
   expect(result.providerOptions).toEqual({
@@ -323,7 +324,7 @@ test("claudeReasoningMiddleware > should map xhigh effort to max for Claude Opus
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -560,7 +561,7 @@ test("claudeReasoningMiddleware > should map xhigh effort to native xhigh for Cl
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.7" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-7" }),
   });
 
   expect(result).toEqual({
@@ -594,7 +595,7 @@ test("claudeReasoningMiddleware > should ignore max_tokens for Claude Opus 4.7 (
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.7" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-7" }),
   });
 
   expect(result).toEqual({
@@ -628,7 +629,7 @@ test("claudeReasoningMiddleware > should use adaptive thinking without budget fo
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.7" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-7" }),
   });
 
   expect(result).toEqual({
@@ -661,7 +662,7 @@ test("claudeReasoningMiddleware > should map minimal effort to low for Claude So
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4-6" }),
   });
 
   expect(result).toEqual({
@@ -695,7 +696,7 @@ test("claudeReasoningMiddleware > should use manual thinking for Claude Sonnet 4
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-sonnet-4-6" }),
   });
 
   expect(result).toEqual({
@@ -729,7 +730,7 @@ test("claudeReasoningMiddleware > should map none effort to low for Claude Haiku
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4-5-20251001" }),
   });
 
   expect(result).toEqual({
@@ -764,7 +765,7 @@ test("claudeReasoningMiddleware > should include effort and max_tokens for Claud
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -799,7 +800,7 @@ test("claudeReasoningMiddleware > should clamp max_tokens to 128k for Claude Opu
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -834,7 +835,7 @@ test("claudeReasoningMiddleware > should include effort and max_tokens for Claud
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4-5-20251001" }),
   });
 
   expect(result).toEqual({
@@ -868,7 +869,7 @@ test("claudeReasoningMiddleware > should map xhigh effort to high for Claude Hai
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4-5-20251001" }),
   });
 
   expect(result).toEqual({
@@ -936,7 +937,7 @@ test("claudeReasoningMiddleware > should map max effort to native max for Claude
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.7" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-7" }),
   });
 
   expect(result).toEqual({
@@ -969,7 +970,7 @@ test("claudeReasoningMiddleware > should map max effort to max for Claude Opus 4
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -1002,7 +1003,7 @@ test("claudeReasoningMiddleware > should map max effort to high for non-Opus mod
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-haiku-4-5-20251001" }),
   });
 
   expect(result).toEqual({
@@ -1036,7 +1037,7 @@ test("claudeReasoningMiddleware > should map xhigh effort for Claude Opus 4.5 wi
   const result = await claudeReasoningMiddleware.transformParams!({
     type: "generate",
     params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.5" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-5-20251101" }),
   });
 
   expect(result).toEqual({

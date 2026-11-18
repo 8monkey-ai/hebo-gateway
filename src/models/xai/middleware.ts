@@ -72,8 +72,8 @@ export const xaiReasoningMiddleware: LanguageModelMiddleware = {
 
 modelMiddlewareMatcher.useForModel(
   [
-    "xai/grok-4.20",
-    "xai/grok-4.20-multi-agent",
+    "xai/grok-4.20-0309-reasoning",
+    "xai/grok-4.20-multi-agent-0309",
     "xai/grok-4.3",
     "xai/grok-4.5",
     "xai/grok-4.6",

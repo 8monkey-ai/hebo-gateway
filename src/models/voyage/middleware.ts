@@ -23,4 +23,4 @@ export const voyageDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel("voyage/*", { embedding: [voyageDimensionsMiddleware] });
+modelMiddlewareMatcher.useForModel("voyageai/*", { embedding: [voyageDimensionsMiddleware] });

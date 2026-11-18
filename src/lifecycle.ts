@@ -45,7 +45,8 @@ export const winterCgHandler = (
       state: state ?? {},
       otel: {},
       providers: parsedConfig.providers,
-      models: parsedConfig.models,
+      // Only the first requests wait, until the catalog is loaded.
+      models: parsedConfig.catalog.current ?? (await parsedConfig.catalog.load()),
       requestId: resolveOrCreateRequestId(request),
     };
 

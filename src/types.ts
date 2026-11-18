@@ -16,6 +16,7 @@ import type { Messages, MessagesBody, MessagesStream } from "./endpoints/message
 import type { Model, ModelList } from "./endpoints/models/index.ts";
 import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema.ts";
 import type { Logger, LoggerConfig } from "./logger/index.ts";
+import type { ModelCatalogConfig, ModelCatalogStore } from "./models/catalog.ts";
 import type { ModelCatalog, ModelId } from "./models/types.ts";
 import type { ProviderId, ProviderRegistry } from "./providers/types.ts";
 
@@ -46,7 +47,7 @@ export type GatewayContext = {
    */
   providers: ProviderRegistry;
   /**
-   * Model catalog from config.
+   * Model catalog, after `config.models` filters and overrides.
    */
   models: ModelCatalog;
   /**
@@ -262,9 +263,10 @@ export type GatewayConfig = {
    */
   providers: ProviderRegistry;
   /**
-   * Model catalog keyed by canonical model IDs.
+   * Model catalog settings. Models come from models.dev (loaded once, on the first request,
+   * falling back to the snapshot bundled with the release), keyed by canonical model ID.
    */
-  models: ModelCatalog;
+  models?: ModelCatalogConfig;
   /**
    * Optional lifecycle hooks for routing, auth, and response shaping.
    */
@@ -333,6 +335,7 @@ export type GatewayConfig = {
 
 export const kParsed = Symbol("hebo.gateway.parsed");
 export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "advanced"> & {
+  catalog: ModelCatalogStore;
   storage: ConversationStorage;
   advanced: {
     timeouts: {

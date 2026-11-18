@@ -83,6 +83,10 @@ export const cohereReasoningMiddleware: LanguageModelMiddleware = {
 modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: [cohereDimensionsMiddleware] });
 
 modelMiddlewareMatcher.useForModel(
-  ["cohere/command-a-reasoning", "cohere/command-a-plus", "cohere/north-mini-code"],
+  [
+    "cohere/command-a-reasoning-08-2025",
+    "cohere/command-a-plus-05-2026",
+    "cohere/north-mini-code-1-0",
+  ],
   { language: [cohereReasoningMiddleware] },
 );

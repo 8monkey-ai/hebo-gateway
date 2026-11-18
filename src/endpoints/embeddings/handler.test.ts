@@ -44,15 +44,18 @@ describe("Embeddings Handler", () => {
       }),
     },
     models: {
-      "text-embedding-3-small": {
-        name: "OpenAI Embedding Model",
-        modalities: { input: ["text"], output: ["embeddings"] },
-        providers: ["openai"],
-      },
-      "gpt-oss-20b": {
-        name: "GPT-OSS 20B",
-        modalities: { input: ["text"], output: ["text"] },
-        providers: ["openai"],
+      include: [],
+      overrides: {
+        "text-embedding-3-small": {
+          name: "OpenAI Embedding Model",
+          modalities: { input: ["text"], output: ["embeddings"] },
+          providers: ["openai"],
+        },
+        "gpt-oss-20b": {
+          name: "GPT-OSS 20B",
+          modalities: { input: ["text"], output: ["text"] },
+          providers: ["openai"],
+        },
       },
     },
   });

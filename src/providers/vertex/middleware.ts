@@ -62,7 +62,7 @@ modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
   language: [vertexServiceTierMiddleware],
 });
 
-// Matches both the canonical id (`google/gemma-4-26b-a4b`) and the MaaS-specific one
+// Matches both the canonical id (`google/gemma-4-26b-a4b-it`) and the MaaS-specific one
 // (`google/gemma-4-26b-a4b-it-maas`). The MaaS endpoint serves several model families
 // under one provider id, so the Gemma check lives here rather than in the registration.
 const GEMMA_4_MODEL_ID = /(?:^|\/)gemma-4-/u;

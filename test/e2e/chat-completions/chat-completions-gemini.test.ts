@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import OpenAI, { APIError } from "openai";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 
-import { gemini3FlashPreview } from "../../../src/models/google/index.ts";
 import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server.ts";
 import { createVertexTestServer, type TestServer } from "../shared/server.ts";
 import { CHAT_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools.ts";
@@ -29,7 +28,7 @@ let baseUrl: string;
 
 describe.skipIf(!hasVertexCredentials)("Chat Completions E2E (Vertex - thought_signature)", () => {
   beforeAll(() => {
-    testServer = createVertexTestServer(gemini3FlashPreview());
+    testServer = createVertexTestServer("google/gemini-3-flash-preview");
     baseUrl = testServer.baseUrl;
     client = new OpenAI({
       apiKey: "not-needed",

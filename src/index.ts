@@ -11,6 +11,7 @@ export * from "./middleware/matcher.ts";
 export * from "./middleware/transcription.ts";
 
 export * from "./models/catalog.ts";
+export * from "./models/models-dev.ts";
 export * from "./models/types.ts";
 
 export * from "./providers/registry.ts";

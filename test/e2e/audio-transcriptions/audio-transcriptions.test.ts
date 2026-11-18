@@ -6,11 +6,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import OpenAI, { APIError, toFile } from "openai";
 
-import type { ModelCatalog, ProviderRegistry } from "../../../src/index.ts";
-import { gemini35Transcribe } from "../../../src/models/google/index.ts";
-import { maiTranscribe2 } from "../../../src/models/microsoft/index.ts";
-import { gptTranscribe } from "../../../src/models/openai/index.ts";
-import { grokVoiceTranscribe20 } from "../../../src/models/xai/index.ts";
+import type { ModelCatalogConfig, ProviderRegistry } from "../../../src/index.ts";
 import { withCanonicalIdsForAzure } from "../../../src/providers/azure/index.ts";
 import { withCanonicalIdsForOpenAI } from "../../../src/providers/openai/index.ts";
 import { withCanonicalIdsForVertex } from "../../../src/providers/vertex/index.ts";
@@ -64,7 +60,7 @@ type SuiteOptions = {
   name: string;
   enabled: boolean;
   providers: () => ProviderRegistry;
-  catalog: () => ModelCatalog;
+  catalog: ModelCatalogConfig;
   model: string;
   /** Which usage field the provider reports. */
   usage: "tokens" | "seconds";
@@ -90,7 +86,7 @@ function describeTranscriptions(options: SuiteOptions) {
     };
 
     beforeAll(() => {
-      testServer = createTestServer(options.providers(), options.catalog());
+      testServer = createTestServer(options.providers(), options.catalog);
       client = new OpenAI({ apiKey: "not-needed", baseURL: `${testServer.baseUrl}/v1` });
     });
 
@@ -187,7 +183,7 @@ describeTranscriptions({
   providers: () => ({
     openai: withCanonicalIdsForOpenAI(createOpenAI({ apiKey: OPENAI_API_KEY })),
   }),
-  catalog: () => gptTranscribe({ providers: ["openai"] }),
+  catalog: { include: ["openai/gpt-transcribe"] },
   model: "openai/gpt-transcribe",
   usage: "seconds",
   segments: false,
@@ -201,7 +197,16 @@ describeTranscriptions({
       createAzure({ resourceName: AZURE_RESOURCE_NAME, apiKey: AZURE_API_KEY }),
     ),
   }),
-  catalog: () => maiTranscribe2(),
+  // Not on models.dev, so declared here.
+  catalog: {
+    include: [],
+    overrides: {
+      "microsoft/mai-transcribe-2": {
+        modalities: { input: ["audio"], output: ["transcription"] },
+        providers: ["azure"],
+      },
+    },
+  },
   model: "microsoft/mai-transcribe-2",
   usage: "seconds",
   segments: true,
@@ -211,7 +216,7 @@ describeTranscriptions({
   name: "xAI - grok-voice-transcribe-2.0",
   enabled: !!XAI_API_KEY,
   providers: () => ({ xai: withCanonicalIdsForXai(createXai({ apiKey: XAI_API_KEY })) }),
-  catalog: () => grokVoiceTranscribe20(),
+  catalog: { include: ["xai/grok-voice-transcribe-2.0"] },
   model: "xai/grok-voice-transcribe-2.0",
   usage: "seconds",
   // xAI only returns word timings, so they go to `words`.
@@ -229,7 +234,7 @@ describeTranscriptions({
   name: "Vertex - gemini-3.5-transcribe",
   enabled: hasVertexCredentials,
   providers: vertexProviders,
-  catalog: () => gemini35Transcribe(),
+  catalog: { include: ["google/gemini-3.5-transcribe"] },
   model: "google/gemini-3.5-transcribe",
   usage: "tokens",
   segments: false,

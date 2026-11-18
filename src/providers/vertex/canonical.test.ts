@@ -12,9 +12,9 @@ const vertex = createVertex({
   location: "us-central1",
 });
 
-test("google/gemma-4-26b-a4b routes to the MaaS OpenAI-compatible provider", () => {
+test("google/gemma-4-26b-a4b-it routes to the MaaS OpenAI-compatible provider", () => {
   const provider = withCanonicalIdsForVertex(vertex);
-  const model = provider.languageModel("google/gemma-4-26b-a4b");
+  const model = provider.languageModel("google/gemma-4-26b-a4b-it");
   expect(model.modelId).toBe("google/gemma-4-26b-a4b-it-maas");
   expect(model.provider).toBe("vertex.maas.chat");
 });
@@ -76,7 +76,7 @@ async function captureMaasRequest(
   // The capturing fetch always throws, so only the request itself is asserted on.
   try {
     await provider
-      .languageModel("google/gemma-4-26b-a4b")
+      .languageModel("google/gemma-4-26b-a4b-it")
       .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
   } catch {
     // expected

@@ -1,14 +1,15 @@
 import { type GroqProvider } from "@ai-sdk/groq";
 
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
 
 const MAPPING = {
-  "meta/llama-3.1-8b": "llama-3.1-8b-instant",
-  "meta/llama-3.3-70b": "llama-3.3-70b-versatile",
-  "meta/llama-4-scout": "meta-llama/llama-4-scout-17b-16e-instruct",
+  "openai/gpt-oss-20b": "openai/gpt-oss-20b",
+  "openai/gpt-oss-120b": "openai/gpt-oss-120b",
+  "meta/llama-3.3-70b-instruct": "llama-3.3-70b-versatile",
+  "meta/llama-4-scout-17b-instruct": "meta-llama/llama-4-scout-17b-16e-instruct",
   "alibaba/qwen3.8-27b": "qwen/qwen3.8-27b",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
+} as const satisfies Record<ModelId, string>;
 
 export const withCanonicalIdsForGroq = (
   provider: GroqProvider,
@@ -16,5 +17,7 @@ export const withCanonicalIdsForGroq = (
 ) =>
   withCanonicalIds(provider, {
     mapping: { ...MAPPING, ...extraMapping },
+    // Native IDs follow no common scheme: only mapped models are served.
+    namespaces: [],
     options: { stripNamespace: false },
   });
