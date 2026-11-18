@@ -4,20 +4,9 @@ import {
   type GoogleVertexMaasProvider,
   type GoogleVertexMaasProviderSettings,
 } from "@ai-sdk/google-vertex/maas";
-import { customProvider } from "ai";
 
 import type { ModelId } from "../../models/types.ts";
-import {
-  getCanonicalIdsResolver,
-  withCanonicalIds,
-  withCanonicalIdsResolver,
-} from "../registry.ts";
-
-// Dated Claude snapshots use Vertex's `@` version separator.
-const MAPPING = {
-  "anthropic/claude-haiku-4-5-20251001": "claude-haiku-4-5@20251001",
-  "anthropic/claude-opus-4-5-20251101": "claude-opus-4-5@20251101",
-} as const satisfies Record<ModelId, string>;
+import { withCanonicalIds } from "../registry.ts";
 
 /**
  * `createVertex` keeps `project` and `googleAuthOptions` in a closure, so the resolved
@@ -30,8 +19,8 @@ type VertexModelConfig = {
   fetch?: GoogleVertexMaasProviderSettings["fetch"];
 };
 
-// Gemma thinking is not exposed via generateContent, so it routes through the
-// MaaS endpoint, which serves Gemma only from the global endpoint.
+// Partner and open models (e.g. `google/gemma-4-26b-a4b-it-maas`) are served by the MaaS
+// endpoint, which serves them from the global location. Their native IDs carry a publisher.
 const createMaas = (provider: GoogleVertexProvider): GoogleVertexMaasProvider => {
   // Any model id works: constructing a model issues no request, it only resolves settings.
   const { config } = provider.languageModel("gemini-3.7-flash") as unknown as {
@@ -73,28 +62,25 @@ const createMaas = (provider: GoogleVertexProvider): GoogleVertexMaasProvider =>
 
 export const withCanonicalIdsForVertex = (
   provider: GoogleVertexProvider,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) => {
   // Deferred so incomplete settings surface at model construction, not at wrap time.
   let maas: GoogleVertexMaasProvider | undefined;
 
-  const base = withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
-    namespaces: ["google", "anthropic"],
-    options: {
-      stripNamespace: true,
-    },
-  });
-
-  const wrapped = customProvider({
-    languageModels: {
-      get "google/gemma-4-26b-a4b-it"() {
+  return withCanonicalIds(
+    {
+      ...provider,
+      languageModel: (id: string) => {
+        if (!id.includes("/")) return provider.languageModel(id);
         maas ??= createMaas(provider);
-        return maas.languageModel("google/gemma-4-26b-a4b-it-maas");
+        return maas.languageModel(id);
       },
     },
-    fallbackProvider: base,
-  });
-
-  return withCanonicalIdsResolver(wrapped, getCanonicalIdsResolver(base)!);
+    {
+      mapping: extraMapping,
+      options: {
+        stripNamespace: true,
+      },
+    },
+  );
 };

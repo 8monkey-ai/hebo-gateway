@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { MockProviderV4 } from "ai/test";
 
 import { parseResponse } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
 import { models } from "./handler.ts";
 
 const baseUrl = "http://localhost/models";
@@ -13,33 +14,30 @@ describe("Models Handler", () => {
       anthropic: new MockProviderV4(),
       google: new MockProviderV4(),
     },
-    models: {
-      include: [],
-      overrides: {
-        "anthropic/claude-opus-4-5-20251101": {
-          name: "Claude Opus 4.5",
-          created: "2025-09-29T10:00:00.000Z",
-          knowledge: "2025-07",
-          modalities: {
-            input: ["text", "image"],
-            output: ["text"],
-          },
-          context: 200000,
-          capabilities: ["reasoning", "tool_call"],
-          providers: ["anthropic"],
+    models: defineModelCatalog({
+      "anthropic/claude-opus-4-5-20251101": {
+        name: "Claude Opus 4.5",
+        created: "2025-09-29T10:00:00.000Z",
+        knowledge: "2025-07",
+        modalities: {
+          input: ["text", "image"],
+          output: ["text"],
         },
-        "google/gemini-3-flash": {
-          name: "Gemini 3 Flash",
-          created: "2025-10-01T08:30:00.000Z",
-          modalities: {
-            input: ["text", "video"],
-            output: ["text"],
-          },
-          context: 128000,
-          providers: ["google"],
-        },
+        context: 200000,
+        capabilities: ["reasoning", "tool_call"],
+        providers: { anthropic: "claude-opus-4-5-20251101" },
       },
-    },
+      "google/gemini-3-flash": {
+        name: "Gemini 3 Flash",
+        created: "2025-10-01T08:30:00.000Z",
+        modalities: {
+          input: ["text", "video"],
+          output: ["text"],
+        },
+        context: 128000,
+        providers: { google: "gemini-3-flash" },
+      },
+    }),
   });
 
   test("should list models via GET request with realistic data (exact match)", async () => {
@@ -116,7 +114,9 @@ describe("Models Handler", () => {
     }) => {
       const res = await models({
         providers: { openai: new MockProviderV4() },
-        models: { include: [], overrides: { "test/model": { modalities, providers: ["openai"] } } },
+        models: defineModelCatalog({
+          "test/model": { modalities, providers: { openai: "model" } },
+        }),
       }).handler(new Request(`${baseUrl}/test/model`, { method: "GET" }));
       const data = (await parseResponse(res)) as { architecture: { modality?: string } };
       return data.architecture.modality;

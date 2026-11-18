@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { MockEmbeddingModelV4, MockProviderV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
 import { embeddings } from "./handler.ts";
 
 const baseUrl = "http://localhost/embeddings";
@@ -43,21 +44,18 @@ describe("Embeddings Handler", () => {
         },
       }),
     },
-    models: {
-      include: [],
-      overrides: {
-        "text-embedding-3-small": {
-          name: "OpenAI Embedding Model",
-          modalities: { input: ["text"], output: ["embeddings"] },
-          providers: ["openai"],
-        },
-        "gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text"], output: ["text"] },
-          providers: ["openai"],
-        },
+    models: defineModelCatalog({
+      "text-embedding-3-small": {
+        name: "OpenAI Embedding Model",
+        modalities: { input: ["text"], output: ["embeddings"] },
+        providers: { openai: "model" },
       },
-    },
+      "gpt-oss-20b": {
+        name: "GPT-OSS 20B",
+        modalities: { input: ["text"], output: ["text"] },
+        providers: { openai: "model" },
+      },
+    }),
   });
 
   test("should return 422 if model does not support embeddings", async () => {

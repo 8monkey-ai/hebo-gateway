@@ -5,6 +5,8 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { parseResponse, postJson } from "../../../test/helpers/http.ts";
 import { chatCompletions } from "../../endpoints/chat-completions/handler.ts";
 import type { ChatCompletions } from "../../endpoints/chat-completions/schema.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
+import { gemini } from "../../models/google/presets.ts";
 import { withCanonicalIdsForVertex } from "./canonical.ts";
 
 type GeminiRequest = { contents: { parts: { thoughtSignature?: string }[] }[] };
@@ -43,7 +45,8 @@ const endpoint = chatCompletions({
     ),
   },
   // Served from the bundled models.dev snapshot.
-  models: { source: false, include: ["google/gemini-3.7-flash"] },
+  models: defineModelCatalog(gemini["v3.7"]),
+  advanced: { catalog: { source: false } },
 });
 
 const send = async (messages: unknown[]) =>

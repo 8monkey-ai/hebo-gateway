@@ -3,11 +3,19 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 import {
-  type ModelCatalogConfig,
   type ModelId,
   type ProviderRegistry,
+  defineModelCatalog,
   gateway,
 } from "../../../src/index.ts";
+// oxlint-disable no-unassigned-import
+// Registers the models (and model middleware) of every lab under test.
+import "../../../src/models/anthropic/index.ts";
+import "../../../src/models/google/index.ts";
+import "../../../src/models/microsoft/index.ts";
+import "../../../src/models/openai/index.ts";
+import "../../../src/models/xai/index.ts";
+// oxlint-enable no-unassigned-import
 import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock/index.ts";
 import { withCanonicalIdsForVertex } from "../../../src/providers/vertex/index.ts";
 
@@ -67,8 +75,8 @@ export function createBedrockTestServer(...models: ModelId[]): TestServer {
     providers: {
       bedrock: withCanonicalIdsForBedrock(bedrock),
     },
-    models: { source: false, include: models },
-    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+    models: defineModelCatalog(models),
+    advanced: { catalog: { source: false }, timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({
@@ -97,8 +105,8 @@ export function createVertexTestServer(...models: ModelId[]): TestServer {
     providers: {
       vertex: withCanonicalIdsForVertex(vertex),
     },
-    models: { source: false, include: models },
-    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+    models: defineModelCatalog(models),
+    advanced: { catalog: { source: false }, timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({
@@ -114,16 +122,13 @@ export function createVertexTestServer(...models: ModelId[]): TestServer {
 // Generic
 // ---------------------------------------------------------------------------
 
-export function createTestServer(
-  providers: ProviderRegistry,
-  models: ModelCatalogConfig,
-): TestServer {
+export function createTestServer(providers: ProviderRegistry, ...models: ModelId[]): TestServer {
   const gw = gateway({
     basePath: "/v1",
     logger: { level: "warn" },
     providers,
-    models: { source: false, ...models },
-    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+    models: defineModelCatalog(models),
+    advanced: { catalog: { source: false }, timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({

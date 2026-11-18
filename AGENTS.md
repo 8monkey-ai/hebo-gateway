@@ -51,12 +51,14 @@ If priorities conflict, apply this order:
 
 - `src/index.ts`: public entrypoint.
 - `src/gateway.ts`: gateway construction and core lifecycle.
-- `src/models/types.ts`: catalog shape.
-- `src/models/models-dev.ts`: models.dev → catalog conversion (labs, provider hosts).
-- `src/models/catalog.ts`: catalog loading, filters (`include` / `exclude` / `overrides`) and fallback.
-- `src/models/models-dev.json`: bundled models.dev snapshot (`bun run models:sync`).
+- `src/models/types.ts`: canonical model ID union (from the bundled snapshots) and catalog shape.
+- `src/models/models-dev.ts`: models.dev → catalog conversion (labs, provider hosts, native IDs).
+- `src/models/catalog.ts`: lab registry, `defineModelCatalog`, catalog loading and fallback.
+- `src/models/family.ts`: model families (`all`, `latest`, version and named groups).
+- `src/models/*/presets.ts`: lab registration (snapshot + gap-filling extras) and family exports.
+- `src/models/*/models-dev.json`: bundled models.dev snapshot per lab (`bun run models:sync`).
 - `src/models/*/middleware.ts`: model-family middleware.
-- `src/providers/*/canonical.ts`: provider-specific canonical model ID mappings.
+- `src/providers/*/canonical.ts`: provider-wide native ID rules (inference profiles, Mantle, MaaS).
 - `src/providers/registry.ts`: canonical ID adapter wrapper and provider resolution logic.
 - `src/endpoints/*`: OpenAI-compatible schema/converter/handler layers.
 - `e2e/*`: framework integration examples (Elysia, Hono, Next.js, TanStack).
@@ -87,7 +89,7 @@ If priorities conflict, apply this order:
 
 ## Model & Provider Changes
 
-For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.agents/skills/add-model/SKILL.md`). It covers the models.dev catalog snapshot, provider canonical mappings, model middleware, and testing.
+For detailed instructions on adding or updating models and providers, use the **add-model** skill (`.agents/skills/add-model/SKILL.md`). It covers the models.dev catalog snapshots, lab extras, model families, model middleware, and testing.
 
 ## Testing Expectations
 
@@ -109,4 +111,4 @@ For detailed instructions on adding or updating models and providers, use the **
 - [ ] Change is scoped to requested behavior.
 - [ ] Types compile (`bun run typecheck`).
 - [ ] Tests pass (`bun run test`) or failures are documented.
-- [ ] Canonical IDs follow models.dev, and providers that list them can resolve them (mappings / `namespaces`).
+- [ ] Canonical and provider-native IDs follow models.dev; lab extras only fill gaps models.dev does not cover yet.

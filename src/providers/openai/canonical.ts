@@ -5,11 +5,10 @@ import { withCanonicalIds } from "../registry.ts";
 
 export const withCanonicalIdsForOpenAI = (
   provider: OpenAIProvider,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
-    namespaces: ["openai"],
     options: {
       stripNamespace: true,
     },

@@ -40,7 +40,11 @@ export const resolveProvider = (args: {
   }
 
   // FUTURE: implement fallback logic [e.g. runtime config invalid]
-  const resolvedProviderId = catalogModel.providers[0];
+  let resolvedProviderId: string | undefined;
+  for (const id in catalogModel.providers) {
+    resolvedProviderId = id;
+    break;
+  }
 
   if (!resolvedProviderId) {
     throw new GatewayError(`No providers configured for model '${modelId}'`, 422, "NO_PROVIDERS");
@@ -58,32 +62,26 @@ export const resolveProvider = (args: {
   return provider;
 };
 
-/** Kind of model a catalog entry is served as. */
-export type CanonicalModelKind = "text" | "embeddings" | "transcription";
+const kNativeIds = Symbol.for("hebo.gateway.native-ids");
 
-/** Whether a provider can serve a canonical model ID, i.e. knows its provider-native ID. */
-export type CanonicalIdsResolver = (modelId: ModelId, kind: CanonicalModelKind) => boolean;
+/** Canonical -> provider-native model IDs, filled from the catalog once it is loaded. */
+export type NativeIds = Map<ModelId, string>;
 
-const kResolver = Symbol.for("hebo.gateway.canonical-ids");
+/** Attaches a native ID map to a provider, read back with `getNativeIds`. */
+export const withNativeIds = <P extends ProviderV4>(provider: P, ids: NativeIds): P =>
+  Object.assign(provider, { [kNativeIds]: ids });
 
-/** Attaches a resolver to a provider, read back with `getCanonicalIdsResolver`. */
-export const withCanonicalIdsResolver = <P extends ProviderV4>(
-  provider: P,
-  resolver: CanonicalIdsResolver,
-): P => Object.assign(provider, { [kResolver]: resolver });
-
-/** Resolver of a provider wrapped with `withCanonicalIds`, if any. */
-export const getCanonicalIdsResolver = (provider: ProviderV4) =>
-  (provider as { [kResolver]?: CanonicalIdsResolver })[kResolver];
+/** Native ID map of a provider wrapped with `withCanonicalIds`, if any. */
+export const getNativeIds = (provider: ProviderV4) =>
+  (provider as { [kNativeIds]?: NativeIds })[kNativeIds];
 
 export type CanonicalIdsOptions = {
-  mapping?: Partial<Record<ModelId, string>>;
   /**
-   * Canonical namespaces (e.g. `"anthropic"`) whose provider-native IDs the default
-   * transform below produces. Other IDs are only served through `mapping`, so the catalog
-   * does not route them to this provider. Defaults to every namespace.
+   * Canonical -> provider-native IDs that win over the catalog. Values may use `{key}`
+   * placeholders from `options.template`.
    */
-  namespaces?: readonly string[];
+  mapping?: Partial<Record<ModelId, string>>;
+  /** Transform for model IDs that neither `mapping` nor the catalog knows. */
   options?: {
     /** @default true */
     stripNamespace?: boolean;
@@ -105,10 +103,9 @@ export type CanonicalIdsOptions = {
 export const withCanonicalIds = (
   provider: ProviderV3 | ProviderV4,
   config: CanonicalIdsOptions = {},
-): ProviderV4 => {
+) => {
   const {
     mapping,
-    namespaces,
     options: {
       stripNamespace = true,
       normalizeDelimiters = false,
@@ -139,9 +136,11 @@ export const withCanonicalIds = (
     return out;
   };
 
+  const placeholders =
+    template && Object.entries(template).map(([k, v]) => [`{${k}}`, v ?? ""] as const);
   const applyTemplate = (input: string) => {
-    if (!template) return input;
-    return Object.entries(template).reduce((out, [k, v]) => out.replace(`{${k}}`, v ?? ""), input);
+    if (!placeholders || !input.includes("{")) return input;
+    return placeholders.reduce((out, [k, v]) => out.replace(k, v), input);
   };
 
   const applyFallbackAffixes = (v: string) => {
@@ -150,8 +149,16 @@ export const withCanonicalIds = (
     return out;
   };
 
-  const needsFallbackWrap =
-    stripNamespace || normalizeDelimiters || namespaceSeparator !== "/" || !!prefix || !!postfix;
+  const ids: NativeIds = new Map();
+
+  // Explicit mapping, then the catalog, then the fallback transform.
+  const resolve = (id: string) => {
+    const native = mapping?.[id] ?? ids.get(id);
+    const mapped =
+      native === undefined ? applyFallbackAffixes(normalizeId(id)) : applyTemplate(native);
+    if (mapped !== id) logger.debug(`[canonical] mapped ${id} to ${mapped}`);
+    return mapped;
+  };
 
   const languageModel: (id: string) => LanguageModel = (id) => provider.languageModel(id);
   const embeddingModel: (id: string) => EmbeddingModel = (id) => provider.embeddingModel(id);
@@ -159,65 +166,21 @@ export const withCanonicalIds = (
   const transcriptionModel: ((id: string) => TranscriptionModel) | undefined =
     provider.transcriptionModel && ((id) => provider.transcriptionModel!(id));
 
-  const fallbackProvider = needsFallbackWrap
-    ? ({
-        ...provider,
-        // Community providers may omit `specificationVersion`. Anything that is
-        // not explicitly `v4` must report `v3`, otherwise the AI SDK adapts it
-        // through its v2 shim, which reads the deprecated `textEmbeddingModel`
-        // and would bypass the overrides below.
-        specificationVersion: provider.specificationVersion === "v4" ? "v4" : "v3",
-        languageModel: (id: string) => {
-          const mapped = applyFallbackAffixes(normalizeId(id));
-          logger.debug(`[canonical] mapped ${id} to ${mapped}`);
-          return languageModel(mapped);
-        },
-        embeddingModel: (id: string) => {
-          const mapped = applyFallbackAffixes(normalizeId(id));
-          logger.debug(`[canonical] mapped ${id} to ${mapped}`);
-          return embeddingModel(mapped);
-        },
-        ...(transcriptionModel && {
-          transcriptionModel: (id: string) => {
-            const mapped = applyFallbackAffixes(normalizeId(id));
-            logger.debug(`[canonical] mapped ${id} to ${mapped}`);
-            return transcriptionModel(mapped);
-          },
-        }),
-      } as ProviderV3 | ProviderV4)
-    : provider;
-
-  const mapModels = <T>(fn?: (id: string) => T) => {
-    const out = {} as Record<string, T>;
-
-    // Some providers don't have languageModel / embeddingModel / transcriptionModel
-    if (fn === undefined) return out;
-
-    for (const [k, v] of Object.entries(mapping ?? {})) {
-      if (v === undefined) continue;
-      // This is lazy so that provider is only create once called
-      Object.defineProperty(out, k, {
-        get: () => {
-          const mapped = applyTemplate(v);
-          logger.debug(`[canonical] mapped ${k} to ${mapped}`);
-          return fn(mapped);
-        },
-      });
-    }
-
-    return out;
-  };
-
   const wrapped = customProvider({
-    languageModels: mapModels(languageModel),
-    embeddingModels: mapModels(embeddingModel),
-    transcriptionModels: mapModels(transcriptionModel),
-    fallbackProvider,
+    fallbackProvider: {
+      ...provider,
+      // Community providers may omit `specificationVersion`. Anything that is
+      // not explicitly `v4` must report `v3`, otherwise the AI SDK adapts it
+      // through its v2 shim, which reads the deprecated `textEmbeddingModel`
+      // and would bypass the overrides below.
+      specificationVersion: provider.specificationVersion === "v4" ? "v4" : "v3",
+      languageModel: (id: string) => languageModel(resolve(id)),
+      embeddingModel: (id: string) => embeddingModel(resolve(id)),
+      ...(transcriptionModel && {
+        transcriptionModel: (id: string) => transcriptionModel(resolve(id)),
+      }),
+    } as ProviderV3 | ProviderV4,
   });
 
-  return withCanonicalIdsResolver(wrapped, (modelId, kind) => {
-    if (kind === "transcription" && !transcriptionModel) return false;
-    if (mapping?.[modelId] !== undefined) return true;
-    return !namespaces || namespaces.includes(modelId.split("/", 1)[0]!);
-  });
+  return withNativeIds(wrapped, ids);
 };

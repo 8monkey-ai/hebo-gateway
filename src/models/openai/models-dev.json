@@ -1,0 +1,855 @@
+{
+  "openai/gpt-4.1": {
+    "name": "GPT-4.1",
+    "family": "gpt",
+    "created": "2025-04-14",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1047576,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-4.1"
+    }
+  },
+  "openai/gpt-4.1-mini": {
+    "name": "GPT-4.1 mini",
+    "family": "gpt-mini",
+    "created": "2025-04-14",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1047576,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-4.1-mini"
+    }
+  },
+  "openai/gpt-4o": {
+    "name": "GPT-4o",
+    "family": "gpt",
+    "created": "2024-05-13",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-4o"
+    }
+  },
+  "openai/gpt-4o-2024-08-06": {
+    "name": "GPT-4o (2024-08-06)",
+    "family": "gpt",
+    "created": "2024-08-06",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-4o-2024-08-06"
+    }
+  },
+  "openai/gpt-4o-2024-11-20": {
+    "name": "GPT-4o (2024-11-20)",
+    "family": "gpt",
+    "created": "2024-11-20",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-4o-2024-11-20"
+    }
+  },
+  "openai/gpt-4o-mini": {
+    "name": "GPT-4o mini",
+    "family": "gpt-mini",
+    "created": "2024-07-18",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-4o-mini"
+    }
+  },
+  "openai/gpt-4o-mini-transcribe": {
+    "name": "GPT-4o Mini Transcribe (Azure)",
+    "family": "gpt-mini",
+    "created": "2025-03-20",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text", "audio"],
+      "output": ["transcription"]
+    },
+    "context": 16000,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "openai": "gpt-4o-mini-transcribe"
+    }
+  },
+  "openai/gpt-4o-transcribe": {
+    "name": "GPT-4o Transcribe (Azure)",
+    "family": "gpt",
+    "created": "2025-03-20",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text", "audio"],
+      "output": ["transcription"]
+    },
+    "context": 16000,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "openai": "gpt-4o-transcribe"
+    }
+  },
+  "openai/gpt-5": {
+    "name": "GPT-5",
+    "family": "gpt",
+    "created": "2025-08-07",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-5",
+      "azure": "gpt-5"
+    }
+  },
+  "openai/gpt-5-codex": {
+    "name": "GPT-5-Codex",
+    "family": "gpt-codex",
+    "created": "2025-09-15",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call"],
+    "providers": {
+      "azure": "gpt-5-codex"
+    }
+  },
+  "openai/gpt-5-mini": {
+    "name": "GPT-5 Mini",
+    "family": "gpt-mini",
+    "created": "2025-08-07",
+    "knowledge": "2024-05-30",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-5-mini",
+      "azure": "gpt-5-mini"
+    }
+  },
+  "openai/gpt-5-nano": {
+    "name": "GPT-5 Nano",
+    "family": "gpt-nano",
+    "created": "2025-08-07",
+    "knowledge": "2024-05-30",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-5-nano",
+      "azure": "gpt-5-nano"
+    }
+  },
+  "openai/gpt-5-pro": {
+    "name": "GPT-5 Pro",
+    "family": "gpt-pro",
+    "created": "2025-10-06",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-5-pro",
+      "azure": "gpt-5-pro"
+    }
+  },
+  "openai/gpt-5.1": {
+    "name": "GPT-5.1",
+    "family": "gpt",
+    "created": "2025-11-13",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.1",
+      "azure": "gpt-5.1"
+    }
+  },
+  "openai/gpt-5.1-codex": {
+    "name": "GPT-5.1 Codex",
+    "family": "gpt-codex",
+    "created": "2025-11-14",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "azure": "gpt-5.1-codex"
+    }
+  },
+  "openai/gpt-5.1-codex-max": {
+    "name": "GPT-5.1 Codex Max",
+    "family": "gpt-codex",
+    "created": "2025-11-13",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "azure": "gpt-5.1-codex-max"
+    }
+  },
+  "openai/gpt-5.1-codex-mini": {
+    "name": "GPT-5.1 Codex Mini",
+    "family": "gpt-codex",
+    "created": "2025-11-14",
+    "knowledge": "2024-09-30",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "azure": "gpt-5.1-codex-mini"
+    }
+  },
+  "openai/gpt-5.2": {
+    "name": "GPT-5.2",
+    "family": "gpt",
+    "created": "2025-12-11",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.2",
+      "azure": "gpt-5.2"
+    }
+  },
+  "openai/gpt-5.2-codex": {
+    "name": "GPT-5.2 Codex",
+    "family": "gpt-codex",
+    "created": "2026-01-14",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "azure": "gpt-5.2-codex"
+    }
+  },
+  "openai/gpt-5.2-pro": {
+    "name": "GPT-5.2 Pro",
+    "family": "gpt-pro",
+    "created": "2025-12-11",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call"],
+    "providers": {
+      "openai": "gpt-5.2-pro"
+    }
+  },
+  "openai/gpt-5.3-codex": {
+    "name": "GPT-5.3 Codex",
+    "family": "gpt-codex",
+    "created": "2026-02-05",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.3-codex",
+      "azure": "gpt-5.3-codex"
+    }
+  },
+  "openai/gpt-5.3-codex-spark": {
+    "name": "GPT-5.3 Codex Spark",
+    "family": "gpt-codex-spark",
+    "created": "2026-02-05",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-5.3-codex-spark"
+    }
+  },
+  "openai/gpt-5.4": {
+    "name": "GPT-5.4",
+    "family": "gpt",
+    "created": "2026-03-05",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.4",
+      "bedrock": "mantle:openai.gpt-5.4",
+      "azure": "gpt-5.4"
+    }
+  },
+  "openai/gpt-5.4-mini": {
+    "name": "GPT-5.4 mini",
+    "family": "gpt-mini",
+    "created": "2026-03-17",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.4-mini",
+      "azure": "gpt-5.4-mini"
+    }
+  },
+  "openai/gpt-5.4-nano": {
+    "name": "GPT-5.4 nano",
+    "family": "gpt-nano",
+    "created": "2026-03-17",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.4-nano",
+      "azure": "gpt-5.4-nano"
+    }
+  },
+  "openai/gpt-5.4-pro": {
+    "name": "GPT-5.4 Pro",
+    "family": "gpt-pro",
+    "created": "2026-03-05",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call"],
+    "providers": {
+      "openai": "gpt-5.4-pro",
+      "azure": "gpt-5.4-pro"
+    }
+  },
+  "openai/gpt-5.5": {
+    "name": "GPT-5.5",
+    "family": "gpt",
+    "created": "2026-04-23",
+    "knowledge": "2025-12-01",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.5",
+      "bedrock": "mantle:openai.gpt-5.5",
+      "azure": "gpt-5.5"
+    }
+  },
+  "openai/gpt-5.5-instant": {
+    "name": "GPT Chat Latest",
+    "status": "beta",
+    "created": "2026-05-05",
+    "knowledge": "2025-12-01",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "azure": "gpt-chat-latest"
+    }
+  },
+  "openai/gpt-5.5-pro": {
+    "name": "GPT-5.5 Pro",
+    "family": "gpt-pro",
+    "created": "2026-04-23",
+    "knowledge": "2025-12-01",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-5.5-pro"
+    }
+  },
+  "openai/gpt-5.6-cyber": {
+    "name": "Daybreak Red",
+    "family": "gpt",
+    "created": "2026-08-07",
+    "knowledge": "2026-02-16",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 400000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-daybreak-red-latest"
+    }
+  },
+  "openai/gpt-5.6-luna": {
+    "name": "GPT-5.6 Luna",
+    "family": "gpt-luna",
+    "created": "2026-07-09",
+    "knowledge": "2026-02-16",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.6-luna",
+      "bedrock": "mantle:openai.gpt-5.6-luna",
+      "azure": "gpt-5.6-luna"
+    }
+  },
+  "openai/gpt-5.6-sol": {
+    "name": "Daybreak Blue",
+    "family": "gpt-sol",
+    "created": "2026-08-07",
+    "knowledge": "2026-02-16",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.6-sol",
+      "bedrock": "mantle:openai.gpt-5.6-sol",
+      "azure": "gpt-5.6-sol"
+    }
+  },
+  "openai/gpt-5.6-terra": {
+    "name": "GPT-5.6 Terra",
+    "family": "gpt-terra",
+    "created": "2026-07-09",
+    "knowledge": "2026-02-16",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-5.6-terra",
+      "bedrock": "mantle:openai.gpt-5.6-terra",
+      "azure": "gpt-5.6-terra"
+    }
+  },
+  "openai/gpt-6-astra": {
+    "name": "GPT-6 Astra",
+    "family": "gpt-astra",
+    "created": "2026-09-04",
+    "knowledge": "2026-04-30",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-6-astra",
+      "bedrock": "mantle:openai.gpt-6-astra",
+      "azure": "gpt-6-astra"
+    }
+  },
+  "openai/gpt-6-luna": {
+    "name": "GPT-6 Luna",
+    "family": "gpt-luna",
+    "created": "2026-09-22",
+    "knowledge": "2026-05-18",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-6-luna",
+      "bedrock": "mantle:openai.gpt-6-luna",
+      "azure": "gpt-6-luna"
+    }
+  },
+  "openai/gpt-6-sol": {
+    "name": "GPT-6 Sol",
+    "family": "gpt-sol",
+    "created": "2026-09-22",
+    "knowledge": "2026-04-20",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-6-sol",
+      "bedrock": "mantle:openai.gpt-6-sol",
+      "azure": "gpt-6-sol"
+    }
+  },
+  "openai/gpt-6.1-sol": {
+    "name": "GPT-6.1 Sol",
+    "family": "gpt-sol",
+    "created": "2026-09-29",
+    "knowledge": "2026-04-30",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-6.1-sol",
+      "bedrock": "mantle:openai.gpt-6.1-sol",
+      "azure": "gpt-6.1-sol"
+    }
+  },
+  "openai/gpt-6.1-terra": {
+    "name": "GPT-6.1 Terra",
+    "family": "gpt-terra",
+    "created": "2026-10-26",
+    "knowledge": "2026-06-01",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": "gpt-6.1-terra",
+      "bedrock": "mantle:openai.gpt-6.1-terra",
+      "azure": "gpt-6.1-terra"
+    }
+  },
+  "openai/gpt-6.2-astra": {
+    "name": "GPT-6.2 Astra",
+    "family": "gpt-astra",
+    "created": "2026-11-17",
+    "knowledge": "2026-05-18",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-6.2-astra"
+    }
+  },
+  "openai/gpt-6.2-sol": {
+    "name": "GPT-6.2 Sol",
+    "family": "gpt-sol",
+    "created": "2026-11-17",
+    "knowledge": "2026-06-01",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1050000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "gpt-6.2-sol"
+    }
+  },
+  "openai/gpt-live-transcribe": {
+    "name": "GPT-Live-Transcribe",
+    "family": "gpt",
+    "created": "2026-07-28",
+    "modalities": {
+      "input": ["text", "audio"],
+      "output": ["transcription"]
+    },
+    "capabilities": ["attachments"],
+    "providers": {
+      "openai": "gpt-live-transcribe"
+    }
+  },
+  "openai/gpt-oss-120b": {
+    "name": "gpt-oss-120b",
+    "family": "gpt-oss",
+    "created": "2025-08-05",
+    "knowledge": "2024-06",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "openai.gpt-oss-120b-1:0",
+      "vertex": "openai/gpt-oss-120b-maas",
+      "groq": "openai/gpt-oss-120b",
+      "togetherai": "openai/gpt-oss-120b",
+      "deepinfra": "openai/gpt-oss-120b"
+    }
+  },
+  "openai/gpt-oss-20b": {
+    "name": "gpt-oss-20b",
+    "family": "gpt-oss",
+    "created": "2025-08-05",
+    "knowledge": "2024-06",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "openai.gpt-oss-20b-1:0",
+      "groq": "openai/gpt-oss-20b",
+      "deepinfra": "openai/gpt-oss-20b"
+    }
+  },
+  "openai/gpt-oss-safeguard-120b": {
+    "name": "GPT OSS Safeguard 120B",
+    "family": "gpt-oss",
+    "created": "2025-10-29",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "openai.gpt-oss-safeguard-120b"
+    }
+  },
+  "openai/gpt-oss-safeguard-20b": {
+    "name": "GPT OSS Safeguard 20B",
+    "family": "gpt-oss",
+    "created": "2025-10-29",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "openai.gpt-oss-safeguard-20b",
+      "groq": "openai/gpt-oss-safeguard-20b"
+    }
+  },
+  "openai/gpt-realtime-whisper": {
+    "name": "gpt-realtime-whisper",
+    "family": "whisper",
+    "created": "2026-05-07",
+    "modalities": {
+      "input": ["audio"],
+      "output": ["transcription"]
+    },
+    "context": 16000,
+    "capabilities": ["attachments"],
+    "providers": {
+      "openai": "gpt-realtime-whisper"
+    }
+  },
+  "openai/gpt-transcribe": {
+    "name": "GPT-Transcribe",
+    "family": "gpt",
+    "created": "2026-07-28",
+    "modalities": {
+      "input": ["text", "audio"],
+      "output": ["transcription"]
+    },
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "openai": "gpt-transcribe"
+    }
+  },
+  "openai/o3": {
+    "name": "o3",
+    "family": "o",
+    "created": "2025-04-16",
+    "knowledge": "2024-05",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "o3",
+      "azure": "o3"
+    }
+  },
+  "openai/o3-pro": {
+    "name": "o3-pro",
+    "family": "o-pro",
+    "created": "2025-06-10",
+    "knowledge": "2024-05",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": "o3-pro"
+    }
+  },
+  "openai/text-embedding-3-large": {
+    "name": "text-embedding-3-large",
+    "family": "text-embedding",
+    "created": "2024-01-25",
+    "knowledge": "2024-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 8191,
+    "providers": {
+      "openai": "text-embedding-3-large",
+      "azure": "text-embedding-3-large"
+    }
+  },
+  "openai/text-embedding-3-small": {
+    "name": "text-embedding-3-small",
+    "family": "text-embedding",
+    "created": "2024-01-25",
+    "knowledge": "2024-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 8191,
+    "providers": {
+      "openai": "text-embedding-3-small",
+      "azure": "text-embedding-3-small"
+    }
+  },
+  "openai/text-embedding-ada-002": {
+    "name": "text-embedding-ada-002",
+    "family": "text-embedding",
+    "created": "2022-12-15",
+    "knowledge": "2022-12",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 8192,
+    "providers": {
+      "openai": "text-embedding-ada-002",
+      "azure": "text-embedding-ada-002"
+    }
+  },
+  "openai/whisper-1": {
+    "name": "Whisper",
+    "family": "whisper",
+    "created": "2023-03-01",
+    "modalities": {
+      "input": ["audio"],
+      "output": ["transcription"]
+    },
+    "context": 448000,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "openai": "whisper-1"
+    }
+  },
+  "openai/whisper-large-v3": {
+    "name": "Whisper",
+    "family": "whisper",
+    "created": "2023-11-06",
+    "modalities": {
+      "input": ["audio"],
+      "output": ["transcription"]
+    },
+    "context": 448,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "groq": "whisper-large-v3"
+    }
+  },
+  "openai/whisper-large-v3-turbo": {
+    "name": "Whisper Large V3 Turbo",
+    "family": "whisper",
+    "created": "2024-10-01",
+    "modalities": {
+      "input": ["audio"],
+      "output": ["transcription"]
+    },
+    "context": 448,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "groq": "whisper-large-v3-turbo"
+    }
+  }
+}

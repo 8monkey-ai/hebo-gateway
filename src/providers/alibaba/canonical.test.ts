@@ -6,17 +6,6 @@ import { withCanonicalIdsForAlibaba } from "./canonical.ts";
 
 const provider = withCanonicalIdsForAlibaba(createAlibaba({ apiKey: "test-key" }));
 
-const explicitMappings: [canonical: string, nativeId: string][] = [
-  ["alibaba/qwen3.6-flash", "qwen3.6-35b-a3b"],
-];
-
-for (const [canonical, nativeId] of explicitMappings) {
-  test(`explicit mapping: ${canonical} → ${nativeId}`, () => {
-    const model = provider.languageModel(canonical);
-    expect(model.modelId).toBe(nativeId);
-  });
-}
-
 const stripNamespaceFallbacks: [canonical: string, nativeId: string][] = [
   ["alibaba/qwen3.5-397b-a17b", "qwen3.5-397b-a17b"],
   ["alibaba/qwen3.5-122b-a10b", "qwen3.5-122b-a10b"],

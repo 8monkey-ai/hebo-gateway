@@ -1,0 +1,339 @@
+{
+  "google/gemini-3-flash-preview": {
+    "name": "Gemini 3 Flash Preview",
+    "family": "gemini-flash",
+    "created": "2025-12-17",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3-flash-preview"
+    }
+  },
+  "google/gemini-3.1-flash-lite": {
+    "name": "Gemini 3.1 Flash Lite",
+    "family": "gemini-flash-lite",
+    "created": "2026-05-07",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.1-flash-lite"
+    }
+  },
+  "google/gemini-3.1-pro-preview": {
+    "name": "Gemini Pro Latest",
+    "family": "gemini-pro",
+    "created": "2026-02-19",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.1-pro-preview"
+    }
+  },
+  "google/gemini-3.1-pro-preview-customtools": {
+    "name": "Gemini 3.1 Pro Preview Custom Tools",
+    "family": "gemini-pro",
+    "created": "2026-02-19",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.1-pro-preview-customtools"
+    }
+  },
+  "google/gemini-3.5-flash": {
+    "name": "Gemini 3.5 Flash",
+    "family": "gemini-flash",
+    "created": "2026-05-19",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.5-flash"
+    }
+  },
+  "google/gemini-3.5-flash-lite": {
+    "name": "Gemini 3.5 Flash Lite",
+    "family": "gemini-flash-lite",
+    "created": "2026-07-21",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.5-flash-lite"
+    }
+  },
+  "google/gemini-3.5-transcribe": {
+    "name": "Gemini 3.5 Transcribe",
+    "family": "gemini",
+    "created": "2026-08-26",
+    "modalities": {
+      "input": ["audio"],
+      "output": ["transcription"]
+    },
+    "context": 98304,
+    "capabilities": ["attachments"],
+    "providers": {
+      "vertex": "gemini-3.5-transcribe"
+    }
+  },
+  "google/gemini-3.5-transcribe-live": {
+    "name": "Gemini 3.5 Transcribe Live",
+    "family": "gemini",
+    "created": "2026-08-26",
+    "modalities": {
+      "input": ["audio"],
+      "output": ["transcription"]
+    },
+    "capabilities": ["attachments"],
+    "providers": {
+      "vertex": "gemini-3.5-transcribe-live"
+    }
+  },
+  "google/gemini-3.7-flash": {
+    "name": "Gemini 3.7 Flash",
+    "family": "gemini-flash",
+    "created": "2026-08-13",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.7-flash"
+    }
+  },
+  "google/gemini-3.8-flash": {
+    "name": "Gemini 3.8 Flash",
+    "family": "gemini-flash",
+    "created": "2026-09-02",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-3.8-flash"
+    }
+  },
+  "google/gemini-4-argon": {
+    "name": "Gemini 4 Argon",
+    "family": "gemini",
+    "created": "2026-10-13",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-4-argon"
+    }
+  },
+  "google/gemini-4-carbon": {
+    "name": "Gemini 4 Carbon",
+    "family": "gemini",
+    "created": "2026-11-10",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-4-carbon"
+    }
+  },
+  "google/gemini-4-hydrogen": {
+    "name": "Gemini 4 Hydrogen",
+    "family": "gemini",
+    "created": "2026-11-12",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "gemini-4-hydrogen"
+    }
+  },
+  "google/gemini-embedding-001": {
+    "name": "Gemini Embedding 001",
+    "family": "gemini",
+    "created": "2025-05-20",
+    "knowledge": "2025-05",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 2048,
+    "providers": {
+      "vertex": "gemini-embedding-001"
+    }
+  },
+  "google/gemini-embedding-2": {
+    "name": "Gemini Embedding 2",
+    "family": "gemini",
+    "created": "2026-04-22",
+    "knowledge": "2025-11",
+    "modalities": {
+      "input": ["text", "image", "audio", "video", "file"],
+      "output": ["embeddings"]
+    },
+    "context": 8192,
+    "capabilities": ["attachments"],
+    "providers": {
+      "vertex": "gemini-embedding-2"
+    }
+  },
+  "google/gemma-3-12b-it": {
+    "name": "Gemma 3 12B IT",
+    "family": "gemma",
+    "created": "2025-03-12",
+    "knowledge": "2024-08",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "google/gemma-3-12b-it"
+    }
+  },
+  "google/gemma-3-27b-it": {
+    "name": "Gemma 3 27B IT",
+    "family": "gemma",
+    "created": "2025-03-12",
+    "knowledge": "2024-08",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "google/gemma-3-27b-it"
+    }
+  },
+  "google/gemma-3-4b-it": {
+    "name": "Gemma 3 4B IT",
+    "family": "gemma",
+    "created": "2025-03-12",
+    "knowledge": "2024-08",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "google/gemma-3-4b-it"
+    }
+  },
+  "google/gemma-4-26b-a4b-it": {
+    "name": "Gemma 4 26B A4B IT",
+    "family": "gemma",
+    "created": "2026-04-02",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": "google/gemma-4-26b-a4b-it-maas",
+      "bedrock": "mantle:google.gemma-4-26b-a4b",
+      "deepinfra": "google/gemma-4-26B-A4B-it"
+    }
+  },
+  "google/gemma-4-31b-it": {
+    "name": "Gemma 4 31B IT",
+    "family": "gemma",
+    "created": "2026-04-02",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "mantle:google.gemma-4-31b",
+      "deepinfra": "google/gemma-4-31B-it",
+      "chutes": "google/gemma-4-31B-turbo-TEE"
+    }
+  },
+  "google/gemma-4-E2B-it": {
+    "name": "Gemma 4 E2B IT",
+    "family": "gemma",
+    "created": "2026-04-02",
+    "modalities": {
+      "input": ["text", "image", "audio", "video"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "mantle:google.gemma-4-e2b"
+    }
+  },
+  "google/text-embedding-005": {
+    "name": "Text Embedding 005",
+    "family": "text-embedding",
+    "created": "2024-11-18",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 2048,
+    "providers": {
+      "vertex": "text-embedding-005"
+    }
+  },
+  "google/text-multilingual-embedding-002": {
+    "name": "Text Multilingual Embedding 002",
+    "family": "text-embedding",
+    "created": "2024-05-14",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 2048,
+    "providers": {
+      "vertex": "text-multilingual-embedding-002"
+    }
+  }
+}

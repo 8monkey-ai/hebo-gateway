@@ -1,0 +1,41 @@
+{
+  "voyageai/voyage-4": {
+    "name": "voyage-4",
+    "family": "voyage",
+    "created": "2026-01-15",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 32000,
+    "providers": {
+      "voyage": "voyage-4"
+    }
+  },
+  "voyageai/voyage-4-large": {
+    "name": "voyage-4-large",
+    "family": "voyage",
+    "created": "2026-01-15",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 32000,
+    "providers": {
+      "voyage": "voyage-4-large"
+    }
+  },
+  "voyageai/voyage-4-lite": {
+    "name": "voyage-4-lite",
+    "family": "voyage",
+    "created": "2026-01-15",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 32000,
+    "providers": {
+      "voyage": "voyage-4-lite"
+    }
+  }
+}

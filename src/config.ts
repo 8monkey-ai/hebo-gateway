@@ -2,9 +2,6 @@ import { InMemoryStorage } from "./endpoints/conversations/storage/memory.ts";
 import { createDefaultLogger } from "./logger/default.ts";
 import { isLogger, logger, setLoggerInstance } from "./logger/index.ts";
 import { createModelCatalog } from "./models/catalog.ts";
-// The catalog spans every model family, so all model middleware is registered with it.
-// oxlint-disable-next-line no-unassigned-import
-import "./models/middleware.ts";
 import { installAiSdkWarningLogger } from "./telemetry/ai-sdk.ts";
 import {
   DEFAULT_CHAT_TIMEOUT_MS,
@@ -51,8 +48,8 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     throw new Error("No providers configured (config.providers is empty)");
   }
 
-  // Built from the bundled snapshot until the live catalog is loaded on the first request.
-  const catalog = createModelCatalog(config.models, parsedProviders);
+  // Loaded on the first request: models.dev, or the snapshot bundled with each lab.
+  const catalog = createModelCatalog(config.models, parsedProviders, config.advanced?.catalog);
 
   // Default for the telemetry settings.
   const telemetryEnabled = config.telemetry?.enabled ?? false;

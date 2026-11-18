@@ -5,10 +5,9 @@ import { withCanonicalIds } from "../registry.ts";
 
 export const withCanonicalIdsForMinimax = (
   provider: ProviderV4,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
-    namespaces: ["minimax"],
     options: { stripNamespace: true },
   });

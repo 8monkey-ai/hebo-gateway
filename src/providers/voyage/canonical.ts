@@ -5,11 +5,10 @@ import { withCanonicalIds } from "../registry.ts";
 
 export const withCanonicalIdsForVoyage = (
   provider: VoyageProvider,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
-    namespaces: ["voyageai"],
     options: {
       stripNamespace: true,
     },

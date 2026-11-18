@@ -6,20 +6,6 @@ import { withCanonicalIdsForZai } from "./canonical.ts";
 
 const provider = withCanonicalIdsForZai(createZhipu({ apiKey: "test-key" }));
 
-const explicitMappings: [canonical: string, nativeId: string][] = [
-  ["zhipuai/glm-5", "glm-5-20260211"],
-  ["zhipuai/glm-5-turbo", "glm-5-turbo-20260315"],
-  ["zhipuai/glm-5.1", "glm-5.1-20260406"],
-  ["zhipuai/glm-5.2", "glm-5.2-20260616"],
-];
-
-for (const [canonical, nativeId] of explicitMappings) {
-  test(`explicit mapping: ${canonical} → ${nativeId}`, () => {
-    const model = provider.languageModel(canonical);
-    expect(model.modelId).toBe(nativeId);
-  });
-}
-
 const defaultMappings: [canonical: string, nativeId: string][] = [
   ["zhipuai/glm-5.3", "glm-5.3"],
   ["zhipuai/glm-5.3-flash", "glm-5.3-flash"],

@@ -1,187 +1,246 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
-import { createAnthropic } from "@ai-sdk/anthropic";
 import { MockProviderV4 } from "ai/test";
 
 import { models } from "../endpoints/models/handler.ts";
-import { withCanonicalIdsForAnthropic } from "../providers/anthropic/canonical.ts";
-import { withCanonicalIds } from "../providers/registry.ts";
-import { createModelCatalog, normalizeCatalog } from "./catalog.ts";
+import { getNativeIds, withCanonicalIds } from "../providers/registry.ts";
+import { claude } from "./anthropic/presets.ts";
+import { createModelCatalog, defineModelCatalog, registerModels } from "./catalog.ts";
+import { defineModelFamily } from "./family.ts";
 import type { ModelsDevApi } from "./models-dev.ts";
-import type { ModelCatalog } from "./types.ts";
+import type { CatalogModel, ModelCatalog } from "./types.ts";
 
-const CATALOG: ModelCatalog = {
-  "anthropic/claude-a-1": { name: "A", providers: ["anthropic", "bedrock"] },
-  "anthropic/claude-b-1": { name: "B", providers: ["anthropic"] },
-  "openai/gpt-x": { name: "X", providers: ["openai"] },
+const model = (name: string, created: string, extra: Partial<CatalogModel> = {}) =>
+  ({
+    name,
+    family: name.split(" ")[0]!.toLowerCase(),
+    created,
+    providers: { a: `native-${name}`, b: `other-${name}` },
+    ...extra,
+  }) satisfies CatalogModel;
+
+// A fake lab, so no real lab registration is touched.
+const ACME: ModelCatalog = {
+  "acme/rocket-1": model("Rocket 1", "2026-01-01"),
+  "acme/rocket-1.5": model("Rocket 1.5", "2026-03-01"),
+  "acme/rocket-2": model("Rocket 2", "2026-06-01"),
+  "acme/rocket-2-preview": model("Rocket 2 Preview", "2026-07-01"),
+  "acme/rocket-3": model("Rocket 3", "2026-08-01", { status: "beta" }),
+  "acme/anvil-2": model("Anvil 2", "2026-05-01"),
 };
 
-const providers = { anthropic: new MockProviderV4(), openai: new MockProviderV4() };
+registerModels("acme", ACME, {
+  "acme/rocket-4": model("Rocket 4", "2026-09-01"),
+  // Already listed upstream: the upstream entry wins.
+  "acme/rocket-2": model("Rocket 2 (extra)", "2026-06-01"),
+});
 
-const API: ModelsDevApi = {
-  anthropic: {
-    models: {
-      "claude-live-1": {
-        name: "Claude Live 1",
-        modalities: { input: ["text"], output: ["text"] },
-      },
-    },
-  },
-};
+const rocket = defineModelFamily({
+  namespace: "acme",
+  version: /^acme\/rocket-(\d+(?:\.\d+)?)$/u,
+  groups: { stable: ["acme/rocket-1", "acme/rocket-2"] },
+});
 
-let urls = 0;
-// The remote catalog is shared per URL across the process, so every test gets its own.
-const nextUrl = () => `https://catalog.test/${++urls}.json`;
+const providers = { a: new MockProviderV4(), b: new MockProviderV4() };
+const offline = { source: false } as const;
+
+const resolve = (...inputs: Parameters<typeof defineModelCatalog>) =>
+  createModelCatalog(defineModelCatalog(...inputs), providers, offline).current!;
 
 afterEach(() => {
   mock.restore();
 });
 
-describe("normalizeCatalog", () => {
-  test("filters with include and exclude patterns", () => {
-    const out = normalizeCatalog(
-      CATALOG,
-      { include: ["anthropic/*", "openai/gpt-x"], exclude: ["*-b-*"] },
-      providers,
-    );
-    expect(Object.keys(out)).toEqual(["anthropic/claude-a-1", "openai/gpt-x"]);
+describe("defineModelCatalog", () => {
+  test("selects models by ID and pattern", () => {
+    expect(Object.keys(resolve("acme/anvil-2", "acme/rocket-1*"))).toEqual([
+      "acme/anvil-2",
+      "acme/rocket-1",
+      "acme/rocket-1.5",
+    ]);
   });
 
-  test("keeps only configured providers and drops models left without one", () => {
-    const out = normalizeCatalog(CATALOG, {}, { anthropic: new MockProviderV4() });
-    expect(out).toEqual({
-      "anthropic/claude-a-1": { name: "A", providers: ["anthropic"] },
-      "anthropic/claude-b-1": { name: "B", providers: ["anthropic"] },
+  test("selects family groups, created on first access for any version", () => {
+    expect(Object.keys(resolve(rocket.all))).toEqual([
+      "acme/rocket-1",
+      "acme/rocket-1.5",
+      "acme/rocket-2",
+      "acme/rocket-3",
+      "acme/rocket-4",
+    ]);
+    expect(Object.keys(resolve(rocket["v1.x"]))).toEqual(["acme/rocket-1", "acme/rocket-1.5"]);
+    expect(Object.keys(resolve(rocket["v1"]))).toEqual(["acme/rocket-1"]);
+    expect(Object.keys(resolve(rocket.stable))).toEqual(["acme/rocket-1", "acme/rocket-2"]);
+    expect(resolve("acme/anvil-2", rocket["v9.x"])).toEqual({
+      "acme/anvil-2": ACME["acme/anvil-2"],
     });
   });
 
-  test("merges overrides, and adds models that are missing or filtered out", () => {
-    const out = normalizeCatalog(
-      CATALOG,
-      {
-        include: ["anthropic/claude-a-1"],
-        overrides: {
-          "anthropic/claude-a-1": { name: "Renamed" },
-          "openai/gpt-x": { context: 1000 },
-          "acme/custom": { name: "Custom", providers: ["openai"] },
-          "acme/no-provider": { name: "Dropped" },
-        },
+  test("latest is the newest stable release of each family", () => {
+    expect(Object.keys(resolve(rocket.latest))).toEqual(["acme/rocket-4"]);
+
+    const anvil = defineModelFamily({ namespace: "acme", version: /^acme\/(?:anvil|rocket)-/u });
+    const latest = Object.keys(resolve(anvil.latest));
+    latest.sort();
+    expect(latest).toEqual(["acme/anvil-2", "acme/rocket-4"]);
+  });
+
+  test("applies group overrides, narrowing and reordering providers", () => {
+    expect(resolve(rocket["v2"]!({ name: "Renamed", providers: ["b", "missing"] }))).toEqual({
+      "acme/rocket-2": {
+        ...ACME["acme/rocket-2"],
+        name: "Renamed",
+        providers: { b: "other-Rocket 2" },
       },
-      providers,
-    );
-
-    expect(out).toEqual({
-      "anthropic/claude-a-1": { name: "Renamed", providers: ["anthropic"] },
-      "openai/gpt-x": { name: "X", context: 1000, providers: ["openai"] },
-      "acme/custom": { name: "Custom", providers: ["openai"] },
     });
   });
 
-  test("drops providers that cannot resolve the model's native ID", () => {
-    const scoped = {
-      anthropic: withCanonicalIdsForAnthropic(createAnthropic({ apiKey: "test" })),
-      openai: withCanonicalIds(new MockProviderV4(), { namespaces: [] }),
-    };
-
-    const out = normalizeCatalog(
-      {
-        "anthropic/claude-a-1": { providers: ["anthropic"] },
-        "openai/claude-a-1": { providers: ["anthropic", "openai"] },
-      },
-      { overrides: { "acme/forced": { providers: ["openai"] } } },
-      scoped,
-    );
-
-    expect(out).toEqual({
-      "anthropic/claude-a-1": { providers: ["anthropic"] },
-      // Providers named in `overrides` are trusted as is.
-      "acme/forced": { providers: ["openai"] },
+  test("custom models only fill gaps, and groups see them", () => {
+    const custom = model("Rocket 5", "2026-10-01");
+    const out = resolve(rocket.latest, {
+      "acme/rocket-5": custom,
+      "acme/anvil-2": model("Anvil 2 (custom)", "2026-05-01"),
     });
+
+    expect(Object.keys(out)).toEqual(["acme/rocket-5", "acme/anvil-2"]);
+    expect(out["acme/rocket-5"]).toEqual(custom);
+    expect(out["acme/anvil-2"]).toEqual(ACME["acme/anvil-2"]);
+  });
+
+  test("lab extras only fill gaps", () => {
+    const out = resolve("acme/rocket-2", "acme/rocket-4");
+    expect(out["acme/rocket-2"]!.name).toBe("Rocket 2");
+    expect(out["acme/rocket-4"]!.name).toBe("Rocket 4");
+  });
+
+  test("skips undefined inputs and flattens arrays", () => {
+    expect(Object.keys(resolve(undefined, [["acme/anvil-2"], rocket["v1"]]))).toEqual([
+      "acme/anvil-2",
+      "acme/rocket-1",
+    ]);
   });
 });
 
 describe("createModelCatalog", () => {
-  test("uses the bundled snapshot right away when the source is disabled", () => {
-    const fetchSpy = spyOn(globalThis, "fetch");
+  test("keeps only configured providers and drops models left without one", () => {
     const store = createModelCatalog(
-      { source: false, include: ["anthropic/*"] },
-      { anthropic: new MockProviderV4() },
+      defineModelCatalog(rocket["v1.x"]),
+      { b: providers.b },
+      offline,
     );
+    expect(store.current).toEqual({
+      "acme/rocket-1": { ...ACME["acme/rocket-1"], providers: { b: "other-Rocket 1" } },
+      "acme/rocket-1.5": { ...ACME["acme/rocket-1.5"], providers: { b: "other-Rocket 1.5" } },
+    });
+  });
 
-    expect(Object.keys(store.current!).length).toBeGreaterThan(0);
-    expect(Object.keys(store.current!).every((id) => id.startsWith("anthropic/"))).toBe(true);
+  test("hands the native IDs to the providers wrapped with withCanonicalIds", () => {
+    const a = withCanonicalIds(new MockProviderV4());
+    createModelCatalog(defineModelCatalog("acme/anvil-2"), { a }, offline);
+    expect(getNativeIds(a)?.get("acme/anvil-2")).toBe("native-Anvil 2");
+  });
+
+  test("throws for a namespace no lab module registered", () => {
+    expect(() => createModelCatalog(defineModelCatalog("nope/model"), providers, offline)).toThrow(
+      "No models registered for 'nope'",
+    );
+  });
+
+  test("throws when no model is served by a configured provider", () => {
+    expect(() =>
+      createModelCatalog(defineModelCatalog("acme/anvil-2"), { c: new MockProviderV4() }, offline),
+    ).toThrow("No models configured");
+  });
+
+  test("does not fetch when only custom models are selected", async () => {
+    const fetchSpy = spyOn(globalThis, "fetch");
+    const custom = { "custom/m": { providers: { a: "m" } } };
+    const store = createModelCatalog(defineModelCatalog(custom), providers);
+
+    expect(await store.load()).toEqual(custom);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+});
 
-  test("does not fetch when only overrides are included", async () => {
-    const fetchSpy = spyOn(globalThis, "fetch");
-    const store = createModelCatalog(
-      { include: [], overrides: { "acme/m": { providers: ["openai"] } } },
-      providers,
-    );
+describe("live catalog", () => {
+  const API: ModelsDevApi = {
+    anthropic: {
+      models: {
+        "claude-live-9": {
+          name: "Claude Live 9",
+          family: "claude-live",
+          release_date: "2027-01-01",
+          modalities: { input: ["text"], output: ["text"] },
+        },
+      },
+    },
+  };
 
-    expect(await store.load()).toEqual({ "acme/m": { providers: ["openai"] } });
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
+  const anthropic = { anthropic: new MockProviderV4() };
 
-  test("throws when the bundled snapshot has no model for the configured providers", () => {
-    expect(() => createModelCatalog({ source: false }, { acme: new MockProviderV4() })).toThrow(
-      "No models configured",
-    );
-  });
+  let urls = 0;
+  // The live catalog is shared per URL across the process, so every test gets its own.
+  const source = () => ({ source: `https://catalog.test/${++urls}.json` });
 
-  test("loads the live catalog once and shares it", async () => {
+  test("is loaded once, shared, and resolves groups against it", async () => {
     const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(Response.json(API));
-    const url = nextUrl();
-    const config = { source: url, include: ["anthropic/*"] };
+    const options = source();
+    const spec = defineModelCatalog(claude.latest);
 
-    const store = createModelCatalog(config, providers);
+    const store = createModelCatalog(spec, anthropic, options);
     expect(store.current).toBeUndefined();
 
     const [a, b] = await Promise.all([store.load(), store.load()]);
     expect(a).toEqual({
-      "anthropic/claude-live-1": {
-        name: "Claude Live 1",
+      "anthropic/claude-live-9": {
+        name: "Claude Live 9",
+        family: "claude-live",
+        created: "2027-01-01",
         modalities: { input: ["text"], output: ["text"] },
-        providers: ["anthropic"],
+        providers: { anthropic: "claude-live-9" },
       },
     });
     expect(b).toBe(a);
     expect(store.current).toBe(a);
 
     // Another gateway in the same process reuses the response.
-    await createModelCatalog(config, providers).load();
+    await createModelCatalog(spec, anthropic, options).load();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   test("falls back to the bundled snapshot when loading fails", async () => {
     spyOn(globalThis, "fetch").mockResolvedValue(new Response("down", { status: 503 }));
-    const config = { source: nextUrl(), include: ["anthropic/*"] };
+    const spec = defineModelCatalog(claude["v4.x"]);
 
-    const loaded = await createModelCatalog(config, providers).load();
-    const bundled = createModelCatalog({ ...config, source: false }, providers).current;
+    const loaded = await createModelCatalog(spec, anthropic, source()).load();
+    const bundled = createModelCatalog(spec, anthropic, offline).current;
+    expect(Object.keys(loaded).length).toBeGreaterThan(0);
     expect(loaded).toEqual(bundled!);
   });
 
   test("falls back to the bundled snapshot when the payload has no usable model", async () => {
     spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ nope: true }));
-    const config = { source: nextUrl(), include: ["anthropic/*"] };
 
-    const loaded = await createModelCatalog(config, providers).load();
+    const loaded = await createModelCatalog(
+      defineModelCatalog(claude.all),
+      anthropic,
+      source(),
+    ).load();
     expect(Object.keys(loaded).length).toBeGreaterThan(0);
-    expect(loaded["anthropic/claude-live-1"]).toBeUndefined();
-  });
-});
-
-test("the first request waits for the live catalog", async () => {
-  spyOn(globalThis, "fetch").mockResolvedValue(Response.json(API));
-
-  const endpoint = models({
-    providers: { anthropic: new MockProviderV4() },
-    models: { source: nextUrl() },
+    expect(loaded["anthropic/claude-live-9"]).toBeUndefined();
   });
 
-  const res = await endpoint.handler(new Request("http://localhost/models"));
-  const body = (await res.json()) as { data: { id: string }[] };
-  expect(body.data.map((m) => m.id)).toEqual(["anthropic/claude-live-1"]);
+  test("the first request waits for it", async () => {
+    spyOn(globalThis, "fetch").mockResolvedValue(Response.json(API));
+
+    const endpoint = models({
+      providers: anthropic,
+      models: defineModelCatalog("anthropic/claude-live-*"),
+      advanced: { catalog: source() },
+    });
+
+    const res = await endpoint.handler(new Request("http://localhost/models"));
+    const body = (await res.json()) as { data: { id: string }[] };
+    expect(body.data.map((m) => m.id)).toEqual(["anthropic/claude-live-9"]);
+  });
 });

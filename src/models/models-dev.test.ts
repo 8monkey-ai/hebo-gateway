@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
 import { CANONICAL_PROVIDER_IDS } from "../providers/types.ts";
-import { BUNDLED_MODEL_CATALOG } from "./catalog.ts";
 import { fromModelsDev, type ModelsDevApi, type ModelsDevModel } from "./models-dev.ts";
+import type { ModelCatalog } from "./types.ts";
+
+const SNAPSHOTS = new Bun.Glob("*/models-dev.json");
 
 const chat = (overrides: ModelsDevModel = {}): ModelsDevModel => ({
   name: "Model",
@@ -27,18 +29,19 @@ describe("fromModelsDev", () => {
         },
       },
       // First-party listings often omit `canonical_model_id`.
-      anthropic: { models: { "claude-x-1": chat({ name: "Claude X 1" }) } },
+      anthropic: { models: { "claude-x-1": chat({ name: "Claude X 1", family: "claude-x" }) } },
     };
 
     expect(fromModelsDev(api)).toEqual({
       "anthropic/claude-x-1": {
         name: "Claude X 1",
+        family: "claude-x",
         created: "2026-02-03",
         knowledge: "2026-01",
         modalities: { input: ["text", "image", "file"], output: ["text"] },
         context: 200_000,
         capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
-        providers: ["anthropic", "bedrock"],
+        providers: { anthropic: "claude-x-1", bedrock: "anthropic.claude-x-1" },
       },
     });
   });
@@ -52,7 +55,7 @@ describe("fromModelsDev", () => {
       zai: { models: { "glm-9": chat() } },
     };
 
-    expect(fromModelsDev(api)["zhipuai/glm-9"]?.providers).toEqual([
+    expect(Object.keys(fromModelsDev(api)["zhipuai/glm-9"]!.providers)).toEqual([
       "zai",
       "bedrock",
       "fireworks",
@@ -104,7 +107,7 @@ describe("fromModelsDev", () => {
 
     const catalog = fromModelsDev(api);
     expect(catalog["voyageai/voyage-9"]?.modalities?.output).toEqual(["embeddings"]);
-    expect(catalog["voyageai/voyage-9"]?.providers).toEqual(["voyage"]);
+    expect(catalog["voyageai/voyage-9"]?.providers).toEqual({ voyage: "voyage-9" });
     // Open weights can be served by anyone, so the lab is not assumed to.
     expect(catalog["openai/whisper-9"]).toBeUndefined();
   });
@@ -116,8 +119,88 @@ describe("fromModelsDev", () => {
     };
 
     const catalog = fromModelsDev(api);
-    expect(catalog["openai/gpt-x"]?.providers).toEqual(["openai", "azure"]);
+    expect(catalog["openai/gpt-x"]?.providers).toEqual({ openai: "gpt-x", azure: "gpt-x" });
     expect(Object.keys(catalog)).toEqual(["openai/gpt-x"]);
+  });
+
+  test("only reads the given namespaces", () => {
+    const api: ModelsDevApi = {
+      openai: { models: { "gpt-x": chat() } },
+      anthropic: { models: { "claude-x": chat() } },
+    };
+
+    expect(Object.keys(fromModelsDev(api, ["anthropic"]))).toEqual(["anthropic/claude-x"]);
+  });
+
+  test("picks the native ID named like the model, and skips routers", () => {
+    const api: ModelsDevApi = {
+      minimax: { models: { "MiniMax-M9": chat(), "MiniMax-M9-highspeed": chat() } },
+      "fireworks-ai": {
+        models: {
+          "accounts/fireworks/routers/minimax-latest": chat({
+            canonical_model_id: "minimax/MiniMax-M9",
+          }),
+          "accounts/fireworks/models/minimax-m9": chat({
+            canonical_model_id: "minimax/MiniMax-M9",
+          }),
+        },
+      },
+    };
+
+    expect(fromModelsDev(api)["minimax/MiniMax-M9"]?.providers).toEqual({
+      minimax: "MiniMax-M9",
+      fireworks: "accounts/fireworks/models/minimax-m9",
+    });
+  });
+
+  test("skips listings served through an SDK the adapter does not speak", () => {
+    const api: ModelsDevApi = {
+      anthropic: { models: { "claude-x": chat() } },
+      azure: {
+        models: { "claude-x": chat({ provider: { npm: "@ai-sdk/anthropic" } }) },
+      },
+    };
+
+    expect(fromModelsDev(api)["anthropic/claude-x"]?.providers).toEqual({
+      anthropic: "claude-x",
+    });
+  });
+
+  test("collapses Bedrock inference profiles and marks Mantle models", () => {
+    const bedrock = (id: string, model: ModelsDevModel = {}) => [
+      id,
+      chat({
+        canonical_model_id: `openai/${id.split(".").at(-1)!.replace(/-1:0$/u, "")}`,
+        ...model,
+      }),
+    ];
+    const mantle = { provider: { npm: "@ai-sdk/amazon-bedrock/mantle" } };
+    const api: ModelsDevApi = {
+      "amazon-bedrock": {
+        models: Object.fromEntries([
+          // Converse on demand, and through a profile.
+          bedrock("openai.gpt-a"),
+          bedrock("us.openai.gpt-a"),
+          // Profiles only.
+          bedrock("global.openai.gpt-b"),
+          // Mantle, its profiles are ignored.
+          bedrock("openai.gpt-c", mantle),
+          bedrock("us.openai.gpt-c"),
+          // Converse wins over Mantle; a `us-gov` profile is no reason to use profiles.
+          bedrock("openai.gpt-d", mantle),
+          bedrock("openai.gpt-d-1:0"),
+          bedrock("us-gov.openai.gpt-d-1:0"),
+        ]) as Record<string, ModelsDevModel>,
+      },
+    };
+
+    const providers = Object.entries(fromModelsDev(api)).map(([id, m]) => [id, m!.providers]);
+    expect(Object.fromEntries(providers)).toEqual({
+      "openai/gpt-a": { bedrock: "{ip?}openai.gpt-a" },
+      "openai/gpt-b": { bedrock: "{ip}openai.gpt-b" },
+      "openai/gpt-c": { bedrock: "mantle:openai.gpt-c" },
+      "openai/gpt-d": { bedrock: "openai.gpt-d-1:0" },
+    });
   });
 
   test("tolerates malformed payloads", () => {
@@ -132,12 +215,16 @@ describe("fromModelsDev", () => {
   });
 });
 
-describe("bundled snapshot", () => {
-  test("only references gateway providers", () => {
+describe("bundled snapshots", () => {
+  test("only reference gateway providers", async () => {
     const known = new Set<string>(CANONICAL_PROVIDER_IDS);
-    for (const [id, model] of Object.entries(BUNDLED_MODEL_CATALOG)) {
-      expect(model!.providers.length, id).toBeGreaterThan(0);
-      for (const provider of model!.providers) expect(known.has(provider), id).toBe(true);
+    for await (const file of SNAPSHOTS.scan(import.meta.dir)) {
+      const snapshot = (await Bun.file(`${import.meta.dir}/${file}`).json()) as ModelCatalog;
+      for (const [id, model] of Object.entries(snapshot)) {
+        const providers = Object.keys(model!.providers);
+        expect(providers.length, id).toBeGreaterThan(0);
+        for (const provider of providers) expect(known.has(provider), id).toBe(true);
+      }
     }
   });
 });

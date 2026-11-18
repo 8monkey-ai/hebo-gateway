@@ -4,6 +4,7 @@ import type { TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 import { MockProviderV4, MockTranscriptionModelV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
 import { audioTranscriptions } from "./handler.ts";
 
 const baseUrl = "http://localhost/audio/transcriptions";
@@ -67,31 +68,28 @@ describe("Audio Transcriptions Handler", () => {
       openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
       xai: new MockProviderV4({ transcriptionModels: { "grok-voice-transcribe-2.0": grok } }),
     },
-    models: {
-      include: [],
-      overrides: {
-        "transcribe-1": {
-          name: "Transcribe",
-          modalities: { input: ["audio"], output: ["transcription"] },
-          providers: ["openai"],
-        },
-        "grok-voice-transcribe-2.0": {
-          name: "Grok Voice Transcribe",
-          modalities: { input: ["audio"], output: ["transcription"] },
-          providers: ["xai"],
-        },
-        "gpt-oss-20b": {
-          name: "GPT-OSS 20B",
-          modalities: { input: ["text"], output: ["text"] },
-          providers: ["openai"],
-        },
-        "text-embedding-3-small": {
-          name: "OpenAI Embedding Model",
-          modalities: { input: ["text"], output: ["embeddings"] },
-          providers: ["openai"],
-        },
+    models: defineModelCatalog({
+      "transcribe-1": {
+        name: "Transcribe",
+        modalities: { input: ["audio"], output: ["transcription"] },
+        providers: { openai: "model" },
       },
-    },
+      "grok-voice-transcribe-2.0": {
+        name: "Grok Voice Transcribe",
+        modalities: { input: ["audio"], output: ["transcription"] },
+        providers: { xai: "model" },
+      },
+      "gpt-oss-20b": {
+        name: "GPT-OSS 20B",
+        modalities: { input: ["text"], output: ["text"] },
+        providers: { openai: "model" },
+      },
+      "text-embedding-3-small": {
+        name: "OpenAI Embedding Model",
+        modalities: { input: ["text"], output: ["embeddings"] },
+        providers: { openai: "model" },
+      },
+    }),
     advanced: { maxBodySize: 1024 },
   });
 
@@ -274,15 +272,12 @@ describe("Audio Transcriptions Handler", () => {
       providers: {
         openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
       },
-      models: {
-        include: [],
-        overrides: {
-          "transcribe-1": {
-            modalities: { input: ["audio"], output: ["transcription"] },
-            providers: ["openai"],
-          },
+      models: defineModelCatalog({
+        "transcribe-1": {
+          modalities: { input: ["audio"], output: ["transcription"] },
+          providers: { openai: "model" },
         },
-      },
+      }),
       hooks: {
         before: (ctx) => {
           expect(ctx.operation).toBe("transcriptions");

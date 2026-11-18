@@ -9,6 +9,5 @@ export const withCanonicalIdsForXai = (
 ) =>
   withCanonicalIds(provider, {
     mapping: extraMapping,
-    namespaces: ["xai"],
     options: { stripNamespace: true },
   });

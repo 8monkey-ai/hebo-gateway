@@ -1,0 +1,87 @@
+{
+  "moonshotai/kimi-k2.5": {
+    "name": "Kimi K2.5",
+    "family": "kimi-k2",
+    "created": "2026-01-27",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "moonshotai.kimi-k2.5"
+    }
+  },
+  "moonshotai/kimi-k2.6": {
+    "name": "Kimi K2.6",
+    "family": "kimi-k2",
+    "created": "2026-04-20",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": "kimi-k2.6",
+      "deepinfra": "moonshotai/Kimi-K2.6",
+      "chutes": "moonshotai/Kimi-K2.6-TEE"
+    }
+  },
+  "moonshotai/kimi-k2.7-code": {
+    "name": "Kimi K2.7 Code HighSpeed",
+    "family": "kimi-k2",
+    "created": "2026-06-12",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": "kimi-k2.7-code"
+    }
+  },
+  "moonshotai/kimi-k3": {
+    "name": "Kimi K3",
+    "family": "kimi-k3",
+    "created": "2026-07-16",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": "kimi-k3",
+      "alibaba": "kimi-k3",
+      "bedrock": "{ip}moonshotai.kimi-k3",
+      "togetherai": "moonshotai/Kimi-K3",
+      "deepinfra": "moonshotai/Kimi-K3",
+      "fireworks": "accounts/fireworks/models/kimi-k3",
+      "chutes": "moonshotai/Kimi-K3-TEE"
+    }
+  },
+  "moonshotai/kimi-k3.1-pro": {
+    "name": "Kimi K3.1 Pro Highspeed",
+    "family": "kimi-k3",
+    "created": "2026-10-23",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": "kimi-k3.1-pro",
+      "bedrock": "{ip}moonshotai.kimi-k3.1",
+      "togetherai": "moonshotai/Kimi-K3.1-Pro",
+      "deepinfra": "moonshotai/Kimi-K3.1-Pro",
+      "fireworks": "accounts/fireworks/models/kimi-k3p1-pro"
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import OpenAI, { APIError, toFile } from "openai";
 
-import type { ModelCatalogConfig, ProviderRegistry } from "../../../src/index.ts";
+import type { ProviderRegistry } from "../../../src/index.ts";
 import { withCanonicalIdsForAzure } from "../../../src/providers/azure/index.ts";
 import { withCanonicalIdsForOpenAI } from "../../../src/providers/openai/index.ts";
 import { withCanonicalIdsForVertex } from "../../../src/providers/vertex/index.ts";
@@ -60,7 +60,6 @@ type SuiteOptions = {
   name: string;
   enabled: boolean;
   providers: () => ProviderRegistry;
-  catalog: ModelCatalogConfig;
   model: string;
   /** Which usage field the provider reports. */
   usage: "tokens" | "seconds";
@@ -86,7 +85,7 @@ function describeTranscriptions(options: SuiteOptions) {
     };
 
     beforeAll(() => {
-      testServer = createTestServer(options.providers(), options.catalog);
+      testServer = createTestServer(options.providers(), options.model);
       client = new OpenAI({ apiKey: "not-needed", baseURL: `${testServer.baseUrl}/v1` });
     });
 
@@ -183,7 +182,6 @@ describeTranscriptions({
   providers: () => ({
     openai: withCanonicalIdsForOpenAI(createOpenAI({ apiKey: OPENAI_API_KEY })),
   }),
-  catalog: { include: ["openai/gpt-transcribe"] },
   model: "openai/gpt-transcribe",
   usage: "seconds",
   segments: false,
@@ -198,15 +196,6 @@ describeTranscriptions({
     ),
   }),
   // Not on models.dev, so declared here.
-  catalog: {
-    include: [],
-    overrides: {
-      "microsoft/mai-transcribe-2": {
-        modalities: { input: ["audio"], output: ["transcription"] },
-        providers: ["azure"],
-      },
-    },
-  },
   model: "microsoft/mai-transcribe-2",
   usage: "seconds",
   segments: true,
@@ -216,7 +205,6 @@ describeTranscriptions({
   name: "xAI - grok-voice-transcribe-2.0",
   enabled: !!XAI_API_KEY,
   providers: () => ({ xai: withCanonicalIdsForXai(createXai({ apiKey: XAI_API_KEY })) }),
-  catalog: { include: ["xai/grok-voice-transcribe-2.0"] },
   model: "xai/grok-voice-transcribe-2.0",
   usage: "seconds",
   // xAI only returns word timings, so they go to `words`.
@@ -234,7 +222,6 @@ describeTranscriptions({
   name: "Vertex - gemini-3.5-transcribe",
   enabled: hasVertexCredentials,
   providers: vertexProviders,
-  catalog: { include: ["google/gemini-3.5-transcribe"] },
   model: "google/gemini-3.5-transcribe",
   usage: "tokens",
   segments: false,

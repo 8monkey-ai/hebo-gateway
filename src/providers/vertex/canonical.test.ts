@@ -2,7 +2,15 @@ import { expect, test } from "bun:test";
 
 import { createVertex } from "@ai-sdk/google-vertex";
 
-import { withCanonicalIdsForVertex } from "./canonical.ts";
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
+import { withCanonicalIdsForVertex as withCanonicalIds } from "./canonical.ts";
+
+/** Wraps a Vertex provider and hands it the bundled catalog's native IDs, as a gateway does. */
+const withCanonicalIdsForVertex = (...args: Parameters<typeof withCanonicalIds>) => {
+  const provider = withCanonicalIds(...args);
+  loadBundledCatalog("vertex", provider);
+  return provider;
+};
 
 process.env["GOOGLE_VERTEX_PROJECT"] = "test-project";
 
@@ -12,7 +20,7 @@ const vertex = createVertex({
   location: "us-central1",
 });
 
-test("google/gemma-4-26b-a4b-it routes to the MaaS OpenAI-compatible provider", () => {
+test("models with a publisher in their native ID route to the MaaS provider", () => {
   const provider = withCanonicalIdsForVertex(vertex);
   const model = provider.languageModel("google/gemma-4-26b-a4b-it");
   expect(model.modelId).toBe("google/gemma-4-26b-a4b-it-maas");
@@ -90,7 +98,7 @@ test("MaaS override uses the provider's project instead of GOOGLE_VERTEX_PROJECT
 
   expect(url).toContain("/projects/my-project/");
   expect(url).not.toContain("test-project");
-  // Gemma is only served from the global MaaS endpoint.
+  // MaaS models are served from the global endpoint.
   expect(url).toContain("/locations/global/");
 });
 

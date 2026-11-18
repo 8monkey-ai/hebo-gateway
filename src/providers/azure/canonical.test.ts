@@ -27,11 +27,11 @@ test("withCanonicalIdsForAzure > maps transcription models", () => {
     "openai/gpt-transcribe": "production-transcribe",
   });
 
-  expect(provider.transcriptionModel!("openai/gpt-transcribe").modelId).toBe(
+  expect(provider.transcriptionModel("openai/gpt-transcribe").modelId).toBe(
     "production-transcribe",
   );
   // MAI-Transcribe IDs must stay MAI model names: the Azure SDK routes them to the Speech API.
-  expect(provider.transcriptionModel!("microsoft/mai-transcribe-2").modelId).toBe(
+  expect(provider.transcriptionModel("microsoft/mai-transcribe-2").modelId).toBe(
     "mai-transcribe-2",
   );
 });

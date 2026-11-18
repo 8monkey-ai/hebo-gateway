@@ -5,6 +5,7 @@ import { type LanguageModelV4CallOptions, type LanguageModelV4TextPart } from "@
 import { wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 // Also registers the model-level Claude middlewares the full chain below relies on.
 import { claudeReasoningMiddleware } from "../../models/anthropic/middleware.ts";
@@ -20,6 +21,13 @@ import {
   bedrockPromptCachingMiddleware,
   bedrockServiceTierMiddleware,
 } from "./middleware.ts";
+
+/** Wraps a Bedrock provider and hands it the bundled catalog's native IDs, as a gateway does. */
+const withBundledCatalog = (...args: Parameters<typeof withCanonicalIdsForBedrock>) => {
+  const provider = withCanonicalIdsForBedrock(...args);
+  loadBundledCatalog("bedrock", provider);
+  return provider;
+};
 
 /** A fetch that records the JSON request body and throws, so no request leaves the process. */
 const capturingFetch = (
@@ -663,7 +671,7 @@ test("bedrockMantleReasoningMiddleware > skips GPT-OSS, which is not a reasoning
 test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full chain", async () => {
   let body: Record<string, unknown> | undefined;
 
-  const provider = withCanonicalIdsForBedrock(
+  const provider = withBundledCatalog(
     createAmazonBedrock({ region: "us-east-1", apiKey: "provider-key" }),
     {
       mantle: {
@@ -807,7 +815,7 @@ test("bedrockAnthropicBetaMiddleware > should ignore a missing header", async ()
 /** A Claude model on the nested Anthropic provider (InvokeModel), with its request captured. */
 const anthropicModel = (canonicalId: string) => {
   const captured: { body?: Record<string, unknown>; headers?: Record<string, string> } = {};
-  const provider = withCanonicalIdsForBedrock(
+  const provider = withBundledCatalog(
     createAmazonBedrock({
       region: "us-east-1",
       apiKey: "provider-key",

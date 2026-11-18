@@ -1,0 +1,175 @@
+{
+  "deepseek/deepseek-r1-0528": {
+    "name": "DeepSeek-R1-0528",
+    "family": "deepseek-thinking",
+    "created": "2025-05-28",
+    "knowledge": "2024-07",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 163840,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "deepseek-ai/DeepSeek-R1-0528"
+    }
+  },
+  "deepseek/deepseek-v3": {
+    "name": "DeepSeek-V3",
+    "family": "deepseek",
+    "created": "2024-12-26",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 163840,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "deepseek-ai/DeepSeek-V3"
+    }
+  },
+  "deepseek/deepseek-v3.1": {
+    "name": "DeepSeek-V3.1",
+    "family": "deepseek",
+    "created": "2025-08-21",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 163840,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "deepseek-ai/DeepSeek-V3.1"
+    }
+  },
+  "deepseek/deepseek-v3.2": {
+    "name": "DeepSeek V3.2",
+    "family": "deepseek",
+    "created": "2025-12-01",
+    "knowledge": "2024-07",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 163840,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": "deepseek.v3.2",
+      "azure": "deepseek-v3.2",
+      "deepinfra": "deepseek-ai/DeepSeek-V3.2",
+      "chutes": "deepseek-ai/DeepSeek-V3.2-TEE"
+    }
+  },
+  "deepseek/deepseek-v4-flash": {
+    "name": "DeepSeek-V4-Flash",
+    "family": "deepseek-flash",
+    "created": "2026-04-24",
+    "knowledge": "2025-05",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "deepseek-ai/DeepSeek-V4-Flash"
+    }
+  },
+  "deepseek/deepseek-v4-flash-0731": {
+    "name": "DeepSeek V4 Flash 0731",
+    "family": "deepseek-flash",
+    "created": "2026-07-31",
+    "knowledge": "2025-05",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "alibaba": "deepseek-v4-flash-0731",
+      "deepinfra": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "chutes": "deepseek-ai/DeepSeek-V4-Flash-0731-TEE"
+    }
+  },
+  "deepseek/deepseek-v4-flash-vision-exp": {
+    "name": "DeepSeek V4 Flash Vision Exp",
+    "family": "deepseek-flash",
+    "created": "2026-08-21",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp"
+    }
+  },
+  "deepseek/deepseek-v4-pro": {
+    "name": "DeepSeek-V4-Pro",
+    "family": "deepseek-thinking",
+    "created": "2026-04-24",
+    "knowledge": "2025-05",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepinfra": "deepseek-ai/DeepSeek-V4-Pro"
+    }
+  },
+  "deepseek/deepseek-v4-pro-0813": {
+    "name": "DeepSeek V4 Pro",
+    "family": "deepseek-thinking",
+    "created": "2026-08-13",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepseek": "deepseek-v4-pro",
+      "togetherai": "deepseek-ai/DeepSeek-V4-Pro-0813",
+      "deepinfra": "deepseek-ai/DeepSeek-V4-Pro-0813"
+    }
+  },
+  "deepseek/deepseek-v4.1-flash": {
+    "name": "DeepSeek-V4.1-Flash",
+    "family": "deepseek-flash",
+    "status": "beta",
+    "created": "2026-09-10",
+    "knowledge": "2025-05",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "togetherai": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "deepinfra": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "fireworks": "accounts/fireworks/models/deepseek-v4p1-flash"
+    }
+  },
+  "deepseek/deepseek-v4.1-flash-1017": {
+    "name": "DeepSeek V4.1 Flash 1017",
+    "family": "deepseek-flash",
+    "created": "2026-10-17",
+    "knowledge": "2025-05",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "deepseek": "deepseek-flash",
+      "deepinfra": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fireworks": "accounts/fireworks/models/deepseek-v4p1-flash-1017"
+    }
+  }
+}
