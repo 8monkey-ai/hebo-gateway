@@ -5,6 +5,9 @@ import {
   gemini36Flash,
   gemini37Flash,
   gemini38Flash,
+  gemini4Argon,
+  gemini4Carbon,
+  gemini4Hydrogen,
   geminiEmbedding2,
   gemma31b,
   gemma4E4b,
@@ -79,9 +82,65 @@ test("gemini35FlashLite > should expose Gemini 3.5 Flash-Lite metadata", () => {
   });
 });
 
-test("gemini.latest > should point to Gemini 3.8 Flash", () => {
+test("gemini4Hydrogen > should expose Gemini 4 Hydrogen metadata", () => {
+  expect(gemini4Hydrogen()).toEqual({
+    "google/gemini-4-hydrogen": {
+      name: "Gemini 4 Hydrogen",
+      created: "2026-11-12",
+      knowledge: "2026-03",
+      modalities: {
+        input: ["text", "image", "file", "audio", "video"],
+        output: ["text"],
+      },
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
+      context: 1048576,
+      providers: ["vertex"],
+    },
+  });
+});
+
+test("gemini4Argon > should expose Gemini 4 Argon metadata", () => {
+  expect(gemini4Argon()).toEqual({
+    "google/gemini-4-argon": {
+      name: "Gemini 4 Argon",
+      created: "2026-10-13",
+      knowledge: "2026-03",
+      modalities: {
+        input: ["text", "image", "file", "audio", "video"],
+        output: ["text"],
+      },
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
+      context: 1048576,
+      providers: ["vertex"],
+    },
+  });
+});
+
+test("gemini4Carbon > should expose Gemini 4 Carbon metadata", () => {
+  expect(gemini4Carbon()).toEqual({
+    "google/gemini-4-carbon": {
+      name: "Gemini 4 Carbon",
+      created: "2026-11-10",
+      knowledge: "2026-03",
+      modalities: {
+        input: ["text", "image", "file", "audio", "video"],
+        output: ["text"],
+      },
+      capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
+      context: 1048576,
+      providers: ["vertex"],
+    },
+  });
+});
+
+test("gemini.latest > should point to Gemini 4", () => {
   const ids = gemini.latest.map((preset) => Object.keys(preset())[0]);
-  expect(ids).toEqual(["google/gemini-3.8-flash"]);
+  expect(ids).toEqual([
+    "google/gemini-4-hydrogen",
+    "google/gemini-4-argon",
+    "google/gemini-4-carbon",
+  ]);
+  expect(gemini["v4.x"].map((preset) => Object.keys(preset())[0])).toEqual(ids);
 });
 
 test("gemini.v3.x > should include the new 3.5 Flash-Lite, 3.6 Flash and 3.7 Flash models", () => {

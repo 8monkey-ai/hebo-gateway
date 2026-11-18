@@ -258,7 +258,7 @@ Out-of-the-box model presets:
   DeepSeek: `deepseek` (`v4`, `v4.1`, `v4.x`, `latest`, `all`)
 
 - **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3-preview`, `v3.x`, `embeddings`, `transcription`, `latest`, `preview`, `all`)
+  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v4`, `v3-preview`, `v3.x`, `v4.x`, `embeddings`, `transcription`, `latest`, `preview`, `all`)
   Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
 
 - **Meta** — `@hebo-ai/gateway/models/meta`  
@@ -852,7 +852,7 @@ On `/chat/completions`, `reasoning_details` follows the convention used by OpenR
 
 Echo the array back on the assistant message and the gateway restores the provider state, matching entries by `id`.
 
-For **Gemini 3** models, returning the thought signature is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance. The gateway exposes it in two interchangeable ways and you only need to echo back one of them — `reasoning_details`, or the Vertex-specific `extra_content.vertex.thought_signature` on the tool call. When both are present, `extra_content` takes precedence.
+For **Gemini 3 and 4** models, returning the thought signature is mandatory to resume the chain-of-thought; failing to do so may result in errors or degraded performance. The gateway exposes it in two interchangeable ways and you only need to echo back one of them — `reasoning_details`, or the Vertex-specific `extra_content.vertex.thought_signature` on the tool call. When both are present, `extra_content` takes precedence.
 
 ```json
 {
@@ -920,7 +920,7 @@ Provider behavior:
 
 - **OpenAI-compatible**: forwards `prompt_cache_key` and `prompt_cache_retention` as native provider options.
 - **Anthropic Claude**: maps top-level caching to Anthropic cache control, while message/part `cache_control` breakpoints are preserved. Claude serves `5m` and `1h` TTLs, so OpenAI's 24h retention is clamped to `1h`. Applies on every host serving Claude, Bedrock `InvokeModel` included.
-- **Google Gemini**: maps `cached_content` to Gemini `cachedContent`.
+- **Google Gemini**: maps `cached_content` to Gemini `cachedContent` on Gemini 3. Gemini 4 supports implicit caching only, so no explicit cache is set.
 - **Amazon Nova (Bedrock)**: maps `cache_control` to Bedrock `cachePoints` and inserts an automatic cache point on a stable prefix when none is provided.
 
 ### Compressed Requests

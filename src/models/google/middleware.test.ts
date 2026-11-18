@@ -44,6 +44,20 @@ test("geminiReasoningMiddleware > matching patterns", () => {
   }
 });
 
+test("geminiReasoningMiddleware > matches Gemini 4 without explicit prompt caching", () => {
+  const ids = [
+    "google/gemini-4-hydrogen",
+    "google/gemini-4-argon",
+    "google/gemini-4-carbon",
+  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+
+  for (const id of ids) {
+    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
+    expect(middleware).toContain(geminiReasoningMiddleware);
+    expect(middleware).not.toContain(geminiPromptCachingMiddleware);
+  }
+});
+
 test("geminiPromptCachingMiddleware > should map normalized cached_content", async () => {
   const params = {
     prompt: [],
@@ -314,6 +328,70 @@ test("geminiReasoningMiddleware > should collapse minimal to low on Gemini 3.8 F
     },
     unknown: {},
   });
+});
+
+const runGemini4Reasoning = async (
+  modelId: string,
+  reasoning: { enabled: boolean; effort: string },
+) => {
+  const result = await geminiReasoningMiddleware.transformParams!({
+    type: "generate",
+    params: { prompt: [], providerOptions: { unknown: { reasoning } } },
+    model: new MockLanguageModelV4({ modelId }),
+  });
+  return result.providerOptions?.["google"]?.["thinkingConfig"];
+};
+
+// Gemini 4 always thinks and rejects `thinkingBudget` and `minimal` with a 400.
+test("geminiReasoningMiddleware > maps none and minimal to low on Gemini 4", async () => {
+  const ids = ["gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen"];
+
+  const none = await Promise.all(
+    ids.map((id) => runGemini4Reasoning(id, { enabled: false, effort: "none" })),
+  );
+  const minimal = await Promise.all(
+    ids.map((id) => runGemini4Reasoning(id, { enabled: true, effort: "minimal" })),
+  );
+
+  for (const config of none) {
+    expect(config).toEqual({ thinkingLevel: "low", includeThoughts: false });
+  }
+  for (const config of minimal) {
+    expect(config).toEqual({ thinkingLevel: "low", includeThoughts: true });
+  }
+});
+
+test("geminiReasoningMiddleware > passes medium and high through on Gemini 4", async () => {
+  expect(await runGemini4Reasoning("gemini-4-argon", { enabled: true, effort: "medium" })).toEqual({
+    thinkingLevel: "medium",
+    includeThoughts: true,
+  });
+  expect(await runGemini4Reasoning("gemini-4-carbon", { enabled: true, effort: "high" })).toEqual({
+    thinkingLevel: "high",
+    includeThoughts: true,
+  });
+});
+
+// Only Hydrogen lists `xhigh`; Argon and Carbon top out at `high`.
+test("geminiReasoningMiddleware > maps xhigh and max per Gemini 4 model", async () => {
+  const cases = [
+    ["gemini-4-hydrogen", "xhigh"],
+    ["gemini-4-argon", "high"],
+    ["gemini-4-carbon", "high"],
+  ] as const;
+
+  const results = await Promise.all(
+    cases.flatMap(([id]) =>
+      ["xhigh", "max"].map((effort) => runGemini4Reasoning(id, { enabled: true, effort })),
+    ),
+  );
+
+  expect(results).toEqual(
+    cases.flatMap(([, level]) => [
+      { thinkingLevel: level, includeThoughts: true },
+      { thinkingLevel: level, includeThoughts: true },
+    ]),
+  );
 });
 
 test("geminiTranscribeMiddleware > matching patterns", () => {

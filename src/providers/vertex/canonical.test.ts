@@ -34,6 +34,15 @@ test("dotted Gemini versions resolve without an explicit mapping", () => {
   expect(model.provider).toBe("google.vertex.chat");
 });
 
+test("Gemini 4 models resolve without an explicit mapping", () => {
+  const provider = withCanonicalIdsForVertex(vertex);
+  for (const id of ["gemini-4-hydrogen", "gemini-4-argon", "gemini-4-carbon"] as const) {
+    const model = provider.languageModel(`google/${id}`);
+    expect(model.modelId).toBe(id);
+    expect(model.provider).toBe("google.vertex.chat");
+  }
+});
+
 // ---------------------------------------------------------------------------
 // The MaaS override inherits the provider's project and credentials
 // ---------------------------------------------------------------------------
