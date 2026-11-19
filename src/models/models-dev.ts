@@ -1,5 +1,10 @@
 import type { CanonicalProviderId } from "../providers/types.ts";
-import type { CatalogModel, ModelCatalog } from "./types.ts";
+import type {
+  CatalogModel,
+  ModelsDevCatalog,
+  ModelsDevCatalogModel,
+  NativeModelIds,
+} from "./types.ts";
 
 /**
  * Catalog fetched on the first request. Any URL serving the same shape works (e.g. a
@@ -229,8 +234,8 @@ const pickNativeId = (id: string, listings: readonly Listing[]) => {
 
 const toCatalogModel = (
   model: ModelsDevModel,
-  providers: CatalogModel["providers"],
-): CatalogModel => {
+  providers: NativeModelIds,
+): ModelsDevCatalogModel => {
   const input = (model.modalities?.input ?? [])
     .map((m) => INPUTS.get(m))
     .filter((m) => m !== undefined);
@@ -250,7 +255,7 @@ const toCatalogModel = (
   if (model.structured_output) capabilities.push("structured_output");
   if (model.temperature) capabilities.push("temperature");
 
-  const out: Omit<CatalogModel, "providers"> = {};
+  const out: Omit<ModelsDevCatalogModel, "providers"> = {};
   if (model.name) out.name = model.name;
   if (model.family) out.family = model.family;
   if (model.status === "alpha" || model.status === "beta") out.status = model.status;
@@ -272,7 +277,7 @@ const toCatalogModel = (
 export function fromModelsDev(
   api: ModelsDevApi,
   namespaces: Iterable<string> = MODELS_DEV_NAMESPACES,
-): ModelCatalog {
+): ModelsDevCatalog {
   const labs = new Set(namespaces);
   const entries = new Map<string, Entry>();
   const lookup = indexCanonicalIds(api);
@@ -315,7 +320,7 @@ export function fromModelsDev(
     }
   }
 
-  const out: ModelCatalog = {};
+  const out: ModelsDevCatalog = {};
   const ids = [...entries.keys()];
   ids.sort();
 

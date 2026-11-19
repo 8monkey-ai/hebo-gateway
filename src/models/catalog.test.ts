@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
-import { MockProviderV4 } from "ai/test";
+import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { models } from "../endpoints/models/handler.ts";
 import { getNativeIds, withCanonicalIds } from "../providers/registry.ts";
@@ -8,19 +8,35 @@ import { claude } from "./anthropic/presets.ts";
 import { createModelCatalog, defineModelCatalog, registerModels } from "./catalog.ts";
 import { defineModelFamily } from "./family.ts";
 import type { ModelsDevApi } from "./models-dev.ts";
-import type { CatalogModel, ModelCatalog } from "./types.ts";
+import type { CatalogModel, ModelsDevCatalog, ModelsDevCatalogModel } from "./types.ts";
 
-const model = (name: string, created: string, extra: Partial<CatalogModel> = {}) =>
+// A models.dev model, with native IDs.
+const model = (name: string, created: string, extra: Partial<ModelsDevCatalogModel> = {}) =>
   ({
     name,
     family: name.split(" ")[0]!.toLowerCase(),
     created,
     providers: { a: `native-${name}`, b: `other-${name}` },
     ...extra,
+  }) satisfies ModelsDevCatalogModel;
+
+// A custom model: providers only.
+const custom = (name: string, created: string) =>
+  ({
+    name,
+    family: name.split(" ")[0]!.toLowerCase(),
+    created,
+    providers: ["a", "b"],
   }) satisfies CatalogModel;
 
+// How the gateway catalog lists a models.dev model.
+const listed = (m: ModelsDevCatalogModel | undefined) => ({
+  ...m!,
+  providers: Object.keys(m!.providers),
+});
+
 // A fake lab, so no real lab registration is touched.
-const ACME: ModelCatalog = {
+const ACME: ModelsDevCatalog = {
   "acme/rocket-1": model("Rocket 1", "2026-01-01"),
   "acme/rocket-1.5": model("Rocket 1.5", "2026-03-01"),
   "acme/rocket-2": model("Rocket 2", "2026-06-01"),
@@ -30,9 +46,9 @@ const ACME: ModelCatalog = {
 };
 
 registerModels("acme", ACME, {
-  "acme/rocket-4": model("Rocket 4", "2026-09-01"),
+  "acme/rocket-4": custom("Rocket 4", "2026-09-01"),
   // Already listed upstream: the upstream entry wins.
-  "acme/rocket-2": model("Rocket 2 (extra)", "2026-06-01"),
+  "acme/rocket-2": custom("Rocket 2 (extra)", "2026-06-01"),
 });
 
 const rocket = defineModelFamily({
@@ -72,7 +88,7 @@ describe("defineModelCatalog", () => {
     expect(Object.keys(resolve(rocket["v1"]))).toEqual(["acme/rocket-1"]);
     expect(Object.keys(resolve(rocket.stable))).toEqual(["acme/rocket-1", "acme/rocket-2"]);
     expect(resolve("acme/anvil-2", rocket["v9.x"])).toEqual({
-      "acme/anvil-2": ACME["acme/anvil-2"],
+      "acme/anvil-2": listed(ACME["acme/anvil-2"]),
     });
   });
 
@@ -87,24 +103,20 @@ describe("defineModelCatalog", () => {
 
   test("applies group overrides, narrowing and reordering providers", () => {
     expect(resolve(rocket["v2"]!({ name: "Renamed", providers: ["b", "missing"] }))).toEqual({
-      "acme/rocket-2": {
-        ...ACME["acme/rocket-2"],
-        name: "Renamed",
-        providers: { b: "other-Rocket 2" },
-      },
+      "acme/rocket-2": { ...ACME["acme/rocket-2"], name: "Renamed", providers: ["b"] },
     });
   });
 
   test("custom models only fill gaps, and groups see them", () => {
-    const custom = model("Rocket 5", "2026-10-01");
+    const rocket5 = custom("Rocket 5", "2026-10-01");
     const out = resolve(rocket.latest, {
-      "acme/rocket-5": custom,
-      "acme/anvil-2": model("Anvil 2 (custom)", "2026-05-01"),
+      "acme/rocket-5": rocket5,
+      "acme/anvil-2": custom("Anvil 2 (custom)", "2026-05-01"),
     });
 
     expect(Object.keys(out)).toEqual(["acme/rocket-5", "acme/anvil-2"]);
-    expect(out["acme/rocket-5"]).toEqual(custom);
-    expect(out["acme/anvil-2"]).toEqual(ACME["acme/anvil-2"]);
+    expect(out["acme/rocket-5"]).toEqual(rocket5);
+    expect(out["acme/anvil-2"]).toEqual(listed(ACME["acme/anvil-2"]));
   });
 
   test("lab extras only fill gaps", () => {
@@ -129,8 +141,8 @@ describe("createModelCatalog", () => {
       offline,
     );
     expect(store.current).toEqual({
-      "acme/rocket-1": { ...ACME["acme/rocket-1"], providers: { b: "other-Rocket 1" } },
-      "acme/rocket-1.5": { ...ACME["acme/rocket-1.5"], providers: { b: "other-Rocket 1.5" } },
+      "acme/rocket-1": { ...ACME["acme/rocket-1"], providers: ["b"] },
+      "acme/rocket-1.5": { ...ACME["acme/rocket-1.5"], providers: ["b"] },
     });
   });
 
@@ -138,6 +150,29 @@ describe("createModelCatalog", () => {
     const a = withCanonicalIds(new MockProviderV4());
     createModelCatalog(defineModelCatalog("acme/anvil-2"), { a }, offline);
     expect(getNativeIds(a)?.get("acme/anvil-2")).toBe("native-Anvil 2");
+  });
+
+  test("leaves the native IDs of custom models to the provider", () => {
+    const seen: string[] = [];
+    const base = new MockProviderV4();
+    base.languageModel = (id: string) => {
+      seen.push(id);
+      return new MockLanguageModelV4({ modelId: id });
+    };
+    const a = withCanonicalIds(base, { mapping: { "acme/rocket-6": "rocket-six" } });
+    createModelCatalog(
+      defineModelCatalog({
+        "acme/rocket-5": custom("Rocket 5", "2026-10-01"),
+        "acme/rocket-6": custom("Rocket 6", "2026-11-01"),
+      }),
+      { a },
+      offline,
+    );
+
+    expect(getNativeIds(a)?.has("acme/rocket-5")).toBe(false);
+    a.languageModel("acme/rocket-5");
+    a.languageModel("acme/rocket-6");
+    expect(seen).toEqual(["rocket-5", "rocket-six"]);
   });
 
   test("throws for a namespace no lab module registered", () => {
@@ -154,10 +189,10 @@ describe("createModelCatalog", () => {
 
   test("does not fetch when only custom models are selected", async () => {
     const fetchSpy = spyOn(globalThis, "fetch");
-    const custom = { "custom/m": { providers: { a: "m" } } };
-    const store = createModelCatalog(defineModelCatalog(custom), providers);
+    const only = { "custom/m": { providers: ["a"] } } satisfies Record<string, CatalogModel>;
+    const store = createModelCatalog(defineModelCatalog(only), providers);
 
-    expect(await store.load()).toEqual(custom);
+    expect(await store.load()).toEqual(only);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
@@ -197,7 +232,7 @@ describe("live catalog", () => {
         family: "claude-live",
         created: "2027-01-01",
         modalities: { input: ["text"], output: ["text"] },
-        providers: { anthropic: "claude-live-9" },
+        providers: ["anthropic"],
       },
     });
     expect(b).toBe(a);

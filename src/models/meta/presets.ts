@@ -1,9 +1,9 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelCatalog } from "../types.ts";
+import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("meta", snapshot as ModelCatalog);
+registerModels("meta", snapshot as ModelsDevCatalog);
 
 export const llama = defineModelFamily({
   namespace: "meta",

@@ -1,6 +1,6 @@
 import { compileGlob } from "../utils/glob.ts";
 import { defineModelGroup, type ModelGroup } from "./catalog.ts";
-import type { ModelCatalog, ModelId } from "./types.ts";
+import type { ModelId, ModelsDevCatalog } from "./types.ts";
 
 /**
  * A model family (e.g. `claude`), resolved against the catalog when it loads, so new
@@ -46,7 +46,7 @@ export function defineModelFamily<const G extends string = never, const P extend
   const { namespace, version, prefix = "v", groups = {} as Record<G, string> } = config;
   const namespaces = [namespace];
 
-  const members = (source: ModelCatalog) => {
+  const members = (source: ModelsDevCatalog) => {
     const out: [ModelId, string | undefined][] = [];
     for (const id in source) {
       const match = version.exec(id);
@@ -55,7 +55,7 @@ export function defineModelFamily<const G extends string = never, const P extend
     return out;
   };
 
-  const group = (select: (source: ModelCatalog) => ModelId[]) =>
+  const group = (select: (source: ModelsDevCatalog) => ModelId[]) =>
     defineModelGroup(namespaces, select);
 
   const family: Record<string, ModelGroup> = {

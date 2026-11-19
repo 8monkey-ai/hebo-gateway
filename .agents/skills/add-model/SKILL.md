@@ -48,7 +48,7 @@ jq '."<canonical-id>"' src/models/<lab>/models-dev.json
 
 ## Step 2: Fill Gaps (only if models.dev lacks the model)
 
-Add the entry to the `extras` of `registerModels` in `src/models/<lab>/presets.ts` (see `microsoft` / `voyage`). `providers` maps provider → native ID. Verify the metadata against the lab's docs; keep it minimal rather than speculative.
+Add the entry to the `extras` of `registerModels` in `src/models/<lab>/presets.ts` (see `microsoft` / `voyage`). `providers` lists the providers serving it, in routing order (same shape as consumer entries). There is no native ID on the entry: providers derive it from the canonical ID (namespace stripped), so only add an extra when that derived ID is what the provider serves. Verify the metadata against the lab's docs; keep it minimal rather than speculative.
 
 ## Step 3: Check the Model Family
 

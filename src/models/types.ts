@@ -47,15 +47,29 @@ export type CatalogModel = {
     | "structured_output"
     | "temperature"
   )[];
-  /**
-   * Providers serving the model, mapped to their provider-native model ID. Key order is the
-   * routing preference. Bedrock IDs may start with `{ip}` (inference profile required) or
-   * `{ip?}` (inference profile optional), and `mantle:` (served by Bedrock Mantle).
-   */
-  providers: { readonly [P in ProviderId]?: string };
+  /** Providers serving the model, in routing preference order. */
+  providers: readonly ProviderId[];
   additionalProperties?: Record<string, unknown>;
 };
 
 export type ModelCatalog = {
   [K in ModelId]?: CatalogModel;
+};
+
+/**
+ * Providers serving a models.dev model, mapped to their provider-native model ID. Key order is
+ * the routing preference. Bedrock IDs may start with `{ip}` (inference profile required) or
+ * `{ip?}` (inference profile optional), and `mantle:` (served by Bedrock Mantle). `undefined`
+ * (custom models) leaves the native ID to the provider: its `extraMapping`, or its fallback
+ * rule (usually the canonical ID without its namespace).
+ */
+export type NativeModelIds = { readonly [P in ProviderId]?: string | undefined };
+
+/** A model as loaded from models.dev, with the native ID of each provider. */
+export type ModelsDevCatalogModel = Omit<CatalogModel, "providers"> & {
+  providers: NativeModelIds;
+};
+
+export type ModelsDevCatalog = {
+  [K in ModelId]?: ModelsDevCatalogModel;
 };

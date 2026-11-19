@@ -25,7 +25,7 @@ describe("Models Handler", () => {
         },
         context: 200000,
         capabilities: ["reasoning", "tool_call"],
-        providers: { anthropic: "claude-opus-4-5-20251101" },
+        providers: ["anthropic"],
       },
       "google/gemini-3-flash": {
         name: "Gemini 3 Flash",
@@ -35,7 +35,7 @@ describe("Models Handler", () => {
           output: ["text"],
         },
         context: 128000,
-        providers: { google: "gemini-3-flash" },
+        providers: ["google"],
       },
     }),
   });
@@ -115,7 +115,7 @@ describe("Models Handler", () => {
       const res = await models({
         providers: { openai: new MockProviderV4() },
         models: defineModelCatalog({
-          "test/model": { modalities, providers: { openai: "model" } },
+          "test/model": { modalities, providers: ["openai"] },
         }),
       }).handler(new Request(`${baseUrl}/test/model`, { method: "GET" }));
       const data = (await parseResponse(res)) as { architecture: { modality?: string } };

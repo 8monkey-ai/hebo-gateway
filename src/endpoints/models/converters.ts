@@ -30,7 +30,7 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
       modality: modalities && `${modalities.input.join("+")}->${modalities.output.join("+")}`,
       output_modalities: modalities?.output ?? [],
     },
-    endpoints: Object.keys(providers).map((provider) => ({ tag: provider })),
+    endpoints: providers.map((provider) => ({ tag: provider })),
     ...rest,
     ...additionalProperties,
   };

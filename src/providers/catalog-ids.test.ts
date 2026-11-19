@@ -16,7 +16,7 @@ import { createXai } from "@ai-sdk/xai";
 import { createVoyage } from "voyage-ai-provider";
 import { createZhipu } from "zhipu-ai-provider";
 
-import { loadBundledCatalog } from "../../test/helpers/catalog.ts";
+import { bundledNativeId, loadBundledCatalog } from "../../test/helpers/catalog.ts";
 import { withCanonicalIdsForAlibaba } from "./alibaba/canonical.ts";
 import { withCanonicalIdsForAnthropic } from "./anthropic/canonical.ts";
 import { withCanonicalIdsForAzure } from "./azure/canonical.ts";
@@ -82,7 +82,9 @@ describe("bundled catalog native IDs", () => {
           : output.includes("transcription")
             ? provider.transcriptionModel!(modelId)
             : provider.languageModel(modelId);
-        expect(resolved.modelId, modelId).toBe(model!.providers[id]!);
+        // Models missing from models.dev (lab extras) fall back to the ID without namespace.
+        const expected = bundledNativeId(id, modelId) ?? modelId.slice(modelId.indexOf("/") + 1);
+        expect(resolved.modelId, modelId).toBe(expected);
       }
     });
   }

@@ -84,7 +84,7 @@ describe("Messages Handler", () => {
       "openai/gpt-oss-20b": {
         name: "GPT-OSS 20B",
         modalities: { input: ["text", "file"], output: ["text"] },
-        providers: { groq: "gpt-oss-20b" },
+        providers: ["groq"],
       },
     }),
   });
@@ -452,7 +452,7 @@ describe("Messages Handler", () => {
         "openai/gpt-oss-20b": {
           name: "GPT-OSS 20B",
           modalities: { input: ["text", "file"], output: ["text"] },
-          providers: { groq: "gpt-oss-20b" },
+          providers: ["groq"],
         },
       }),
       hooks: {

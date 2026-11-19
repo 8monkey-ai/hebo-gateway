@@ -1,9 +1,9 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelCatalog } from "../types.ts";
+import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("anthropic", snapshot as ModelCatalog);
+registerModels("anthropic", snapshot as ModelsDevCatalog);
 
 export const claude = defineModelFamily({
   namespace: "anthropic",

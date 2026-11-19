@@ -3,13 +3,19 @@ import { getNativeIds } from "../providers/registry.ts";
 import type { ProviderId, ProviderRegistry } from "../providers/types.ts";
 import { compileGlob } from "../utils/glob.ts";
 import { fromModelsDev, MODELS_DEV_API_URL, type ModelsDevApi } from "./models-dev.ts";
-import type { CatalogModel, ModelCatalog, ModelId } from "./types.ts";
+import type {
+  CatalogModel,
+  ModelCatalog,
+  ModelId,
+  ModelsDevCatalog,
+  ModelsDevCatalogModel,
+} from "./types.ts";
 
 export const DEFAULT_CATALOG_TIMEOUT_MS = 5000;
 
 // --- Lab registry --------------------------------------------------------------------------
 
-type Lab = { snapshot: ModelCatalog; extras: ModelCatalog };
+type Lab = { snapshot: ModelsDevCatalog; extras: ModelCatalog };
 
 const labs = new Map<string, Lab>();
 
@@ -25,7 +31,7 @@ const labs = new Map<string, Lab>();
  */
 export function registerModels(
   namespace: string,
-  snapshot: ModelCatalog,
+  snapshot: ModelsDevCatalog,
   extras: ModelCatalog = {},
 ): void {
   labs.set(namespace, { snapshot, extras });
@@ -36,15 +42,13 @@ export function registerModels(
 const kSelect = Symbol.for("hebo.gateway.model-selection");
 
 /** Changes applied to every selected model. `providers` narrows and reorders the providers. */
-export type ModelOverride = Partial<Omit<CatalogModel, "providers">> & {
-  providers?: readonly ProviderId[];
-};
+export type ModelOverride = Partial<CatalogModel>;
 
 /** Models picked from the loaded catalog, e.g. `claude.latest`. */
 export type ModelSelection = {
   readonly [kSelect]: {
     namespaces: readonly string[];
-    select: (source: ModelCatalog) => ModelId[];
+    select: (source: ModelsDevCatalog) => ModelId[];
     override?: ModelOverride;
   };
 };
@@ -52,23 +56,32 @@ export type ModelSelection = {
 /** A selection that can also be called with an override, e.g. `claude.opus({ ... })`. */
 export type ModelGroup = ModelSelection & ((override?: ModelOverride) => ModelSelection);
 
-const applyOverride = (model: CatalogModel, override?: ModelOverride): CatalogModel => {
+const applyOverride = (
+  model: ModelsDevCatalogModel,
+  override?: ModelOverride,
+): ModelsDevCatalogModel => {
   if (!override) return model;
   const { providers, ...rest } = override;
   if (!providers) return { ...model, ...rest };
 
-  const picked: Record<string, string> = {};
+  const picked: Record<string, string | undefined> = {};
   for (const id of providers) {
-    const native = model.providers[id];
-    if (native !== undefined) picked[id] = native;
+    if (id in model.providers) picked[id] = model.providers[id];
   }
   return { ...model, ...rest, providers: picked };
+};
+
+// Custom models list providers only: their native IDs are left to the provider.
+const withoutNativeIds = (model: CatalogModel): ModelsDevCatalogModel => {
+  const providers: Record<string, undefined> = {};
+  for (const id of model.providers) providers[id] = undefined;
+  return { ...model, providers };
 };
 
 /** Creates a group of models, picked by `select` from the namespaces it reads. */
 export function defineModelGroup(
   namespaces: readonly string[],
-  select: (source: ModelCatalog) => ModelId[],
+  select: (source: ModelsDevCatalog) => ModelId[],
 ): ModelGroup {
   const withOverride = (override?: ModelOverride): ModelSelection => ({
     [kSelect]: { namespaces, select, override },
@@ -101,7 +114,7 @@ export type ModelCatalogSpec = {
     namespaces: ReadonlySet<string>;
     /** Custom models. */
     custom: ModelCatalog;
-    resolve: (source: ModelCatalog) => ModelCatalog;
+    resolve: (source: ModelsDevCatalog) => ModelsDevCatalog;
   };
 };
 
@@ -110,7 +123,7 @@ const namespaceOf = (id: string) => id.slice(0, Math.max(0, id.indexOf("/")));
 export function defineModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalogSpec {
   const namespaces = new Set<string>();
   const custom: ModelCatalog = {};
-  const steps: ((source: ModelCatalog, out: ModelCatalog) => void)[] = [];
+  const steps: ((source: ModelsDevCatalog, out: ModelsDevCatalog) => void)[] = [];
 
   const add = (input: ModelCatalogInput) => {
     if (input === undefined) return;
@@ -158,7 +171,7 @@ export function defineModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalog
       namespaces,
       custom,
       resolve: (source) => {
-        const out: ModelCatalog = {};
+        const out: ModelsDevCatalog = {};
         for (const step of steps) step(source, out);
         return out;
       },
@@ -191,7 +204,7 @@ export type ModelCatalogStore = {
 };
 
 // Shared by every gateway (and endpoint) in the process that loads the same source.
-const remote = new Map<string, Promise<ModelCatalog | null>>();
+const remote = new Map<string, Promise<ModelsDevCatalog | null>>();
 
 const fetchCatalog = (url: string, namespaces: readonly string[], timeout: number) => {
   const key = `${url}#${namespaces.join(",")}`;
@@ -237,7 +250,7 @@ export function createModelCatalog(
   namespaces.sort();
 
   const extras: ModelCatalog = {};
-  const bundled: ModelCatalog = {};
+  const bundled: ModelsDevCatalog = {};
   for (const ns of namespaces) {
     const lab = labs.get(ns);
     if (!lab) {
@@ -249,31 +262,26 @@ export function createModelCatalog(
     Object.assign(bundled, lab.snapshot);
   }
 
-  const build = (upstream: ModelCatalog) => {
+  const build = (upstream: ModelsDevCatalog) => {
     // Custom models, then lab extras, fill the gaps upstream.
-    const source: ModelCatalog = { ...upstream };
+    const source: ModelsDevCatalog = { ...upstream };
     for (const gaps of [def?.custom, extras]) {
-      for (const id in gaps) source[id] ??= gaps[id];
+      for (const id in gaps) source[id] ??= withoutNativeIds(gaps[id]!);
     }
     const selected = def ? def.resolve(source) : source;
 
     const out: ModelCatalog = {};
     for (const id in selected) {
       const model = selected[id]!;
-      const kept: Record<string, string> = {};
+      const kept: ProviderId[] = [];
       for (const p in model.providers) {
-        if (providers[p]) kept[p] = model.providers[p]!;
+        if (!providers[p]) continue;
+        kept.push(p);
+        // Native IDs are handed to the providers wrapped with `withCanonicalIds`.
+        const native = model.providers[p];
+        if (native !== undefined) getNativeIds(providers[p])?.set(id, native);
       }
-      if (Object.keys(kept).length > 0) out[id] = { ...model, providers: kept };
-    }
-
-    for (const key in providers) {
-      const ids = getNativeIds(providers[key]!);
-      if (!ids) continue;
-      for (const id in out) {
-        const native = out[id]!.providers[key];
-        if (native !== undefined) ids.set(id, native);
-      }
+      if (kept.length > 0) out[id] = { ...model, providers: kept };
     }
     return out;
   };

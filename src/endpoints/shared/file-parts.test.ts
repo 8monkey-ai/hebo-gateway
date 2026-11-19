@@ -33,7 +33,7 @@ const models = defineModelCatalog({
   [MODEL_ID]: {
     name: "GPT-OSS 20B",
     modalities: { input: ["text", "image", "file"], output: ["text"] },
-    providers: { groq: "model" },
+    providers: ["groq"],
   },
 });
 

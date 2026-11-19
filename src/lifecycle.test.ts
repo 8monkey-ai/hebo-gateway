@@ -34,7 +34,7 @@ describe("winterCgHandler", () => {
         "openai/gpt-oss-20b": {
           name: "GPT-OSS 20B",
           modalities: { input: ["text"], output: ["text"] },
-          providers: { openai: "gpt-oss-20b" },
+          providers: ["openai"],
         },
       }),
       telemetry: {
@@ -79,7 +79,7 @@ describe("winterCgHandler", () => {
           "openai/gpt-oss-20b": {
             name: "GPT-OSS 20B",
             modalities: { input: ["text"], output: ["text"] },
-            providers: { openai: "gpt-oss-20b" },
+            providers: ["openai"],
           },
         }),
       },
@@ -110,7 +110,7 @@ describe("winterCgHandler", () => {
         "openai/gpt-oss-20b": {
           name: "GPT-OSS 20B",
           modalities: { input: ["text"], output: ["text"] },
-          providers: { openai: "gpt-oss-20b" },
+          providers: ["openai"],
         },
       }),
       telemetry: {
@@ -161,7 +161,7 @@ describe("winterCgHandler", () => {
           "openai/gpt-oss-20b": {
             name: "GPT-OSS 20B",
             modalities: { input: ["text"], output: ["text"] },
-            providers: { openai: "gpt-oss-20b" },
+            providers: ["openai"],
           },
         }),
         telemetry: { enabled: true, tracer: tracerProvider.getTracer("test") },

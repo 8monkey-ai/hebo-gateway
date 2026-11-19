@@ -1,6 +1,6 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelCatalog } from "../types.ts";
+import type { ModelCatalog, ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
 // Not on models.dev yet. Served by Azure's Speech API (not Azure OpenAI deployments).
@@ -9,11 +9,11 @@ const extras: ModelCatalog = {
     name: "MAI-Transcribe 2",
     created: "2026-09-03",
     modalities: { input: ["audio"], output: ["transcription"] },
-    providers: { azure: "mai-transcribe-2" },
+    providers: ["azure"],
   },
 };
 
-registerModels("microsoft", snapshot as ModelCatalog, extras);
+registerModels("microsoft", snapshot as ModelsDevCatalog, extras);
 
 export const maiTranscribe = defineModelFamily({
   namespace: "microsoft",

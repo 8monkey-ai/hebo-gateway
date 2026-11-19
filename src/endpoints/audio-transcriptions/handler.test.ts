@@ -72,22 +72,22 @@ describe("Audio Transcriptions Handler", () => {
       "transcribe-1": {
         name: "Transcribe",
         modalities: { input: ["audio"], output: ["transcription"] },
-        providers: { openai: "model" },
+        providers: ["openai"],
       },
       "grok-voice-transcribe-2.0": {
         name: "Grok Voice Transcribe",
         modalities: { input: ["audio"], output: ["transcription"] },
-        providers: { xai: "model" },
+        providers: ["xai"],
       },
       "gpt-oss-20b": {
         name: "GPT-OSS 20B",
         modalities: { input: ["text"], output: ["text"] },
-        providers: { openai: "model" },
+        providers: ["openai"],
       },
       "text-embedding-3-small": {
         name: "OpenAI Embedding Model",
         modalities: { input: ["text"], output: ["embeddings"] },
-        providers: { openai: "model" },
+        providers: ["openai"],
       },
     }),
     advanced: { maxBodySize: 1024 },
@@ -275,7 +275,7 @@ describe("Audio Transcriptions Handler", () => {
       models: defineModelCatalog({
         "transcribe-1": {
           modalities: { input: ["audio"], output: ["transcription"] },
-          providers: { openai: "model" },
+          providers: ["openai"],
         },
       }),
       hooks: {

@@ -210,7 +210,7 @@ const gw = gateway({
   },
   models: defineModelCatalog({
     // ...your own models, served by the custom provider
-    "acme/support-bot": { name: "Support Bot", providers: { myProvider: "support-bot-v2" } },
+    "acme/support-bot": { name: "Support Bot", providers: ["myProvider"] },
   }),
 });
 ```
@@ -219,7 +219,7 @@ const gw = gateway({
 
 The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the models.dev snapshot bundled with the installed release if that fails (or times out after 5 seconds). New models therefore show up without upgrading the gateway.
 
-Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one maps the configured providers that serve it to their provider-native ID; the first one serves the request.
+Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it; the first one serves the request. Provider-native IDs stay internal: the catalog hands the ones models.dev lists to the providers wrapped with `withCanonicalIds`.
 
 #### Model Families
 
@@ -286,8 +286,8 @@ const models = defineModelCatalog(claude["latest"], {
     },
     context: 1000000,
     capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    // Provider -> provider-native ID, in routing order
-    providers: { anthropic: "claude-opus-6", bedrock: "{ip}anthropic.claude-opus-6" },
+    // Providers serving the model, in routing order
+    providers: ["anthropic", "bedrock"],
     // Additional properties are merged into the model object
     additionalProperties: {
       customProperty: "customValue",
@@ -298,6 +298,8 @@ const models = defineModelCatalog(claude["latest"], {
 
 > [!NOTE]
 > The only mandatory property is `providers`, everything else is optional metadata. Custom models are visible to the family groups in the same `defineModelCatalog` call: the example above makes Claude Opus 6 part of `claude["latest"]`.
+>
+> Providers resolve the native ID of a custom model like any ID the catalog does not know, through the adapter's fallback rule: usually the canonical ID without its namespace (`claude-opus-6`), on Bedrock `us.anthropic.claude-opus-6-v1:0`. When a provider serves it under a different ID, pass that ID in the adapter's extra mapping, e.g. `withCanonicalIdsForBedrock(bedrock, { extraMapping: { "anthropic/claude-opus-6": "{ip}anthropic.claude-opus-6" } })`.
 
 #### Catalog Source
 

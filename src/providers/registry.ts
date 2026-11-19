@@ -40,11 +40,7 @@ export const resolveProvider = (args: {
   }
 
   // FUTURE: implement fallback logic [e.g. runtime config invalid]
-  let resolvedProviderId: string | undefined;
-  for (const id in catalogModel.providers) {
-    resolvedProviderId = id;
-    break;
-  }
+  const resolvedProviderId = catalogModel.providers[0];
 
   if (!resolvedProviderId) {
     throw new GatewayError(`No providers configured for model '${modelId}'`, 422, "NO_PROVIDERS");

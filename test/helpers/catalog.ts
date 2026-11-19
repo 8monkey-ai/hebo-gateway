@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import type { ProviderV4 } from "@ai-sdk/provider";
 
 // oxlint-disable no-unassigned-import
@@ -17,7 +19,7 @@ import "../../src/models/xai/index.ts";
 import "../../src/models/zai/index.ts";
 // oxlint-enable no-unassigned-import
 import { createModelCatalog } from "../../src/models/catalog.ts";
-import type { ModelCatalog } from "../../src/models/types.ts";
+import type { ModelCatalog, ModelsDevCatalog } from "../../src/models/types.ts";
 
 /**
  * Loads the bundled models.dev snapshots of every lab for `provider`, registered as `id`,
@@ -25,3 +27,15 @@ import type { ModelCatalog } from "../../src/models/types.ts";
  */
 export const loadBundledCatalog = (id: string, provider: ProviderV4): ModelCatalog =>
   createModelCatalog(undefined, { [id]: provider }, { source: false }).current!;
+
+const snapshots: ModelsDevCatalog = {};
+for (const path of new Bun.Glob("src/models/*/models-dev.json").scanSync({
+  cwd: `${import.meta.dir}/../..`,
+  absolute: true,
+})) {
+  Object.assign(snapshots, JSON.parse(readFileSync(path, "utf8")) as ModelsDevCatalog);
+}
+
+/** Native ID of `modelId` on `provider` in the bundled models.dev snapshots, if listed. */
+export const bundledNativeId = (provider: string, modelId: string): string | undefined =>
+  snapshots[modelId]?.providers[provider];

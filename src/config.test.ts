@@ -13,7 +13,7 @@ const minimalConfig: GatewayConfig = {
   models: defineModelCatalog({
     "mock/model": {
       name: "Mock",
-      providers: { mock: "model" },
+      providers: ["mock"],
       modalities: { input: ["text"], output: ["text"] },
     },
   }),
