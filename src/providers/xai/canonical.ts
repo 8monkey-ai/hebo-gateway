@@ -8,6 +8,7 @@ export const withCanonicalIdsForXai = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "xai",
     mapping: extraMapping,
     options: { stripNamespace: true },
   });

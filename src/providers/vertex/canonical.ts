@@ -77,6 +77,7 @@ export const withCanonicalIdsForVertex = (
       },
     },
     {
+      providerId: "vertex",
       mapping: extraMapping,
       options: {
         stripNamespace: true,

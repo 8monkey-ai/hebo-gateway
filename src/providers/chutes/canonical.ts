@@ -8,6 +8,7 @@ export const withCanonicalIdsForChutes = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "chutes",
     mapping: extraMapping,
     options: { stripNamespace: false },
   });

@@ -9,7 +9,7 @@ import {
 import { GatewayError } from "../errors/gateway.ts";
 import { logger } from "../logger/index.ts";
 import type { ModelCatalog, ModelId, ModelSpec } from "../models/types.ts";
-import type { ProviderRegistry } from "./types.ts";
+import type { ProviderId, ProviderRegistry } from "./types.ts";
 
 export const resolveProvider = (args: {
   providers: ProviderRegistry;
@@ -63,6 +63,19 @@ const kModelSpecs = Symbol.for("hebo.gateway.model-specs");
 /** Canonical model ID -> how the provider serves it, filled from the catalog once it loads. */
 export type ModelSpecMap = Map<ModelId, ModelSpec>;
 
+const shared = new Map<string, ModelSpecMap>();
+
+/**
+ * Model specs of a provider ID, shared by every provider instance wrapped for it. Instances
+ * created after the catalog loads (e.g. BYOK providers built per request in a
+ * `resolveProvider` hook) resolve the same native IDs and specs as the configured one.
+ */
+export const modelSpecsFor = (providerId: ProviderId): ModelSpecMap => {
+  let specs = shared.get(providerId);
+  if (!specs) shared.set(providerId, (specs = new Map()));
+  return specs;
+};
+
 /** Attaches a model spec map to a provider, read back with `getModelSpecs`. */
 export const withModelSpecs = <P extends ProviderV4>(provider: P, specs: ModelSpecMap): P =>
   Object.assign(provider, { [kModelSpecs]: specs });
@@ -76,6 +89,12 @@ export const getModelSpec = (provider: ProviderV4, modelId: ModelId) =>
   getModelSpecs(provider)?.get(modelId);
 
 export type CanonicalIdsOptions = {
+  /**
+   * Gateway provider ID (e.g. `bedrock`): every instance wrapped for it shares the model
+   * specs loaded from the catalog (see `modelSpecsFor`). Without it, the instance only gets
+   * the specs of the catalog it is configured in.
+   */
+  providerId?: ProviderId;
   /**
    * Canonical -> provider-native IDs that win over the catalog. Values may use `{key}`
    * placeholders from `options.template`.
@@ -105,6 +124,7 @@ export const withCanonicalIds = (
   config: CanonicalIdsOptions = {},
 ) => {
   const {
+    providerId,
     mapping,
     options: {
       stripNamespace = true,
@@ -149,7 +169,7 @@ export const withCanonicalIds = (
     return out;
   };
 
-  const specs: ModelSpecMap = new Map();
+  const specs: ModelSpecMap = providerId ? modelSpecsFor(providerId) : new Map();
 
   // Explicit mapping, then the catalog, then the fallback transform.
   const resolve = (id: string) => {

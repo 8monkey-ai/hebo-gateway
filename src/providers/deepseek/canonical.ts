@@ -8,6 +8,7 @@ export const withCanonicalIdsForDeepSeek = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "deepseek",
     mapping: extraMapping,
     options: { stripNamespace: true },
   });

@@ -8,6 +8,7 @@ export const withCanonicalIdsForAnthropic = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "anthropic",
     mapping: extraMapping,
     options: {
       stripNamespace: true,

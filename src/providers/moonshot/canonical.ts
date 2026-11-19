@@ -8,6 +8,7 @@ export const withCanonicalIdsForMoonshot = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "moonshot",
     mapping: extraMapping,
     options: { stripNamespace: true },
   });

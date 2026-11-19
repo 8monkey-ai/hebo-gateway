@@ -8,6 +8,7 @@ export const withCanonicalIdsForDeepInfra = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "deepinfra",
     mapping: extraMapping,
     options: { stripNamespace: false },
   });

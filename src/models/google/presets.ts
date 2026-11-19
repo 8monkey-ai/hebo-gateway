@@ -18,7 +18,8 @@ declare module "../types.ts" {
 }
 
 export const gemini = defineModelFamily(lab, {
-  version: /^gemini-(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+  // Transcription models are only in `transcription` (and `all`), not in version groups.
+  version: /^gemini-(\d+(?:\.\d+)?)(?:-(?!transcribe)[a-z]+)*$/u,
   groups: {
     preview: "gemini-*-preview*",
     embeddings: "gemini-embedding-*",

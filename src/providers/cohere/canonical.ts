@@ -8,6 +8,7 @@ export const withCanonicalIdsForCohere = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "cohere",
     mapping: extraMapping,
     options: {
       stripNamespace: true,

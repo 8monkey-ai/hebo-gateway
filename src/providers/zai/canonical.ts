@@ -8,6 +8,7 @@ export const withCanonicalIdsForZai = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "zai",
     mapping: extraMapping,
     options: { stripNamespace: true },
   });

@@ -36,6 +36,36 @@ test("withCanonicalIdsForBedrock > maps Claude Sonnet 5 to inference profile wit
   expect(model.modelId).toBe("us.anthropic.claude-sonnet-5");
 });
 
+// BYOK: a provider created per request (e.g. in a `resolveProvider` hook, with the customer's
+// credentials) resolves the same native IDs and route as the configured one.
+test("withCanonicalIdsForBedrock > instances created after the catalog loads share its native IDs", () => {
+  withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  const byok = withCanonicalIdsForBedrock(
+    createAmazonBedrock({
+      region: "us-east-1",
+      credentials: { accessKeyId: "customer", secretAccessKey: "customer" },
+    } as Parameters<typeof createAmazonBedrock>[0]),
+  );
+
+  const claude = byok.languageModel("anthropic/claude-sonnet-4-6");
+  expect(claude.modelId).toBe("us.anthropic.claude-sonnet-4-6");
+  expect(claude.provider).toBe("bedrock.anthropic.messages");
+
+  const gpt = byok.languageModel("openai/gpt-5.5");
+  expect(gpt.modelId).toBe("openai.gpt-5.5");
+  expect(gpt.provider).toBe("bedrock-mantle.responses");
+});
+
+test("withCanonicalIdsForBedrock > maps the embedding models missing from models.dev", () => {
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  expect(provider.embeddingModel("amazon/nova-2-multimodal-embeddings").modelId).toBe(
+    "amazon.nova-2-multimodal-embeddings-v1:0",
+  );
+  expect(provider.embeddingModel("cohere/embed-english-v3.0").modelId).toBe(
+    "cohere.embed-english-v3",
+  );
+});
+
 type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
 type CanonicalConfig = Parameters<typeof withCanonicalIdsForBedrock>[1] & object;
 type CapturedRequest = { url: string; headers: Headers };

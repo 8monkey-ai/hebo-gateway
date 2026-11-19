@@ -5,7 +5,7 @@ import type { ModelId, ModelsDevCatalog } from "./types.ts";
 /**
  * A model family (e.g. `claude`), resolved against the catalog when it loads, so new
  * releases join their groups without a gateway release:
- * - `all`: every model of the family
+ * - `all`: every model of the family, named groups included
  * - `latest`: the newest stable release of each models.dev family (e.g. Opus, Sonnet, Haiku)
  * - `v5.5` / `v5`: one version, `v5.x`: one major version
  * - named groups (e.g. `opus`)
@@ -61,8 +61,22 @@ export function defineModelFamily<const G extends string = never, const P extend
   const group = (select: (source: ModelsDevCatalog) => ModelId[]) =>
     defineModelGroup(namespaces, select);
 
+  const named = Object.entries<string | readonly string[]>(groups).map(([name, patterns]) => {
+    const tests = (typeof patterns === "string" ? [patterns] : patterns).map((p) =>
+      compileGlob(scope + p),
+    );
+    return [name, (id: string) => tests.some((t) => t(id))] as const;
+  });
+
   const family: Record<string, ModelGroup> = {
-    all: group((source) => members(source).map(([id]) => id)),
+    // Versioned models and every named group (e.g. embeddings, transcription).
+    all: group((source) => {
+      const ids = new Set(members(source).map(([id]) => id));
+      for (const id in source) {
+        if (named.some(([, test]) => test(id))) ids.add(id);
+      }
+      return [...ids];
+    }),
     // By release date rather than version: labs number some releases out of order.
     latest: group((source) => {
       const newest = new Map<string, { created: string; ids: ModelId[] }>();
@@ -80,11 +94,8 @@ export function defineModelFamily<const G extends string = never, const P extend
     }),
   };
 
-  for (const [name, patterns] of Object.entries<string | readonly string[]>(groups)) {
-    const tests = (typeof patterns === "string" ? [patterns] : patterns).map((p) =>
-      compileGlob(scope + p),
-    );
-    family[name] = group((source) => Object.keys(source).filter((id) => tests.some((t) => t(id))));
+  for (const [name, test] of named) {
+    family[name] = group((source) => Object.keys(source).filter((id) => test(id)));
   }
 
   // Version groups are created on first access: versions released later work too.

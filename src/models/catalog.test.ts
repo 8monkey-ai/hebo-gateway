@@ -3,7 +3,7 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { models } from "../endpoints/models/handler.ts";
-import { getModelSpecs, withCanonicalIds } from "../providers/registry.ts";
+import { getModelSpec, getModelSpecs, withCanonicalIds } from "../providers/registry.ts";
 import { claude } from "./anthropic/presets.ts";
 import { createModelCatalog, defineModelCatalog, registerModels } from "./catalog.ts";
 import { defineModelFamily } from "./family.ts";
@@ -49,9 +49,9 @@ const acme = registerModels({
   namespace: "acme",
   snapshot: ACME,
   extras: {
-    "acme/rocket-4": custom("Rocket 4", "2026-09-01"),
+    "acme/rocket-4": model("Rocket 4", "2026-09-01"),
     // Already listed upstream: the upstream entry wins.
-    "acme/rocket-2": custom("Rocket 2 (extra)", "2026-06-01"),
+    "acme/rocket-2": model("Rocket 2 (extra)", "2026-06-01"),
   },
 });
 
@@ -164,6 +164,35 @@ describe("createModelCatalog", () => {
     const a = withCanonicalIds(new MockProviderV4());
     createModelCatalog(defineModelCatalog("acme/anvil-2"), { a }, offline);
     expect(getModelSpecs(a)?.get("acme/anvil-2")).toBe(ACME["acme/anvil-2"]!.providers["a"]);
+  });
+
+  test("shares the model specs with every instance wrapped for the same provider ID", () => {
+    const seen: string[] = [];
+    const byokBase = new MockProviderV4();
+    byokBase.languageModel = (id: string) => {
+      seen.push(id);
+      return new MockLanguageModelV4({ modelId: id });
+    };
+
+    const configured = withCanonicalIds(new MockProviderV4(), { providerId: "a" });
+    createModelCatalog(defineModelCatalog("acme/anvil-2"), { a: configured }, offline);
+    // E.g. created per request in a `resolveProvider` hook, with the customer's credentials.
+    const byok = withCanonicalIds(byokBase, { providerId: "a" });
+
+    expect(getModelSpec(byok, "acme/anvil-2")).toBe(ACME["acme/anvil-2"]!.providers["a"]);
+    byok.languageModel("acme/anvil-2");
+    // Also models the catalog did not select, as with the hand-written mappings before.
+    byok.languageModel("acme/rocket-1");
+    expect(seen).toEqual(["native-Anvil 2", "native-Rocket 1"]);
+  });
+
+  test("shares the bundled specs of a lab as soon as it is registered", () => {
+    registerModels({
+      namespace: "early",
+      snapshot: { "early/m-1": { name: "M 1", providers: { early: { id: "native-m-1" } } } },
+    });
+    const provider = withCanonicalIds(new MockProviderV4(), { providerId: "early" });
+    expect(getModelSpec(provider, "early/m-1")).toEqual({ id: "native-m-1" });
   });
 
   test("leaves the native IDs of custom models to the provider", () => {

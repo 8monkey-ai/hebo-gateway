@@ -8,6 +8,7 @@ export const withCanonicalIdsForGroq = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "groq",
     mapping: extraMapping,
     options: { stripNamespace: false },
   });

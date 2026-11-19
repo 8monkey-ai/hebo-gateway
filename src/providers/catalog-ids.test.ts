@@ -82,7 +82,7 @@ describe("bundled catalog native IDs", () => {
           : output.includes("transcription")
             ? provider.transcriptionModel!(modelId)
             : provider.languageModel(modelId);
-        // Models missing from models.dev (lab extras) fall back to the ID without namespace.
+        // Lab extras without a native ID fall back to the ID without namespace.
         const expected = bundledNativeId(id, modelId) ?? modelId.slice(modelId.indexOf("/") + 1);
         expect(resolved.modelId, modelId).toBe(expected);
       }

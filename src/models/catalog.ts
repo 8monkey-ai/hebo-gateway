@@ -1,5 +1,5 @@
 import { logger } from "../logger/index.ts";
-import { getModelSpecs } from "../providers/registry.ts";
+import { getModelSpecs, modelSpecsFor } from "../providers/registry.ts";
 import type { ProviderId, ProviderRegistry } from "../providers/types.ts";
 import { compileGlob } from "../utils/glob.ts";
 import {
@@ -24,14 +24,28 @@ export const DEFAULT_CATALOG_TIMEOUT_MS = 5000;
 export type ModelLabConfig = ModelsDevLab & {
   /** models.dev snapshot bundled with the release, used when the live catalog cannot load. */
   snapshot: ModelsDevCatalog;
-  /** Models not on models.dev yet. They only fill gaps: a model listed upstream always wins. */
-  extras?: ModelCatalog;
+  /**
+   * Models not on models.dev yet, in the snapshot's shape (native IDs included). They only
+   * fill gaps: a model listed upstream always wins.
+   */
+  extras?: ModelsDevCatalog;
 };
 
 /** A registered lab, e.g. to define its model families with `defineModelFamily`. */
 export type ModelLab = Readonly<ModelLabConfig>;
 
 const labs = new Map<string, ModelLab>();
+
+/** Hands the specs of `source` to every provider instance wrapped for their provider ID. */
+const shareSpecs = (source: ModelsDevCatalog, replace: boolean) => {
+  for (const id in source) {
+    const { providers } = source[id]!;
+    for (const p in providers) {
+      const specs = modelSpecsFor(p);
+      if (replace || !specs.has(id)) specs.set(id, providers[p]!);
+    }
+  }
+};
 
 /**
  * Registers the models of a lab namespace (e.g. `anthropic`). Lab modules
@@ -40,6 +54,9 @@ const labs = new Map<string, ModelLab>();
  */
 export function registerModels(lab: ModelLabConfig): ModelLab {
   labs.set(lab.namespace, lab);
+  // Until the catalog loads, providers resolve native IDs from the bundled snapshot.
+  shareSpecs(lab.snapshot, false);
+  if (lab.extras) shareSpecs(lab.extras, false);
   return lab;
 }
 
@@ -259,7 +276,7 @@ export function createModelCatalog(
   namespaces.sort();
 
   const read: ModelLab[] = [];
-  const extras: ModelCatalog = {};
+  const extras: ModelsDevCatalog = {};
   const bundled: ModelsDevCatalog = {};
   for (const ns of namespaces) {
     const lab = labs.get(ns);
@@ -274,11 +291,15 @@ export function createModelCatalog(
   }
 
   const build = (upstream: ModelsDevCatalog) => {
+    // Every model of the read labs, also for providers created outside the config (BYOK).
+    shareSpecs(upstream, true);
+    shareSpecs(extras, false);
+
     // Custom models, then lab extras, fill the gaps upstream.
     const source: ModelsDevCatalog = { ...upstream };
-    for (const gaps of [def?.custom, extras]) {
-      for (const id in gaps) source[id] ??= withoutSpecs(gaps[id]!);
-    }
+    const custom = def?.custom;
+    for (const id in custom) source[id] ??= withoutSpecs(custom[id]!);
+    for (const id in extras) source[id] ??= extras[id];
     const selected = def ? def.resolve(source) : source;
 
     const out: ModelCatalog = {};

@@ -3,10 +3,23 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
+// Not on models.dev yet.
+const extras: ModelsDevCatalog = {
+  "amazon/nova-2-multimodal-embeddings": {
+    name: "Nova 2 Embeddings",
+    family: "nova-embeddings",
+    created: "2025-10-28",
+    modalities: { input: ["text", "image", "audio", "video", "file"], output: ["embeddings"] },
+    context: 8000,
+    providers: { bedrock: { id: "amazon.nova-2-multimodal-embeddings-v1:0" } },
+  },
+};
+
 const lab = registerModels({
   namespace: "amazon",
   provider: "bedrock",
   snapshot: snapshot as ModelsDevCatalog,
+  extras,
 });
 
 // Adds the snapshot's model IDs to `CanonicalModelId`.

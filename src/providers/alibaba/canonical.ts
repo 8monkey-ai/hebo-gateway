@@ -8,5 +8,6 @@ export const withCanonicalIdsForAlibaba = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "alibaba",
     mapping: extraMapping,
   });

@@ -219,7 +219,7 @@ const gw = gateway({
 
 The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the models.dev snapshot bundled with the installed release if that fails (or times out after 5 seconds). New models therefore show up without upgrading the gateway.
 
-Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it; the first one serves the request. How each provider serves a model stays internal: the catalog hands the native ID, output limit and reasoning controls models.dev lists to the providers wrapped with `withCanonicalIds`, and model middleware is built from them (see [Model Middleware](#model-middleware)).
+Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it; the first one serves the request. How each provider serves a model stays internal: the catalog hands the native ID, output limit and reasoning controls models.dev lists to the providers wrapped with `withCanonicalIds`, and model middleware is built from them (see [Model Middleware](#model-middleware)). Every instance of a `withCanonicalIdsFor*` wrapper shares them, so providers created per request (e.g. BYOK providers returned by a `resolveProvider` hook) resolve the same native IDs as the configured ones.
 
 #### Model Families
 
@@ -227,7 +227,7 @@ Hebo Gateway ships one module per lab under `@hebo-ai/gateway/models/<lab>`. Imp
 
 Each module also exports the lab's model families (e.g. `claude`, `gemini`, `llama`), which group its models:
 
-- `all`: every model of the family.
+- `all`: every model of the family, named groups included (e.g. embedding and transcription models).
 - `latest`: the newest stable release of each product line (e.g. Claude Opus, Sonnet, Haiku and Fable).
 - `vX` / `vX.Y`: one version (e.g. `claude["v4.6"]`), `vX.x`: one major version (e.g. `claude["v5.x"]`).
 - Named groups, e.g. `claude.opus`, `gpt.codex`, `gemini.embeddings`.

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import type { ProviderV4 } from "@ai-sdk/provider";
 
-import { createModelCatalog } from "../../src/models/catalog.ts";
+import { createModelCatalog, getRegisteredLabs } from "../../src/models/catalog.ts";
 import type { ModelCatalog, ModelsDevCatalog, ModelSpec } from "../../src/models/types.ts";
 
 const MODELS_DIR = `${import.meta.dir}/../../src/models`;
@@ -27,8 +27,12 @@ for (const path of new Bun.Glob("*/models-dev.json").scanSync({
 })) {
   Object.assign(snapshots, JSON.parse(readFileSync(path, "utf8")) as ModelsDevCatalog);
 }
+// Lab extras fill the gaps, as in the catalog.
+for (const lab of getRegisteredLabs().values()) {
+  for (const id in lab.extras) snapshots[id] ??= lab.extras[id];
+}
 
-/** Native ID of `modelId` on `provider` in the bundled models.dev snapshots, if listed. */
+/** Native ID of `modelId` on `provider` in the bundled snapshots (or lab extras), if listed. */
 export const bundledNativeId = (provider: string, modelId: string): string | undefined =>
   snapshots[modelId]?.providers[provider]?.id;
 

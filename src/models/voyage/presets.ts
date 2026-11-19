@@ -1,19 +1,19 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { CatalogModel, ModelCatalog, ModelsDevCatalog } from "../types.ts";
+import type { ModelsDevCatalog, ModelsDevCatalogModel } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-const embedding = (name: string, created: string): CatalogModel => ({
+const embedding = (name: string, created: string): ModelsDevCatalogModel => ({
   name,
   family: "voyage",
   created,
   modalities: { input: ["text"], output: ["embeddings"] },
   context: 32000,
-  providers: ["voyage"],
+  providers: { voyage: {} },
 });
 
 // Voyage is not a models.dev provider, which only lists its newest models.
-const extras: ModelCatalog = {
+const extras: ModelsDevCatalog = {
   "voyageai/voyage-3.5": embedding("Voyage 3.5", "2025-05-20"),
   "voyageai/voyage-3.5-lite": embedding("Voyage 3.5 Lite", "2025-05-20"),
   "voyageai/voyage-3-large": embedding("Voyage 3 Large", "2025-01-07"),

@@ -8,6 +8,7 @@ export const withCanonicalIdsForVoyage = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "voyage",
     mapping: extraMapping,
     options: {
       stripNamespace: true,

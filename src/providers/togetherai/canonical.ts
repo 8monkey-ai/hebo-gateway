@@ -8,6 +8,7 @@ export const withCanonicalIdsForTogetherAI = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "togetherai",
     mapping: extraMapping,
     options: { stripNamespace: false },
   });

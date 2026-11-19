@@ -8,6 +8,7 @@ export const withCanonicalIdsForMinimax = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "minimax",
     mapping: extraMapping,
     options: { stripNamespace: true },
   });

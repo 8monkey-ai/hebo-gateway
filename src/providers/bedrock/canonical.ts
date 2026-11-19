@@ -264,6 +264,7 @@ export const withCanonicalIdsForBedrock = (
   return withCanonicalIds(
     { ...provider, languageModel },
     {
+      providerId: "bedrock",
       mapping: config.extraMapping,
       options: {
         stripNamespace: false,

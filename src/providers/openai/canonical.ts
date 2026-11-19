@@ -8,6 +8,7 @@ export const withCanonicalIdsForOpenAI = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "openai",
     mapping: extraMapping,
     options: {
       stripNamespace: true,
