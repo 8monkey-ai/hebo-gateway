@@ -37,6 +37,20 @@ export type ModelsDevModel = {
 /** `models.dev/api.json`: models keyed by provider, then by provider-native model ID. */
 export type ModelsDevApi = Record<string, { models?: Record<string, ModelsDevModel> }>;
 
+/** A lab (canonical model namespace), as registered by its lab module. */
+export type ModelsDevLab = {
+  /** Canonical model namespace, e.g. `anthropic`. */
+  namespace: string;
+  /** Gateway provider run by the lab itself, listed first for its models. */
+  provider?: CanonicalProviderId;
+  /**
+   * models.dev provider listing the lab's own models, often without `canonical_model_id`.
+   * Its listing is also the preferred source of metadata.
+   * @default namespace
+   */
+  host?: string;
+};
+
 /**
  * models.dev providers that back each gateway provider, with the SDKs (`provider.npm`) the
  * gateway adapter can serve besides the default one. Key order is the provider preference
@@ -52,7 +66,7 @@ const HOSTS: Record<CanonicalProviderId, Record<string, readonly string[]>> = {
   moonshot: { moonshotai: [] },
   xai: { xai: [] },
   zai: { zai: [] },
-  // Not listed as a provider on models.dev: picked up through `LABS` only.
+  // Not listed as a provider on models.dev: only serves its own lab (`ModelsDevLab.provider`).
   voyage: {},
   bedrock: { "amazon-bedrock": ["@ai-sdk/amazon-bedrock/mantle"] },
   vertex: {
@@ -66,50 +80,6 @@ const HOSTS: Record<CanonicalProviderId, Record<string, readonly string[]>> = {
   fireworks: { "fireworks-ai": [] },
   chutes: { chutes: [] },
 };
-
-/** Labs (canonical model namespaces) the gateway ships, with the provider each one runs. */
-const LABS = new Map<string, CanonicalProviderId | null>(
-  Object.entries({
-    alibaba: "alibaba",
-    amazon: "bedrock",
-    anthropic: "anthropic",
-    cohere: "cohere",
-    deepseek: "deepseek",
-    google: "vertex",
-    meta: null,
-    microsoft: "azure",
-    minimax: "minimax",
-    moonshotai: "moonshot",
-    openai: "openai",
-    voyageai: "voyage",
-    xai: "xai",
-    zhipuai: "zai",
-  }),
-);
-
-/** Every lab namespace known to the converter. */
-export const MODELS_DEV_NAMESPACES: readonly string[] = [...LABS.keys()];
-
-/**
- * models.dev first-party providers -> their lab. They often list their own models without
- * `canonical_model_id`, the provider-native ID being the lab one. Their listing is also the
- * preferred source of metadata.
- */
-const FIRST_PARTY = new Map<string, string>(
-  Object.entries({
-    alibaba: "alibaba",
-    anthropic: "anthropic",
-    cohere: "cohere",
-    deepseek: "deepseek",
-    google: "google",
-    meta: "meta",
-    minimax: "minimax",
-    moonshotai: "moonshotai",
-    openai: "openai",
-    xai: "xai",
-    zai: "zhipuai",
-  }),
-);
 
 const PROVIDER_ORDER = Object.keys(HOSTS) as CanonicalProviderId[];
 
@@ -150,17 +120,28 @@ const BEDROCK_GEO = /^(global|us|eu|apac|au|ca|jp|in|us-gov)\./u;
 type Listing = { nativeId: string; model: ModelsDevModel };
 type Entry = { model: ModelsDevModel; rank: number; listings: Map<CanonicalProviderId, Listing[]> };
 
-const canonicalIdOf = (host: string, nativeId: string, model: ModelsDevModel) => {
+// First-party providers often list their own models without `canonical_model_id`, the
+// provider-native ID being the lab one.
+const canonicalIdOf = (lab: string | undefined, nativeId: string, model: ModelsDevModel) => {
   if (model.canonical_model_id) return model.canonical_model_id;
-  const lab = FIRST_PARTY.get(host);
   return lab && !nativeId.includes("/") ? `${lab}/${nativeId}` : undefined;
 };
 
 /**
  * Some hosts (e.g. Azure) list well-known models without `canonical_model_id`. Their native
  * ID is then matched against the model part of every known canonical ID, if unambiguous.
+ * Labs that are not registered count too (a host named like a namespace is first-party),
+ * so a lab that is not imported still makes a shared name ambiguous.
  */
-const indexCanonicalIds = (api: ModelsDevApi) => {
+const indexCanonicalIds = (api: ModelsDevApi, labOf: ReadonlyMap<string, string>) => {
+  const namespaces = new Set<string>();
+  for (const listing of Object.values(api)) {
+    for (const model of Object.values(listing?.models ?? {})) {
+      const id = model?.canonical_model_id;
+      if (id) namespaces.add(id.split("/", 1)[0]!);
+    }
+  }
+
   const byName = new Map<string, string | null>();
   const add = (id: string) => {
     const name = id.slice(id.indexOf("/") + 1).toLowerCase();
@@ -170,8 +151,9 @@ const indexCanonicalIds = (api: ModelsDevApi) => {
   };
 
   for (const [host, listing] of Object.entries(api)) {
+    const lab = labOf.get(host) ?? (namespaces.has(host) ? host : undefined);
     for (const [nativeId, model] of Object.entries(listing?.models ?? {})) {
-      const id = canonicalIdOf(host, nativeId, model ?? {});
+      const id = canonicalIdOf(lab, nativeId, model ?? {});
       if (id) add(id);
     }
   }
@@ -269,18 +251,22 @@ const toCatalogModel = (
 
 /**
  * Builds a gateway catalog from `models.dev/api.json`, keyed by the models.dev canonical
- * (lab) model ID, for the given lab namespaces. Each model maps the gateway providers that
+ * (lab) model ID, for the given labs. Each model maps the gateway providers that
  * serve it to their provider-native ID. Deprecated listings and unsupported model types are
  * ignored. Metadata comes from the lab's own listing when there is one, otherwise from the
  * preferred gateway provider.
  */
-export function fromModelsDev(
-  api: ModelsDevApi,
-  namespaces: Iterable<string> = MODELS_DEV_NAMESPACES,
-): ModelsDevCatalog {
-  const labs = new Set(namespaces);
+export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): ModelsDevCatalog {
+  const byNamespace = new Map<string, ModelsDevLab>();
+  // models.dev first-party provider -> its lab namespace.
+  const labOf = new Map<string, string>();
+  for (const lab of labs) {
+    byNamespace.set(lab.namespace, lab);
+    labOf.set(lab.host ?? lab.namespace, lab.namespace);
+  }
+
   const entries = new Map<string, Entry>();
-  const lookup = indexCanonicalIds(api);
+  const lookup = indexCanonicalIds(api, labOf);
 
   for (const [host, listing] of Object.entries(api)) {
     const models = listing?.models;
@@ -295,16 +281,18 @@ export function fromModelsDev(
       if (model.status === "deprecated" || !TYPES.has(model.type)) continue;
 
       // Only gateway hosts are worth matching by name: other listings just add metadata.
-      const id = canonicalIdOf(host, nativeId, model) ?? (provider ? lookup(nativeId) : undefined);
+      const id =
+        canonicalIdOf(labOf.get(host), nativeId, model) ??
+        (provider ? lookup(nativeId) : undefined);
       if (!id) continue;
 
       const namespace = id.split("/", 1)[0]!;
-      if (!labs.has(namespace) || !LABS.has(namespace)) continue;
-      const lab = LABS.get(namespace);
+      if (!byNamespace.has(namespace)) continue;
+      const lab = byNamespace.get(namespace)!.provider;
 
       let entry = entries.get(id);
       // The lab's own listing is the most authoritative source of metadata.
-      const ownRank = FIRST_PARTY.get(host) === namespace ? -1 : rank;
+      const ownRank = labOf.get(host) === namespace ? -1 : rank;
       if (!entry) entries.set(id, (entry = { model, rank: ownRank, listings: new Map() }));
       else if (ownRank < entry.rank) Object.assign(entry, { model, rank: ownRank });
 
@@ -328,7 +316,7 @@ export function fromModelsDev(
     const { model, listings } = entries.get(id)!;
 
     // The lab's own provider first, then the others in preference order.
-    const lab = LABS.get(id.split("/", 1)[0]!);
+    const lab = byNamespace.get(id.split("/", 1)[0]!)!.provider;
     const ordered = PROVIDER_ORDER.filter((p) => p !== lab && listings.has(p));
     if (lab && listings.has(lab)) ordered.unshift(lab);
 

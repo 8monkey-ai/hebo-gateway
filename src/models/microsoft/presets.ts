@@ -13,9 +13,21 @@ const extras: ModelCatalog = {
   },
 };
 
-registerModels("microsoft", snapshot as ModelsDevCatalog, extras);
-
-export const maiTranscribe = defineModelFamily({
+const lab = registerModels({
   namespace: "microsoft",
-  version: /^microsoft\/mai-transcribe-(\d+(?:\.\d+)?)$/u,
+  provider: "azure",
+  snapshot: snapshot as ModelsDevCatalog,
+  extras,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const maiTranscribe = defineModelFamily(lab, {
+  version: /^mai-transcribe-(\d+(?:\.\d+)?)$/u,
 });

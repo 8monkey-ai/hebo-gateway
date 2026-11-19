@@ -1,5 +1,5 @@
 import { compileGlob } from "../utils/glob.ts";
-import { defineModelGroup, type ModelGroup } from "./catalog.ts";
+import { defineModelGroup, type ModelGroup, type ModelLab } from "./catalog.ts";
 import type { ModelId, ModelsDevCatalog } from "./types.ts";
 
 /**
@@ -17,11 +17,11 @@ export type ModelFamily<G extends string = never, P extends string = "v"> = {
   readonly [K in `${P}${number}` | `${P}${number}.x`]: ModelGroup;
 };
 
+/** IDs and patterns are written without the lab namespace, e.g. `claude-opus-*`. */
 export type ModelFamilyConfig<G extends string, P extends string> = {
-  namespace: string;
   /**
    * Matches the models of the family, capturing their version if they have one (`-`
-   * separators read as `.`), e.g. `/^anthropic\/claude-[a-z]+-(\d+(?:-\d)?)(?:-\d{8})?$/u`.
+   * separators read as `.`), e.g. `/^claude-[a-z]+-(\d+(?:-\d)?)(?:-\d{8})?$/u`.
    */
   version: RegExp;
   /** Prefix of the version group keys. @default "v" */
@@ -41,15 +41,18 @@ const sameVersion = (a: string, b: string) => {
 };
 
 export function defineModelFamily<const G extends string = never, const P extends string = "v">(
+  lab: Pick<ModelLab, "namespace">,
   config: ModelFamilyConfig<G, P>,
 ): ModelFamily<G, P> {
-  const { namespace, version, prefix = "v", groups = {} as Record<G, string> } = config;
-  const namespaces = [namespace];
+  const { version, prefix = "v", groups = {} as Record<G, string> } = config;
+  const namespaces = [lab.namespace];
+  const scope = `${lab.namespace}/`;
 
   const members = (source: ModelsDevCatalog) => {
     const out: [ModelId, string | undefined][] = [];
     for (const id in source) {
-      const match = version.exec(id);
+      if (!id.startsWith(scope)) continue;
+      const match = version.exec(id.slice(scope.length));
       if (match) out.push([id, match[1]?.replaceAll("-", ".")]);
     }
     return out;
@@ -78,7 +81,9 @@ export function defineModelFamily<const G extends string = never, const P extend
   };
 
   for (const [name, patterns] of Object.entries<string | readonly string[]>(groups)) {
-    const tests = (typeof patterns === "string" ? [patterns] : patterns).map((p) => compileGlob(p));
+    const tests = (typeof patterns === "string" ? [patterns] : patterns).map((p) =>
+      compileGlob(scope + p),
+    );
     family[name] = group((source) => Object.keys(source).filter((id) => tests.some((t) => t(id))));
   }
 

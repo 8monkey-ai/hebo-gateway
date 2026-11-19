@@ -2,7 +2,12 @@ import { logger } from "../logger/index.ts";
 import { getNativeIds } from "../providers/registry.ts";
 import type { ProviderId, ProviderRegistry } from "../providers/types.ts";
 import { compileGlob } from "../utils/glob.ts";
-import { fromModelsDev, MODELS_DEV_API_URL, type ModelsDevApi } from "./models-dev.ts";
+import {
+  fromModelsDev,
+  MODELS_DEV_API_URL,
+  type ModelsDevApi,
+  type ModelsDevLab,
+} from "./models-dev.ts";
 import type {
   CatalogModel,
   ModelCatalog,
@@ -15,27 +20,30 @@ export const DEFAULT_CATALOG_TIMEOUT_MS = 5000;
 
 // --- Lab registry --------------------------------------------------------------------------
 
-type Lab = { snapshot: ModelsDevCatalog; extras: ModelCatalog };
+export type ModelLabConfig = ModelsDevLab & {
+  /** models.dev snapshot bundled with the release, used when the live catalog cannot load. */
+  snapshot: ModelsDevCatalog;
+  /** Models not on models.dev yet. They only fill gaps: a model listed upstream always wins. */
+  extras?: ModelCatalog;
+};
 
-const labs = new Map<string, Lab>();
+/** A registered lab, e.g. to define its model families with `defineModelFamily`. */
+export type ModelLab = Readonly<ModelLabConfig>;
+
+const labs = new Map<string, ModelLab>();
 
 /**
  * Registers the models of a lab namespace (e.g. `anthropic`). Lab modules
  * (`@hebo-ai/gateway/models/<lab>`) call it when imported: only registered labs are part of
  * the catalog.
- *
- * @param snapshot models.dev snapshot bundled with the release, used when the live catalog
- *   cannot be loaded.
- * @param extras Models not on models.dev yet. They only fill gaps: a model listed upstream
- *   always wins.
  */
-export function registerModels(
-  namespace: string,
-  snapshot: ModelsDevCatalog,
-  extras: ModelCatalog = {},
-): void {
-  labs.set(namespace, { snapshot, extras });
+export function registerModels(lab: ModelLabConfig): ModelLab {
+  labs.set(lab.namespace, lab);
+  return lab;
 }
+
+/** Labs registered so far, keyed by namespace. */
+export const getRegisteredLabs = (): ReadonlyMap<string, ModelLab> => labs;
 
 // --- Selections ------------------------------------------------------------------------------
 
@@ -206,8 +214,8 @@ export type ModelCatalogStore = {
 // Shared by every gateway (and endpoint) in the process that loads the same source.
 const remote = new Map<string, Promise<ModelsDevCatalog | null>>();
 
-const fetchCatalog = (url: string, namespaces: readonly string[], timeout: number) => {
-  const key = `${url}#${namespaces.join(",")}`;
+const fetchCatalog = (url: string, read: readonly ModelLab[], timeout: number) => {
+  const key = `${url}#${read.map((lab) => lab.namespace).join(",")}`;
   let pending = remote.get(key);
   if (pending) return pending;
 
@@ -216,7 +224,7 @@ const fetchCatalog = (url: string, namespaces: readonly string[], timeout: numbe
       const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const catalog = fromModelsDev((await res.json()) as ModelsDevApi, namespaces);
+      const catalog = fromModelsDev((await res.json()) as ModelsDevApi, read);
       const count = Object.keys(catalog).length;
       if (count === 0) throw new Error("no models found");
 
@@ -249,6 +257,7 @@ export function createModelCatalog(
   const namespaces = [...(def?.namespaces ?? labs.keys())];
   namespaces.sort();
 
+  const read: ModelLab[] = [];
   const extras: ModelCatalog = {};
   const bundled: ModelsDevCatalog = {};
   for (const ns of namespaces) {
@@ -258,6 +267,7 @@ export function createModelCatalog(
         `No models registered for '${ns}': import its lab module from "@hebo-ai/gateway/models/*"`,
       );
     }
+    read.push(lab);
     Object.assign(extras, lab.extras);
     Object.assign(bundled, lab.snapshot);
   }
@@ -307,22 +317,20 @@ export function createModelCatalog(
       return current;
     },
     load() {
-      pending ??= fetchCatalog(
-        source,
-        namespaces,
-        options.timeout ?? DEFAULT_CATALOG_TIMEOUT_MS,
-      ).then((upstream) => {
-        let catalog = upstream ? build(upstream) : undefined;
-        if (!catalog || Object.keys(catalog).length === 0) {
-          if (catalog) logger.warn(`[models] no live model matches the configured providers`);
-          catalog = build(bundled);
-        }
-        if (Object.keys(catalog).length === 0) {
-          logger.warn(`[models] no model is served by a configured provider`);
-        }
-        current = catalog;
-        return catalog;
-      });
+      pending ??= fetchCatalog(source, read, options.timeout ?? DEFAULT_CATALOG_TIMEOUT_MS).then(
+        (upstream) => {
+          let catalog = upstream ? build(upstream) : undefined;
+          if (!catalog || Object.keys(catalog).length === 0) {
+            if (catalog) logger.warn(`[models] no live model matches the configured providers`);
+            catalog = build(bundled);
+          }
+          if (Object.keys(catalog).length === 0) {
+            logger.warn(`[models] no model is served by a configured provider`);
+          }
+          current = catalog;
+          return catalog;
+        },
+      );
       return pending;
     },
   };

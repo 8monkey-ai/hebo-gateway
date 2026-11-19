@@ -3,9 +3,20 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("minimax", snapshot as ModelsDevCatalog);
-
-export const minimax = defineModelFamily({
+const lab = registerModels({
   namespace: "minimax",
-  version: /^minimax\/MiniMax-M(\d+(?:\.\d+)?)(?:-[A-Za-z]+)*$/u,
+  provider: "minimax",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const minimax = defineModelFamily(lab, {
+  version: /^MiniMax-M(\d+(?:\.\d+)?)(?:-[A-Za-z]+)*$/u,
 });

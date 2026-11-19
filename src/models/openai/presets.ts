@@ -3,24 +3,33 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("openai", snapshot as ModelsDevCatalog);
-
-export const gpt = defineModelFamily({
+const lab = registerModels({
   namespace: "openai",
-  version: /^openai\/gpt-(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+  provider: "openai",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const gpt = defineModelFamily(lab, {
+  version: /^gpt-(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
   groups: {
-    codex: "openai/gpt-*-codex*",
-    pro: "openai/gpt-*-pro",
-    transcription: "openai/gpt-*transcribe",
+    codex: "gpt-*-codex*",
+    pro: "gpt-*-pro",
+    transcription: "gpt-*transcribe",
   },
 });
 
-export const gptOss = defineModelFamily({
-  namespace: "openai",
-  version: /^openai\/gpt-oss-/u,
+export const gptOss = defineModelFamily(lab, {
+  version: /^gpt-oss-/u,
 });
 
-export const textEmbeddings = defineModelFamily({
-  namespace: "openai",
-  version: /^openai\/text-embedding-(\d+)-[a-z]+$/u,
+export const textEmbeddings = defineModelFamily(lab, {
+  version: /^text-embedding-(\d+)-[a-z]+$/u,
 });

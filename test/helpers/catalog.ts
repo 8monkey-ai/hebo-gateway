@@ -2,24 +2,16 @@ import { readFileSync } from "node:fs";
 
 import type { ProviderV4 } from "@ai-sdk/provider";
 
-// oxlint-disable no-unassigned-import
-import "../../src/models/alibaba/index.ts";
-import "../../src/models/amazon/index.ts";
-import "../../src/models/anthropic/index.ts";
-import "../../src/models/cohere/index.ts";
-import "../../src/models/deepseek/index.ts";
-import "../../src/models/google/index.ts";
-import "../../src/models/meta/index.ts";
-import "../../src/models/microsoft/index.ts";
-import "../../src/models/minimax/index.ts";
-import "../../src/models/moonshot/index.ts";
-import "../../src/models/openai/index.ts";
-import "../../src/models/voyage/index.ts";
-import "../../src/models/xai/index.ts";
-import "../../src/models/zai/index.ts";
-// oxlint-enable no-unassigned-import
 import { createModelCatalog } from "../../src/models/catalog.ts";
 import type { ModelCatalog, ModelsDevCatalog } from "../../src/models/types.ts";
+
+const MODELS_DIR = `${import.meta.dir}/../../src/models`;
+
+// Registers every lab module, found on disk. Loaded synchronously: with a top-level await,
+// Bun runs some test files before this module is initialized.
+for (const path of new Bun.Glob("*/index.ts").scanSync({ cwd: MODELS_DIR, absolute: true })) {
+  require(path);
+}
 
 /**
  * Loads the bundled models.dev snapshots of every lab for `provider`, registered as `id`,
@@ -29,8 +21,8 @@ export const loadBundledCatalog = (id: string, provider: ProviderV4): ModelCatal
   createModelCatalog(undefined, { [id]: provider }, { source: false }).current!;
 
 const snapshots: ModelsDevCatalog = {};
-for (const path of new Bun.Glob("src/models/*/models-dev.json").scanSync({
-  cwd: `${import.meta.dir}/../..`,
+for (const path of new Bun.Glob("*/models-dev.json").scanSync({
+  cwd: MODELS_DIR,
   absolute: true,
 })) {
   Object.assign(snapshots, JSON.parse(readFileSync(path, "utf8")) as ModelsDevCatalog);

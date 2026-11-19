@@ -3,10 +3,21 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("xai", snapshot as ModelsDevCatalog);
-
-export const grok = defineModelFamily({
+const lab = registerModels({
   namespace: "xai",
-  version: /^xai\/grok-(\d+(?:\.\d+)?)(?:-[a-z0-9-]+)?$/u,
-  groups: { transcription: "xai/grok-*-transcribe-*" },
+  provider: "xai",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const grok = defineModelFamily(lab, {
+  version: /^grok-(\d+(?:\.\d+)?)(?:-[a-z0-9-]+)?$/u,
+  groups: { transcription: "grok-*-transcribe-*" },
 });

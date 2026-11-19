@@ -51,11 +51,11 @@ If priorities conflict, apply this order:
 
 - `src/index.ts`: public entrypoint.
 - `src/gateway.ts`: gateway construction and core lifecycle.
-- `src/models/types.ts`: canonical model ID union (from the bundled snapshots) and catalog shape.
-- `src/models/models-dev.ts`: models.dev → catalog conversion (labs, provider hosts, native IDs).
+- `src/models/types.ts`: catalog shape and `CanonicalModelId` (extended by each lab module with its snapshot IDs).
+- `src/models/models-dev.ts`: models.dev → catalog conversion for the registered labs (provider hosts, native IDs).
 - `src/models/catalog.ts`: lab registry, `defineModelCatalog`, catalog loading and fallback.
 - `src/models/family.ts`: model families (`all`, `latest`, version and named groups).
-- `src/models/*/presets.ts`: lab registration (snapshot + gap-filling extras) and family exports.
+- `src/models/*/presets.ts`: lab registration (namespace, provider, snapshot, gap-filling extras), model ID types and family exports. The only place a lab is named.
 - `src/models/*/models-dev.json`: bundled models.dev snapshot per lab (`bun run models:sync`).
 - `src/models/*/middleware.ts`: model-family middleware.
 - `src/providers/*/canonical.ts`: provider-wide native ID rules (inference profiles, Mantle, MaaS).

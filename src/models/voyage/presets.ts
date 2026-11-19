@@ -20,9 +20,21 @@ const extras: ModelCatalog = {
   "voyageai/voyage-code-3": embedding("Voyage Code 3", "2024-12-04"),
 };
 
-registerModels("voyageai", snapshot as ModelsDevCatalog, extras);
-
-export const voyage = defineModelFamily({
+const lab = registerModels({
   namespace: "voyageai",
-  version: /^voyageai\/voyage-(?:[a-z]+-)?(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+  provider: "voyage",
+  snapshot: snapshot as ModelsDevCatalog,
+  extras,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const voyage = defineModelFamily(lab, {
+  version: /^voyage-(?:[a-z]+-)?(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
 });

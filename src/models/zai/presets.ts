@@ -3,9 +3,21 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("zhipuai", snapshot as ModelsDevCatalog);
-
-export const glm = defineModelFamily({
+const lab = registerModels({
   namespace: "zhipuai",
-  version: /^zhipuai\/glm-(\d+(?:\.\d+)?)(?:[a-z]*)(?:-[a-z]+)*$/u,
+  provider: "zai",
+  host: "zai",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const glm = defineModelFamily(lab, {
+  version: /^glm-(\d+(?:\.\d+)?)(?:[a-z]*)(?:-[a-z]+)*$/u,
 });

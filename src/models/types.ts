@@ -1,27 +1,16 @@
 import type { ProviderId } from "../providers/types.ts";
 
-// Model IDs known at build time: the keys of the models.dev snapshots bundled with each lab.
-type SnapshotIds<T> = Extract<keyof T, string>;
+/**
+ * Model IDs known at build time. Each lab module adds the keys of its bundled models.dev
+ * snapshot, so only the IDs of imported labs autocomplete.
+ */
+export interface CanonicalModelIds {}
 
 /**
  * Canonical model ID: the models.dev lab ID (`<lab>/<model>`), e.g. `anthropic/claude-opus-4-6`.
  *   https://models.dev
  */
-export type CanonicalModelId =
-  | SnapshotIds<typeof import("./alibaba/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./amazon/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./anthropic/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./cohere/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./deepseek/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./google/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./meta/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./microsoft/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./minimax/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./moonshot/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./openai/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./voyage/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./xai/models-dev.json", { with: { type: "json" } })>
-  | SnapshotIds<typeof import("./zai/models-dev.json", { with: { type: "json" } })>;
+export type CanonicalModelId = Extract<keyof CanonicalModelIds, string>;
 
 // Models released after the build are accepted too.
 // oxlint-disable-next-line ban-types

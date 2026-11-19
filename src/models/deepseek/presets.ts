@@ -3,9 +3,20 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("deepseek", snapshot as ModelsDevCatalog);
-
-export const deepseek = defineModelFamily({
+const lab = registerModels({
   namespace: "deepseek",
-  version: /^deepseek\/deepseek-v(\d+(?:\.\d+)?)(?:-[a-z]+)*(?:-\d{4})?$/u,
+  provider: "deepseek",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const deepseek = defineModelFamily(lab, {
+  version: /^deepseek-v(\d+(?:\.\d+)?)(?:-[a-z]+)*(?:-\d{4})?$/u,
 });

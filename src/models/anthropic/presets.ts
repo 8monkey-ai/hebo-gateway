@@ -3,15 +3,26 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("anthropic", snapshot as ModelsDevCatalog);
-
-export const claude = defineModelFamily({
+const lab = registerModels({
   namespace: "anthropic",
-  version: /^anthropic\/claude-[a-z]+-(\d+(?:-\d)?)(?:-\d{8})?$/u,
+  provider: "anthropic",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const claude = defineModelFamily(lab, {
+  version: /^claude-[a-z]+-(\d+(?:-\d)?)(?:-\d{8})?$/u,
   groups: {
-    opus: "anthropic/claude-opus-*",
-    sonnet: "anthropic/claude-sonnet-*",
-    haiku: "anthropic/claude-haiku-*",
-    fable: "anthropic/claude-fable-*",
+    opus: "claude-opus-*",
+    sonnet: "claude-sonnet-*",
+    haiku: "claude-haiku-*",
+    fable: "claude-fable-*",
   },
 });

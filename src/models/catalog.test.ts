@@ -45,16 +45,19 @@ const ACME: ModelsDevCatalog = {
   "acme/anvil-2": model("Anvil 2", "2026-05-01"),
 };
 
-registerModels("acme", ACME, {
-  "acme/rocket-4": custom("Rocket 4", "2026-09-01"),
-  // Already listed upstream: the upstream entry wins.
-  "acme/rocket-2": custom("Rocket 2 (extra)", "2026-06-01"),
+const acme = registerModels({
+  namespace: "acme",
+  snapshot: ACME,
+  extras: {
+    "acme/rocket-4": custom("Rocket 4", "2026-09-01"),
+    // Already listed upstream: the upstream entry wins.
+    "acme/rocket-2": custom("Rocket 2 (extra)", "2026-06-01"),
+  },
 });
 
-const rocket = defineModelFamily({
-  namespace: "acme",
-  version: /^acme\/rocket-(\d+(?:\.\d+)?)$/u,
-  groups: { stable: ["acme/rocket-1", "acme/rocket-2"] },
+const rocket = defineModelFamily(acme, {
+  version: /^rocket-(\d+(?:\.\d+)?)$/u,
+  groups: { stable: ["rocket-1", "rocket-2"] },
 });
 
 const providers = { a: new MockProviderV4(), b: new MockProviderV4() };
@@ -95,7 +98,7 @@ describe("defineModelCatalog", () => {
   test("latest is the newest stable release of each family", () => {
     expect(Object.keys(resolve(rocket.latest))).toEqual(["acme/rocket-4"]);
 
-    const anvil = defineModelFamily({ namespace: "acme", version: /^acme\/(?:anvil|rocket)-/u });
+    const anvil = defineModelFamily(acme, { version: /^(?:anvil|rocket)-/u });
     const latest = Object.keys(resolve(anvil.latest));
     latest.sort();
     expect(latest).toEqual(["acme/anvil-2", "acme/rocket-4"]);
@@ -123,6 +126,17 @@ describe("defineModelCatalog", () => {
     const out = resolve("acme/rocket-2", "acme/rocket-4");
     expect(out["acme/rocket-2"]!.name).toBe("Rocket 2");
     expect(out["acme/rocket-4"]!.name).toBe("Rocket 4");
+  });
+
+  test("families only match models of their lab", () => {
+    registerModels({
+      namespace: "other",
+      snapshot: {
+        "other/rocket-9": model("Rocket 9", "2026-11-01"),
+        "other/anvil-9": model("Anvil 9", "2026-11-01"),
+      },
+    });
+    expect(Object.keys(resolve(rocket.all, "other/anvil-9"))).not.toContain("other/rocket-9");
   });
 
   test("skips undefined inputs and flattens arrays", () => {

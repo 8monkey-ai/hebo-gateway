@@ -1,10 +1,26 @@
 import { describe, expect, test } from "bun:test";
 
 import { CANONICAL_PROVIDER_IDS } from "../providers/types.ts";
-import { fromModelsDev, type ModelsDevApi, type ModelsDevModel } from "./models-dev.ts";
+import {
+  fromModelsDev,
+  type ModelsDevApi,
+  type ModelsDevLab,
+  type ModelsDevModel,
+} from "./models-dev.ts";
 import type { ModelCatalog } from "./types.ts";
 
 const SNAPSHOTS = new Bun.Glob("*/models-dev.json");
+
+// Labs as registered by their lab modules.
+const LABS: ModelsDevLab[] = [
+  { namespace: "anthropic", provider: "anthropic" },
+  { namespace: "minimax", provider: "minimax" },
+  { namespace: "openai", provider: "openai" },
+  { namespace: "voyageai", provider: "voyage" },
+  { namespace: "zhipuai", provider: "zai", host: "zai" },
+];
+
+const convert = (api: ModelsDevApi, labs = LABS) => fromModelsDev(api, labs);
 
 const chat = (overrides: ModelsDevModel = {}): ModelsDevModel => ({
   name: "Model",
@@ -32,7 +48,7 @@ describe("fromModelsDev", () => {
       anthropic: { models: { "claude-x-1": chat({ name: "Claude X 1", family: "claude-x" }) } },
     };
 
-    expect(fromModelsDev(api)).toEqual({
+    expect(convert(api)).toEqual({
       "anthropic/claude-x-1": {
         name: "Claude X 1",
         family: "claude-x",
@@ -55,7 +71,7 @@ describe("fromModelsDev", () => {
       zai: { models: { "glm-9": chat() } },
     };
 
-    expect(Object.keys(fromModelsDev(api)["zhipuai/glm-9"]!.providers)).toEqual([
+    expect(Object.keys(convert(api)["zhipuai/glm-9"]!.providers)).toEqual([
       "zai",
       "bedrock",
       "fireworks",
@@ -75,7 +91,7 @@ describe("fromModelsDev", () => {
       deepinfra: { models: { "acme/x": chat({ canonical_model_id: "acme/x" }) } },
     };
 
-    expect(Object.keys(fromModelsDev(api))).toEqual(["openai/gpt-new"]);
+    expect(Object.keys(convert(api))).toEqual(["openai/gpt-new"]);
   });
 
   test("skips models that no gateway provider serves", () => {
@@ -83,7 +99,7 @@ describe("fromModelsDev", () => {
       openrouter: { models: { "openai/gpt-x": chat({ canonical_model_id: "openai/gpt-x" }) } },
     };
 
-    expect(fromModelsDev(api)).toEqual({});
+    expect(convert(api)).toEqual({});
   });
 
   test("maps specialized types and assigns closed-weight ones to their lab", () => {
@@ -105,7 +121,7 @@ describe("fromModelsDev", () => {
       },
     };
 
-    const catalog = fromModelsDev(api);
+    const catalog = convert(api);
     expect(catalog["voyageai/voyage-9"]?.modalities?.output).toEqual(["embeddings"]);
     expect(catalog["voyageai/voyage-9"]?.providers).toEqual({ voyage: "voyage-9" });
     // Open weights can be served by anyone, so the lab is not assumed to.
@@ -118,7 +134,7 @@ describe("fromModelsDev", () => {
       azure: { models: { "gpt-x": chat(), "model-router": chat() } },
     };
 
-    const catalog = fromModelsDev(api);
+    const catalog = convert(api);
     expect(catalog["openai/gpt-x"]?.providers).toEqual({ openai: "gpt-x", azure: "gpt-x" });
     expect(Object.keys(catalog)).toEqual(["openai/gpt-x"]);
   });
@@ -129,7 +145,26 @@ describe("fromModelsDev", () => {
       anthropic: { models: { "claude-x": chat() } },
     };
 
-    expect(Object.keys(fromModelsDev(api, ["anthropic"]))).toEqual(["anthropic/claude-x"]);
+    const anthropic = LABS.filter((lab) => lab.namespace === "anthropic");
+    expect(Object.keys(convert(api, anthropic))).toEqual(["anthropic/claude-x"]);
+  });
+
+  test("reads a lab's own listing from its models.dev provider", () => {
+    const api: ModelsDevApi = { zai: { models: { "glm-9": chat() } } };
+
+    expect(convert(api)["zhipuai/glm-9"]?.providers).toEqual({ zai: "glm-9" });
+  });
+
+  test("leaves a name shared with a lab that is not registered unmatched", () => {
+    const api: ModelsDevApi = {
+      openai: { models: { "x-1": chat() } },
+      // `acme` is a namespace on models.dev, so its own listing counts as first-party.
+      acme: { models: { "x-1": chat() } },
+      deepinfra: { models: { "acme/x-2": chat({ canonical_model_id: "acme/x-2" }) } },
+      azure: { models: { "x-1": chat() } },
+    };
+
+    expect(convert(api)["openai/x-1"]?.providers).toEqual({ openai: "x-1" });
   });
 
   test("picks the native ID named like the model, and skips routers", () => {
@@ -147,7 +182,7 @@ describe("fromModelsDev", () => {
       },
     };
 
-    expect(fromModelsDev(api)["minimax/MiniMax-M9"]?.providers).toEqual({
+    expect(convert(api)["minimax/MiniMax-M9"]?.providers).toEqual({
       minimax: "MiniMax-M9",
       fireworks: "accounts/fireworks/models/minimax-m9",
     });
@@ -161,7 +196,7 @@ describe("fromModelsDev", () => {
       },
     };
 
-    expect(fromModelsDev(api)["anthropic/claude-x"]?.providers).toEqual({
+    expect(convert(api)["anthropic/claude-x"]?.providers).toEqual({
       anthropic: "claude-x",
     });
   });
@@ -194,7 +229,7 @@ describe("fromModelsDev", () => {
       },
     };
 
-    const providers = Object.entries(fromModelsDev(api)).map(([id, m]) => [id, m!.providers]);
+    const providers = Object.entries(convert(api)).map(([id, m]) => [id, m!.providers]);
     expect(Object.fromEntries(providers)).toEqual({
       "openai/gpt-a": { bedrock: "{ip?}openai.gpt-a" },
       "openai/gpt-b": { bedrock: "{ip}openai.gpt-b" },
@@ -211,7 +246,7 @@ describe("fromModelsDev", () => {
       constructor: { models: { x: chat({ canonical_model_id: "constructor/x" }) } },
     } as unknown as ModelsDevApi;
 
-    expect(fromModelsDev(api)).toEqual({});
+    expect(convert(api)).toEqual({});
   });
 });
 

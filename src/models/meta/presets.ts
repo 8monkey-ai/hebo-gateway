@@ -3,9 +3,19 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("meta", snapshot as ModelsDevCatalog);
-
-export const llama = defineModelFamily({
+const lab = registerModels({
   namespace: "meta",
-  version: /^meta\/llama-(\d+(?:\.\d+)?)-/u,
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const llama = defineModelFamily(lab, {
+  version: /^llama-(\d+(?:\.\d+)?)-/u,
 });

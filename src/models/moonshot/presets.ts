@@ -3,10 +3,21 @@ import { defineModelFamily } from "../family.ts";
 import type { ModelsDevCatalog } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
-registerModels("moonshotai", snapshot as ModelsDevCatalog);
-
-export const kimi = defineModelFamily({
+const lab = registerModels({
   namespace: "moonshotai",
-  version: /^moonshotai\/kimi-k(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+  provider: "moonshot",
+  snapshot: snapshot as ModelsDevCatalog,
+});
+
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends Record<
+    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
+    true
+  > {}
+}
+
+export const kimi = defineModelFamily(lab, {
+  version: /^kimi-k(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
   prefix: "k",
 });

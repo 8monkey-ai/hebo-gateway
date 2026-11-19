@@ -3,39 +3,17 @@ import { describe, expect, test } from "bun:test";
 import { MockProviderV4 } from "ai/test";
 
 import { CANONICAL_PROVIDER_IDS } from "../providers/types.ts";
-import * as alibaba from "./alibaba/presets.ts";
-import * as amazon from "./amazon/presets.ts";
 import * as anthropic from "./anthropic/presets.ts";
 import { createModelCatalog, defineModelCatalog, type ModelGroup } from "./catalog.ts";
-import * as cohere from "./cohere/presets.ts";
-import * as deepseek from "./deepseek/presets.ts";
 import type { ModelFamily } from "./family.ts";
-import * as google from "./google/presets.ts";
-import * as meta from "./meta/presets.ts";
-import * as microsoft from "./microsoft/presets.ts";
-import * as minimax from "./minimax/presets.ts";
 import * as moonshot from "./moonshot/presets.ts";
-import * as openai from "./openai/presets.ts";
-import * as voyage from "./voyage/presets.ts";
-import * as xai from "./xai/presets.ts";
-import * as zai from "./zai/presets.ts";
 
-const LABS = [
-  alibaba,
-  amazon,
-  anthropic,
-  cohere,
-  deepseek,
-  google,
-  meta,
-  microsoft,
-  minimax,
-  moonshot,
-  openai,
-  voyage,
-  xai,
-  zai,
-];
+// Every lab module, found on disk.
+const LABS = await Promise.all(
+  [...new Bun.Glob("*/presets.ts").scanSync({ cwd: import.meta.dir, absolute: true })].map(
+    (path) => import(path) as Promise<Record<string, ModelFamily>>,
+  ),
+);
 
 const providers = Object.fromEntries(CANONICAL_PROVIDER_IDS.map((p) => [p, new MockProviderV4()]));
 
@@ -44,7 +22,7 @@ const ids = (group: ModelGroup | undefined) =>
 
 describe("bundled model families", () => {
   for (const lab of LABS) {
-    for (const [name, family] of Object.entries(lab) as [string, ModelFamily][]) {
+    for (const [name, family] of Object.entries(lab)) {
       test(`${name}: latest is a non-empty part of all`, () => {
         const all = ids(family.all);
         const latest = ids(family.latest);

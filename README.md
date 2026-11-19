@@ -242,7 +242,7 @@ const models = defineModelCatalog(
   claude["latest"],
   // The same, served only by Bedrock (`providers` narrows and reorders, other fields replace)
   claude["v5.x"]({ providers: ["bedrock"] }),
-  // Single models (autocompleted), or `*` patterns
+  // Single models (IDs of imported labs autocomplete), or `*` patterns
   "openai/gpt-6-sol",
   "openai/gpt-oss-*",
 );
