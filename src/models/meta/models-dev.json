@@ -11,8 +11,16 @@
     "context": 128000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "azure": "llama-3.3-70b-instruct",
-      "deepinfra": "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      "azure": {
+        "id": "llama-3.3-70b-instruct",
+        "output": 32768,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "output": 16384,
+        "reasoning": false
+      }
     }
   },
   "meta/llama-4-scout-17b-instruct": {
@@ -27,8 +35,16 @@
     "context": 1310720,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "meta/llama-4-scout-17b-16e-instruct-maas",
-      "deepinfra": "meta-llama/Llama-4-Scout-17B-16E-Instruct"
+      "vertex": {
+        "id": "meta/llama-4-scout-17b-16e-instruct-maas",
+        "output": 8192,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "output": 16384,
+        "reasoning": false
+      }
     }
   },
   "meta/llama-guard-4-12b": {
@@ -42,7 +58,11 @@
     "context": 163840,
     "capabilities": ["attachments", "temperature"],
     "providers": {
-      "deepinfra": "meta-llama/Llama-Guard-4-12B"
+      "deepinfra": {
+        "id": "meta-llama/Llama-Guard-4-12B",
+        "output": 163840,
+        "reasoning": false
+      }
     }
   },
   "meta/llama-prompt-guard-2-22m": {
@@ -56,7 +76,11 @@
     },
     "context": 512,
     "providers": {
-      "groq": "meta-llama/llama-prompt-guard-2-22m"
+      "groq": {
+        "id": "meta-llama/llama-prompt-guard-2-22m",
+        "output": 512,
+        "reasoning": false
+      }
     }
   },
   "meta/llama-prompt-guard-2-86m": {
@@ -70,7 +94,11 @@
     },
     "context": 512,
     "providers": {
-      "groq": "meta-llama/llama-prompt-guard-2-86m"
+      "groq": {
+        "id": "meta-llama/llama-prompt-guard-2-86m",
+        "output": 512,
+        "reasoning": false
+      }
     }
   },
   "meta/muse-spark-open": {
@@ -85,8 +113,20 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "togetherai": "meta-models/Muse-Spark-Open-816B-A42B",
-      "fireworks": "accounts/fireworks/models/muse-spark-open"
+      "togetherai": {
+        "id": "meta-models/Muse-Spark-Open-816B-A42B",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/muse-spark-open",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
     }
   }
 }

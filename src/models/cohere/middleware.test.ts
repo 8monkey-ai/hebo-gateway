@@ -1,188 +1,72 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
-import { MockLanguageModelV4 } from "ai/test";
+import type { JSONObject } from "@ai-sdk/provider";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { ModelSpec } from "../types.ts";
 import { cohereDimensionsMiddleware, cohereReasoningMiddleware } from "./middleware.ts";
 
 test("cohere middleware > matching patterns", () => {
-  const languageMatching = [
-    "cohere/command-a-reasoning-08-2025",
-    "cohere/command-a-plus-05-2026",
-    "cohere/north-mini-code-1-0",
-  ];
-
-  const languageNonMatching = [
-    "cohere/command-a-03-2025",
-    "cohere/command-r7b-12-2024",
-    "cohere/north-small-translate-1-0",
-  ];
-
-  for (const id of languageMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(cohereReasoningMiddleware);
+  for (const id of ["cohere/command-a-reasoning-08-2025", "cohere/north-mini-code-1-0"]) {
+    expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
+      cohereReasoningMiddleware(),
+    );
   }
 
-  for (const id of languageNonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).not.toContain(cohereReasoningMiddleware);
-  }
-
-  const embeddingMatching = ["cohere/embed-v4.0", "cohere/embed-english-v3.0"];
-
-  const embeddingNonMatching = ["cohere/command-a-03-2025"];
-
-  for (const id of embeddingMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
-    expect(middleware).toContain(cohereDimensionsMiddleware);
-  }
-
-  for (const id of embeddingNonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
-    expect(middleware).not.toContain(cohereDimensionsMiddleware);
-  }
+  expect(
+    modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: "cohere/embed-v4.0" }),
+  ).toContain(cohereDimensionsMiddleware);
+  expect(
+    modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: "cohere/command-a-03-2025" }),
+  ).not.toContain(cohereDimensionsMiddleware);
 });
 
-test("cohereReasoningMiddleware > should map effort to thinking budget", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 2000,
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "medium" },
-      },
-    },
-  };
+const thinkingOf = async (spec: ModelSpec, reasoning: JSONObject, maxOutputTokens?: number) =>
+  (await transform(cohereReasoningMiddleware(spec), withReasoning(reasoning, { maxOutputTokens })))
+    .providerOptions?.["cohere"]?.["thinking"];
 
-  const result = await cohereReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+const COMMAND_A: ModelSpec = { output: 32_000, reasoning: { toggle: true, budget: { min: 1 } } };
+
+describe("cohereReasoningMiddleware", () => {
+  test("computes the budget from the effort", async () => {
+    expect(await thinkingOf(COMMAND_A, { enabled: true, effort: "medium" }, 10_000)).toEqual({
+      type: "enabled",
+      tokenBudget: 5000,
+    });
+    expect(await thinkingOf(COMMAND_A, { enabled: true, effort: "high" })).toEqual({
+      type: "enabled",
+      tokenBudget: 25_600,
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 2000,
-    providerOptions: {
-      cohere: {
-        thinking: {
-          type: "enabled",
-          tokenBudget: 1024,
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("cohereReasoningMiddleware > should disable reasoning when requested", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false },
-      },
-    },
-  };
-
-  const result = await cohereReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+  test("takes max_tokens as the budget", async () => {
+    expect(await thinkingOf(COMMAND_A, { enabled: true, max_tokens: 2000 })).toEqual({
+      type: "enabled",
+      tokenBudget: 2000,
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      cohere: {
-        thinking: {
-          type: "disabled",
-        },
-      },
-      unknown: {},
+  test.each([{ enabled: false }, { enabled: false, effort: "none" }])(
+    "turns thinking off (%o)",
+    async (reasoning) => {
+      expect(await thinkingOf(COMMAND_A, reasoning)).toEqual({ type: "disabled" });
     },
-  });
-});
+  );
 
-test("cohereReasoningMiddleware > should default reasoning budget when enabled without effort", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 4000,
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true },
-      },
-    },
-  };
-
-  const result = await cohereReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+  test("sends a plain toggle to models without a budget", async () => {
+    expect(
+      await thinkingOf({ reasoning: { toggle: true } }, { enabled: true, effort: "high" }),
+    ).toEqual({
+      type: "enabled",
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 4000,
-    providerOptions: {
-      cohere: {
-        thinking: {
-          type: "enabled",
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("cohereReasoningMiddleware > should keep North on a plain thinking toggle", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 2000,
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "high" },
-      },
-    },
-  };
-
-  const result = await cohereReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "north-mini-code-1-0" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 2000,
-    providerOptions: {
-      cohere: { thinking: { type: "enabled" } },
-      unknown: {},
-    },
-  });
-});
-
-test("cohereReasoningMiddleware > should disable thinking for none effort", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "none" },
-      },
-    },
-  };
-
-  const result = await cohereReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "north-mini-code-1-0" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      cohere: { thinking: { type: "disabled" } },
-      unknown: {},
-    },
+  test("drops reasoning for models that don't reason", async () => {
+    const result = await transform(
+      cohereReasoningMiddleware({ reasoning: false }),
+      withReasoning({ enabled: true, effort: "high" }),
+    );
+    expect(result.providerOptions).toEqual({ unknown: {} });
   });
 });

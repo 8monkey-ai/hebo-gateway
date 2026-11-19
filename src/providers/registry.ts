@@ -8,7 +8,7 @@ import {
 
 import { GatewayError } from "../errors/gateway.ts";
 import { logger } from "../logger/index.ts";
-import type { ModelCatalog, ModelId } from "../models/types.ts";
+import type { ModelCatalog, ModelId, ModelSpec } from "../models/types.ts";
 import type { ProviderRegistry } from "./types.ts";
 
 export const resolveProvider = (args: {
@@ -58,18 +58,22 @@ export const resolveProvider = (args: {
   return provider;
 };
 
-const kNativeIds = Symbol.for("hebo.gateway.native-ids");
+const kModelSpecs = Symbol.for("hebo.gateway.model-specs");
 
-/** Canonical -> provider-native model IDs, filled from the catalog once it is loaded. */
-export type NativeIds = Map<ModelId, string>;
+/** Canonical model ID -> how the provider serves it, filled from the catalog once it loads. */
+export type ModelSpecMap = Map<ModelId, ModelSpec>;
 
-/** Attaches a native ID map to a provider, read back with `getNativeIds`. */
-export const withNativeIds = <P extends ProviderV4>(provider: P, ids: NativeIds): P =>
-  Object.assign(provider, { [kNativeIds]: ids });
+/** Attaches a model spec map to a provider, read back with `getModelSpecs`. */
+export const withModelSpecs = <P extends ProviderV4>(provider: P, specs: ModelSpecMap): P =>
+  Object.assign(provider, { [kModelSpecs]: specs });
 
-/** Native ID map of a provider wrapped with `withCanonicalIds`, if any. */
-export const getNativeIds = (provider: ProviderV4) =>
-  (provider as { [kNativeIds]?: NativeIds })[kNativeIds];
+/** Model spec map of a provider wrapped with `withCanonicalIds`, if any. */
+export const getModelSpecs = (provider: ProviderV4) =>
+  (provider as { [kModelSpecs]?: ModelSpecMap })[kModelSpecs];
+
+/** How `provider` serves a model, as loaded from the catalog. */
+export const getModelSpec = (provider: ProviderV4, modelId: ModelId) =>
+  getModelSpecs(provider)?.get(modelId);
 
 export type CanonicalIdsOptions = {
   /**
@@ -145,11 +149,11 @@ export const withCanonicalIds = (
     return out;
   };
 
-  const ids: NativeIds = new Map();
+  const specs: ModelSpecMap = new Map();
 
   // Explicit mapping, then the catalog, then the fallback transform.
   const resolve = (id: string) => {
-    const native = mapping?.[id] ?? ids.get(id);
+    const native = mapping?.[id] ?? specs.get(id)?.id;
     const mapped =
       native === undefined ? applyFallbackAffixes(normalizeId(id)) : applyTemplate(native);
     if (mapped !== id) logger.debug(`[canonical] mapped ${id} to ${mapped}`);
@@ -178,5 +182,5 @@ export const withCanonicalIds = (
     } as ProviderV3 | ProviderV4,
   });
 
-  return withNativeIds(wrapped, ids);
+  return withModelSpecs(wrapped, specs);
 };

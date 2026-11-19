@@ -1,180 +1,70 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
-import { MockLanguageModelV4 } from "ai/test";
+import type { JSONObject } from "@ai-sdk/provider";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { ModelSpec } from "../types.ts";
 import { deepseekReasoningMiddleware } from "./middleware.ts";
 
-test("deepseek middleware > matching patterns", () => {
-  const languageMatching = ["deepseek/deepseek-v4-pro-0813", "deepseek/deepseek-v4.1-flash-1017"];
-
-  for (const id of languageMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(deepseekReasoningMiddleware);
+test("deepseek middleware > matches every DeepSeek model", () => {
+  for (const id of ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v5"]) {
+    expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
+      deepseekReasoningMiddleware(),
+    );
   }
 });
 
-test("deepseekReasoningMiddleware > should enable thinking when reasoning enabled", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true },
-      },
-    },
-  };
+const optionsOf = async (spec: ModelSpec, reasoning: JSONObject) =>
+  (await transform(deepseekReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions;
 
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+const V4: ModelSpec = { reasoning: { toggle: true, effort: ["low", "high", "max"] } };
+
+describe("deepseekReasoningMiddleware", () => {
+  test.each([
+    ["low", "low"],
+    ["medium", "high"],
+    ["xhigh", "max"],
+    ["max", "max"],
+  ] as const)("maps %s to the %s thinking strength", async (effort, expected) => {
+    expect(await optionsOf(V4, { enabled: true, effort })).toEqual({
+      deepseek: { thinking: { type: "enabled" }, reasoningEffort: expected },
+      unknown: {},
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
+  test.each([{ enabled: false }, { enabled: false, effort: "none" }])(
+    "turns thinking off (%o)",
+    async (reasoning) => {
+      expect(await optionsOf(V4, reasoning)).toEqual({
+        deepseek: { thinking: { type: "disabled" } },
+        unknown: {},
+      });
+    },
+  );
+
+  test("only sends what the model takes", async () => {
+    // e.g. DeepSeek V4 Flash on Chutes: a toggle only.
+    expect(
+      await optionsOf({ reasoning: { toggle: true } }, { enabled: true, effort: "high" }),
+    ).toEqual({
       deepseek: { thinking: { type: "enabled" } },
       unknown: {},
-    },
-  });
-});
-
-test("deepseekReasoningMiddleware > should map effort to the thinking strength", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "high" },
-      },
-    },
-  };
-
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+    });
+    // e.g. DeepSeek V4.1 Flash on Together: effort levels with `none`.
+    expect(
+      await optionsOf(
+        { reasoning: { effort: ["none", "low", "high", "max"] } },
+        { enabled: false },
+      ),
+    ).toEqual({ deepseek: { reasoningEffort: "none" }, unknown: {} });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      deepseek: { thinking: { type: "enabled" }, reasoningEffort: "high" },
-      unknown: {},
-    },
-  });
-});
-
-test("deepseekReasoningMiddleware > should collapse medium effort to low", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "medium" },
-      },
-    },
-  };
-
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      deepseek: { thinking: { type: "enabled" }, reasoningEffort: "low" },
-      unknown: {},
-    },
-  });
-});
-
-test("deepseekReasoningMiddleware > should disable thinking when reasoning disabled", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false },
-      },
-    },
-  };
-
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      deepseek: { thinking: { type: "disabled" } },
-      unknown: {},
-    },
-  });
-});
-
-test("deepseekReasoningMiddleware > should disable thinking with none effort", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "none" },
-      },
-    },
-  };
-
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      deepseek: { thinking: { type: "disabled" } },
-      unknown: {},
-    },
-  });
-});
-
-test("deepseekReasoningMiddleware > should pass through when no reasoning config", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {},
-    },
-  };
-
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      unknown: {},
-    },
-  });
-});
-
-test("deepseekReasoningMiddleware > should pass through when no unknown namespace", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {},
-  };
-
-  const result = await deepseekReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {},
+  test("leaves requests without reasoning untouched", async () => {
+    expect((await transform(deepseekReasoningMiddleware(V4), {})).providerOptions).toBeUndefined();
+    expect(
+      (await transform(deepseekReasoningMiddleware(V4), { providerOptions: { unknown: {} } }))
+        .providerOptions,
+    ).toEqual({ unknown: {} });
   });
 });

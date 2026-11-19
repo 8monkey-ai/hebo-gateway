@@ -1,7 +1,7 @@
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import { logger } from "../logger/index.ts";
-import type { ModelId } from "../models/types.ts";
+import type { ModelId, ModelSpec } from "../models/types.ts";
 import type { ProviderId } from "../providers/types.ts";
 import { addSpanEvent } from "../telemetry/span.ts";
 import { compileGlob } from "../utils/glob.ts";
@@ -17,10 +17,33 @@ import {
 } from "./debug.ts";
 import type { TranscriptionModelMiddleware } from "./transcription.ts";
 
+/** Middleware built from the spec of the model being served, see `defineSpecMiddleware`. */
+export type SpecMiddleware<M> = (spec?: ModelSpec) => M;
+
+const NO_SPEC: ModelSpec = Object.freeze({});
+
+/**
+ * Defines middleware built from the model spec (models.dev data such as its reasoning
+ * controls) of the provider serving the request, so it adapts to new models without a code
+ * change. Built once per spec; `spec` is empty for models without one (custom models).
+ */
+export function defineSpecMiddleware<M extends ModelMiddleware>(
+  create: (spec: ModelSpec) => M,
+): SpecMiddleware<M> {
+  const built = new WeakMap<ModelSpec, M>();
+  return (spec = NO_SPEC) => {
+    let middleware = built.get(spec);
+    if (!middleware) built.set(spec, (middleware = create(spec)));
+    return middleware;
+  };
+}
+
+type Entry<M> = M | SpecMiddleware<M>;
+
 type MiddlewareEntries = {
-  language?: LanguageModelMiddleware[];
-  embedding?: EmbeddingModelMiddleware[];
-  transcription?: TranscriptionModelMiddleware[];
+  language?: Entry<LanguageModelMiddleware>[];
+  embedding?: Entry<EmbeddingModelMiddleware>[];
+  transcription?: Entry<TranscriptionModelMiddleware>[];
 };
 
 type MiddlewareKind = "text" | "embedding" | "transcription";
@@ -68,7 +91,7 @@ class ModelMiddlewareMatcher {
   private provider = new SimpleMatcher();
 
   private static readonly MAX_CACHE = 500;
-  private cache = new Map<string, ModelMiddleware[]>();
+  private cache = new Map<string, { spec?: ModelSpec; chain: ModelMiddleware[] }>();
 
   useForModel(patterns: ModelId | readonly ModelId[], entry: MiddlewareEntries) {
     this.cache.clear();
@@ -84,31 +107,43 @@ class ModelMiddlewareMatcher {
     }
   }
 
-  for(modelId: ModelId, providerId: ProviderId): LanguageModelMiddleware[] {
+  /** `spec`: how the provider serves the model, see `getModelSpecs`. */
+  for(modelId: ModelId, providerId: ProviderId, spec?: ModelSpec): LanguageModelMiddleware[] {
     return this.resolve({
       kind: "text",
       modelId,
       providerId,
+      spec,
       forward: () => forwardParamsMiddleware(providerId),
       debug: debugFinalParamsMiddleware,
     }) as LanguageModelMiddleware[];
   }
 
-  forEmbedding(modelId: ModelId, providerId: ProviderId): EmbeddingModelMiddleware[] {
+  forEmbedding(
+    modelId: ModelId,
+    providerId: ProviderId,
+    spec?: ModelSpec,
+  ): EmbeddingModelMiddleware[] {
     return this.resolve({
       kind: "embedding",
       modelId,
       providerId,
+      spec,
       forward: () => forwardParamsEmbeddingMiddleware(providerId),
       debug: debugEmbeddingFinalParamsMiddleware,
     }) as EmbeddingModelMiddleware[];
   }
 
-  forTranscription(modelId: ModelId, providerId: ProviderId): TranscriptionModelMiddleware[] {
+  forTranscription(
+    modelId: ModelId,
+    providerId: ProviderId,
+    spec?: ModelSpec,
+  ): TranscriptionModelMiddleware[] {
     return this.resolve({
       kind: "transcription",
       modelId,
       providerId,
+      spec,
       forward: () => forwardParamsTranscriptionMiddleware(providerId),
       debug: debugTranscriptionFinalParamsMiddleware,
     }) as TranscriptionModelMiddleware[];
@@ -118,29 +153,31 @@ class ModelMiddlewareMatcher {
     kind: MiddlewareKind;
     modelId?: ModelId;
     providerId?: ProviderId;
+    spec?: ModelSpec;
     forward?: ModelMiddleware | (() => ModelMiddleware);
     debug?: ModelMiddleware;
   }): ModelMiddleware[] {
-    const { kind, modelId, providerId, forward, debug } = options;
+    const { kind, modelId, providerId, spec, forward, debug } = options;
 
     // `resolve` is also called without the forward / debug middlewares (tests, custom
     // chains), so they belong in the key: the resulting chains are not interchangeable.
     const key = `${kind}-${modelId}:${providerId}:${forward ? 1 : 0}${debug ? 1 : 0}`;
+    // Specs are stable per loaded catalog, so a different one only shows up across gateways.
     const cached = this.cache.get(key);
-    if (cached) {
+    if (cached && cached.spec === spec) {
       logger.debug(`[middleware] cache hit for ${modelId}:${providerId}`);
-      return cached;
+      return cached.chain;
     }
 
     const out: ModelMiddleware[] = [];
     if (modelId) {
-      out.push(...this.collect(this.model.match(modelId), kind));
+      out.push(...this.collect(this.model.match(modelId), kind, spec));
     }
     if (forward) {
       out.push(typeof forward === "function" ? forward() : forward);
     }
     if (providerId) {
-      out.push(...this.collect(this.provider.match(providerId), kind));
+      out.push(...this.collect(this.provider.match(providerId), kind, spec));
     }
     if (debug) {
       out.push(debug);
@@ -156,16 +193,20 @@ class ModelMiddlewareMatcher {
       addSpanEvent("hebo.middleware.cache.evicted");
     }
 
-    this.cache.set(key, out);
+    this.cache.set(key, { spec, chain: out });
     return out;
   }
 
-  private collect(entries: MiddlewareEntries[], kind: MiddlewareKind): ModelMiddleware[] {
+  private collect(
+    entries: MiddlewareEntries[],
+    kind: MiddlewareKind,
+    spec: ModelSpec | undefined,
+  ): ModelMiddleware[] {
     const out: ModelMiddleware[] = [];
     for (const s of entries) {
-      if (kind === "text") out.push(...(s.language ?? []));
-      else if (kind === "embedding") out.push(...(s.embedding ?? []));
-      else out.push(...(s.transcription ?? []));
+      const list: Entry<ModelMiddleware>[] | undefined =
+        kind === "text" ? s.language : kind === "embedding" ? s.embedding : s.transcription;
+      for (const m of list ?? []) out.push(typeof m === "function" ? m(spec) : m);
     }
     return out;
   }

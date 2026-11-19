@@ -15,7 +15,7 @@ import "../models/voyage/index.ts";
 import { withCanonicalIdsForAzure } from "../providers/azure/canonical.ts";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical.ts";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical.ts";
-import { getNativeIds, resolveProvider } from "./registry.ts";
+import { getModelSpecs, resolveProvider } from "./registry.ts";
 import type { ProviderRegistry } from "./types.ts";
 
 /** The gateway catalog for `id`, from the bundled snapshot: it hands out the native IDs. */
@@ -81,7 +81,7 @@ test("GPT-5.6 Sol resolves through Bedrock's Mantle endpoint in gateway config",
   expect(languageModel.provider).toBe("bedrock-mantle.responses");
 });
 
-test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
+test("Claude Haiku 5.5 resolves through Bedrock's InvokeModel endpoint", () => {
   const config = {
     providers: {
       bedrock: withCanonicalIdsForBedrock(
@@ -89,9 +89,9 @@ test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
       ),
     },
   };
-  const models = catalog(config.providers, "anthropic/claude-haiku-4-5-20251001");
+  const models = catalog(config.providers, "anthropic/claude-haiku-5-5");
 
-  const modelId = "anthropic/claude-haiku-4-5-20251001";
+  const modelId = "anthropic/claude-haiku-5-5";
 
   const provider = resolveProvider({
     providers: config.providers,
@@ -103,7 +103,7 @@ test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
   const languageModel = provider.languageModel(modelId);
 
   // Same Bedrock ID as on Converse, but served with the Anthropic request shape.
-  expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
+  expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-5-5");
   expect(languageModel.provider).toBe("bedrock.anthropic.messages");
 });
 
@@ -145,8 +145,8 @@ test("catalog native IDs win over the fallback transform, explicit mappings over
   const voyage = withCanonicalIdsForVoyage(createVoyage({ apiKey: "test-key" }), {
     "voyageai/voyage-pinned": "voyage-pinned-2",
   });
-  getNativeIds(voyage)!.set("voyageai/voyage-9", "voyage-9-native");
-  getNativeIds(voyage)!.set("voyageai/voyage-pinned", "ignored");
+  getModelSpecs(voyage)!.set("voyageai/voyage-9", { id: "voyage-9-native" });
+  getModelSpecs(voyage)!.set("voyageai/voyage-pinned", { id: "ignored" });
 
   expect(voyage.embeddingModel("voyageai/voyage-9").modelId).toBe("voyage-9-native");
   expect(voyage.embeddingModel("voyageai/voyage-pinned").modelId).toBe("voyage-pinned-2");

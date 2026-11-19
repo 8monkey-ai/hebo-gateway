@@ -66,7 +66,9 @@ Middlewares bridge OpenAI-compatible request parameters to provider-native optio
 
 ### Model-level middlewares (`src/models/<lab>/middleware.ts`)
 
-Registered via `modelMiddlewareMatcher.useForModel()` and matched by canonical model ID patterns. They are registered when the lab module is imported.
+Registered via `modelMiddlewareMatcher.useForModel()` when the lab module is imported, and matched by canonical model ID patterns. Patterns cover the whole lab (e.g. `anthropic/claude-*`, `deepseek/*`), never single versions: a new model must get the middleware without a code change.
+
+What differs per model comes from its **model spec** (models.dev data per provider: native ID, output limit, reasoning controls), not from its ID. Middleware that needs it is defined with `defineSpecMiddleware((spec) => …)` and reads the controls with `reasoningControls(spec, FALLBACK)`, where `FALLBACK` describes the lab's current generation (used for models without data). `resolveReasoning` maps the request to what the model takes; the middleware only writes the result in the lab's API shape.
 
 | Category       | When needed                                                                             | Example                                                                                         |
 | -------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -74,9 +76,9 @@ Registered via `modelMiddlewareMatcher.useForModel()` and matched by canonical m
 | **Dimensions** | Embedding model supports variable output dimensions with a non-standard parameter name. | `voyageDimensionsMiddleware` maps `dimensions` → Voyage `outputDimension`                       |
 | **Caching**    | Model supports prompt caching (`cost.cache_read` / `cost.cache_write` on models.dev).   | `claudePromptCachingMiddleware` maps `cache_control` → Anthropic `cacheControl` provider option |
 
-1. Check whether an existing pattern already matches the canonical ID (e.g. `anthropic/claude-opus-5*`).
-2. If not, extend the `useForModel()` patterns.
-3. Add or update tests in `src/models/<lab>/middleware.test.ts`.
+1. A new model of an existing lab usually needs nothing: run `bun run models:sync` and review the reasoning changes it lists.
+2. Behaviour models.dev doesn't describe goes in the lab middleware as a list of the **older** models that differ (e.g. explicit caching is `google/gemini-3*` only), so the list never grows. If an old model would need special-casing in otherwise generic logic, prefer dropping it with `exclude` in the lab's `registerModels` (e.g. Claude 4.5).
+3. Add or update tests in `src/models/<lab>/middleware.test.ts`, with inline specs.
 
 ### Provider-level middlewares (`src/providers/<provider>/middleware.ts`)
 
@@ -88,7 +90,7 @@ Registered via `modelMiddlewareMatcher.useForProvider()` and matched by provider
 | **Reasoning**     | `bedrock`, `fireworks`      | Translates reasoning params into provider-native format (e.g., Bedrock `reasoningConfig`, Fireworks `thinking`) |
 | **Caching**       | `bedrock`                   | Maps `cache_control` → Bedrock `cachePoint` with provider-specific TTL handling                                 |
 
-Some middlewares filter internally by native model ID (e.g. `bedrockPromptCachingMiddleware` only applies to `nova` and `claude`); update those filters when needed.
+Provider-level middleware can also be defined with `defineSpecMiddleware` to read the model spec (e.g. `bedrockMantleReasoningMiddleware`). Some middlewares filter internally by native model ID (e.g. `bedrockPromptCachingMiddleware` only applies to `nova` and `claude`); update those filters when needed.
 
 ## Step 5: New Lab or Provider
 

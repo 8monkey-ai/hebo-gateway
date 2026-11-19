@@ -9,7 +9,11 @@
     "context": 128000,
     "capabilities": ["temperature"],
     "providers": {
-      "cohere": "c4ai-aya-expanse-32b"
+      "cohere": {
+        "id": "c4ai-aya-expanse-32b",
+        "output": 4000,
+        "reasoning": false
+      }
     }
   },
   "cohere/c4ai-aya-vision-32b": {
@@ -22,7 +26,11 @@
     "context": 16000,
     "capabilities": ["attachments", "temperature"],
     "providers": {
-      "cohere": "c4ai-aya-vision-32b"
+      "cohere": {
+        "id": "c4ai-aya-vision-32b",
+        "output": 4000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-a-03-2025": {
@@ -37,7 +45,11 @@
     "context": 256000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-a-03-2025"
+      "cohere": {
+        "id": "command-a-03-2025",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-a-plus-05-2026": {
@@ -52,7 +64,16 @@
     "context": 128000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-a-plus-05-2026"
+      "cohere": {
+        "id": "command-a-plus-05-2026",
+        "output": 64000,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "min": 1
+          }
+        }
+      }
     }
   },
   "cohere/command-a-reasoning-08-2025": {
@@ -67,7 +88,16 @@
     "context": 256000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-a-reasoning-08-2025"
+      "cohere": {
+        "id": "command-a-reasoning-08-2025",
+        "output": 32000,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "min": 1
+          }
+        }
+      }
     }
   },
   "cohere/command-a-translate-08-2025": {
@@ -82,7 +112,11 @@
     "context": 8000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-a-translate-08-2025"
+      "cohere": {
+        "id": "command-a-translate-08-2025",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-a-vision-07-2025": {
@@ -97,7 +131,11 @@
     "context": 128000,
     "capabilities": ["attachments", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-a-vision-07-2025"
+      "cohere": {
+        "id": "command-a-vision-07-2025",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-r-08-2024": {
@@ -112,7 +150,11 @@
     "context": 128000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-r-08-2024"
+      "cohere": {
+        "id": "command-r-08-2024",
+        "output": 4000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-r-plus-08-2024": {
@@ -127,7 +169,11 @@
     "context": 128000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-r-plus-08-2024"
+      "cohere": {
+        "id": "command-r-plus-08-2024",
+        "output": 4000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-r7b-12-2024": {
@@ -142,7 +188,11 @@
     "context": 128000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-r7b-12-2024"
+      "cohere": {
+        "id": "command-r7b-12-2024",
+        "output": 4000,
+        "reasoning": false
+      }
     }
   },
   "cohere/command-r7b-arabic-02-2025": {
@@ -157,7 +207,11 @@
     "context": 128000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "cohere": "command-r7b-arabic-02-2025"
+      "cohere": {
+        "id": "command-r7b-arabic-02-2025",
+        "output": 4000,
+        "reasoning": false
+      }
     }
   },
   "cohere/embed-v4.0": {
@@ -170,7 +224,9 @@
     },
     "context": 128000,
     "providers": {
-      "cohere": "embed-v4.0"
+      "cohere": {
+        "id": "embed-v4.0"
+      }
     }
   },
   "cohere/embed-v5.0-fast": {
@@ -183,7 +239,9 @@
     },
     "context": 128000,
     "providers": {
-      "cohere": "embed-v5.0-fast"
+      "cohere": {
+        "id": "embed-v5.0-fast"
+      }
     }
   },
   "cohere/embed-v5.0-pro": {
@@ -196,7 +254,9 @@
     },
     "context": 128000,
     "providers": {
-      "cohere": "embed-v5.0-pro"
+      "cohere": {
+        "id": "embed-v5.0-pro"
+      }
     }
   },
   "cohere/north-small-translate-1-0": {
@@ -210,7 +270,11 @@
     "context": 32768,
     "capabilities": ["temperature"],
     "providers": {
-      "cohere": "north-small-translate-09-2026"
+      "cohere": {
+        "id": "north-small-translate-09-2026",
+        "output": 16000,
+        "reasoning": false
+      }
     }
   },
   "cohere/tiny-aya-earth": {
@@ -223,7 +287,11 @@
     "context": 8000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "cohere": "tiny-aya-earth"
+      "cohere": {
+        "id": "tiny-aya-earth",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   },
   "cohere/tiny-aya-fire": {
@@ -236,7 +304,11 @@
     "context": 8000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "cohere": "tiny-aya-fire"
+      "cohere": {
+        "id": "tiny-aya-fire",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   },
   "cohere/tiny-aya-global": {
@@ -249,7 +321,11 @@
     "context": 8000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "cohere": "tiny-aya-global"
+      "cohere": {
+        "id": "tiny-aya-global",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   },
   "cohere/tiny-aya-water": {
@@ -262,7 +338,11 @@
     "context": 8000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "cohere": "tiny-aya-water"
+      "cohere": {
+        "id": "tiny-aya-water",
+        "output": 8000,
+        "reasoning": false
+      }
     }
   }
 }

@@ -3,20 +3,20 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { models } from "../endpoints/models/handler.ts";
-import { getNativeIds, withCanonicalIds } from "../providers/registry.ts";
+import { getModelSpecs, withCanonicalIds } from "../providers/registry.ts";
 import { claude } from "./anthropic/presets.ts";
 import { createModelCatalog, defineModelCatalog, registerModels } from "./catalog.ts";
 import { defineModelFamily } from "./family.ts";
 import type { ModelsDevApi } from "./models-dev.ts";
 import type { CatalogModel, ModelsDevCatalog, ModelsDevCatalogModel } from "./types.ts";
 
-// A models.dev model, with native IDs.
+// A models.dev model, with the spec of each provider.
 const model = (name: string, created: string, extra: Partial<ModelsDevCatalogModel> = {}) =>
   ({
     name,
     family: name.split(" ")[0]!.toLowerCase(),
     created,
-    providers: { a: `native-${name}`, b: `other-${name}` },
+    providers: { a: { id: `native-${name}`, output: 1000 }, b: { id: `other-${name}` } },
     ...extra,
   }) satisfies ModelsDevCatalogModel;
 
@@ -160,10 +160,10 @@ describe("createModelCatalog", () => {
     });
   });
 
-  test("hands the native IDs to the providers wrapped with withCanonicalIds", () => {
+  test("hands the model specs to the providers wrapped with withCanonicalIds", () => {
     const a = withCanonicalIds(new MockProviderV4());
     createModelCatalog(defineModelCatalog("acme/anvil-2"), { a }, offline);
-    expect(getNativeIds(a)?.get("acme/anvil-2")).toBe("native-Anvil 2");
+    expect(getModelSpecs(a)?.get("acme/anvil-2")).toBe(ACME["acme/anvil-2"]!.providers["a"]);
   });
 
   test("leaves the native IDs of custom models to the provider", () => {
@@ -183,7 +183,7 @@ describe("createModelCatalog", () => {
       offline,
     );
 
-    expect(getNativeIds(a)?.has("acme/rocket-5")).toBe(false);
+    expect(getModelSpecs(a)?.get("acme/rocket-5")).toEqual({});
     a.languageModel("acme/rocket-5");
     a.languageModel("acme/rocket-6");
     expect(seen).toEqual(["rocket-5", "rocket-six"]);

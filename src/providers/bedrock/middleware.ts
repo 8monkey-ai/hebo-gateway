@@ -9,16 +9,10 @@ import type { LanguageModelMiddleware } from "ai";
 
 import type {
   ChatCompletionsCacheControl,
-  ChatCompletionsReasoningEffort,
   ChatCompletionsServiceTier,
 } from "../../endpoints/chat-completions/schema.ts";
 import { logger } from "../../logger/index.ts";
-import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
-
-const BEDROCK_EFFORT_CAPABLE = ["-4-6", "-4-7"] as const;
-const isBedrockEffortCapable = (modelId: string) =>
-  BEDROCK_EFFORT_CAPABLE.some((tag) => modelId.includes(tag));
+import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 
 // Bedrock serves the default tier when the tier is omitted, so `auto` maps to nothing.
 // https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
@@ -56,49 +50,33 @@ export const bedrockServiceTierMiddleware: LanguageModelMiddleware = {
   },
 };
 
-export const bedrockGptReasoningMiddleware: LanguageModelMiddleware = {
+type BedrockReasoningOptions = BedrockProviderOptions &
+  Pick<AnthropicLanguageModelOptions, "thinking" | "effort"> &
+  Pick<OpenAIChatLanguageModelOptions, "reasoningEffort">;
+
+/**
+ * Lab middleware writes reasoning in its own API's shape (`thinking` / `effort`, or
+ * `reasoningEffort`). Converse takes all of it as `reasoningConfig`, which the SDK maps per
+ * model. Dropped for models that don't reason per their spec (models.dev).
+ */
+export const bedrockReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => ({
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
-    if (!model.modelId.includes("gpt")) return params;
-
-    const bedrock = params.providerOptions?.["bedrock"] as OpenAIChatLanguageModelOptions;
+  transformParams: async ({ params }) => {
+    const bedrock = params.providerOptions?.["bedrock"] as BedrockReasoningOptions | undefined;
     if (!bedrock) return params;
 
-    const effort = bedrock.reasoningEffort;
-    if (effort === undefined) return params;
+    const { thinking, effort, reasoningEffort } = bedrock;
+    if (!thinking && effort === undefined && reasoningEffort === undefined) return params;
 
-    const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
+    bedrock.thinking = undefined;
+    bedrock.effort = undefined;
+    bedrock.reasoningEffort = undefined;
+    if (spec.reasoning === false) return params;
 
-    // @ts-expect-error AI SDK does accept this
-    target.maxReasoningEffort = effort;
-
-    delete bedrock.reasoningEffort;
-
-    return params;
-  },
-};
-
-export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
-    if (!model.modelId.includes("claude")) return params;
-
-    const bedrock = params.providerOptions?.["bedrock"] as AnthropicLanguageModelOptions;
-    if (!bedrock) return params;
-
-    const thinking = bedrock.thinking;
-    const effort = bedrock.effort;
-
-    if (!thinking && effort === undefined) return params;
-
-    const target = ((bedrock as BedrockProviderOptions).reasoningConfig ??= {});
-
+    const target = (bedrock.reasoningConfig ??= {});
     if (thinking && typeof thinking === "object") {
-      // Bedrock Converse API supports "adaptive" natively for Claude Opus 4.6/4.7
-      // and Sonnet 4.6 via additionalModelRequestFields. Opus 4.7 *only* supports
-      // adaptive — "enabled" returns a 400.
+      // Converse takes "adaptive" natively via additionalModelRequestFields.
       // https://docs.aws.amazon.com/bedrock/latest/userguide/claude-messages-adaptive-thinking.html
       if (thinking.type === "between_tools") {
         throw new Error("Bedrock reasoningConfig does not support between_tools thinking.");
@@ -106,30 +84,21 @@ export const bedrockClaudeReasoningMiddleware: LanguageModelMiddleware = {
       target.type = thinking.type;
       if ("budgetTokens" in thinking && thinking.budgetTokens !== undefined) {
         target.budgetTokens = thinking.budgetTokens;
-      } else if (target.type === "enabled") {
-        // Bedrock requires budgetTokens when type is "enabled" — compute a fallback
-        // from effort, defaulting to "medium".
-        const mappedEffort: ChatCompletionsReasoningEffort =
-          effort === "max" ? "xhigh" : ((effort as ChatCompletionsReasoningEffort) ?? "medium");
-        target.budgetTokens = calculateReasoningBudgetFromEffort(
-          mappedEffort,
-          params.maxOutputTokens ?? 65536,
-          1024,
-        );
       }
     }
 
-    // FUTURE: bedrock currently does not support "effort" for other 4.x models
-    if (effort !== undefined && isBedrockEffortCapable(model.modelId)) {
-      target.maxReasoningEffort = effort;
+    // `none` is not an effort level on Converse.
+    const level = effort ?? reasoningEffort;
+    if (level === "none") target.type ??= "disabled";
+    else if (level !== undefined) {
+      target.maxReasoningEffort = level as NonNullable<
+        BedrockProviderOptions["reasoningConfig"]
+      >["maxReasoningEffort"];
     }
-
-    delete bedrock.thinking;
-    delete bedrock.effort;
 
     return params;
   },
-};
+}));
 
 function toBedrockCachePoint(modelId: string, cacheControl?: ChatCompletionsCacheControl) {
   const out: { type: "default"; ttl?: string } = { type: "default" };
@@ -185,31 +154,33 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
   },
 };
 
-// Mantle keeps the Bedrock namespace in the model ID (`openai.gpt-5.5`), which the OpenAI
-// model cannot recognize as a GPT-5 reasoning model: it would send `max_tokens` plus
-// `temperature` and drop `reasoning` entirely. `gpt-oss` genuinely is not one of those.
-const isMantleReasoningModel = (modelId: string) =>
-  modelId.startsWith("openai.gpt-") && !modelId.startsWith("openai.gpt-oss");
+// Mantle keeps the Bedrock namespace in the model ID (`openai.gpt-6-sol`), which the OpenAI
+// model cannot recognize as a reasoning model: it would send `max_tokens` plus `temperature`
+// and drop `reasoning` entirely. So reasoning is forced unless the model spec (models.dev)
+// says it doesn't reason.
+export const bedrockMantleReasoningMiddleware = defineSpecMiddleware(
+  (spec): LanguageModelMiddleware => {
+    const reasons = spec.reasoning !== false;
+    return {
+      specificationVersion: "v3",
+      // oxlint-disable-next-line require-await
+      transformParams: async ({ params }) => {
+        if (!reasons) return params;
 
-export const bedrockMantleReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
-    if (!isMantleReasoningModel(model.modelId)) return params;
+        const openai = ((params.providerOptions ??= {})["openai"] ??=
+          {}) as OpenAILanguageModelResponsesOptions;
+        openai.forceReasoning = true;
 
-    const openai = ((params.providerOptions ??= {})["openai"] ??=
-      {}) as OpenAILanguageModelResponsesOptions;
-    openai.forceReasoning = true;
-
-    return params;
+        return params;
+      },
+    };
   },
-};
+);
 
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   language: [
     bedrockServiceTierMiddleware,
-    bedrockGptReasoningMiddleware,
-    bedrockClaudeReasoningMiddleware,
+    bedrockReasoningMiddleware,
     bedrockPromptCachingMiddleware,
   ],
 });

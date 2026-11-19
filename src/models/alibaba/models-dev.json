@@ -11,7 +11,14 @@
     "context": 1000000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen-flash"
+      "alibaba": {
+        "id": "qwen-flash",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen-max": {
@@ -26,7 +33,11 @@
     "context": 32768,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen-max"
+      "alibaba": {
+        "id": "qwen-max",
+        "output": 8192,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen-mt-plus": {
@@ -41,7 +52,11 @@
     "context": 16384,
     "capabilities": ["temperature"],
     "providers": {
-      "alibaba": "qwen-mt-plus"
+      "alibaba": {
+        "id": "qwen-mt-plus",
+        "output": 8192,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen-plus": {
@@ -56,7 +71,14 @@
     "context": 1000000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen-plus"
+      "alibaba": {
+        "id": "qwen-plus",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen-plus-character-ja": {
@@ -71,7 +93,11 @@
     "context": 8192,
     "capabilities": ["temperature"],
     "providers": {
-      "alibaba": "qwen-plus-character-ja"
+      "alibaba": {
+        "id": "qwen-plus-character-ja",
+        "output": 512,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen-vl-ocr": {
@@ -86,7 +112,11 @@
     "context": 34096,
     "capabilities": ["attachments", "temperature"],
     "providers": {
-      "alibaba": "qwen-vl-ocr"
+      "alibaba": {
+        "id": "qwen-vl-ocr",
+        "output": 4096,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-235b-a22b-instruct-2507": {
@@ -100,8 +130,16 @@
     "context": 262144,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "qwen.qwen3-235b-a22b-2507-v1:0",
-      "deepinfra": "Qwen/Qwen3-235B-A22B-Instruct-2507"
+      "bedrock": {
+        "id": "qwen.qwen3-235b-a22b-2507-v1:0",
+        "output": 131072,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
+        "output": 16384,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-30b-a3b": {
@@ -115,7 +153,11 @@
     "context": 40960,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "Qwen/Qwen3-30B-A3B"
+      "deepinfra": {
+        "id": "Qwen/Qwen3-30B-A3B",
+        "output": 16384,
+        "reasoning": {}
+      }
     }
   },
   "alibaba/qwen3-32b": {
@@ -130,8 +172,18 @@
     "context": 32768,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "qwen.qwen3-32b-v1:0",
-      "deepinfra": "Qwen/Qwen3-32B"
+      "bedrock": {
+        "id": "qwen.qwen3-32b-v1:0",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3-32B",
+        "output": 16384,
+        "reasoning": {}
+      }
     }
   },
   "alibaba/qwen3-asr-flash": {
@@ -146,7 +198,9 @@
     "context": 53248,
     "capabilities": ["attachments"],
     "providers": {
-      "alibaba": "qwen3-asr-flash"
+      "alibaba": {
+        "id": "qwen3-asr-flash"
+      }
     }
   },
   "alibaba/qwen3-coder-480b-a35b-instruct": {
@@ -161,7 +215,11 @@
     "context": 262144,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo"
+      "deepinfra": {
+        "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",
+        "output": 66536,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-coder-flash": {
@@ -176,7 +234,11 @@
     "context": 1000000,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3-coder-flash"
+      "alibaba": {
+        "id": "qwen3-coder-flash",
+        "output": 65536,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-coder-next": {
@@ -191,7 +253,11 @@
     "context": 262144,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "qwen.qwen3-coder-next"
+      "bedrock": {
+        "id": "qwen.qwen3-coder-next",
+        "output": 65536,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-next-80b-a3b-instruct": {
@@ -206,8 +272,16 @@
     "context": 262144,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "qwen.qwen3-next-80b-a3b",
-      "deepinfra": "Qwen/Qwen3-Next-80B-A3B-Instruct"
+      "bedrock": {
+        "id": "qwen.qwen3-next-80b-a3b",
+        "output": 262000,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+        "output": 32768,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-omni-flash": {
@@ -222,7 +296,13 @@
     "context": 65536,
     "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
     "providers": {
-      "alibaba": "qwen3-omni-flash"
+      "alibaba": {
+        "id": "qwen3-omni-flash",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "alibaba/qwen3-vl-235b-a22b-instruct": {
@@ -237,8 +317,16 @@
     "context": 262144,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "qwen.qwen3-vl-235b-a22b",
-      "deepinfra": "Qwen/Qwen3-VL-235B-A22B-Instruct"
+      "bedrock": {
+        "id": "qwen.qwen3-vl-235b-a22b",
+        "output": 262000,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3-VL-235B-A22B-Instruct",
+        "output": 32768,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-vl-30b-a3b": {
@@ -253,7 +341,14 @@
     "context": 131072,
     "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
     "providers": {
-      "alibaba": "qwen3-vl-30b-a3b"
+      "alibaba": {
+        "id": "qwen3-vl-30b-a3b",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen3-vl-30b-a3b-instruct": {
@@ -267,7 +362,11 @@
     "context": 262144,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "Qwen/Qwen3-VL-30B-A3B-Instruct"
+      "deepinfra": {
+        "id": "Qwen/Qwen3-VL-30B-A3B-Instruct",
+        "output": 32768,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3-vl-plus": {
@@ -282,7 +381,14 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3-vl-plus"
+      "alibaba": {
+        "id": "qwen3-vl-plus",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen3.5-122b-a10b": {
@@ -296,7 +402,14 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.5-122b-a10b"
+      "alibaba": {
+        "id": "qwen3.5-122b-a10b",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen3.5-27b": {
@@ -310,9 +423,26 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.5-27b",
-      "deepinfra": "Qwen/Qwen3.5-27B",
-      "chutes": "Qwen/Qwen3.5-27B-TEE"
+      "alibaba": {
+        "id": "qwen3.5-27b",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.5-27B",
+        "output": 65536,
+        "reasoning": {}
+      },
+      "chutes": {
+        "id": "Qwen/Qwen3.5-27B-TEE",
+        "output": 262144,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "alibaba/qwen3.5-35b-a3b": {
@@ -326,8 +456,19 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.5-35b-a3b",
-      "deepinfra": "Qwen/Qwen3.5-35B-A3B"
+      "alibaba": {
+        "id": "qwen3.5-35b-a3b",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.5-35B-A3B",
+        "output": 81920,
+        "reasoning": {}
+      }
     }
   },
   "alibaba/qwen3.5-397b-a17b": {
@@ -341,9 +482,26 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.5-397b-a17b",
-      "deepinfra": "Qwen/Qwen3.5-397B-A17B",
-      "chutes": "Qwen/Qwen3.5-397B-A17B-TEE"
+      "alibaba": {
+        "id": "qwen3.5-397b-a17b",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.5-397B-A17B",
+        "output": 81920,
+        "reasoning": {}
+      },
+      "chutes": {
+        "id": "Qwen/Qwen3.5-397B-A17B-TEE",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "alibaba/qwen3.5-9b": {
@@ -357,8 +515,18 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "togetherai": "Qwen/Qwen3.5-9B",
-      "deepinfra": "Qwen/Qwen3.5-9B"
+      "togetherai": {
+        "id": "Qwen/Qwen3.5-9B",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.5-9B",
+        "output": 65536,
+        "reasoning": {}
+      }
     }
   },
   "alibaba/qwen3.5-flash": {
@@ -372,7 +540,16 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.5-flash"
+      "alibaba": {
+        "id": "qwen3.5-flash",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "max": 81920
+          }
+        }
+      }
     }
   },
   "alibaba/qwen3.5-plus": {
@@ -387,7 +564,14 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.5-plus"
+      "alibaba": {
+        "id": "qwen3.5-plus",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen3.6-27b": {
@@ -401,9 +585,26 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.6-27b",
-      "deepinfra": "Qwen/Qwen3.6-27B",
-      "chutes": "Qwen/Qwen3.6-27B-TEE"
+      "alibaba": {
+        "id": "qwen3.6-27b",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.6-27B",
+        "output": 65536,
+        "reasoning": {}
+      },
+      "chutes": {
+        "id": "Qwen/Qwen3.6-27B-TEE",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "alibaba/qwen3.6-35b-a3b": {
@@ -417,8 +618,19 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.6-35b-a3b",
-      "deepinfra": "Qwen/Qwen3.6-35B-A3B"
+      "alibaba": {
+        "id": "qwen3.6-35b-a3b",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.6-35B-A3B",
+        "output": 81920,
+        "reasoning": {}
+      }
     }
   },
   "alibaba/qwen3.6-flash": {
@@ -432,7 +644,14 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.6-flash"
+      "alibaba": {
+        "id": "qwen3.6-flash",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen3.6-plus": {
@@ -447,8 +666,21 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.6-plus",
-      "togetherai": "Qwen/Qwen3.6-Plus"
+      "alibaba": {
+        "id": "qwen3.6-plus",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "togetherai": {
+        "id": "Qwen/Qwen3.6-Plus",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "alibaba/qwen3.7-flash": {
@@ -462,7 +694,16 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.7-flash"
+      "alibaba": {
+        "id": "qwen3.7-flash",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "max": 262144
+          }
+        }
+      }
     }
   },
   "alibaba/qwen3.7-max": {
@@ -476,9 +717,24 @@
     "context": 1000000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.7-max",
-      "togetherai": "Qwen/Qwen3.7-Max",
-      "deepinfra": "Qwen/Qwen3.7-Max"
+      "alibaba": {
+        "id": "qwen3.7-max",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      },
+      "togetherai": {
+        "id": "Qwen/Qwen3.7-Max",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.7-Max",
+        "output": 131072,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3.7-plus": {
@@ -493,7 +749,14 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.7-plus"
+      "alibaba": {
+        "id": "qwen3.7-plus",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
     }
   },
   "alibaba/qwen3.8-2.4t-a95b": {
@@ -507,7 +770,13 @@
     "context": 262144,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "fireworks": "accounts/fireworks/models/qwen3p8-2p4t-a95b"
+      "fireworks": {
+        "id": "accounts/fireworks/models/qwen3p8-2p4t-a95b",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "xhigh"]
+        }
+      }
     }
   },
   "alibaba/qwen3.8-27b": {
@@ -522,9 +791,26 @@
     "context": 131072,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "groq": "qwen/qwen3.8-27b",
-      "deepinfra": "Qwen/Qwen3.8-27B",
-      "chutes": "Qwen/Qwen3.8-27B-TEE"
+      "groq": {
+        "id": "qwen/qwen3.8-27b",
+        "output": 16384,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high"]
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.8-27B",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "xhigh"]
+        }
+      },
+      "chutes": {
+        "id": "Qwen/Qwen3.8-27B-TEE",
+        "output": 65536,
+        "reasoning": {}
+      }
     }
   },
   "alibaba/qwen3.8-flash": {
@@ -538,8 +824,22 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.8-flash",
-      "deepinfra": "Qwen/Qwen3.8-Flash"
+      "alibaba": {
+        "id": "qwen3.8-flash",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "xhigh"],
+          "budget": {
+            "max": 262144
+          }
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.8-Flash",
+        "output": 131072,
+        "reasoning": false
+      }
     }
   },
   "alibaba/qwen3.8-max": {
@@ -553,9 +853,30 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.8-max",
-      "deepinfra": "Qwen/Qwen3.8-Max",
-      "fireworks": "accounts/fireworks/models/qwen3p8-max"
+      "alibaba": {
+        "id": "qwen3.8-max",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "xhigh"],
+          "budget": {
+            "min": 0,
+            "max": 262144
+          }
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.8-Max",
+        "output": 131072,
+        "reasoning": false
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/qwen3p8-max",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "xhigh"]
+        }
+      }
     }
   },
   "alibaba/qwen3.8-omni-flash": {
@@ -569,7 +890,13 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "qwen3.8-omni-flash"
+      "alibaba": {
+        "id": "qwen3.8-omni-flash",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "xhigh"]
+        }
+      }
     }
   },
   "alibaba/qwen4-max": {
@@ -583,7 +910,13 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "Qwen/Qwen4-Max"
+      "deepinfra": {
+        "id": "Qwen/Qwen4-Max",
+        "output": 262144,
+        "reasoning": {
+          "effort": ["none", "low", "high", "xhigh"]
+        }
+      }
     }
   }
 }

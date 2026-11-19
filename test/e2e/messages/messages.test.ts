@@ -15,7 +15,7 @@ import {
 
 // hasCredentials is true when explicit env vars are set OR when ~/.aws credentials may be present
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
-const MODEL = "anthropic/claude-haiku-4-5-20251001";
+const MODEL = "anthropic/claude-haiku-5-5";
 // Bedrock retires older models ("marked by provider as Legacy"), so keep this
 // pointed at a currently active reasoning-capable model.
 const THINKING_MODEL = "anthropic/claude-sonnet-4-6";
@@ -35,7 +35,7 @@ let baseUrl: string;
 describe.skipIf(!hasCredentials)("Messages E2E (Bedrock)", () => {
   beforeAll(() => {
     testServer = createBedrockTestServer(
-      "anthropic/claude-haiku-4-5-20251001",
+      "anthropic/claude-haiku-5-5",
       "anthropic/claude-sonnet-4-6",
     );
     baseUrl = testServer.baseUrl;

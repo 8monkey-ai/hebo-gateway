@@ -10,8 +10,16 @@
     "context": 1000000,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.20-0309-non-reasoning",
-      "vertex": "xai/grok-4.20-non-reasoning"
+      "xai": {
+        "id": "grok-4.20-0309-non-reasoning",
+        "output": 30000,
+        "reasoning": false
+      },
+      "vertex": {
+        "id": "xai/grok-4.20-non-reasoning",
+        "output": 30000,
+        "reasoning": false
+      }
     }
   },
   "xai/grok-4.20-0309-reasoning": {
@@ -25,8 +33,16 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.20-0309-reasoning",
-      "vertex": "xai/grok-4.20-reasoning"
+      "xai": {
+        "id": "grok-4.20-0309-reasoning",
+        "output": 30000,
+        "reasoning": {}
+      },
+      "vertex": {
+        "id": "xai/grok-4.20-reasoning",
+        "output": 30000,
+        "reasoning": {}
+      }
     }
   },
   "xai/grok-4.20-multi-agent-0309": {
@@ -40,7 +56,13 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.20-multi-agent-0309"
+      "xai": {
+        "id": "grok-4.20-multi-agent-0309",
+        "output": 30000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
     }
   },
   "xai/grok-4.3": {
@@ -54,9 +76,25 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.3",
-      "bedrock": "mantle:xai.grok-4.3",
-      "vertex": "xai/grok-4.3"
+      "xai": {
+        "id": "grok-4.3",
+        "output": 30000,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh"]
+        }
+      },
+      "bedrock": {
+        "id": "mantle:xai.grok-4.3",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high"]
+        }
+      },
+      "vertex": {
+        "id": "xai/grok-4.3",
+        "output": 30000,
+        "reasoning": {}
+      }
     }
   },
   "xai/grok-4.5": {
@@ -70,7 +108,13 @@
     "context": 500000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.5"
+      "xai": {
+        "id": "grok-4.5",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
     }
   },
   "xai/grok-4.6": {
@@ -85,10 +129,34 @@
     "context": 500000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.6",
-      "bedrock": "mantle:xai.grok-4.6",
-      "vertex": "xai/grok-4.6",
-      "azure": "grok-4.6"
+      "xai": {
+        "id": "grok-4.6",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      },
+      "bedrock": {
+        "id": "mantle:xai.grok-4.6",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      },
+      "vertex": {
+        "id": "xai/grok-4.6",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      },
+      "azure": {
+        "id": "grok-4.6",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
     }
   },
   "xai/grok-4.7": {
@@ -103,10 +171,34 @@
     "context": 500000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-4.7",
-      "bedrock": "{ip}xai.grok-4.7",
-      "vertex": "xai/grok-4.7",
-      "azure": "grok-4.7"
+      "xai": {
+        "id": "grok-4.7",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip}xai.grok-4.7",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      },
+      "vertex": {
+        "id": "xai/grok-4.7",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      },
+      "azure": {
+        "id": "grok-4.7",
+        "output": 500000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
     }
   },
   "xai/grok-build-0.1": {
@@ -120,7 +212,11 @@
     "context": 256000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "xai": "grok-build-0.1"
+      "xai": {
+        "id": "grok-build-0.1",
+        "output": 256000,
+        "reasoning": {}
+      }
     }
   },
   "xai/grok-voice-transcribe-2.0": {
@@ -134,7 +230,9 @@
     "context": 15000,
     "capabilities": ["attachments"],
     "providers": {
-      "xai": "grok-voice-transcribe-2.0"
+      "xai": {
+        "id": "grok-voice-transcribe-2.0"
+      }
     }
   }
 }

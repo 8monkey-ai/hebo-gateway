@@ -11,7 +11,11 @@
     "context": 128000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "azure": "phi-4-mini"
+      "azure": {
+        "id": "phi-4-mini",
+        "output": 4096,
+        "reasoning": false
+      }
     }
   }
 }

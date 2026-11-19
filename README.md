@@ -219,7 +219,7 @@ const gw = gateway({
 
 The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the models.dev snapshot bundled with the installed release if that fails (or times out after 5 seconds). New models therefore show up without upgrading the gateway.
 
-Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it; the first one serves the request. Provider-native IDs stay internal: the catalog hands the ones models.dev lists to the providers wrapped with `withCanonicalIds`.
+Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it; the first one serves the request. How each provider serves a model stays internal: the catalog hands the native ID, output limit and reasoning controls models.dev lists to the providers wrapped with `withCanonicalIds`, and model middleware is built from them (see [Model Middleware](#model-middleware)).
 
 #### Model Families
 
@@ -324,6 +324,46 @@ const gw = gateway({
 > On runtimes with tight per-request CPU limits (e.g. Cloudflare Workers free plan), parsing the full models.dev catalog on the first request can be too expensive. Use `source: false`, or point `source` at a smaller, self-hosted copy.
 
 The bundled snapshots live in `src/models/<lab>/models-dev.json` and are refreshed with `bun run models:sync` before every release.
+
+#### Model Middleware
+
+Each lab module registers middleware for all of its models (e.g. `anthropic/claude-*`), which maps the gateway's provider-agnostic params (reasoning, prompt caching, dimensions, …) to the lab's API. What differs per model and provider comes from models.dev, not from model IDs: the effort levels a model takes, whether reasoning can be turned off, whether it takes a thinking budget, and its output limit. A new model therefore gets the right mapping on restart, without a gateway release. Models without that data (e.g. user-defined ones) are treated like the lab's current generation.
+
+Custom middleware can use the same data with `defineSpecMiddleware`, which builds the middleware once per model spec:
+
+```ts
+import {
+  defineSpecMiddleware,
+  modelMiddlewareMatcher,
+  reasoningControls,
+  resolveReasoning,
+  takeReasoning,
+} from "@hebo-ai/gateway";
+import type { LanguageModelMiddleware } from "ai";
+
+const acmeReasoning = defineSpecMiddleware((spec): LanguageModelMiddleware => {
+  // The model's controls, or these when models.dev has none. `undefined`: it takes none.
+  const controls = reasoningControls(spec, { effort: ["low", "high"] });
+  return {
+    specificationVersion: "v3",
+    transformParams: async ({ params }) => {
+      const reasoning = takeReasoning(params);
+      if (!reasoning || !controls) return params;
+
+      const resolved = resolveReasoning(reasoning, controls, spec.output);
+      if (resolved?.effort) (params.providerOptions!["acme"] ??= {})["effort"] = resolved.effort;
+      return params;
+    },
+  };
+});
+
+modelMiddlewareMatcher.useForModel("acme/*", { language: [acmeReasoning] });
+```
+
+> [!NOTE]
+> Claude 4.5 models are not part of the catalog: unlike every later Claude model, they can't think adaptively.
+
+The sync script lists every change to the reasoning controls of a bundled model, so upstream data changes show up in review.
 
 ### Hooks
 
@@ -823,7 +863,9 @@ Normalization rules:
 - `enabled` -> fall-back to model default if none provided
 - `max_tokens`: fall-back to model default if model supports
 - `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`
-- Generic `effort` -> budget = percentage of `max_tokens`
+- `effort` -> the nearest level the model takes (per models.dev), ties going up, e.g. `xhigh` -> `max` on Claude Opus 4.6
+- Off (`enabled: false` or `effort: "none"`) -> the model's reasoning toggle, else its `none` level, else its lowest level for models that always reason
+- Generic `effort` -> budget = percentage of `max_tokens`, for models that take a budget
   - `none`: 0%
   - `minimal`: 10%
   - `low`: 20%

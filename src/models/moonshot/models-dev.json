@@ -11,7 +11,13 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "moonshotai.kimi-k2.5"
+      "bedrock": {
+        "id": "moonshotai.kimi-k2.5",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "moonshotai/kimi-k2.6": {
@@ -26,13 +32,31 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "moonshot": "kimi-k2.6",
-      "deepinfra": "moonshotai/Kimi-K2.6",
-      "chutes": "moonshotai/Kimi-K2.6-TEE"
+      "moonshot": {
+        "id": "kimi-k2.6",
+        "output": 262144,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K2.6",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "chutes": {
+        "id": "moonshotai/Kimi-K2.6-TEE",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "moonshotai/kimi-k2.7-code": {
-    "name": "Kimi K2.7 Code HighSpeed",
+    "name": "Kimi K2.7 Code",
     "family": "kimi-k2",
     "created": "2026-06-12",
     "knowledge": "2025-01",
@@ -43,7 +67,11 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "moonshot": "kimi-k2.7-code"
+      "moonshot": {
+        "id": "kimi-k2.7-code",
+        "output": 262144,
+        "reasoning": {}
+      }
     }
   },
   "moonshotai/kimi-k3": {
@@ -57,13 +85,55 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "moonshot": "kimi-k3",
-      "alibaba": "kimi-k3",
-      "bedrock": "{ip}moonshotai.kimi-k3",
-      "togetherai": "moonshotai/Kimi-K3",
-      "deepinfra": "moonshotai/Kimi-K3",
-      "fireworks": "accounts/fireworks/models/kimi-k3",
-      "chutes": "moonshotai/Kimi-K3-TEE"
+      "moonshot": {
+        "id": "kimi-k3",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "alibaba": {
+        "id": "kimi-k3",
+        "output": 1048576,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip}moonshotai.kimi-k3",
+        "output": 128000,
+        "reasoning": {}
+      },
+      "togetherai": {
+        "id": "moonshotai/Kimi-K3",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["none", "low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K3",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/kimi-k3",
+        "output": 1048576,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"]
+        }
+      },
+      "chutes": {
+        "id": "moonshotai/Kimi-K3-TEE",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "moonshotai/kimi-k3.1-pro": {
@@ -77,11 +147,42 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "moonshot": "kimi-k3.1-pro",
-      "bedrock": "{ip}moonshotai.kimi-k3.1",
-      "togetherai": "moonshotai/Kimi-K3.1-Pro",
-      "deepinfra": "moonshotai/Kimi-K3.1-Pro",
-      "fireworks": "accounts/fireworks/models/kimi-k3p1-pro"
+      "moonshot": {
+        "id": "kimi-k3.1-pro",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip}moonshotai.kimi-k3.1",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "togetherai": {
+        "id": "moonshotai/Kimi-K3.1-Pro",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K3.1-Pro",
+        "output": 943718,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/kimi-k3p1-pro",
+        "output": 1048576,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"]
+        }
+      }
     }
   }
 }

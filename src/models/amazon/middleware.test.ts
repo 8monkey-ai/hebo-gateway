@@ -1,129 +1,60 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
-import { MockLanguageModelV4 } from "ai/test";
+import type { JSONObject } from "@ai-sdk/provider";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { ModelSpec } from "../types.ts";
 import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware.ts";
 
 test("nova middleware > matching patterns", () => {
-  const languageMatching = ["amazon/nova-2-lite"];
-
-  const languageNonMatching = [
-    "amazon/nova-micro",
-    "amazon/nova-lite",
-    "amazon/nova-pro",
-    "amazon/nova-premier",
-  ];
-
-  for (const id of languageMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(novaReasoningMiddleware);
+  for (const id of ["amazon/nova-2-lite", "amazon/nova-3-pro"]) {
+    expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
+      novaReasoningMiddleware(),
+    );
   }
 
-  for (const id of languageNonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).not.toContain(novaReasoningMiddleware);
-  }
-
-  const embeddingMatching = ["amazon/nova-2-multimodal-embeddings"];
-
-  const embeddingNonMatching = ["amazon/nova-2-lite"];
-
-  for (const id of embeddingMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
-    expect(middleware).toContain(novaDimensionsMiddleware);
-  }
-
-  for (const id of embeddingNonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
-    expect(middleware).not.toContain(novaDimensionsMiddleware);
-  }
+  expect(
+    modelMiddlewareMatcher.resolve({
+      kind: "embedding",
+      modelId: "amazon/nova-2-multimodal-embeddings",
+    }),
+  ).toContain(novaDimensionsMiddleware);
+  expect(
+    modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: "amazon/nova-2-lite" }),
+  ).not.toContain(novaDimensionsMiddleware);
 });
 
-test("novaReasoningMiddleware > should map effort to Bedrock reasoning config", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "low" },
-      },
-    },
-  };
+const configOf = async (spec: ModelSpec, reasoning: JSONObject) =>
+  (await transform(novaReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions?.[
+    "amazon"
+  ]?.["reasoningConfig"];
 
-  const result = await novaReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+const NOVA_2: ModelSpec = { reasoning: { toggle: true, effort: ["low", "medium", "high"] } };
+
+describe("novaReasoningMiddleware", () => {
+  test("maps the effort to the nearest maximum effort", async () => {
+    expect(await configOf(NOVA_2, { enabled: true, effort: "max" })).toEqual({
+      type: "enabled",
+      maxReasoningEffort: "high",
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      amazon: {
-        reasoningConfig: {
-          type: "enabled",
-          maxReasoningEffort: "low",
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("novaReasoningMiddleware > should disable reasoning when requested", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false },
-      },
-    },
-  };
-
-  const result = await novaReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+  test("enables reasoning without effort", async () => {
+    expect(await configOf(NOVA_2, { enabled: true, max_tokens: 1000 })).toEqual({
+      type: "enabled",
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      amazon: {
-        reasoningConfig: {
-          type: "disabled",
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("novaReasoningMiddleware > should default reasoning effort when enabled without effort", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true },
-      },
-    },
-  };
-
-  const result = await novaReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4(),
+  test("turns reasoning off", async () => {
+    expect(await configOf(NOVA_2, { enabled: false })).toEqual({ type: "disabled" });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      amazon: {
-        reasoningConfig: {
-          type: "enabled",
-        },
-      },
-      unknown: {},
-    },
+  test("drops reasoning for models that don't reason", async () => {
+    const result = await transform(
+      novaReasoningMiddleware({ reasoning: false }),
+      withReasoning({ enabled: true, effort: "high" }),
+    );
+    expect(result.providerOptions).toEqual({ unknown: {} });
   });
 });

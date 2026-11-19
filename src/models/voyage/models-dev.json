@@ -9,7 +9,9 @@
     },
     "context": 32000,
     "providers": {
-      "voyage": "voyage-4"
+      "voyage": {
+        "id": "voyage-4"
+      }
     }
   },
   "voyageai/voyage-4-large": {
@@ -22,7 +24,9 @@
     },
     "context": 32000,
     "providers": {
-      "voyage": "voyage-4-large"
+      "voyage": {
+        "id": "voyage-4-large"
+      }
     }
   },
   "voyageai/voyage-4-lite": {
@@ -35,7 +39,9 @@
     },
     "context": 32000,
     "providers": {
-      "voyage": "voyage-4-lite"
+      "voyage": {
+        "id": "voyage-4-lite"
+      }
     }
   }
 }

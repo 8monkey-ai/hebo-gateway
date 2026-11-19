@@ -1,5 +1,5 @@
 import { logger } from "../logger/index.ts";
-import { getNativeIds } from "../providers/registry.ts";
+import { getModelSpecs } from "../providers/registry.ts";
 import type { ProviderId, ProviderRegistry } from "../providers/types.ts";
 import { compileGlob } from "../utils/glob.ts";
 import {
@@ -14,6 +14,7 @@ import type {
   ModelId,
   ModelsDevCatalog,
   ModelsDevCatalogModel,
+  ModelSpec,
 } from "./types.ts";
 
 export const DEFAULT_CATALOG_TIMEOUT_MS = 5000;
@@ -72,17 +73,17 @@ const applyOverride = (
   const { providers, ...rest } = override;
   if (!providers) return { ...model, ...rest };
 
-  const picked: Record<string, string | undefined> = {};
+  const picked: Record<string, ModelSpec> = {};
   for (const id of providers) {
-    if (id in model.providers) picked[id] = model.providers[id];
+    if (id in model.providers) picked[id] = model.providers[id]!;
   }
   return { ...model, ...rest, providers: picked };
 };
 
-// Custom models list providers only: their native IDs are left to the provider.
-const withoutNativeIds = (model: CatalogModel): ModelsDevCatalogModel => {
-  const providers: Record<string, undefined> = {};
-  for (const id of model.providers) providers[id] = undefined;
+// Custom models list providers only: their native IDs (and specs) are left to the provider.
+const withoutSpecs = (model: CatalogModel): ModelsDevCatalogModel => {
+  const providers: Record<string, ModelSpec> = {};
+  for (const id of model.providers) providers[id] = {};
   return { ...model, providers };
 };
 
@@ -245,7 +246,7 @@ const fetchCatalog = (url: string, read: readonly ModelLab[], timeout: number) =
 
 /**
  * Builds the gateway catalog from the `spec` (every registered lab when omitted), keeping
- * only configured providers. Their native IDs are handed to the providers wrapped with
+ * only configured providers. Their model specs are handed to the providers wrapped with
  * `withCanonicalIds`.
  */
 export function createModelCatalog(
@@ -276,7 +277,7 @@ export function createModelCatalog(
     // Custom models, then lab extras, fill the gaps upstream.
     const source: ModelsDevCatalog = { ...upstream };
     for (const gaps of [def?.custom, extras]) {
-      for (const id in gaps) source[id] ??= withoutNativeIds(gaps[id]!);
+      for (const id in gaps) source[id] ??= withoutSpecs(gaps[id]!);
     }
     const selected = def ? def.resolve(source) : source;
 
@@ -287,9 +288,9 @@ export function createModelCatalog(
       for (const p in model.providers) {
         if (!providers[p]) continue;
         kept.push(p);
-        // Native IDs are handed to the providers wrapped with `withCanonicalIds`.
-        const native = model.providers[p];
-        if (native !== undefined) getNativeIds(providers[p])?.set(id, native);
+        // Specs (native IDs, reasoning controls, …) are handed to the providers wrapped with
+        // `withCanonicalIds`, where middleware reads them.
+        getModelSpecs(providers[p])?.set(id, model.providers[p]!);
       }
       if (kept.length > 0) out[id] = { ...model, providers: kept };
     }

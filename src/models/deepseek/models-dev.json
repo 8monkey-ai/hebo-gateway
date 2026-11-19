@@ -11,7 +11,11 @@
     "context": 163840,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "deepseek-ai/DeepSeek-R1-0528"
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-R1-0528",
+        "output": 64000,
+        "reasoning": {}
+      }
     }
   },
   "deepseek/deepseek-v3": {
@@ -25,7 +29,11 @@
     "context": 163840,
     "capabilities": ["tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "deepseek-ai/DeepSeek-V3"
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V3",
+        "output": 8192,
+        "reasoning": false
+      }
     }
   },
   "deepseek/deepseek-v3.1": {
@@ -39,7 +47,13 @@
     "context": 163840,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "deepseek-ai/DeepSeek-V3.1"
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V3.1",
+        "output": 8192,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "deepseek/deepseek-v3.2": {
@@ -54,10 +68,32 @@
     "context": 163840,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "deepseek.v3.2",
-      "azure": "deepseek-v3.2",
-      "deepinfra": "deepseek-ai/DeepSeek-V3.2",
-      "chutes": "deepseek-ai/DeepSeek-V3.2-TEE"
+      "bedrock": {
+        "id": "deepseek.v3.2",
+        "output": 81920,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "azure": {
+        "id": "deepseek-v3.2",
+        "output": 128000,
+        "reasoning": {}
+      },
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V3.2",
+        "output": 64000,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "chutes": {
+        "id": "deepseek-ai/DeepSeek-V3.2-TEE",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "deepseek/deepseek-v4-flash": {
@@ -72,7 +108,14 @@
     "context": 1000000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "deepseek-ai/DeepSeek-V4-Flash"
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4-Flash",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      }
     }
   },
   "deepseek/deepseek-v4-flash-0731": {
@@ -87,9 +130,29 @@
     "context": 1000000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "alibaba": "deepseek-v4-flash-0731",
-      "deepinfra": "deepseek-ai/DeepSeek-V4-Flash-0731",
-      "chutes": "deepseek-ai/DeepSeek-V4-Flash-0731-TEE"
+      "alibaba": {
+        "id": "deepseek-v4-flash-0731",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4-Flash-0731",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "chutes": {
+        "id": "deepseek-ai/DeepSeek-V4-Flash-0731-TEE",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "deepseek/deepseek-v4-flash-vision-exp": {
@@ -103,7 +166,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp"
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+        "output": 384000,
+        "reasoning": {
+          "effort": ["none", "low", "high", "max"]
+        }
+      }
     }
   },
   "deepseek/deepseek-v4-pro": {
@@ -118,7 +187,14 @@
     "context": 1000000,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "deepseek-ai/DeepSeek-V4-Pro"
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4-Pro",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      }
     }
   },
   "deepseek/deepseek-v4-pro-0813": {
@@ -132,9 +208,30 @@
     "context": 1048576,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepseek": "deepseek-v4-pro",
-      "togetherai": "deepseek-ai/DeepSeek-V4-Pro-0813",
-      "deepinfra": "deepseek-ai/DeepSeek-V4-Pro-0813"
+      "deepseek": {
+        "id": "deepseek-v4-pro",
+        "output": 393216,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-V4-Pro-0813",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4-Pro-0813",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      }
     }
   },
   "deepseek/deepseek-v4.1-flash": {
@@ -150,9 +247,28 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "togetherai": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "deepinfra": "deepseek-ai/DeepSeek-V4.1-Flash",
-      "fireworks": "accounts/fireworks/models/deepseek-v4p1-flash"
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "output": 384000,
+        "reasoning": {
+          "effort": ["none", "low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4.1-Flash",
+        "output": 384000,
+        "reasoning": {
+          "effort": ["none", "low", "high", "xhigh", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/deepseek-v4p1-flash",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      }
     }
   },
   "deepseek/deepseek-v4.1-flash-1017": {
@@ -167,9 +283,29 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepseek": "deepseek-flash",
-      "deepinfra": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
-      "fireworks": "accounts/fireworks/models/deepseek-v4p1-flash-1017"
+      "deepseek": {
+        "id": "deepseek-flash",
+        "output": 393216,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+        "output": 384000,
+        "reasoning": {
+          "effort": ["none", "low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/deepseek-v4p1-flash-1017",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      }
     }
   }
 }

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import type { ProviderV4 } from "@ai-sdk/provider";
 
 import { createModelCatalog } from "../../src/models/catalog.ts";
-import type { ModelCatalog, ModelsDevCatalog } from "../../src/models/types.ts";
+import type { ModelCatalog, ModelsDevCatalog, ModelSpec } from "../../src/models/types.ts";
 
 const MODELS_DIR = `${import.meta.dir}/../../src/models`;
 
@@ -30,4 +30,12 @@ for (const path of new Bun.Glob("*/models-dev.json").scanSync({
 
 /** Native ID of `modelId` on `provider` in the bundled models.dev snapshots, if listed. */
 export const bundledNativeId = (provider: string, modelId: string): string | undefined =>
-  snapshots[modelId]?.providers[provider];
+  snapshots[modelId]?.providers[provider]?.id;
+
+/** Every bundled model spec, as `[modelId, provider, spec]`. */
+export const bundledSpecs = (): [string, string, ModelSpec][] =>
+  Object.entries(snapshots).flatMap(([id, model]) =>
+    Object.entries(model!.providers).map(
+      ([provider, spec]) => [id, provider, spec!] as [string, string, ModelSpec],
+    ),
+  );

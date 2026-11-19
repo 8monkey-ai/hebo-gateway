@@ -5,7 +5,7 @@ import { winterCgHandler } from "../../lifecycle.ts";
 import { logger } from "../../logger/index.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { wrapTranscriptionModel } from "../../middleware/transcription.ts";
-import { resolveProvider } from "../../providers/registry.ts";
+import { getModelSpec, resolveProvider } from "../../providers/registry.ts";
 import { getGenAiGeneralAttributes, recordTokenUsage } from "../../telemetry/gen-ai.ts";
 import { addSpanEvent, setSpanAttributes } from "../../telemetry/span.ts";
 import type {
@@ -128,6 +128,7 @@ export const audioTranscriptions = (config: GatewayConfig): Endpoint => {
       middleware: modelMiddlewareMatcher.forTranscription(
         ctx.resolvedModelId,
         transcriptionModel.provider,
+        getModelSpec(ctx.provider, ctx.resolvedModelId),
       ),
     });
 

@@ -45,18 +45,59 @@ export type ModelCatalog = {
   [K in ModelId]?: CatalogModel;
 };
 
-/**
- * Providers serving a models.dev model, mapped to their provider-native model ID. Key order is
- * the routing preference. Bedrock IDs may start with `{ip}` (inference profile required) or
- * `{ip?}` (inference profile optional), and `mantle:` (served by Bedrock Mantle). `undefined`
- * (custom models) leaves the native ID to the provider: its `extraMapping`, or its fallback
- * rule (usually the canonical ID without its namespace).
- */
-export type NativeModelIds = { readonly [P in ProviderId]?: string | undefined };
+/** Reasoning effort levels, lowest first. */
+export const REASONING_EFFORTS = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+export type ReasoningEffortLevel = (typeof REASONING_EFFORTS)[number];
 
-/** A model as loaded from models.dev, with the native ID of each provider. */
+/**
+ * How a model takes reasoning controls on a provider (models.dev `reasoning_options`). A
+ * model that lists none of them can't be controlled.
+ */
+export type ReasoningControls = {
+  /** Effort levels the model takes, lowest first. `none` turns reasoning off. */
+  effort?: readonly ReasoningEffortLevel[];
+  /** Reasoning can be switched on and off. */
+  toggle?: boolean;
+  /** Reasoning takes a token budget. */
+  budget?: { min?: number; max?: number };
+};
+
+/**
+ * A model as a provider serves it, per models.dev. Middleware is built from it (see
+ * `modelMiddlewareMatcher`), so new models need no code change. Every field is optional:
+ * custom models carry none of them.
+ */
+export type ModelSpec = {
+  /**
+   * Provider-native model ID. Bedrock IDs may start with `{ip}` (inference profile required)
+   * or `{ip?}` (inference profile optional), and `mantle:` (served by Bedrock Mantle). Left to
+   * the provider when unset: its `extraMapping`, or its fallback rule (usually the canonical
+   * ID without its namespace).
+   */
+  id?: string;
+  /** Maximum output tokens. */
+  output?: number;
+  /** Reasoning controls. `false`: the model doesn't reason, unset: unknown. */
+  reasoning?: ReasoningControls | false;
+};
+
+/**
+ * Providers serving a models.dev model, mapped to how they serve it. Key order is the routing
+ * preference.
+ */
+export type ModelSpecs = { readonly [P in ProviderId]?: ModelSpec };
+
+/** A model as loaded from models.dev, with the spec of each provider. */
 export type ModelsDevCatalogModel = Omit<CatalogModel, "providers"> & {
-  providers: NativeModelIds;
+  providers: ModelSpecs;
 };
 
 export type ModelsDevCatalog = {

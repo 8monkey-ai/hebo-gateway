@@ -10,10 +10,34 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-fable-5",
-      "bedrock": "{ip?}anthropic.claude-fable-5",
-      "vertex": "claude-fable-5@default",
-      "deepinfra": "anthropic/claude-fable-5"
+      "anthropic": {
+        "id": "claude-fable-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-fable-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-fable-5@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "anthropic/claude-fable-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-fable-5-1": {
@@ -28,9 +52,27 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-fable-5-1",
-      "bedrock": "{ip?}anthropic.claude-fable-5-1",
-      "vertex": "claude-fable-5-1@default"
+      "anthropic": {
+        "id": "claude-fable-5-1",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-fable-5-1",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-fable-5-1@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-fable-5-2": {
@@ -45,41 +87,27 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-fable-5-2",
-      "bedrock": "{ip?}anthropic.claude-fable-5-2",
-      "vertex": "claude-fable-5-2@default"
-    }
-  },
-  "anthropic/claude-haiku-4-5": {
-    "name": "Claude Haiku 4.5 (latest)",
-    "family": "claude-haiku",
-    "created": "2025-10-15",
-    "knowledge": "2025-02-28",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 200000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "anthropic": "claude-haiku-4-5"
-    }
-  },
-  "anthropic/claude-haiku-4-5-20251001": {
-    "name": "Claude Haiku 4.5",
-    "family": "claude-haiku",
-    "created": "2025-10-15",
-    "knowledge": "2025-02-28",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 200000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "anthropic": "claude-haiku-4-5-20251001",
-      "bedrock": "{ip?}anthropic.claude-haiku-4-5-20251001-v1:0",
-      "vertex": "claude-haiku-4-5@20251001"
+      "anthropic": {
+        "id": "claude-fable-5-2",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-fable-5-2",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-fable-5-2@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-haiku-5-5": {
@@ -94,41 +122,30 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-haiku-5-5",
-      "bedrock": "{ip?}anthropic.claude-haiku-5-5",
-      "vertex": "claude-haiku-5-5@default"
-    }
-  },
-  "anthropic/claude-opus-4-5": {
-    "name": "Claude Opus 4.5 (latest)",
-    "family": "claude-opus",
-    "created": "2025-11-24",
-    "knowledge": "2025-05",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 200000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "anthropic": "claude-opus-4-5"
-    }
-  },
-  "anthropic/claude-opus-4-5-20251101": {
-    "name": "Claude Opus 4.5",
-    "family": "claude-opus",
-    "created": "2025-11-24",
-    "knowledge": "2025-05",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 200000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "anthropic": "claude-opus-4-5-20251101",
-      "bedrock": "{ip?}anthropic.claude-opus-4-5-20251101-v1:0",
-      "vertex": "claude-opus-4-5@20251101"
+      "anthropic": {
+        "id": "claude-haiku-5-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-haiku-5-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-haiku-5-5@default",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-opus-4-6": {
@@ -143,9 +160,37 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "anthropic": "claude-opus-4-6",
-      "bedrock": "{ip?}anthropic.claude-opus-4-6-v1",
-      "vertex": "claude-opus-4-6@default"
+      "anthropic": {
+        "id": "claude-opus-4-6",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-opus-4-6-v1",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-4-6@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      }
     }
   },
   "anthropic/claude-opus-4-7": {
@@ -160,9 +205,28 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-opus-4-7",
-      "bedrock": "{ip?}anthropic.claude-opus-4-7",
-      "vertex": "claude-opus-4-7@default"
+      "anthropic": {
+        "id": "claude-opus-4-7",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-opus-4-7",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-4-7@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-opus-4-8": {
@@ -177,9 +241,28 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-opus-4-8",
-      "bedrock": "{ip?}anthropic.claude-opus-4-8",
-      "vertex": "claude-opus-4-8@default"
+      "anthropic": {
+        "id": "claude-opus-4-8",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-opus-4-8",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-4-8@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-opus-5": {
@@ -194,9 +277,28 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-opus-5",
-      "bedrock": "{ip?}anthropic.claude-opus-5",
-      "vertex": "claude-opus-5@default"
+      "anthropic": {
+        "id": "claude-opus-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-opus-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-5@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-opus-5-5": {
@@ -211,9 +313,27 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-opus-5-5",
-      "bedrock": "{ip?}anthropic.claude-opus-5-5",
-      "vertex": "claude-opus-5-5@default"
+      "anthropic": {
+        "id": "claude-opus-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-opus-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-5-5@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-sonnet-4-6": {
@@ -228,9 +348,37 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "anthropic": "claude-sonnet-4-6",
-      "bedrock": "{ip?}anthropic.claude-sonnet-4-6",
-      "vertex": "claude-sonnet-4-6@default"
+      "anthropic": {
+        "id": "claude-sonnet-4-6",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-sonnet-4-6",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "vertex": {
+        "id": "claude-sonnet-4-6@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      }
     }
   },
   "anthropic/claude-sonnet-5": {
@@ -245,9 +393,30 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-sonnet-5",
-      "bedrock": "{ip?}anthropic.claude-sonnet-5",
-      "vertex": "claude-sonnet-5@default"
+      "anthropic": {
+        "id": "claude-sonnet-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-sonnet-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-sonnet-5@default",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   },
   "anthropic/claude-sonnet-5-5": {
@@ -262,9 +431,27 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "anthropic": "claude-sonnet-5-5",
-      "bedrock": "{ip?}anthropic.claude-sonnet-5-5",
-      "vertex": "claude-sonnet-5-5@default"
+      "anthropic": {
+        "id": "claude-sonnet-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "{ip?}anthropic.claude-sonnet-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-sonnet-5-5@default",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   }
 }

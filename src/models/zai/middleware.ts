@@ -1,32 +1,12 @@
-import type { LanguageModelMiddleware } from "ai";
-
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { thinkingReasoningMiddleware } from "../../middleware/thinking.ts";
 
-export const glmReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
+// GLM 4.x and 5.x take a thinking toggle, GLM 5.2 and later effort levels.
+// https://docs.z.ai/guides/capabilities/thinking
+export const glmReasoningMiddleware = thinkingReasoningMiddleware("zhipu", {
+  effort: ["low", "high", "max"],
+});
 
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
-
-    const target = (params.providerOptions!["zhipu"] ??= {}) as Record<string, unknown>;
-
-    if (!reasoning.enabled || reasoning.effort === "none") {
-      target["thinking"] = { type: "disabled" };
-    } else {
-      target["thinking"] = { type: "enabled" };
-    }
-
-    delete unknown["reasoning"];
-
-    return params;
-  },
-};
-
-modelMiddlewareMatcher.useForModel("zhipuai/glm-*", {
+modelMiddlewareMatcher.useForModel("zhipuai/*", {
   language: [glmReasoningMiddleware],
 });

@@ -1,90 +1,47 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
-import { MockLanguageModelV4 } from "ai/test";
+import type { JSONObject } from "@ai-sdk/provider";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import type { ModelSpec } from "../types.ts";
 import { minimaxReasoningMiddleware } from "./middleware.ts";
 
 test("minimax middlewares > matching model resolves reasoning middleware", () => {
-  const middleware = modelMiddlewareMatcher.resolve({
-    kind: "text",
-    modelId: "minimax/MiniMax-M2.7",
-  });
-
-  expect(middleware).toContain(minimaxReasoningMiddleware);
+  expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: "minimax/MiniMax-M3" })).toContain(
+    minimaxReasoningMiddleware(),
+  );
 });
 
-const reasoningEffortCases = [
-  { effort: "none", expected: undefined },
-  { effort: "minimal", expected: "low" },
-  { effort: "low", expected: "low" },
-  { effort: "medium", expected: "medium" },
-  { effort: "high", expected: "high" },
-  { effort: "xhigh", expected: "high" },
-  { effort: "max", expected: "high" },
-] as const;
+const optionsOf = async (spec: ModelSpec, reasoning: JSONObject) =>
+  (await transform(minimaxReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions;
 
-for (const { effort, expected } of reasoningEffortCases) {
-  test(`minimaxReasoningMiddleware > should map effort ${effort} to ${expected}`, async () => {
-    const params = {
-      prompt: [],
-      providerOptions: {
-        unknown: {
-          reasoning: { enabled: true, effort },
-        },
-      },
-    };
+// MiniMax M3 takes a thinking toggle, M3.1 Flash effort levels.
+const M3: ModelSpec = { reasoning: { toggle: true } };
+const M3_1: ModelSpec = { reasoning: { effort: ["low", "medium", "high", "xhigh", "max"] } };
 
-    const result = await minimaxReasoningMiddleware.transformParams!({
-      type: "generate",
-      params,
-      model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
-    });
-
-    expect(result.providerOptions!["unknown"]).toEqual({
-      reasoning_effort: expected,
+describe("minimaxReasoningMiddleware", () => {
+  test.each([
+    ["minimal", "low"],
+    ["medium", "medium"],
+    ["max", "max"],
+  ] as const)("maps %s to %s", async (effort, expected) => {
+    expect(await optionsOf(M3_1, { enabled: true, effort })).toEqual({
+      unknown: { reasoning_effort: expected },
     });
   });
-}
 
-test("minimaxReasoningMiddleware > should map enabled:false to effort none", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false },
-      },
-    },
-  };
-
-  const result = await minimaxReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.7" }),
+  test("turns thinking off with `none` on models that take a toggle", async () => {
+    expect(await optionsOf(M3, { enabled: false })).toEqual({
+      unknown: { reasoning_effort: "none" },
+    });
+    expect(await optionsOf(M3, { enabled: true, effort: "high" })).toEqual({ unknown: {} });
   });
 
-  expect(result.providerOptions!["unknown"]).toEqual({
-    reasoning_effort: "none",
-  });
-});
-
-test("minimaxReasoningMiddleware > should pass through when no reasoning", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        service_tier: "priority",
-      },
-    },
-  };
-
-  const result = await minimaxReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "minimax/MiniMax-M2.5" }),
-  });
-
-  expect(result.providerOptions!["unknown"]).toEqual({
-    service_tier: "priority",
+  test("leaves requests without reasoning untouched", async () => {
+    expect(
+      (await transform(minimaxReasoningMiddleware(M3_1), { providerOptions: { unknown: {} } }))
+        .providerOptions,
+    ).toEqual({ unknown: {} });
   });
 });

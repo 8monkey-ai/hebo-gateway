@@ -7,7 +7,7 @@ import {
   type ModelsDevLab,
   type ModelsDevModel,
 } from "./models-dev.ts";
-import type { ModelCatalog } from "./types.ts";
+import type { ModelCatalog, ModelSpecs } from "./types.ts";
 
 const SNAPSHOTS = new Bun.Glob("*/models-dev.json");
 
@@ -21,6 +21,11 @@ const LABS: ModelsDevLab[] = [
 ];
 
 const convert = (api: ModelsDevApi, labs = LABS) => fromModelsDev(api, labs);
+
+/** Native ID of each provider. */
+const nativeIds = (providers: ModelSpecs | undefined) =>
+  providers &&
+  Object.fromEntries(Object.entries(providers).map(([provider, spec]) => [provider, spec!.id]));
 
 const chat = (overrides: ModelsDevModel = {}): ModelsDevModel => ({
   name: "Model",
@@ -57,7 +62,7 @@ describe("fromModelsDev", () => {
         modalities: { input: ["text", "image", "file"], output: ["text"] },
         context: 200_000,
         capabilities: ["attachments", "reasoning", "tool_call", "structured_output"],
-        providers: { anthropic: "claude-x-1", bedrock: "anthropic.claude-x-1" },
+        providers: { anthropic: { id: "claude-x-1" }, bedrock: { id: "anthropic.claude-x-1" } },
       },
     });
   });
@@ -123,7 +128,7 @@ describe("fromModelsDev", () => {
 
     const catalog = convert(api);
     expect(catalog["voyageai/voyage-9"]?.modalities?.output).toEqual(["embeddings"]);
-    expect(catalog["voyageai/voyage-9"]?.providers).toEqual({ voyage: "voyage-9" });
+    expect(nativeIds(catalog["voyageai/voyage-9"]?.providers)).toEqual({ voyage: "voyage-9" });
     // Open weights can be served by anyone, so the lab is not assumed to.
     expect(catalog["openai/whisper-9"]).toBeUndefined();
   });
@@ -135,7 +140,10 @@ describe("fromModelsDev", () => {
     };
 
     const catalog = convert(api);
-    expect(catalog["openai/gpt-x"]?.providers).toEqual({ openai: "gpt-x", azure: "gpt-x" });
+    expect(nativeIds(catalog["openai/gpt-x"]?.providers)).toEqual({
+      openai: "gpt-x",
+      azure: "gpt-x",
+    });
     expect(Object.keys(catalog)).toEqual(["openai/gpt-x"]);
   });
 
@@ -152,7 +160,7 @@ describe("fromModelsDev", () => {
   test("reads a lab's own listing from its models.dev provider", () => {
     const api: ModelsDevApi = { zai: { models: { "glm-9": chat() } } };
 
-    expect(convert(api)["zhipuai/glm-9"]?.providers).toEqual({ zai: "glm-9" });
+    expect(nativeIds(convert(api)["zhipuai/glm-9"]?.providers)).toEqual({ zai: "glm-9" });
   });
 
   test("leaves a name shared with a lab that is not registered unmatched", () => {
@@ -164,7 +172,7 @@ describe("fromModelsDev", () => {
       azure: { models: { "x-1": chat() } },
     };
 
-    expect(convert(api)["openai/x-1"]?.providers).toEqual({ openai: "x-1" });
+    expect(nativeIds(convert(api)["openai/x-1"]?.providers)).toEqual({ openai: "x-1" });
   });
 
   test("picks the native ID named like the model, and skips routers", () => {
@@ -182,7 +190,7 @@ describe("fromModelsDev", () => {
       },
     };
 
-    expect(convert(api)["minimax/MiniMax-M9"]?.providers).toEqual({
+    expect(nativeIds(convert(api)["minimax/MiniMax-M9"]?.providers)).toEqual({
       minimax: "MiniMax-M9",
       fireworks: "accounts/fireworks/models/minimax-m9",
     });
@@ -196,7 +204,7 @@ describe("fromModelsDev", () => {
       },
     };
 
-    expect(convert(api)["anthropic/claude-x"]?.providers).toEqual({
+    expect(nativeIds(convert(api)["anthropic/claude-x"]?.providers)).toEqual({
       anthropic: "claude-x",
     });
   });
@@ -229,13 +237,68 @@ describe("fromModelsDev", () => {
       },
     };
 
-    const providers = Object.entries(convert(api)).map(([id, m]) => [id, m!.providers]);
+    const providers = Object.entries(convert(api)).map(([id, m]) => [id, nativeIds(m!.providers)]);
     expect(Object.fromEntries(providers)).toEqual({
       "openai/gpt-a": { bedrock: "{ip?}openai.gpt-a" },
       "openai/gpt-b": { bedrock: "{ip}openai.gpt-b" },
       "openai/gpt-c": { bedrock: "mantle:openai.gpt-c" },
       "openai/gpt-d": { bedrock: "openai.gpt-d-1:0" },
     });
+  });
+
+  test("keeps the output limit and reasoning controls of each provider's listing", () => {
+    const api: ModelsDevApi = {
+      anthropic: {
+        models: {
+          "claude-x": chat({
+            limit: { context: 200_000, output: 64_000 },
+            reasoning_options: [
+              { type: "effort", values: ["default", "max", "low", "high"] },
+              { type: "budget_tokens", min: 1024 },
+            ],
+          }),
+          "claude-y": chat({ reasoning: false, reasoning_options: null }),
+        },
+      },
+      "amazon-bedrock": {
+        models: {
+          "anthropic.claude-x": chat({
+            canonical_model_id: "anthropic/claude-x",
+            reasoning_options: [{ type: "toggle" }],
+          }),
+          // Reasons, but takes no control at all.
+          "anthropic.claude-y": chat({
+            canonical_model_id: "anthropic/claude-y",
+            reasoning_options: [],
+          }),
+        },
+      },
+      // Unknown controls.
+      azure: { models: { "claude-x": chat({ canonical_model_id: "anthropic/claude-x" }) } },
+    };
+
+    const catalog = convert(api);
+    expect(catalog["anthropic/claude-x"]?.providers).toEqual({
+      anthropic: {
+        id: "claude-x",
+        output: 64_000,
+        reasoning: { effort: ["low", "high", "max"], budget: { min: 1024 } },
+      },
+      bedrock: { id: "anthropic.claude-x", reasoning: { toggle: true } },
+      azure: { id: "claude-x" },
+    });
+    expect(catalog["anthropic/claude-y"]?.providers).toEqual({
+      anthropic: { id: "claude-y", reasoning: false },
+      bedrock: { id: "anthropic.claude-y", reasoning: {} },
+    });
+  });
+
+  test("leaves out the models a lab excludes", () => {
+    const api: ModelsDevApi = {
+      anthropic: { models: { "claude-x-4-5": chat(), "claude-x-4-6": chat() } },
+    };
+    const labs = [{ namespace: "anthropic", provider: "anthropic", exclude: ["claude-*-4-5*"] }];
+    expect(Object.keys(convert(api, labs as ModelsDevLab[]))).toEqual(["anthropic/claude-x-4-6"]);
   });
 
   test("tolerates malformed payloads", () => {

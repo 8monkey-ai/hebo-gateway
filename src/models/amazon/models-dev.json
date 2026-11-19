@@ -1,6 +1,6 @@
 {
   "amazon/nova-2-lite": {
-    "name": "Nova 2 Lite (JP)",
+    "name": "Nova 2 Lite (EU)",
     "family": "nova",
     "created": "2025-12-02",
     "knowledge": "2025-10",
@@ -11,11 +11,18 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
     "providers": {
-      "bedrock": "{ip?}amazon.nova-2-lite-v1:0"
+      "bedrock": {
+        "id": "{ip?}amazon.nova-2-lite-v1:0",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "amazon/nova-lite": {
-    "name": "Nova Lite (EU)",
+    "name": "Nova Lite",
     "family": "nova-lite",
     "created": "2024-12-03",
     "knowledge": "2024-10",
@@ -26,7 +33,11 @@
     "context": 300000,
     "capabilities": ["attachments", "tool_call", "temperature"],
     "providers": {
-      "bedrock": "{ip?}amazon.nova-lite-v1:0"
+      "bedrock": {
+        "id": "{ip?}amazon.nova-lite-v1:0",
+        "output": 10000,
+        "reasoning": false
+      }
     }
   },
   "amazon/nova-micro": {
@@ -41,7 +52,11 @@
     "context": 128000,
     "capabilities": ["tool_call", "temperature"],
     "providers": {
-      "bedrock": "{ip?}amazon.nova-micro-v1:0"
+      "bedrock": {
+        "id": "{ip?}amazon.nova-micro-v1:0",
+        "output": 10000,
+        "reasoning": false
+      }
     }
   },
   "amazon/nova-pro": {
@@ -56,7 +71,11 @@
     "context": 300000,
     "capabilities": ["attachments", "tool_call", "temperature"],
     "providers": {
-      "bedrock": "{ip?}amazon.nova-pro-v1:0"
+      "bedrock": {
+        "id": "{ip?}amazon.nova-pro-v1:0",
+        "output": 10000,
+        "reasoning": false
+      }
     }
   }
 }

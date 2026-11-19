@@ -10,7 +10,11 @@
     "context": 196608,
     "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "minimax.minimax-m2.5"
+      "bedrock": {
+        "id": "minimax.minimax-m2.5",
+        "output": 98304,
+        "reasoning": {}
+      }
     }
   },
   "minimax/MiniMax-M3": {
@@ -24,10 +28,32 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
     "providers": {
-      "minimax": "MiniMax-M3",
-      "togetherai": "MiniMaxAI/MiniMax-M3",
-      "deepinfra": "MiniMaxAI/MiniMax-M3",
-      "fireworks": "accounts/fireworks/models/minimax-m3"
+      "minimax": {
+        "id": "MiniMax-M3",
+        "output": 524288,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "MiniMaxAI/MiniMax-M3",
+        "output": 524288,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "MiniMaxAI/MiniMax-M3",
+        "output": 512000,
+        "reasoning": {}
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/minimax-m3",
+        "output": 512000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "minimax/MiniMax-M3.1-Flash": {
@@ -41,8 +67,20 @@
     "context": 1000000,
     "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
     "providers": {
-      "minimax": "MiniMax-M3.1-Flash",
-      "fireworks": "accounts/fireworks/models/minimax-m3p1-flash"
+      "minimax": {
+        "id": "MiniMax-M3.1-Flash",
+        "output": 524288,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/minimax-m3p1-flash",
+        "output": 512000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
     }
   }
 }

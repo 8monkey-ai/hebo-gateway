@@ -1,83 +1,37 @@
 import type { XaiLanguageModelResponsesOptions } from "@ai-sdk/xai";
 import type { LanguageModelMiddleware } from "ai";
 
-import type {
-  ChatCompletionsReasoningConfig,
-  ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema.ts";
-import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
+import type { ReasoningControls } from "../types.ts";
+
+// Current generation, assumed for models without reasoning data (e.g. custom ones).
+const GROK: ReasoningControls = { effort: ["low", "medium", "high", "xhigh"] };
 
 /**
- * The Grok 4.20 line rejects `reasoning_effort` outright, dated variants included, while its
- * multi-agent sibling accepts it. The SDK gates this itself, but only for its own top-level
- * `reasoning` option: writing `providerOptions.xai.reasoningEffort` short-circuits that check,
- * so the gate has to be mirrored here.
+ * Effort levels come from the model spec (models.dev). Models that take no effort (e.g. the
+ * Grok 4.20 reasoning line) reject `reasoning_effort` outright, so nothing is sent to them.
  */
-const rejectsEffort = (modelId: string) =>
-  modelId.startsWith("grok-4.20") && modelId.endsWith("-reasoning");
+export const xaiReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => {
+  const controls = reasoningControls(spec, GROK);
+  return {
+    specificationVersion: "v3",
+    // oxlint-disable-next-line require-await
+    transformParams: async ({ params }) => {
+      const reasoning = takeReasoning(params);
+      if (!reasoning || !controls) return params;
 
-/** `xhigh` arrived with Grok 4.6 — anything above `high` collapses back to it elsewhere. */
-const supportsXhigh = (modelId: string) => modelId === "grok-4.6" || modelId === "grok-4.7";
+      // `none` is what actually disables thinking, on the models that take it.
+      const effort = resolveReasoning(reasoning, controls)?.effort;
+      if (effort) {
+        (
+          (params.providerOptions!["xai"] ??= {}) as XaiLanguageModelResponsesOptions
+        ).reasoningEffort = effort as XaiLanguageModelResponsesOptions["reasoningEffort"];
+      }
 
-function mapXaiReasoningEffort(
-  effort: ChatCompletionsReasoningEffort,
-  modelId: string,
-): XaiLanguageModelResponsesOptions["reasoningEffort"] {
-  switch (effort) {
-    case "none":
-      return "none";
-    case "minimal":
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-      return "high";
-    case "xhigh":
-    case "max":
-      return supportsXhigh(modelId) ? "xhigh" : "high";
-  }
+      return params;
+    },
+  };
+});
 
-  return undefined;
-}
-
-export const xaiReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
-
-    const target = (params.providerOptions!["xai"] ??= {}) as XaiLanguageModelResponsesOptions;
-
-    if (rejectsEffort(model.modelId)) {
-      // FUTURE: warn that the requested effort was dropped for a model that rejects it
-      target.reasoningEffort = undefined;
-    } else if (reasoning.enabled === false) {
-      // `none` is what actually disables thinking; omitting the field leaves the model at
-      // its own default, which is not what "reasoning off" asked for.
-      target.reasoningEffort = "none";
-    } else if (reasoning.effort) {
-      target.reasoningEffort = mapXaiReasoningEffort(reasoning.effort, model.modelId);
-    }
-
-    delete unknown["reasoning"];
-
-    return params;
-  },
-};
-
-modelMiddlewareMatcher.useForModel(
-  [
-    "xai/grok-4.20-0309-reasoning",
-    "xai/grok-4.20-multi-agent-0309",
-    "xai/grok-4.3",
-    "xai/grok-4.5",
-    "xai/grok-4.6",
-    "xai/grok-4.7",
-  ],
-  { language: [xaiReasoningMiddleware] },
-);
+modelMiddlewareMatcher.useForModel("xai/*", { language: [xaiReasoningMiddleware] });

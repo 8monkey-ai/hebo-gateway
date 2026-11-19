@@ -8,6 +8,7 @@ export * from "./logger/index.ts";
 
 export * from "./middleware/common.ts";
 export * from "./middleware/matcher.ts";
+export * from "./middleware/reasoning.ts";
 export * from "./middleware/transcription.ts";
 
 export * from "./models/catalog.ts";

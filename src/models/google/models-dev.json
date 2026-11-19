@@ -11,7 +11,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3-flash-preview"
+      "vertex": {
+        "id": "gemini-3-flash-preview",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.1-flash-lite": {
@@ -26,7 +32,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.1-flash-lite"
+      "vertex": {
+        "id": "gemini-3.1-flash-lite",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.1-pro-preview": {
@@ -41,7 +53,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.1-pro-preview"
+      "vertex": {
+        "id": "gemini-3.1-pro-preview",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.1-pro-preview-customtools": {
@@ -56,7 +74,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.1-pro-preview-customtools"
+      "vertex": {
+        "id": "gemini-3.1-pro-preview-customtools",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.5-flash": {
@@ -71,7 +95,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.5-flash"
+      "vertex": {
+        "id": "gemini-3.5-flash",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.5-flash-lite": {
@@ -86,7 +116,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.5-flash-lite"
+      "vertex": {
+        "id": "gemini-3.5-flash-lite",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.5-transcribe": {
@@ -100,7 +136,9 @@
     "context": 98304,
     "capabilities": ["attachments"],
     "providers": {
-      "vertex": "gemini-3.5-transcribe"
+      "vertex": {
+        "id": "gemini-3.5-transcribe"
+      }
     }
   },
   "google/gemini-3.5-transcribe-live": {
@@ -113,7 +151,9 @@
     },
     "capabilities": ["attachments"],
     "providers": {
-      "vertex": "gemini-3.5-transcribe-live"
+      "vertex": {
+        "id": "gemini-3.5-transcribe-live"
+      }
     }
   },
   "google/gemini-3.7-flash": {
@@ -128,7 +168,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.7-flash"
+      "vertex": {
+        "id": "gemini-3.7-flash",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-3.8-flash": {
@@ -142,7 +188,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-3.8-flash"
+      "vertex": {
+        "id": "gemini-3.8-flash",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-4-argon": {
@@ -157,7 +209,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-4-argon"
+      "vertex": {
+        "id": "gemini-4-argon",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-4-carbon": {
@@ -172,7 +230,13 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-4-carbon"
+      "vertex": {
+        "id": "gemini-4-carbon",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
     }
   },
   "google/gemini-4-hydrogen": {
@@ -187,7 +251,34 @@
     "context": 1048576,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "gemini-4-hydrogen"
+      "vertex": {
+        "id": "gemini-4-hydrogen",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
+    }
+  },
+  "google/gemini-4-neon": {
+    "name": "Gemini 4 Neon",
+    "family": "gemini",
+    "created": "2026-11-18",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "gemini-4-neon",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
     }
   },
   "google/gemini-embedding-001": {
@@ -201,7 +292,9 @@
     },
     "context": 2048,
     "providers": {
-      "vertex": "gemini-embedding-001"
+      "vertex": {
+        "id": "gemini-embedding-001"
+      }
     }
   },
   "google/gemini-embedding-2": {
@@ -216,7 +309,9 @@
     "context": 8192,
     "capabilities": ["attachments"],
     "providers": {
-      "vertex": "gemini-embedding-2"
+      "vertex": {
+        "id": "gemini-embedding-2"
+      }
     }
   },
   "google/gemma-3-12b-it": {
@@ -231,7 +326,11 @@
     "context": 131072,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "google/gemma-3-12b-it"
+      "deepinfra": {
+        "id": "google/gemma-3-12b-it",
+        "output": 131072,
+        "reasoning": false
+      }
     }
   },
   "google/gemma-3-27b-it": {
@@ -246,7 +345,11 @@
     "context": 131072,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "google/gemma-3-27b-it"
+      "deepinfra": {
+        "id": "google/gemma-3-27b-it",
+        "output": 131072,
+        "reasoning": false
+      }
     }
   },
   "google/gemma-3-4b-it": {
@@ -261,7 +364,11 @@
     "context": 131072,
     "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "deepinfra": "google/gemma-3-4b-it"
+      "deepinfra": {
+        "id": "google/gemma-3-4b-it",
+        "output": 131072,
+        "reasoning": false
+      }
     }
   },
   "google/gemma-4-26b-a4b-it": {
@@ -275,9 +382,25 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "vertex": "google/gemma-4-26b-a4b-it-maas",
-      "bedrock": "mantle:google.gemma-4-26b-a4b",
-      "deepinfra": "google/gemma-4-26B-A4B-it"
+      "vertex": {
+        "id": "google/gemma-4-26b-a4b-it-maas",
+        "output": 128000,
+        "reasoning": {}
+      },
+      "bedrock": {
+        "id": "mantle:google.gemma-4-26b-a4b",
+        "output": 32768,
+        "reasoning": {
+          "effort": ["none", "high"]
+        }
+      },
+      "deepinfra": {
+        "id": "google/gemma-4-26B-A4B-it",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "google/gemma-4-31b-it": {
@@ -291,9 +414,27 @@
     "context": 262144,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "mantle:google.gemma-4-31b",
-      "deepinfra": "google/gemma-4-31B-it",
-      "chutes": "google/gemma-4-31B-turbo-TEE"
+      "bedrock": {
+        "id": "mantle:google.gemma-4-31b",
+        "output": 32768,
+        "reasoning": {
+          "effort": ["none", "high"]
+        }
+      },
+      "deepinfra": {
+        "id": "google/gemma-4-31B-it",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "chutes": {
+        "id": "google/gemma-4-31B-turbo-TEE",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      }
     }
   },
   "google/gemma-4-E2B-it": {
@@ -307,7 +448,13 @@
     "context": 131072,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "bedrock": "mantle:google.gemma-4-e2b"
+      "bedrock": {
+        "id": "mantle:google.gemma-4-e2b",
+        "output": 8192,
+        "reasoning": {
+          "effort": ["none", "high"]
+        }
+      }
     }
   },
   "google/text-embedding-005": {
@@ -320,7 +467,9 @@
     },
     "context": 2048,
     "providers": {
-      "vertex": "text-embedding-005"
+      "vertex": {
+        "id": "text-embedding-005"
+      }
     }
   },
   "google/text-multilingual-embedding-002": {
@@ -333,7 +482,9 @@
     },
     "context": 2048,
     "providers": {
-      "vertex": "text-multilingual-embedding-002"
+      "vertex": {
+        "id": "text-multilingual-embedding-002"
+      }
     }
   }
 }

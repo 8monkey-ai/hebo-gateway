@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
+import type { JSONObject } from "@ai-sdk/provider";
 import { MockLanguageModelV4 } from "ai/test";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import { transcriptionProviderOptions } from "../../../test/helpers/transcription.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { azureTranscriptionOptionsMiddleware } from "../../providers/azure/middleware.ts";
+import type { ModelSpec } from "../types.ts";
 import {
   openAIDimensionsMiddleware,
   openAIPromptCachingMiddleware,
@@ -13,46 +16,20 @@ import {
 } from "./middleware.ts";
 
 test("openAI middleware > matching patterns", () => {
-  const languageMatching = [
-    "openai/gpt-5.4",
-    "openai/gpt-5.4-mini",
-    "openai/gpt-5.4-pro",
-    "openai/gpt-5.5",
-    "openai/gpt-5.5-pro",
-    "openai/gpt-6-astra",
-    "openai/gpt-6-sol",
-    "openai/gpt-6-luna",
-    "openai/gpt-6.2-astra",
-    "openai/gpt-6.2-sol",
-    "openai/gpt-oss-20b",
-  ];
-
-  const languageNonMatching = ["openai/text-embedding-3-small"];
-
-  for (const id of languageMatching) {
+  for (const id of ["openai/gpt-5.4-mini", "openai/gpt-6-sol", "openai/gpt-oss-20b", "openai/o3"]) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(openAIReasoningMiddleware);
+    expect(middleware).toContain(openAIReasoningMiddleware());
     expect(middleware).toContain(openAIPromptCachingMiddleware);
   }
 
-  for (const id of languageNonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).not.toContain(openAIReasoningMiddleware);
-  }
-
   const embeddingMatching = ["openai/text-embedding-3-small", "openai/text-embedding-3-large"];
-
-  const embeddingNonMatching = ["openai/gpt-5.4-mini"];
-
   for (const id of embeddingMatching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
     expect(middleware).toContain(openAIDimensionsMiddleware);
   }
-
-  for (const id of embeddingNonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
-    expect(middleware).not.toContain(openAIDimensionsMiddleware);
-  }
+  expect(
+    modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: "openai/gpt-5.4-mini" }),
+  ).not.toContain(openAIDimensionsMiddleware);
 });
 
 test("openAIPromptCachingMiddleware > should map key and retention", async () => {
@@ -81,301 +58,68 @@ test("openAIPromptCachingMiddleware > should map key and retention", async () =>
   });
 });
 
-test("openAIReasoningMiddleware > should map reasoning effort to OpenAI provider options", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "high" },
-      },
+const effortOf = async (spec: ModelSpec, reasoning: JSONObject) =>
+  (await transform(openAIReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions?.[
+    "openai"
+  ]?.["reasoningEffort"];
+
+// models.dev effort levels of a few models.
+const GPT_5: ModelSpec = { reasoning: { effort: ["minimal", "low", "medium", "high"] } };
+const GPT_5_2: ModelSpec = { reasoning: { effort: ["none", "low", "medium", "high", "xhigh"] } };
+const GPT_6_SOL: ModelSpec = {
+  reasoning: { effort: ["none", "low", "medium", "high", "xhigh", "max"] },
+};
+const GPT_6_1_SOL: ModelSpec = { reasoning: { effort: ["low", "medium", "high", "xhigh", "max"] } };
+
+describe("openAIReasoningMiddleware", () => {
+  test.each([
+    [GPT_6_SOL, "max", "max"],
+    [GPT_6_SOL, "minimal", "low"],
+    [GPT_5_2, "max", "xhigh"],
+    [GPT_5, "minimal", "minimal"],
+    [GPT_5, "xhigh", "high"],
+    [GPT_5_2, "high", "high"],
+  ] as const)("maps to an effort the model lists (%#)", async (spec, effort, expected) => {
+    expect(await effortOf(spec, { enabled: true, effort })).toBe(expected);
+  });
+
+  test.each([{ enabled: false }, { enabled: false, effort: "none" }])(
+    "turns reasoning off with `none`, or the lowest effort when the model can't (%o)",
+    async (reasoning) => {
+      expect(await effortOf(GPT_6_SOL, reasoning)).toBe("none");
+      expect(await effortOf(GPT_6_1_SOL, reasoning)).toBe("low");
+      expect(await effortOf(GPT_5, reasoning)).toBe("minimal");
     },
-  };
-
-  const result = await openAIReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      openai: {
-        reasoningEffort: "high",
-      },
-      unknown: {},
-    },
-  });
-});
-
-// The GPT-6 line takes `max` as its own level above `xhigh`, so it must survive the mapping.
-// `openai.gpt-6-astra` is how Bedrock Mantle names the same model, and this middleware runs
-// there too: the matcher applies model- and provider-matched entries alike.
-for (const modelId of [
-  "gpt-6-astra",
-  "gpt-6-sol",
-  "gpt-6-luna",
-  "gpt-6.2-astra",
-  "gpt-6.2-sol",
-  "gpt-6",
-  "gpt-7",
-  "openai/gpt-6-astra",
-  "openai.gpt-6-astra",
-]) {
-  test(`openAIReasoningMiddleware > should keep max effort for ${modelId}`, async () => {
-    const params = {
-      prompt: [],
-      providerOptions: {
-        unknown: {
-          reasoning: { enabled: true, effort: "max" },
-        },
-      },
-    };
-
-    const result = await openAIReasoningMiddleware.transformParams!({
-      type: "generate",
-      params,
-      model: new MockLanguageModelV4({ modelId }),
-    });
-
-    expect(result).toEqual({
-      prompt: [],
-      providerOptions: {
-        openai: { reasoningEffort: "max" },
-        unknown: {},
-      },
-    });
-  });
-}
-
-// Earlier models have no `max`, so it has to come back down to `xhigh`.
-for (const modelId of ["gpt-5.2", "gpt-5.4-mini", "openai/gpt-5.6-sol"]) {
-  test(`openAIReasoningMiddleware > should lower max effort to xhigh for ${modelId}`, async () => {
-    const params = {
-      prompt: [],
-      providerOptions: {
-        unknown: {
-          reasoning: { enabled: true, effort: "max" },
-        },
-      },
-    };
-
-    const result = await openAIReasoningMiddleware.transformParams!({
-      type: "generate",
-      params,
-      model: new MockLanguageModelV4({ modelId }),
-    });
-
-    expect(result).toEqual({
-      prompt: [],
-      providerOptions: {
-        openai: { reasoningEffort: "xhigh" },
-        unknown: {},
-      },
-    });
-  });
-}
-
-for (const modelId of ["gpt-6-astra", "gpt-6.2-astra", "gpt-6.2-sol"]) {
-  test(`openAIReasoningMiddleware > should lower minimal effort to low on ${modelId}`, async () => {
-    const params = {
-      prompt: [],
-      providerOptions: {
-        unknown: {
-          reasoning: { enabled: true, effort: "minimal" },
-        },
-      },
-    };
-
-    const result = await openAIReasoningMiddleware.transformParams!({
-      type: "generate",
-      params,
-      model: new MockLanguageModelV4({ modelId }),
-    });
-
-    expect(result).toEqual({
-      prompt: [],
-      providerOptions: {
-        openai: { reasoningEffort: "low" },
-        unknown: {},
-      },
-    });
-  });
-}
-
-test("openAIReasoningMiddleware > should keep minimal effort on GPT-5", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "minimal" },
-      },
-    },
-  };
-
-  const result = await openAIReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "gpt-5" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      openai: { reasoningEffort: "minimal" },
-      unknown: {},
-    },
-  });
-});
-
-// Sol and Luna are the only GPT-6 models that can turn reasoning off.
-for (const modelId of ["gpt-6-sol", "gpt-6-luna"]) {
-  test(`openAIReasoningMiddleware > should disable reasoning with none for ${modelId}`, async () => {
-    const params = {
-      prompt: [],
-      providerOptions: {
-        unknown: {
-          reasoning: { enabled: false },
-        },
-      },
-    };
-
-    const result = await openAIReasoningMiddleware.transformParams!({
-      type: "generate",
-      params,
-      model: new MockLanguageModelV4({ modelId }),
-    });
-
-    expect(result).toEqual({
-      prompt: [],
-      providerOptions: {
-        openai: { reasoningEffort: "none" },
-        unknown: {},
-      },
-    });
-  });
-}
-
-// Astra, GPT-6.1 Sol and the GPT-6.2 line have no `none`, so the request lands on the lowest
-// effort they do offer instead of being rejected (GPT-6.2) or dropped by the SDK.
-for (const modelId of [
-  "gpt-6-astra",
-  "gpt-6.1-sol",
-  "gpt-6.2-astra",
-  "gpt-6.2-sol",
-  "openai.gpt-6.2-sol",
-]) {
-  for (const reasoning of [{ enabled: false }, { enabled: true, effort: "none" }]) {
-    test(`openAIReasoningMiddleware > should fall back to low on ${modelId} for ${JSON.stringify(reasoning)}`, async () => {
-      const params = {
-        prompt: [],
-        providerOptions: { unknown: { reasoning } },
-      };
-
-      const result = await openAIReasoningMiddleware.transformParams!({
-        type: "generate",
-        params,
-        model: new MockLanguageModelV4({ modelId }),
-      });
-
-      expect(result).toEqual({
-        prompt: [],
-        providerOptions: {
-          openai: { reasoningEffort: "low" },
-          unknown: {},
-        },
-      });
-    });
-  }
-}
-
-test("openAIReasoningMiddleware > should disable reasoning when requested (standard model)", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false },
-      },
-    },
-  };
-
-  const result = await openAIReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      openai: {
-        reasoningEffort: "none",
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("openAIReasoningMiddleware > should map reasoning for gpt-oss models", async () => {
-  const cases = [
-    { reasoning: { enabled: false }, expected: undefined },
-    { reasoning: { enabled: true }, expected: undefined },
-    { reasoning: { enabled: true, effort: "none" }, expected: undefined },
-    { reasoning: { enabled: true, effort: "minimal" }, expected: "low" },
-    { reasoning: { enabled: true, effort: "low" }, expected: "low" },
-    { reasoning: { enabled: true, effort: "medium" }, expected: "medium" },
-    { reasoning: { enabled: true, effort: "high" }, expected: "high" },
-    { reasoning: { enabled: true, effort: "xhigh" }, expected: "high" },
-  ] as const;
-
-  await Promise.all(
-    cases.map(async ({ reasoning, expected }) => {
-      const params = {
-        prompt: [],
-        providerOptions: {
-          unknown: { reasoning },
-        },
-      };
-
-      const result = await openAIReasoningMiddleware.transformParams!({
-        type: "generate",
-        params,
-        model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
-      });
-
-      expect(result).toEqual({
-        prompt: [],
-        providerOptions: {
-          openai: expected === undefined ? {} : { reasoningEffort: expected },
-          unknown: {},
-        },
-      });
-    }),
   );
-});
 
-test("openAIReasoningMiddleware > should default reasoning effort when enabled without effort", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true },
-      },
-    },
-  };
-
-  const result = await openAIReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-5.4-mini" }),
+  test("passes efforts through for models without a spec", async () => {
+    expect(await effortOf({}, { enabled: true, effort: "max" })).toBe("max");
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      openai: {},
-      unknown: {},
-    },
+  test("drops reasoning for models that don't reason", async () => {
+    const result = await transform(
+      openAIReasoningMiddleware({ reasoning: false }),
+      withReasoning({ enabled: true, effort: "high" }),
+    );
+    expect(result.providerOptions).toEqual({ unknown: {} });
+  });
+
+  test("sends no effort when enabled without one", async () => {
+    expect(await effortOf(GPT_6_SOL, { enabled: true, max_tokens: 1000 })).toBeUndefined();
+  });
+
+  // `reasoning_effort` used to be forwarded verbatim, over the mapped effort.
+  test("the mapped effort reaches the provider", async () => {
+    let params = withReasoning({ enabled: false, effort: "none" });
+    for (const middleware of modelMiddlewareMatcher.for(
+      "openai/gpt-6.1-sol",
+      "openai.responses",
+      GPT_6_1_SOL,
+    )) {
+      // oxlint-disable-next-line no-await-in-loop
+      if (middleware.transformParams) params = await transform(middleware, params);
+    }
+    expect(params.providerOptions).toEqual({ openai: { reasoningEffort: "low" } });
   });
 });
 

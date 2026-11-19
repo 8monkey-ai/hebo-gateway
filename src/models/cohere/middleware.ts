@@ -1,27 +1,18 @@
 import type { CohereEmbeddingModelOptions, CohereLanguageModelOptions } from "@ai-sdk/cohere";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings/index.ts";
-import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
+import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
+import type { ReasoningControls } from "../types.ts";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Cohere)
 export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
+  transformParams: async ({ params }) => {
     const unknown = params.providerOptions?.["unknown"];
     if (!unknown) return params;
-
-    const modelId = model.modelId;
-    if (
-      modelId.includes("cohere/embed-english-light") ||
-      modelId.includes("cohere/embed-multilingual-light")
-    ) {
-      delete unknown["dimensions"];
-      return params;
-    }
 
     const dimensions = unknown["dimensions"] as EmbeddingsDimensions;
     if (!dimensions) return params;
@@ -37,56 +28,34 @@ export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-const COHERE_MAX_OUTPUT_TOKENS = 32000;
+// Assumed for models without reasoning data (e.g. custom ones).
+const COMMAND: ReasoningControls = { toggle: true, budget: {} };
 
-/** North exposes a plain thinking toggle; only the Command A line takes a token budget. */
-const supportsTokenBudget = (modelId: string) => !modelId.includes("north");
+// Cohere takes a thinking toggle, with a token budget on the models that list one (models.dev).
+export const cohereReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => {
+  const controls = reasoningControls(spec, COMMAND);
+  return {
+    specificationVersion: "v3",
+    // oxlint-disable-next-line require-await
+    transformParams: async ({ params }) => {
+      const reasoning = takeReasoning(params);
+      if (!reasoning || !controls) return params;
 
-export const cohereReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params, model }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
+      const resolved = resolveReasoning(reasoning, controls, params.maxOutputTokens ?? spec.output);
+      if (!resolved) return params;
 
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
+      const target = (params.providerOptions!["cohere"] ??= {}) as CohereLanguageModelOptions;
+      target.thinking = resolved.enabled
+        ? resolved.budget === undefined
+          ? { type: "enabled" }
+          : { type: "enabled", tokenBudget: resolved.budget }
+        : { type: "disabled" };
 
-    const target = (params.providerOptions!["cohere"] ??= {}) as CohereLanguageModelOptions;
-
-    if (!reasoning.enabled || reasoning.effort === "none") {
-      target.thinking = { type: "disabled" };
-    } else if (!supportsTokenBudget(model.modelId)) {
-      target.thinking = { type: "enabled" };
-    } else if (reasoning.max_tokens) {
-      target.thinking = { type: "enabled", tokenBudget: reasoning.max_tokens };
-    } else if (reasoning.effort) {
-      // FUTURE: warn that reasoning.max_tokens was computed
-      target.thinking = {
-        type: "enabled",
-        tokenBudget: calculateReasoningBudgetFromEffort(
-          reasoning.effort,
-          params.maxOutputTokens ?? COHERE_MAX_OUTPUT_TOKENS,
-          1024,
-        ),
-      };
-    } else {
-      target.thinking = { type: "enabled" };
-    }
-
-    delete unknown["reasoning"];
-
-    return params;
-  },
-};
+      return params;
+    },
+  };
+});
 
 modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: [cohereDimensionsMiddleware] });
 
-modelMiddlewareMatcher.useForModel(
-  [
-    "cohere/command-a-reasoning-08-2025",
-    "cohere/command-a-plus-05-2026",
-    "cohere/north-mini-code-1-0",
-  ],
-  { language: [cohereReasoningMiddleware] },
-);
+modelMiddlewareMatcher.useForModel("cohere/*", { language: [cohereReasoningMiddleware] });

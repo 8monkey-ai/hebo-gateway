@@ -1,32 +1,10 @@
-import type { MoonshotAILanguageModelOptions } from "@ai-sdk/moonshotai";
-import type { LanguageModelMiddleware } from "ai";
-
-import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { thinkingReasoningMiddleware } from "../../middleware/thinking.ts";
 
-export const moonshotReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
-
-    const target = (params.providerOptions!["moonshotai"] ??= {}) as MoonshotAILanguageModelOptions;
-
-    if (reasoning.enabled === false) {
-      target.thinking = { type: "disabled" };
-    } else {
-      target.thinking = { type: "enabled" };
-    }
-
-    delete unknown["reasoning"];
-
-    return params;
-  },
-};
+// Kimi K2.x takes a thinking toggle, K3 effort levels.
+export const moonshotReasoningMiddleware = thinkingReasoningMiddleware("moonshotai", {
+  effort: ["low", "high", "max"],
+});
 
 modelMiddlewareMatcher.useForModel("moonshotai/*", {
   language: [moonshotReasoningMiddleware],

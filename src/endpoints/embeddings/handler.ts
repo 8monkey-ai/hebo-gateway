@@ -5,7 +5,7 @@ import { GatewayError } from "../../errors/gateway.ts";
 import { winterCgHandler } from "../../lifecycle.ts";
 import { logger } from "../../logger/index.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { resolveProvider } from "../../providers/registry.ts";
+import { getModelSpec, resolveProvider } from "../../providers/registry.ts";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
@@ -99,7 +99,11 @@ export const embeddings = (config: GatewayConfig): Endpoint => {
     // Build middleware chain (model -> forward params -> provider).
     const embeddingModelWithMiddleware = wrapEmbeddingModel({
       model: embeddingModel,
-      middleware: modelMiddlewareMatcher.forEmbedding(ctx.resolvedModelId, embeddingModel.provider),
+      middleware: modelMiddlewareMatcher.forEmbedding(
+        ctx.resolvedModelId,
+        embeddingModel.provider,
+        getModelSpec(ctx.provider, ctx.resolvedModelId),
+      ),
     });
 
     // Execute request.

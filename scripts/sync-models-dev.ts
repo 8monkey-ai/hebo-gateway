@@ -24,6 +24,23 @@ for (const path of presets) {
   folders.set(path.slice(0, path.indexOf("/")), added[0]!);
 }
 
+/**
+ * Middleware is built from the reasoning controls, so changes to them are listed for review:
+ * an upstream data mistake would change what requests send.
+ */
+function reportReasoningChanges(before: ModelsDevCatalog, after: ModelsDevCatalog) {
+  for (const id in after) {
+    const providers = after[id]!.providers;
+    for (const provider in providers) {
+      const was = before[id]?.providers[provider];
+      if (!was) continue;
+      const a = JSON.stringify(was.reasoning);
+      const b = JSON.stringify(providers[provider]!.reasoning);
+      if (a !== b) console.log(`  reasoning of ${id} on ${provider}: ${a} -> ${b}`);
+    }
+  }
+}
+
 const res = await fetch(MODELS_DEV_API_URL);
 if (!res.ok) throw new Error(`GET ${MODELS_DEV_API_URL} failed: HTTP ${res.status}`);
 
@@ -37,6 +54,12 @@ for (const [dir, { namespace }] of folders) {
   }
 
   const out = `${root}${dir}/models-dev.json`;
+  // oxlint-disable-next-line no-await-in-loop
+  const file = Bun.file(out);
+  // oxlint-disable-next-line no-await-in-loop
+  const before = (await file.exists()) ? ((await file.json()) as ModelsDevCatalog) : {};
+  reportReasoningChanges(before, slice);
+
   // oxlint-disable-next-line no-await-in-loop
   await Bun.write(out, `${JSON.stringify(slice, null, 2)}\n`);
   console.log(`Wrote ${Object.keys(slice).length} models to ${out}`);

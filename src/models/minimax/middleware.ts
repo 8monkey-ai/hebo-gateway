@@ -1,56 +1,32 @@
 import type { LanguageModelMiddleware } from "ai";
 
-import type {
-  ChatCompletionsReasoningConfig,
-  ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema.ts";
-import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
+import type { ReasoningControls } from "../types.ts";
 
-function mapMinimaxReasoningEffort(
-  effort: ChatCompletionsReasoningEffort,
-): "low" | "medium" | "high" | undefined {
-  switch (effort) {
-    case "none":
-      return undefined;
-    case "minimal":
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-    case "xhigh":
-    case "max":
-      return "high";
-  }
+// Current generation, assumed for models without reasoning data (e.g. custom ones).
+const MINIMAX: ReasoningControls = { effort: ["low", "medium", "high", "xhigh", "max"] };
 
-  return undefined;
-}
+// MiniMax takes the OpenAI-compatible `reasoning_effort`, `none` turning thinking off. What
+// each model takes comes from its spec (models.dev).
+export const minimaxReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => {
+  const controls = reasoningControls(spec, MINIMAX);
+  return {
+    specificationVersion: "v3",
+    // oxlint-disable-next-line require-await
+    transformParams: async ({ params }) => {
+      const reasoning = takeReasoning(params);
+      if (!reasoning || !controls) return params;
 
-// MiniMax M2.7 supports reasoning via OpenAI-compatible reasoning_effort.
-// Map the gateway's generic reasoning config to the provider-native parameter.
-export const minimaxReasoningMiddleware: LanguageModelMiddleware = {
-  specificationVersion: "v3",
-  // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
+      // max_tokens not supported by MiniMax reasoning
+      const resolved = resolveReasoning(reasoning, controls);
+      const effort = resolved?.enabled === false ? "none" : resolved?.effort;
+      if (effort) params.providerOptions!["unknown"]!["reasoning_effort"] = effort;
 
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
-
-    if (reasoning.enabled === false) {
-      unknown["reasoning_effort"] = "none";
-    } else if (reasoning.effort) {
-      unknown["reasoning_effort"] = mapMinimaxReasoningEffort(reasoning.effort);
-    }
-
-    // max_tokens not supported by MiniMax reasoning
-
-    delete unknown["reasoning"];
-
-    return params;
-  },
-};
+      return params;
+    },
+  };
+});
 
 modelMiddlewareMatcher.useForModel("minimax/*", {
   language: [minimaxReasoningMiddleware],

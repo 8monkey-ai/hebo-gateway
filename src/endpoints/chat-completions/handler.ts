@@ -12,7 +12,7 @@ import { GatewayError } from "../../errors/gateway.ts";
 import { winterCgHandler } from "../../lifecycle.ts";
 import { logger } from "../../logger/index.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { resolveProvider } from "../../providers/registry.ts";
+import { getModelSpec, resolveProvider } from "../../providers/registry.ts";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
@@ -116,7 +116,11 @@ export const chatCompletions = (config: GatewayConfig): Endpoint => {
     // Build middleware chain (model -> forward params -> provider).
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
-      middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
+      middleware: modelMiddlewareMatcher.for(
+        ctx.resolvedModelId,
+        languageModel.provider,
+        getModelSpec(ctx.provider, ctx.resolvedModelId),
+      ),
     });
 
     // Execute request (streaming vs. non-streaming).
