@@ -68,6 +68,13 @@ describe("bundled model families", () => {
     ]);
   });
 
+  test("Cohere Embed v4 keeps the providers it had before models.dev", () => {
+    const catalog = createModelCatalog(defineModelCatalog("cohere/embed-v4.0"), providers, {
+      source: false,
+    }).current!;
+    expect(catalog["cohere/embed-v4.0"]?.providers).toEqual(["cohere", "bedrock", "azure"]);
+  });
+
   test("named groups select by pattern", () => {
     const opus = ids(anthropic.claude.opus);
     expect(opus.length).toBeGreaterThan(0);

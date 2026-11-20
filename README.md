@@ -250,18 +250,6 @@ const models = defineModelCatalog(
 
 Groups are resolved when the catalog loads, so a new release joins `all`, `latest` and its version groups without a gateway release. This also means `latest` can change on restart: list exact IDs to pin the catalog. When `models` is omitted, every model of the imported labs is exposed.
 
-Groups can also be used as arrays of single-model presets (`map`, `filter`, `length`, spreading, …). Calling a preset returns its model keyed by ID, so `Object.keys(preset())[0]` is the model ID:
-
-```ts
-const models = defineModelCatalog(
-  claude.all
-    .filter((preset) => !Object.keys(preset())[0]!.includes("haiku"))
-    .map((preset) => preset({ providers: ["bedrock"] })),
-);
-```
-
-The array lists the models of the snapshots bundled with the release (the presets themselves still read the live catalog). Pass a group as is to also pick up models released after it.
-
 Out-of-the-box model families:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`: `qwen` (`embeddings`)

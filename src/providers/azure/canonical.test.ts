@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import { createAzure } from "@ai-sdk/azure";
 
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
 import { withCanonicalIdsForAzure } from "./canonical.ts";
 
 const azure = createAzure({ apiKey: "test-key", resourceName: "test-resource" });
@@ -34,4 +35,10 @@ test("withCanonicalIdsForAzure > maps transcription models", () => {
   expect(provider.transcriptionModel("microsoft/mai-transcribe-2").modelId).toBe(
     "mai-transcribe-2",
   );
+});
+
+test("withCanonicalIdsForAzure > serves Cohere Embed v4, which models.dev only lists on Cohere", () => {
+  const provider = withCanonicalIdsForAzure(azure);
+  expect(loadBundledCatalog("azure", provider)["cohere/embed-v4.0"]?.providers).toEqual(["azure"]);
+  expect(provider.embeddingModel("cohere/embed-v4.0").modelId).toBe("embed-v4.0");
 });

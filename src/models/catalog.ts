@@ -35,8 +35,6 @@ export type ModelLabConfig = ModelsDevLab & {
 export type ModelLab = Readonly<ModelLabConfig>;
 
 const labs = new Map<string, ModelLab>();
-// Bumped on every registration, so the array view of groups (see `ModelGroup`) is rebuilt.
-let registrations = 0;
 
 /** Hands the specs of `source` to every provider instance wrapped for their provider ID. */
 const shareSpecs = (source: ModelsDevCatalog, replace: boolean) => {
@@ -56,7 +54,6 @@ const shareSpecs = (source: ModelsDevCatalog, replace: boolean) => {
  */
 export function registerModels(lab: ModelLabConfig): ModelLab {
   labs.set(lab.namespace, lab);
-  registrations++;
   // Until the catalog loads, providers resolve native IDs from the bundled snapshot.
   shareSpecs(lab.snapshot, false);
   if (lab.extras) shareSpecs(lab.extras, false);
@@ -82,32 +79,8 @@ export type ModelSelection = {
   };
 };
 
-/**
- * A single model of a group, e.g. `claude.all[0]`. Called, it also lists the model keyed by its
- * ID, from the bundled snapshot: `Object.keys(preset())[0]` is the model ID.
- */
-export type ModelPreset = ModelSelection &
-  ((override?: ModelOverride) => ModelSelection & ModelCatalog);
-
-/**
- * A group of models resolved against the catalog when it loads, e.g. `claude.latest`. It can be
- * called with an override (`claude.opus({ ... })`), and read as an array of `ModelPreset`s
- * (`map`, `filter`, `length`, spreading, …). The array lists the models of the snapshots bundled
- * with the release: new models only join a group that is passed as is.
- */
-export type ModelGroup = ModelSelection &
-  ((override?: ModelOverride) => ModelSelection) &
-  readonly ModelPreset[];
-
-const selection = <T extends object>(
-  target: T,
-  namespaces: readonly string[],
-  select: (source: ModelsDevCatalog) => ModelId[],
-  override?: ModelOverride,
-): T & ModelSelection =>
-  // Not enumerable: spreading a preset's catalog (`{ ...preset() }`) only copies models.
-  Object.defineProperty(target, kSelect, { value: { namespaces, select, override } }) as T &
-    ModelSelection;
+/** A selection that can also be called with an override, e.g. `claude.opus({ ... })`. */
+export type ModelGroup = ModelSelection & ((override?: ModelOverride) => ModelSelection);
 
 const applyOverride = (
   model: ModelsDevCatalogModel,
@@ -143,73 +116,15 @@ const withoutSpecs = (model: CatalogModel): ModelsDevCatalogModel => {
   return { ...model, providers };
 };
 
-/** The bundled snapshots of `namespaces`, with their lab extras. */
-const bundledModels = (namespaces: Iterable<string>) => {
-  const out: ModelsDevCatalog = {};
-  for (const ns of namespaces) {
-    const lab = labs.get(ns);
-    if (!lab) continue;
-    Object.assign(out, lab.snapshot);
-    for (const id in lab.extras) {
-      const model = out[id];
-      out[id] = model ? fillProviders(model, lab.extras[id]!) : lab.extras[id];
-    }
-  }
-  return out;
-};
-
-const definePreset = (
-  namespaces: readonly string[],
-  id: ModelId,
-  bundled: ModelsDevCatalogModel,
-): ModelPreset => {
-  const select = (source: ModelsDevCatalog) => (source[id] ? [id] : []);
-  const withOverride = (override?: ModelOverride) => {
-    const model = applyOverride(bundled, override);
-    const listed: ModelCatalog = { [id]: { ...model, providers: Object.keys(model.providers) } };
-    return selection(listed, namespaces, select, override);
-  };
-  return selection(withOverride, namespaces, select);
-};
-
 /** Creates a group of models, picked by `select` from the namespaces it reads. */
 export function defineModelGroup(
   namespaces: readonly string[],
   select: (source: ModelsDevCatalog) => ModelId[],
 ): ModelGroup {
-  const group = selection(
-    (override?: ModelOverride): ModelSelection => selection({}, namespaces, select, override),
-    namespaces,
-    select,
-  );
-
-  // The array view, rebuilt when a lab registers.
-  let built = -1;
-  let presets: ModelPreset[] = [];
-  const list = () => {
-    if (built !== registrations) {
-      const source = bundledModels(namespaces);
-      presets = select(source).map((id) => definePreset(namespaces, id, source[id]!));
-      built = registrations;
-    }
-    return presets;
-  };
-
-  return new Proxy(group, {
-    get(target, key) {
-      if (key === kSelect) return target[kSelect];
-      // Lets `[].concat(group)` spread it, as it did an array.
-      if (key === Symbol.isConcatSpreadable) return true;
-
-      const array = list();
-      if (!(key in array)) return Reflect.get(target, key) as unknown;
-      const value = Reflect.get(array, key) as unknown;
-      // Array methods run on the presets; the presets themselves (indices) are returned as is.
-      return typeof value === "function" && !Object.hasOwn(array, key)
-        ? (value as (...args: unknown[]) => unknown).bind(array)
-        : value;
-    },
-  }) as ModelGroup;
+  const withOverride = (override?: ModelOverride): ModelSelection => ({
+    [kSelect]: { namespaces, select, override },
+  });
+  return Object.assign(withOverride, withOverride());
 }
 
 // --- Catalog definition ----------------------------------------------------------------------
