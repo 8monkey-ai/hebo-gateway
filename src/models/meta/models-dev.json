@@ -1,0 +1,132 @@
+{
+  "meta/llama-3.3-70b-instruct": {
+    "name": "Llama-3.3-70B-Instruct",
+    "family": "llama",
+    "created": "2024-12-06",
+    "knowledge": "2023-12",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "azure": {
+        "id": "llama-3.3-70b-instruct",
+        "output": 32768,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "output": 16384,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/llama-4-scout-17b-instruct": {
+    "name": "Llama 4 Scout 17B Instruct",
+    "family": "llama",
+    "created": "2025-04-05",
+    "knowledge": "2024-08",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1310720,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "meta/llama-4-scout-17b-16e-instruct-maas",
+        "output": 8192,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "output": 16384,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/llama-guard-4-12b": {
+    "name": "Llama Guard 4 12B",
+    "family": "llama",
+    "created": "2025-04-29",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 163840,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "deepinfra": {
+        "id": "meta-llama/Llama-Guard-4-12B",
+        "output": 163840,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/llama-prompt-guard-2-22m": {
+    "name": "Llama Prompt Guard 2 22M",
+    "family": "llama",
+    "status": "beta",
+    "created": "2025-04-29",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 512,
+    "providers": {
+      "groq": {
+        "id": "meta-llama/llama-prompt-guard-2-22m",
+        "output": 512,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/llama-prompt-guard-2-86m": {
+    "name": "Prompt Guard 2 86M",
+    "family": "llama",
+    "status": "beta",
+    "created": "2025-04-29",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 512,
+    "providers": {
+      "groq": {
+        "id": "meta-llama/llama-prompt-guard-2-86m",
+        "output": 512,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/muse-spark-open": {
+    "name": "Muse Spark Open",
+    "family": "muse",
+    "created": "2026-10-15",
+    "knowledge": "2026-01-04",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "togetherai": {
+        "id": "meta-models/Muse-Spark-Open-816B-A42B",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/muse-spark-open",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
+    }
+  }
+}

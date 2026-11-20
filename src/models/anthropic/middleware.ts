@@ -1,106 +1,17 @@
 import type { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import type { LanguageModelMiddleware } from "ai";
 
-import type {
-  ChatCompletionsCacheControl,
-  ChatCompletionsReasoningConfig,
-  ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema.ts";
+import type { ChatCompletionsCacheControl } from "../../endpoints/chat-completions/schema.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
+import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
+import { specOf } from "../../providers/registry.ts";
+import type { ReasoningControls } from "../types.ts";
 
-const isClaude = (family: "opus" | "sonnet" | "haiku", version: string) => {
-  const dashed = version.replace(".", "-");
+// Current generation, assumed for models without reasoning data (e.g. custom ones).
+const CLAUDE: ReasoningControls = { effort: ["low", "medium", "high", "xhigh", "max"] };
 
-  return (modelId: string) =>
-    modelId.includes(`claude-${family}-${version}`) ||
-    modelId.includes(`claude-${family}-${dashed}`);
-};
-
-const isClaude4 = (modelId: string) => modelId.includes("claude-") && modelId.includes("-4");
-const isFable5 = (modelId: string) => modelId.includes("claude-fable-5");
-const isOpus5 = (modelId: string) => modelId.includes("claude-opus-5");
-const isSonnet5 = (modelId: string) => modelId.includes("claude-sonnet-5");
-const isHaiku5 = (modelId: string) => modelId.includes("claude-haiku-5");
-const isClaude4OrFable = (modelId: string) =>
-  isClaude4(modelId) ||
-  isFable5(modelId) ||
-  isOpus5(modelId) ||
-  isSonnet5(modelId) ||
-  isHaiku5(modelId);
-
-const isOpus48 = isClaude("opus", "4.8");
-const isOpus47 = isClaude("opus", "4.7");
-const isOpus46 = isClaude("opus", "4.6");
-const isSonnet46 = isClaude("sonnet", "4.6");
-
-// Models with native effort levels (low–max) and adaptive extended thinking.
-const isNativeEffortClaude = (modelId: string) =>
-  isOpus5(modelId) ||
-  isSonnet5(modelId) ||
-  isHaiku5(modelId) ||
-  isFable5(modelId) ||
-  isOpus48(modelId) ||
-  isOpus47(modelId);
-
-export function mapClaudeReasoningEffort(
-  effort: ChatCompletionsReasoningEffort,
-  modelId: string,
-): "low" | "medium" | "high" | "xhigh" | "max" | undefined {
-  if (isNativeEffortClaude(modelId)) {
-    switch (effort) {
-      case "none":
-      case "minimal":
-      case "low":
-        return "low";
-      case "medium":
-        return "medium";
-      case "high":
-        return "high";
-      case "xhigh":
-        return "xhigh";
-      case "max":
-        return "max";
-    }
-  }
-
-  if (isOpus46(modelId)) {
-    switch (effort) {
-      case "none":
-      case "minimal":
-      case "low":
-        return "low";
-      case "medium":
-        return "medium";
-      case "high":
-        return "high";
-      case "xhigh":
-      case "max":
-        return "max";
-    }
-  }
-
-  switch (effort) {
-    case "none":
-    case "minimal":
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-    case "xhigh":
-    case "max":
-      return "high";
-  }
-
-  return undefined;
-}
-
-function getMaxOutputTokens(modelId: string): number {
-  if (isNativeEffortClaude(modelId) || isOpus46(modelId)) return 128_000;
-  return 64_000;
-}
-
+// Effort levels and budget support come from the model spec (models.dev). Claude can always
+// turn thinking off, and thinks adaptively unless given a budget it takes.
 // Documentation:
 // https://platform.claude.com/docs/en/build-with-claude/effort
 // https://platform.claude.com/docs/en/build-with-claude/extended-thinking
@@ -109,64 +20,29 @@ export const claudeReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
   transformParams: async ({ params, model }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
-
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
+    const spec = specOf(model);
+    const controls = reasoningControls(spec, CLAUDE);
+    const reasoning = takeReasoning(params);
+    if (!reasoning || !controls) return params;
 
     const target = (params.providerOptions!["anthropic"] ??= {}) as AnthropicProviderOptions;
-    const modelId = model.modelId;
-    const clampedMaxTokens =
-      reasoning.max_tokens && Math.min(reasoning.max_tokens, getMaxOutputTokens(modelId));
 
-    if (!reasoning.enabled) {
+    if (reasoning.enabled === false || reasoning.effort === "none") {
       target.thinking = { type: "disabled" };
-    } else if (reasoning.effort) {
-      if (isClaude4OrFable(modelId)) {
-        target.effort = mapClaudeReasoningEffort(reasoning.effort, modelId);
-      }
-      if (isNativeEffortClaude(modelId)) {
-        target.thinking = { type: "adaptive" };
-      } else if (isOpus46(modelId)) {
-        target.thinking = clampedMaxTokens
-          ? // @ts-expect-error AI SDK type missing type:adaptive with budgetToken
-            { type: "adaptive", budgetTokens: clampedMaxTokens }
-          : { type: "adaptive" };
-      } else if (isSonnet46(modelId)) {
-        target.thinking = clampedMaxTokens
-          ? { type: "enabled", budgetTokens: clampedMaxTokens }
-          : { type: "adaptive" };
-      } else {
-        target.thinking = { type: "enabled" };
-        if (clampedMaxTokens) {
-          target.thinking.budgetTokens = clampedMaxTokens;
-        } else {
-          // FUTURE: warn that reasoning.max_tokens was computed
-          target.thinking.budgetTokens = calculateReasoningBudgetFromEffort(
-            reasoning.effort,
-            params.maxOutputTokens ?? getMaxOutputTokens(modelId),
-            1024,
-          );
-        }
-      }
-    } else if (clampedMaxTokens) {
-      target.thinking = {
-        type: "enabled",
-        budgetTokens: clampedMaxTokens,
-      };
-    } else {
-      target.thinking = { type: "enabled" };
+      return params;
     }
+
+    const resolved = resolveReasoning(reasoning, controls, params.maxOutputTokens ?? spec.output)!;
+    if (resolved.effort) target.effort = resolved.effort as AnthropicProviderOptions["effort"];
+    target.thinking =
+      reasoning.max_tokens && resolved.budget !== undefined
+        ? { type: "enabled", budgetTokens: resolved.budget }
+        : { type: "adaptive" };
 
     // Map reasoning.summary to Anthropic thinking.display
-    const thinkingDisplay =
+    const display =
       reasoning.summary === "none" ? "omitted" : reasoning.summary ? "summarized" : undefined;
-    if (thinkingDisplay && target.thinking && target.thinking.type !== "disabled") {
-      (target.thinking as Record<string, unknown>)["display"] = thinkingDisplay;
-    }
-
-    delete unknown["reasoning"];
+    if (display) (target.thinking as Record<string, unknown>)["display"] = display;
 
     return params;
   },
@@ -196,19 +72,6 @@ export const claudePromptCachingMiddleware: LanguageModelMiddleware = {
   },
 };
 
-modelMiddlewareMatcher.useForModel(
-  [
-    "anthropic/claude-haiku-4.5",
-    "anthropic/claude-opus-4.5",
-    "anthropic/claude-*4.6*",
-    "anthropic/claude-opus-4.7*",
-    "anthropic/claude-opus-4.8*",
-    "anthropic/claude-opus-5*",
-    "anthropic/claude-sonnet-5*",
-    "anthropic/claude-haiku-5*",
-    "anthropic/claude-fable-*",
-  ],
-  {
-    language: [claudeReasoningMiddleware, claudePromptCachingMiddleware],
-  },
-);
+modelMiddlewareMatcher.useForModel("anthropic/claude-*", {
+  language: [claudeReasoningMiddleware, claudePromptCachingMiddleware],
+});

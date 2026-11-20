@@ -4,18 +4,19 @@ import { MockProviderV4 } from "ai/test";
 
 import { parseConfig } from "./config.ts";
 import type { Logger } from "./logger/index.ts";
+import { defineModelCatalog } from "./models/catalog.ts";
 import type { GatewayConfig } from "./types.ts";
 import { FORWARD_HEADER_ALLOWLIST } from "./utils/request.ts";
 
 const minimalConfig: GatewayConfig = {
   providers: { mock: new MockProviderV4() },
-  models: {
+  models: defineModelCatalog({
     "mock/model": {
       name: "Mock",
       providers: ["mock"],
       modalities: { input: ["text"], output: ["text"] },
     },
-  },
+  }),
 };
 
 const createMockLogger = (): Logger => ({

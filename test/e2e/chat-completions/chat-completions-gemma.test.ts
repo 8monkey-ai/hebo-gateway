@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import OpenAI from "openai";
 
-import { gemma426bA4b } from "../../../src/models/google/index.ts";
 import { GOOGLE_VERTEX_PROJECT } from "../shared/server.ts";
 import { createVertexTestServer, type TestServer } from "../shared/server.ts";
 
@@ -14,7 +13,7 @@ import { createVertexTestServer, type TestServer } from "../shared/server.ts";
 // rejected by the endpoint. Requires `gcloud auth application-default login`
 // or GOOGLE_APPLICATION_CREDENTIALS in addition to GOOGLE_VERTEX_PROJECT.
 const hasVertexCredentials = !!GOOGLE_VERTEX_PROJECT;
-const VERTEX_MODEL = "google/gemma-4-26b-a4b";
+const VERTEX_MODEL = "google/gemma-4-26b-a4b-it";
 
 // ---------------------------------------------------------------------------
 // Gateway + Server setup
@@ -32,7 +31,7 @@ describe.skipIf(!hasVertexCredentials)(
   "Chat Completions E2E (Vertex MaaS - Gemma 4 26B-A4B)",
   () => {
     beforeAll(() => {
-      testServer = createVertexTestServer(gemma426bA4b());
+      testServer = createVertexTestServer("google/gemma-4-26b-a4b-it");
       baseUrl = testServer.baseUrl;
       client = new OpenAI({
         apiKey: "not-needed",

@@ -1,0 +1,85 @@
+{
+  "amazon/nova-2-lite": {
+    "name": "Nova 2 Lite (EU)",
+    "family": "nova",
+    "created": "2025-12-02",
+    "knowledge": "2025-10",
+    "modalities": {
+      "input": ["text", "image", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "amazon.nova-2-lite-v1:0",
+        "profile": "optional",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high"]
+        }
+      }
+    }
+  },
+  "amazon/nova-lite": {
+    "name": "Nova Lite",
+    "family": "nova-lite",
+    "created": "2024-12-03",
+    "knowledge": "2024-10",
+    "modalities": {
+      "input": ["text", "image", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 300000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "amazon.nova-lite-v1:0",
+        "profile": "optional",
+        "output": 10000,
+        "reasoning": false
+      }
+    }
+  },
+  "amazon/nova-micro": {
+    "name": "Nova Micro (US)",
+    "family": "nova-micro",
+    "created": "2024-12-03",
+    "knowledge": "2024-10",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "amazon.nova-micro-v1:0",
+        "profile": "optional",
+        "output": 10000,
+        "reasoning": false
+      }
+    }
+  },
+  "amazon/nova-pro": {
+    "name": "Nova Pro (US)",
+    "family": "nova-pro",
+    "created": "2024-12-03",
+    "knowledge": "2024-10",
+    "modalities": {
+      "input": ["text", "image", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 300000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "amazon.nova-pro-v1:0",
+        "profile": "optional",
+        "output": 10000,
+        "reasoning": false
+      }
+    }
+  }
+}

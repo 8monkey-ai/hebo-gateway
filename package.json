@@ -261,6 +261,8 @@
     "test:e2e": "bun test --parallel test/e2e/",
     "test:all": "bun test --parallel",
     "check": "bun lint && bun typecheck",
+    "models:sync": "bun scripts/sync-models-dev.ts && oxfmt src/models/*/models-dev.json",
+    "prepublishOnly": "bun run build",
     "fix": "bun lint:staged && bun format:staged"
   },
   "dependencies": {

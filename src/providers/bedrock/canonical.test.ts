@@ -2,30 +2,99 @@ import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
+import { modelSpecsFor } from "../registry.ts";
 import { withCanonicalIdsForBedrock } from "./canonical.ts";
 
+/** Wraps a Bedrock provider and hands it the bundled catalog's native IDs, as a gateway does. */
+const withBundledCatalog = (...args: Parameters<typeof withCanonicalIdsForBedrock>) => {
+  const provider = withCanonicalIdsForBedrock(...args);
+  loadBundledCatalog("bedrock", provider);
+  return provider;
+};
+
 test("withCanonicalIdsForBedrock > maps Claude Opus 5.5 to inference profile without version postfix", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
-  const model = provider.languageModel("anthropic/claude-opus-5.5");
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  const model = provider.languageModel("anthropic/claude-opus-5-5");
   expect(model.modelId).toBe("us.anthropic.claude-opus-5-5");
 });
 
 test("withCanonicalIdsForBedrock > maps Claude Fable 5.1 to inference profile without version postfix", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
-  const model = provider.languageModel("anthropic/claude-fable-5.1");
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  const model = provider.languageModel("anthropic/claude-fable-5-1");
   expect(model.modelId).toBe("us.anthropic.claude-fable-5-1");
 });
 
 test("withCanonicalIdsForBedrock > maps Claude Opus 5 to inference profile without version postfix", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
   const model = provider.languageModel("anthropic/claude-opus-5");
   expect(model.modelId).toBe("us.anthropic.claude-opus-5");
 });
 
 test("withCanonicalIdsForBedrock > maps Claude Sonnet 5 to inference profile without version postfix", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
   const model = provider.languageModel("anthropic/claude-sonnet-5");
   expect(model.modelId).toBe("us.anthropic.claude-sonnet-5");
+});
+
+// BYOK: a provider created per request (e.g. in a `resolveProvider` hook, with the customer's
+// credentials) resolves the same native IDs and route as the configured one.
+test("withCanonicalIdsForBedrock > instances created after the catalog loads share its native IDs", () => {
+  withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  const byok = withCanonicalIdsForBedrock(
+    createAmazonBedrock({
+      region: "us-east-1",
+      credentials: { accessKeyId: "customer", secretAccessKey: "customer" },
+    } as Parameters<typeof createAmazonBedrock>[0]),
+  );
+
+  const claude = byok.languageModel("anthropic/claude-sonnet-4-6");
+  expect(claude.modelId).toBe("us.anthropic.claude-sonnet-4-6");
+  expect(claude.provider).toBe("bedrock.anthropic.messages");
+
+  const gpt = byok.languageModel("openai/gpt-5.5");
+  expect(gpt.modelId).toBe("openai.gpt-5.5");
+  expect(gpt.provider).toBe("bedrock-mantle.responses");
+});
+
+test("withCanonicalIdsForBedrock > maps the embedding models missing from models.dev", () => {
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  expect(provider.embeddingModel("amazon/nova-2-multimodal-embeddings").modelId).toBe(
+    "amazon.nova-2-multimodal-embeddings-v1:0",
+  );
+  expect(provider.embeddingModel("cohere/embed-english-v3.0").modelId).toBe(
+    "cohere.embed-english-v3",
+  );
+});
+
+test("withCanonicalIdsForBedrock > serves Cohere Embed v4, which models.dev only lists on Cohere", () => {
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  expect(loadBundledCatalog("bedrock", provider)["cohere/embed-v4.0"]?.providers).toEqual([
+    "bedrock",
+  ]);
+  expect(provider.embeddingModel("cohere/embed-v4.0").modelId).toBe("us.cohere.embed-v4:0");
+});
+
+test("withCanonicalIdsForBedrock > applies the inference profile and route of the catalog spec", () => {
+  const specs = modelSpecsFor("bedrock");
+  specs.set("acme/optional", { id: "acme.optional-v1:0", profile: "optional" });
+  specs.set("acme/required", { id: "acme.required-v1:0", profile: "required" });
+  specs.set("acme/mantle", { id: "acme.mantle", route: "mantle" });
+  // Upstream IDs are used as is: never templated, nor routed by their text.
+  specs.set("acme/literal", { id: "mantle:{ip}acme.literal" });
+
+  const bedrock = createAmazonBedrock({ region: "us-east-1" });
+  const preferred = withCanonicalIdsForBedrock(bedrock, { inferenceProfile: { geo: "eu" } });
+  const avoid = withCanonicalIdsForBedrock(bedrock, { inferenceProfile: { mode: "avoid" } });
+
+  expect(preferred.languageModel("acme/optional").modelId).toBe("eu.acme.optional-v1:0");
+  expect(avoid.languageModel("acme/optional").modelId).toBe("acme.optional-v1:0");
+  expect(avoid.languageModel("acme/required").modelId).toBe("us.acme.required-v1:0");
+  expect(preferred.languageModel("acme/mantle").provider).toBe("bedrock-mantle.responses");
+
+  const literal = preferred.languageModel("acme/literal");
+  expect(literal.modelId).toBe("mantle:{ip}acme.literal");
+  expect(literal.provider).toBe("amazon-bedrock");
 });
 
 type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
@@ -66,11 +135,11 @@ async function captureRequest(
 // ---------------------------------------------------------------------------
 
 const anthropicCases = [
-  { canonical: "anthropic/claude-opus-5.5", native: "us.anthropic.claude-opus-5-5" },
-  { canonical: "anthropic/claude-sonnet-5.5", native: "us.anthropic.claude-sonnet-5-5" },
-  { canonical: "anthropic/claude-haiku-5.5", native: "us.anthropic.claude-haiku-5-5" },
+  { canonical: "anthropic/claude-opus-5-5", native: "us.anthropic.claude-opus-5-5" },
+  { canonical: "anthropic/claude-sonnet-5-5", native: "us.anthropic.claude-sonnet-5-5" },
+  { canonical: "anthropic/claude-haiku-5-5", native: "us.anthropic.claude-haiku-5-5" },
   {
-    canonical: "anthropic/claude-haiku-4.5",
+    canonical: "anthropic/claude-haiku-4-5-20251001",
     native: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
   },
   // Not in the mapping: resolved by the fallback affixes, same as on Converse.
@@ -79,7 +148,7 @@ const anthropicCases = [
 
 for (const { canonical, native } of anthropicCases) {
   test(`withCanonicalIdsForBedrock > routes ${canonical} to InvokeModel`, () => {
-    const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+    const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
     const model = provider.languageModel(canonical);
 
     // Converse and InvokeModel take the same IDs, inference profiles included.
@@ -89,17 +158,17 @@ for (const { canonical, native } of anthropicCases) {
 }
 
 test("withCanonicalIdsForBedrock > keeps Claude on Converse when the nested provider is off", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }), {
     anthropic: false,
   });
-  const model = provider.languageModel("anthropic/claude-haiku-4.5");
+  const model = provider.languageModel("anthropic/claude-haiku-4-5-20251001");
 
   expect(model.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
   expect(model.provider).toBe("amazon-bedrock");
 });
 
 test("withCanonicalIdsForBedrock > reuses the Anthropic model instance across lookups", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
 
   expect(provider.languageModel("anthropic/claude-opus-5")).toBe(
     provider.languageModel("anthropic/claude-opus-5"),
@@ -112,8 +181,8 @@ test("withCanonicalIdsForBedrock > reuses the Anthropic model instance across lo
 
 /** Captures the request the Claude model would send, without hitting the network. */
 const captureAnthropicRequest = (settings: BedrockSettings, config: CanonicalConfig = {}) =>
-  captureRequest("anthropic/claude-haiku-4.5", (fetch) =>
-    withCanonicalIdsForBedrock(createAmazonBedrock({ ...settings, fetch }), {
+  captureRequest("anthropic/claude-haiku-4-5-20251001", (fetch) =>
+    withBundledCatalog(createAmazonBedrock({ ...settings, fetch }), {
       ...config,
       // Own settings put the nested provider on its own transport, so it needs the capture too.
       anthropic: config.anthropic && { ...config.anthropic, fetch },
@@ -185,7 +254,7 @@ test("Anthropic settings take precedence over the inherited ones", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// GPT-5.5+ and GPT-6 route through the nested Mantle provider
+// Models the catalog lists on Mantle (e.g. GPT-5.5+) route through the nested provider
 // ---------------------------------------------------------------------------
 
 const mantleCases = [
@@ -197,13 +266,11 @@ const mantleCases = [
   { canonical: "openai/gpt-6-sol", native: "openai.gpt-6-sol" },
   { canonical: "openai/gpt-6-luna", native: "openai.gpt-6-luna" },
   { canonical: "openai/gpt-6.1-sol", native: "openai.gpt-6.1-sol" },
-  { canonical: "openai/gpt-6.2-astra", native: "openai.gpt-6.2-astra" },
-  { canonical: "openai/gpt-6.2-sol", native: "openai.gpt-6.2-sol" },
 ] as const;
 
 for (const { canonical, native } of mantleCases) {
   test(`withCanonicalIdsForBedrock > routes ${canonical} to the Mantle Responses API`, () => {
-    const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+    const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
     const model = provider.languageModel(canonical);
 
     // No inference profile prefix and no `-v1:0` postfix: on-demand only, dotted version kept.
@@ -212,7 +279,7 @@ for (const { canonical, native } of mantleCases) {
   });
 
   test(`withCanonicalIdsForBedrock > routes ${canonical} to Mantle when avoiding inference profiles`, () => {
-    const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
+    const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }), {
       inferenceProfile: { mode: "avoid" },
     });
     const model = provider.languageModel(canonical);
@@ -223,7 +290,7 @@ for (const { canonical, native } of mantleCases) {
 }
 
 test("withCanonicalIdsForBedrock > keeps GPT-OSS on the native Converse provider", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }));
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
   const model = provider.languageModel("openai/gpt-oss-120b");
 
   expect(model.modelId).toBe("openai.gpt-oss-120b-1:0");
@@ -240,7 +307,7 @@ test("withCanonicalIdsForBedrock > keeps GPT-OSS on the native Converse provider
  */
 const fromInstance = (settings: BedrockSettings = {}, config: CanonicalConfig = {}) =>
   captureRequest("openai/gpt-5.6-sol", (fetch) =>
-    withCanonicalIdsForBedrock(
+    withBundledCatalog(
       createAmazonBedrock({ region: "eu-west-1", apiKey: "provider-key", ...settings }),
       { ...config, mantle: { apiKey: "mantle-key", fetch, ...config.mantle } },
     ),
@@ -306,7 +373,7 @@ test("Mantle keeps the inherited headers when the region is unresolvable", async
 });
 
 test("withCanonicalIdsForBedrock > reuses the Mantle model instance across lookups", () => {
-  const provider = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-east-1" }), {
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }), {
     mantle: { apiKey: "mantle-key" },
   });
 

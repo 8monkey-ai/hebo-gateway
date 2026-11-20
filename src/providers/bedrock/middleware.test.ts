@@ -5,21 +5,30 @@ import { type LanguageModelV4CallOptions, type LanguageModelV4TextPart } from "@
 import { wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
+import { transform } from "../../../test/helpers/middleware.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 // Also registers the model-level Claude middlewares the full chain below relies on.
 import { claudeReasoningMiddleware } from "../../models/anthropic/middleware.ts";
 // Also registers the model-level GPT middlewares the full chain below relies on.
 import { openAIReasoningMiddleware } from "../../models/openai/middleware.ts";
+import type { ModelSpec } from "../../models/types.ts";
 import { withCanonicalIdsForBedrock } from "./canonical.ts";
 import {
   bedrockAnthropicBetaMiddleware,
   bedrockAnthropicServiceTierMiddleware,
-  bedrockClaudeReasoningMiddleware,
-  bedrockGptReasoningMiddleware,
   bedrockMantleReasoningMiddleware,
   bedrockPromptCachingMiddleware,
+  bedrockReasoningMiddleware,
   bedrockServiceTierMiddleware,
 } from "./middleware.ts";
+
+/** Wraps a Bedrock provider and hands it the bundled catalog's native IDs, as a gateway does. */
+const withBundledCatalog = (...args: Parameters<typeof withCanonicalIdsForBedrock>) => {
+  const provider = withCanonicalIdsForBedrock(...args);
+  loadBundledCatalog("bedrock", provider);
+  return provider;
+};
 
 /** A fetch that records the JSON request body and throws, so no request leaves the process. */
 const capturingFetch = (
@@ -33,26 +42,16 @@ const capturingFetch = (
     throw new Error("captured");
   }) as unknown as typeof fetch;
 
-test("bedrock middlewares > matching provider resolves GPT middleware", () => {
-  const middleware = modelMiddlewareMatcher.resolve({
-    kind: "text",
-    modelId: "openai/gpt-oss-20b",
-    providerId: "amazon-bedrock",
-  });
-
-  expect(middleware).toContain(bedrockGptReasoningMiddleware);
-  expect(middleware).toContain(bedrockServiceTierMiddleware);
-});
-
-test("bedrock middlewares > matching provider resolves Claude middleware", () => {
-  const middleware = modelMiddlewareMatcher.resolve({
-    kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
-    providerId: "amazon-bedrock",
-  });
-
-  expect(middleware).toContain(bedrockClaudeReasoningMiddleware);
-  expect(middleware).toContain(bedrockServiceTierMiddleware);
+test("bedrock middlewares > matching provider resolves the reasoning middleware", () => {
+  for (const modelId of ["openai/gpt-oss-20b", "anthropic/claude-opus-4-6", "zhipuai/glm-5"]) {
+    const middleware = modelMiddlewareMatcher.resolve({
+      kind: "text",
+      modelId,
+      providerId: "amazon-bedrock",
+    });
+    expect(middleware).toContain(bedrockReasoningMiddleware);
+    expect(middleware).toContain(bedrockServiceTierMiddleware);
+  }
 });
 
 const bedrockServiceTierCases = [
@@ -87,7 +86,7 @@ for (const { tier, expected } of bedrockServiceTierCases) {
 test("bedrock middlewares > matching provider resolves prompt caching middleware for Claude", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
+    modelId: "anthropic/claude-opus-4-6",
     providerId: "amazon-bedrock",
   });
 
@@ -104,369 +103,49 @@ test("bedrock middlewares > matching provider resolves prompt caching middleware
   expect(middleware).toContain(bedrockPromptCachingMiddleware);
 });
 
-test("bedrockGptReasoningMiddleware > should map reasoningEffort into reasoningConfig", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningEffort: "high",
-      },
+const reasoningConfigOf = async (bedrock: Record<string, unknown>, reasoning?: false) => {
+  const result = await transform(
+    bedrockReasoningMiddleware,
+    {
+      providerOptions: { bedrock: bedrock as never },
     },
-  };
+    { spec: reasoning === false ? { reasoning } : {} },
+  );
+  return JSON.parse(JSON.stringify(result.providerOptions!["bedrock"])) as Record<string, unknown>;
+};
 
-  const result = await bedrockGptReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          maxReasoningEffort: "high",
-        },
-      },
-    },
+test("bedrockReasoningMiddleware > moves reasoningEffort into reasoningConfig", async () => {
+  expect(await reasoningConfigOf({ reasoningEffort: "high" })).toEqual({
+    reasoningConfig: { maxReasoningEffort: "high" },
   });
 });
 
-test("bedrockGptReasoningMiddleware > should skip non-gpt models", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningEffort: "medium",
-      },
-    },
-  };
-
-  const result = await bedrockGptReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+test("bedrockReasoningMiddleware > moves Anthropic thinking and effort into reasoningConfig", async () => {
+  expect(await reasoningConfigOf({ thinking: { type: "adaptive" }, effort: "max" })).toEqual({
+    reasoningConfig: { type: "adaptive", maxReasoningEffort: "max" },
   });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningEffort: "medium",
-      },
-    },
+  expect(
+    await reasoningConfigOf({ thinking: { type: "enabled", budgetTokens: 4000 }, effort: "high" }),
+  ).toEqual({
+    reasoningConfig: { type: "enabled", budgetTokens: 4000, maxReasoningEffort: "high" },
   });
 });
 
-test("bedrockClaudeReasoningMiddleware > should pass adaptive thinking through with effort", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-          budgetTokens: 4096,
-        },
-        effort: "max",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
+test("bedrockReasoningMiddleware > turns a thinking toggle, or `none`, into the reasoning type", async () => {
+  expect(await reasoningConfigOf({ thinking: { type: "disabled" } })).toEqual({
+    reasoningConfig: { type: "disabled" },
   });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "adaptive",
-          budgetTokens: 4096,
-          maxReasoningEffort: "max",
-        },
-      },
-    },
+  expect(await reasoningConfigOf({ reasoningEffort: "none" })).toEqual({
+    reasoningConfig: { type: "disabled" },
   });
 });
 
-test("bedrockClaudeReasoningMiddleware > should pass adaptive thinking without budget", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "adaptive",
-        },
-      },
-    },
-  });
+test("bedrockReasoningMiddleware > drops reasoning for models that don't reason", async () => {
+  expect(await reasoningConfigOf({ reasoningEffort: "high" }, false)).toEqual({});
 });
 
-test("bedrockClaudeReasoningMiddleware > should map effort with adaptive thinking", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-        effort: "high",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "adaptive",
-          maxReasoningEffort: "high",
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should pass max effort with adaptive thinking", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-        effort: "max",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 10000,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "adaptive",
-          maxReasoningEffort: "max",
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should compute fallback budgetTokens using medium effort when type is enabled", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "enabled",
-        },
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  // medium effort = 50% of maxOutputTokens
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should enforce minimum budgetTokens of 1024 for enabled", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 100,
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "enabled",
-        },
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 100,
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 1024, // minimum enforced
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should skip non-claude models", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-        effort: "high",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "openai/gpt-oss-20b" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-        effort: "high",
-      },
-    },
-  });
-});
-
-test("bedrock middlewares > matching provider resolves Claude middleware for Opus 4.7", () => {
-  const middleware = modelMiddlewareMatcher.resolve({
-    kind: "text",
-    modelId: "anthropic/claude-opus-4.7",
-    providerId: "amazon-bedrock",
-  });
-
-  expect(middleware).toContain(bedrockClaudeReasoningMiddleware);
-  expect(middleware).toContain(bedrockServiceTierMiddleware);
-});
-
-test("bedrockClaudeReasoningMiddleware > should set adaptive type and maxReasoningEffort for Claude Opus 4.7", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "adaptive",
-        },
-        effort: "xhigh",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-7" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "adaptive",
-          maxReasoningEffort: "xhigh",
-        },
-      },
-    },
-  });
-});
-
-test("bedrockClaudeReasoningMiddleware > should not set maxReasoningEffort for Claude 4.5", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        thinking: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-        effort: "high",
-      },
-    },
-  };
-
-  const result = await bedrockClaudeReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.5" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      bedrock: {
-        reasoningConfig: {
-          type: "enabled",
-          budgetTokens: 4096,
-        },
-      },
-    },
-  });
+test("bedrockReasoningMiddleware > leaves requests without reasoning untouched", async () => {
+  expect(await reasoningConfigOf({ serviceTier: "flex" })).toEqual({ serviceTier: "flex" });
 });
 
 test("bedrockPromptCachingMiddleware > should map message and part cacheControl to cachePoint", async () => {
@@ -558,7 +237,7 @@ test("bedrockPromptCachingMiddleware > should fallback from top-level cacheContr
   const result = await bedrockPromptCachingMiddleware.transformParams!({
     type: "generate",
     params: params,
-    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4-6" }),
   });
 
   expect(result).toEqual({
@@ -623,7 +302,7 @@ test("bedrock middlewares > Mantle provider resolves only the Mantle middleware"
 
   expect(middleware).toContain(bedrockMantleReasoningMiddleware);
   // The Converse translations must not touch OpenAI-shaped requests.
-  expect(middleware).not.toContain(bedrockGptReasoningMiddleware);
+  expect(middleware).not.toContain(bedrockReasoningMiddleware);
   expect(middleware).not.toContain(bedrockServiceTierMiddleware);
 });
 
@@ -637,33 +316,38 @@ test("bedrock middlewares > native provider does not resolve the Mantle middlewa
   expect(middleware).not.toContain(bedrockMantleReasoningMiddleware);
 });
 
-test("bedrockMantleReasoningMiddleware > forces the reasoning shape for namespaced GPT-5.x", async () => {
-  const result = await bedrockMantleReasoningMiddleware.transformParams!({
-    type: "generate",
-    params: { prompt: [], providerOptions: { openai: { reasoningEffort: "high" } } },
-    model: new MockLanguageModelV4({ modelId: "openai.gpt-5.6-sol" }),
-  });
+test.each([{ reasoning: { effort: ["low", "high"] } }, {}] as ModelSpec[])(
+  "bedrockMantleReasoningMiddleware > forces the reasoning shape for reasoning models (%o)",
+  async (spec) => {
+    const result = await transform(
+      bedrockMantleReasoningMiddleware,
+      {
+        providerOptions: { openai: { reasoningEffort: "high" } },
+      },
+      { spec },
+    );
+    expect(result.providerOptions!["openai"]).toEqual({
+      reasoningEffort: "high",
+      forceReasoning: true,
+    });
+  },
+);
 
-  expect(result.providerOptions!["openai"]).toEqual({
-    reasoningEffort: "high",
-    forceReasoning: true,
-  });
-});
-
-test("bedrockMantleReasoningMiddleware > skips GPT-OSS, which is not a reasoning-shaped model", async () => {
-  const result = await bedrockMantleReasoningMiddleware.transformParams!({
-    type: "generate",
-    params: { prompt: [], providerOptions: { openai: { reasoningEffort: "low" } } },
-    model: new MockLanguageModelV4({ modelId: "openai.gpt-oss-120b" }),
-  });
-
-  expect(result.providerOptions!["openai"]).toEqual({ reasoningEffort: "low" });
+test("bedrockMantleReasoningMiddleware > skips models that don't reason", async () => {
+  const result = await transform(
+    bedrockMantleReasoningMiddleware,
+    {
+      providerOptions: { openai: {} },
+    },
+    { spec: { reasoning: false } },
+  );
+  expect(result.providerOptions!["openai"]).toEqual({});
 });
 
 test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full chain", async () => {
   let body: Record<string, unknown> | undefined;
 
-  const provider = withCanonicalIdsForBedrock(
+  const provider = withBundledCatalog(
     createAmazonBedrock({ region: "us-east-1", apiKey: "provider-key" }),
     {
       mantle: {
@@ -680,7 +364,7 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
   const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
   const wrapped = wrapLanguageModel({ model, middleware });
 
-  // The canonical ID still matches `openai/gpt-*`, so the GPT reasoning translation applies.
+  // The canonical ID still matches `openai/*`, so the GPT reasoning translation applies.
   expect(middleware).toContain(openAIReasoningMiddleware);
   expect(middleware).toContain(bedrockMantleReasoningMiddleware);
 
@@ -709,14 +393,14 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
 test("bedrock middlewares > the Anthropic provider keeps none of the Converse translations", () => {
   const middleware = modelMiddlewareMatcher.resolve({
     kind: "text",
-    modelId: "anthropic/claude-opus-4.6",
+    modelId: "anthropic/claude-opus-4-6",
     providerId: "bedrock.anthropic.messages",
   });
 
   expect(middleware).toContain(bedrockAnthropicServiceTierMiddleware);
   expect(middleware).toContain(bedrockAnthropicBetaMiddleware);
   expect(middleware).not.toContain(bedrockServiceTierMiddleware);
-  expect(middleware).not.toContain(bedrockClaudeReasoningMiddleware);
+  expect(middleware).not.toContain(bedrockReasoningMiddleware);
   expect(middleware).not.toContain(bedrockPromptCachingMiddleware);
 });
 
@@ -807,7 +491,7 @@ test("bedrockAnthropicBetaMiddleware > should ignore a missing header", async ()
 /** A Claude model on the nested Anthropic provider (InvokeModel), with its request captured. */
 const anthropicModel = (canonicalId: string) => {
   const captured: { body?: Record<string, unknown>; headers?: Record<string, string> } = {};
-  const provider = withCanonicalIdsForBedrock(
+  const provider = withBundledCatalog(
     createAmazonBedrock({
       region: "us-east-1",
       apiKey: "provider-key",
@@ -818,11 +502,14 @@ const anthropicModel = (canonicalId: string) => {
     }),
   );
 
-  return { model: provider.languageModel(canonicalId), captured };
+  return {
+    model: provider.languageModel(canonicalId),
+    captured,
+  };
 };
 
 test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape through the chain", async () => {
-  const modelId = "anthropic/claude-opus-4.6";
+  const modelId = "anthropic/claude-opus-4-6";
   const { model, captured } = anthropicModel(modelId);
   const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
   const wrapped = wrapLanguageModel({ model, middleware });
@@ -852,7 +539,7 @@ test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape thro
 });
 
 test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic", async () => {
-  const modelId = "anthropic/claude-opus-4.6";
+  const modelId = "anthropic/claude-opus-4-6";
   const { model, captured } = anthropicModel(modelId);
   const wrapped = wrapLanguageModel({
     model,
@@ -889,7 +576,7 @@ test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic",
 });
 
 test("bedrock middlewares > unsupported client betas never reach InvokeModel", async () => {
-  const modelId = "anthropic/claude-opus-4.6";
+  const modelId = "anthropic/claude-opus-4-6";
   const { model, captured } = anthropicModel(modelId);
   const wrapped = wrapLanguageModel({
     model,
@@ -915,7 +602,7 @@ test("bedrock middlewares > unsupported client betas never reach InvokeModel", a
 });
 
 test("bedrock middlewares > mid-conversation system turns reach InvokeModel", async () => {
-  const { model, captured } = anthropicModel("anthropic/claude-haiku-4.5");
+  const { model, captured } = anthropicModel("anthropic/claude-haiku-4-5-20251001");
 
   try {
     // The Claude Code shape: a top-level system prompt plus a later `system` turn, which
@@ -944,15 +631,10 @@ test("bedrock middlewares > mid-conversation system turns reach InvokeModel", as
   ]);
 });
 
-test("bedrockClaudeReasoningMiddleware > rejects unsupported between_tools thinking", () => {
+test("bedrockReasoningMiddleware > rejects unsupported between_tools thinking", () => {
   expect(
-    bedrockClaudeReasoningMiddleware.transformParams!({
-      type: "generate",
-      params: {
-        prompt: [],
-        providerOptions: { bedrock: { thinking: { type: "between_tools" } } },
-      },
-      model: new MockLanguageModelV4({ modelId: "anthropic/claude-opus-4.6" }),
+    transform(bedrockReasoningMiddleware, {
+      providerOptions: { bedrock: { thinking: { type: "between_tools" } } },
     }),
   ).rejects.toThrow("Bedrock reasoningConfig does not support between_tools thinking.");
 });

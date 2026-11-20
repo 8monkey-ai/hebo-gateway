@@ -1,24 +1,14 @@
 import { type XaiProvider } from "@ai-sdk/xai";
 
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
-
-const MAPPING = {
-  "xai/grok-4.2": "grok-4.20-0309-non-reasoning",
-  "xai/grok-4.3": "grok-4.3",
-  "xai/grok-4.20": "grok-4.20-0309-reasoning",
-  "xai/grok-4.20-multi-agent": "grok-4.20-multi-agent-0309",
-  "xai/grok-4.5": "grok-4.5",
-  "xai/grok-4.6": "grok-4.6",
-  "xai/grok-4.7": "grok-4.7",
-  "xai/grok-voice-transcribe-2.0": "grok-voice-transcribe-2.0",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForXai = (
   provider: XaiProvider,
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
-    options: { stripNamespace: true, normalizeDelimiters: true },
+    providerId: "xai",
+    mapping: extraMapping,
+    options: { stripNamespace: true },
   });

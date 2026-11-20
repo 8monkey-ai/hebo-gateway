@@ -4,6 +4,7 @@ import type { TranscriptionModelV4CallOptions } from "@ai-sdk/provider";
 import { MockProviderV4, MockTranscriptionModelV4 } from "ai/test";
 
 import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
 import { audioTranscriptions } from "./handler.ts";
 
 const baseUrl = "http://localhost/audio/transcriptions";
@@ -67,7 +68,7 @@ describe("Audio Transcriptions Handler", () => {
       openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
       xai: new MockProviderV4({ transcriptionModels: { "grok-voice-transcribe-2.0": grok } }),
     },
-    models: {
+    models: defineModelCatalog({
       "transcribe-1": {
         name: "Transcribe",
         modalities: { input: ["audio"], output: ["transcription"] },
@@ -88,7 +89,7 @@ describe("Audio Transcriptions Handler", () => {
         modalities: { input: ["text"], output: ["embeddings"] },
         providers: ["openai"],
       },
-    },
+    }),
     advanced: { maxBodySize: 1024 },
   });
 
@@ -271,12 +272,12 @@ describe("Audio Transcriptions Handler", () => {
       providers: {
         openai: new MockProviderV4({ transcriptionModels: { "transcribe-1": transcriber } }),
       },
-      models: {
+      models: defineModelCatalog({
         "transcribe-1": {
           modalities: { input: ["audio"], output: ["transcription"] },
           providers: ["openai"],
         },
-      },
+      }),
       hooks: {
         before: (ctx) => {
           expect(ctx.operation).toBe("transcriptions");

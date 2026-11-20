@@ -7,28 +7,28 @@ import { withCanonicalIdsForMoonshot } from "./canonical.ts";
 test("withCanonicalIdsForMoonshot > strips namespace for kimi-k2.5", () => {
   const provider = withCanonicalIdsForMoonshot(moonshotai);
 
-  const model = provider.languageModel("moonshot/kimi-k2.5");
+  const model = provider.languageModel("moonshotai/kimi-k2.5");
   expect(model.modelId).toBe("kimi-k2.5");
 });
 
 test("withCanonicalIdsForMoonshot > strips namespace for kimi-k2.6", () => {
   const provider = withCanonicalIdsForMoonshot(moonshotai);
 
-  const model = provider.languageModel("moonshot/kimi-k2.6");
+  const model = provider.languageModel("moonshotai/kimi-k2.6");
   expect(model.modelId).toBe("kimi-k2.6");
 });
 
 test("withCanonicalIdsForMoonshot > strips namespace for kimi-k2.7-code", () => {
   const provider = withCanonicalIdsForMoonshot(moonshotai);
 
-  const model = provider.languageModel("moonshot/kimi-k2.7-code");
+  const model = provider.languageModel("moonshotai/kimi-k2.7-code");
   expect(model.modelId).toBe("kimi-k2.7-code");
 });
 
 test("withCanonicalIdsForMoonshot > strips namespace for kimi-k3", () => {
   const provider = withCanonicalIdsForMoonshot(moonshotai);
 
-  const model = provider.languageModel("moonshot/kimi-k3");
+  const model = provider.languageModel("moonshotai/kimi-k3");
   expect(model.modelId).toBe("kimi-k3");
 });
 

@@ -1,112 +1,22 @@
-import type { CanonicalProviderId } from "../../providers/types.ts";
-import { presetFor, type DeepPartial } from "../../utils/preset.ts";
-import type { CanonicalModelId, CatalogModel } from "../types.ts";
+import { registerModels } from "../catalog.ts";
+import { defineModelFamily } from "../family.ts";
+import type { ModelsDevCatalog, SnapshotIds } from "../types.ts";
+import snapshot from "./models-dev.json" with { type: "json" };
 
-const GLM_5_BASE = {
-  modalities: {
-    input: ["text"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["reasoning", "tool_call", "structured_output", "temperature"] as const,
-  context: 200000,
-} satisfies DeepPartial<CatalogModel>;
+const lab = registerModels({
+  namespace: "zhipuai",
+  provider: "zai",
+  host: "zai",
+  snapshot: snapshot as ModelsDevCatalog,
+});
 
-export const glm5 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5" as const, {
-  ...GLM_5_BASE,
-  name: "GLM 5",
-  created: "2026-02-11",
-  context: 204800,
-  providers: [
-    "zai",
-    "deepinfra",
-    "chutes",
-    "togetherai",
-    "fireworks",
-  ] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
+  > {}
+}
 
-export const glm5Turbo = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5-turbo" as const, {
-  ...GLM_5_BASE,
-  name: "GLM 5 Turbo",
-  created: "2026-03-15",
-  providers: ["zai"] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
-
-export const glm51 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5.1" as const, {
-  ...GLM_5_BASE,
-  name: "GLM 5.1",
-  created: "2026-03-27",
-  providers: [
-    "zai",
-    "deepinfra",
-    "chutes",
-    "togetherai",
-    "fireworks",
-  ] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
-
-export const glm52 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5.2" as const, {
-  ...GLM_5_BASE,
-  name: "GLM 5.2",
-  context: 1_000_000,
-  created: "2026-06-13",
-  providers: [
-    "zai",
-    "deepinfra",
-    "chutes",
-    "togetherai",
-    "fireworks",
-  ] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
-
-export const glm53 = presetFor<CanonicalModelId, CatalogModel>()("zhipu/glm-5.3" as const, {
-  ...GLM_5_BASE,
-  name: "GLM 5.3",
-  context: 1_000_000,
-  created: "2026-08-14",
-  providers: [
-    "zai",
-    "deepinfra",
-    "togetherai",
-    "fireworks",
-  ] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
-
-export const glm53Flash = presetFor<CanonicalModelId, CatalogModel>()(
-  "zhipu/glm-5.3-flash" as const,
-  {
-    ...GLM_5_BASE,
-    name: "GLM 5.3 Flash",
-    context: 1_000_000,
-    created: "2026-08-26",
-    modalities: {
-      input: ["text", "image", "video", "file"] as const,
-      output: ["text"] as const,
-    },
-    capabilities: [...GLM_5_BASE.capabilities, "attachments"],
-    providers: [
-      "zai",
-      "deepinfra",
-      "togetherai",
-      "fireworks",
-    ] as const satisfies readonly CanonicalProviderId[],
-  } satisfies CatalogModel,
-);
-
-const glmAtomic = {
-  v5: [glm5, glm5Turbo],
-  "v5.1": [glm51],
-  "v5.2": [glm52],
-  "v5.3": [glm53, glm53Flash],
-} as const;
-
-const glmGroups = {
-  "v5.x": [...glmAtomic["v5"], ...glmAtomic["v5.1"], ...glmAtomic["v5.2"], ...glmAtomic["v5.3"]],
-} as const;
-
-export const glm = {
-  ...glmAtomic,
-  ...glmGroups,
-  latest: [...glmAtomic["v5.3"]],
-  all: Object.values(glmAtomic).flat(),
-} as const;
+export const glm = defineModelFamily(lab, {
+  version: /^glm-(\d+(?:\.\d+)?)(?:[a-z]*)(?:-[a-z]+)*$/u,
+});

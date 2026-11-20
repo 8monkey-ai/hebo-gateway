@@ -1,23 +1,14 @@
 import type { ProviderV4 } from "@ai-sdk/provider";
 
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
-
-const MAPPING = {
-  "minimax/m2.5": "MiniMax/MiniMax-M2.5",
-  "alibaba/qwen3.5-397b": "qwen/qwen3.5-397b-a17b",
-  "alibaba/qwen3.8-27b": "Qwen/Qwen3.8-27B-TEE",
-  "moonshot/kimi-k2.5": "moonshotai/Kimi-K2.5",
-  "moonshot/kimi-k3": "moonshotai/Kimi-K3-TEE",
-  "zhipu/glm-5": "zai-org/GLM-5",
-  "zhipu/glm-5.1": "zai-org/GLM-5.1",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForChutes = (
   provider: ProviderV4,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
+    providerId: "chutes",
+    mapping: extraMapping,
     options: { stripNamespace: false },
   });

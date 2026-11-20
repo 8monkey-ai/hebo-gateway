@@ -16,6 +16,11 @@ import type { Messages, MessagesBody, MessagesStream } from "./endpoints/message
 import type { Model, ModelList } from "./endpoints/models/index.ts";
 import type { Responses, ResponsesBody, ResponsesStream } from "./endpoints/responses/schema.ts";
 import type { Logger, LoggerConfig } from "./logger/index.ts";
+import type {
+  ModelCatalogSourceConfig,
+  ModelCatalogSpec,
+  ModelCatalogStore,
+} from "./models/catalog.ts";
 import type { ModelCatalog, ModelId } from "./models/types.ts";
 import type { ProviderId, ProviderRegistry } from "./providers/types.ts";
 
@@ -46,7 +51,7 @@ export type GatewayContext = {
    */
   providers: ProviderRegistry;
   /**
-   * Model catalog from config.
+   * Model catalog, as selected by `config.models`.
    */
   models: ModelCatalog;
   /**
@@ -262,9 +267,11 @@ export type GatewayConfig = {
    */
   providers: ProviderRegistry;
   /**
-   * Model catalog keyed by canonical model IDs.
+   * Models to expose, from `defineModelCatalog(...)`. Defaults to every model of the
+   * imported lab modules (`@hebo-ai/gateway/models/<lab>`). Models come from models.dev,
+   * loaded once on the first request, falling back to the snapshot bundled with the release.
    */
-  models: ModelCatalog;
+  models?: ModelCatalogSpec;
   /**
    * Optional lifecycle hooks for routing, auth, and response shaping.
    */
@@ -305,9 +312,14 @@ export type GatewayConfig = {
     };
   };
   /**
-   * Advanced configuration for timeouts, body limits, and header forwarding.
+   * Advanced configuration for the model catalog source, timeouts, body limits, and header
+   * forwarding.
    */
   advanced?: {
+    /**
+     * Where the model catalog is loaded from.
+     */
+    catalog?: ModelCatalogSourceConfig;
     /**
      * Optional timeout for server responses.
      * Supports a number in milliseconds, or tiered config.
@@ -333,6 +345,7 @@ export type GatewayConfig = {
 
 export const kParsed = Symbol("hebo.gateway.parsed");
 export type GatewayConfigParsed = Omit<GatewayConfig, "storage" | "advanced"> & {
+  catalog: ModelCatalogStore;
   storage: ConversationStorage;
   advanced: {
     timeouts: {

@@ -1,0 +1,336 @@
+{
+  "cohere/c4ai-aya-expanse-32b": {
+    "name": "Aya Expanse 32B",
+    "created": "2024-10-24",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["temperature"],
+    "providers": {
+      "cohere": {
+        "id": "c4ai-aya-expanse-32b",
+        "output": 4000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/c4ai-aya-vision-32b": {
+    "name": "Aya Vision 32B",
+    "created": "2025-03-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 16000,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "c4ai-aya-vision-32b",
+        "output": 4000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-a-03-2025": {
+    "name": "Command A",
+    "family": "command-a",
+    "created": "2025-03-13",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 256000,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-a-03-2025",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-a-plus-05-2026": {
+    "name": "Command A Plus",
+    "family": "command-a",
+    "created": "2026-05-20",
+    "knowledge": "2025-04-01",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-a-plus-05-2026",
+        "output": 64000,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "min": 1
+          }
+        }
+      }
+    }
+  },
+  "cohere/command-a-reasoning-08-2025": {
+    "name": "Command A Reasoning",
+    "family": "command-a",
+    "created": "2025-08-21",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 256000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-a-reasoning-08-2025",
+        "output": 32000,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "min": 1
+          }
+        }
+      }
+    }
+  },
+  "cohere/command-a-translate-08-2025": {
+    "name": "Command A Translate",
+    "family": "command-a",
+    "created": "2025-08-28",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 8000,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-a-translate-08-2025",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-a-vision-07-2025": {
+    "name": "Command A Vision",
+    "family": "command-a",
+    "created": "2025-07-31",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-a-vision-07-2025",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-r-08-2024": {
+    "name": "Command R",
+    "family": "command-r",
+    "created": "2024-08-30",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-r-08-2024",
+        "output": 4000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-r-plus-08-2024": {
+    "name": "Command R+",
+    "family": "command-r",
+    "created": "2024-08-30",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-r-plus-08-2024",
+        "output": 4000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-r7b-12-2024": {
+    "name": "Command R7B",
+    "family": "command-r",
+    "created": "2024-12-13",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-r7b-12-2024",
+        "output": 4000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/command-r7b-arabic-02-2025": {
+    "name": "Command R7B Arabic",
+    "family": "command-r",
+    "created": "2025-02-27",
+    "knowledge": "2024-06-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "command-r7b-arabic-02-2025",
+        "output": 4000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/embed-v4.0": {
+    "name": "Embed v4.0",
+    "family": "cohere-embed",
+    "created": "2025-04-15",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 128000,
+    "providers": {}
+  },
+  "cohere/embed-v5.0-fast": {
+    "name": "Embed 5 Fast",
+    "family": "cohere-embed",
+    "created": "2026-09-30",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 128000,
+    "providers": {}
+  },
+  "cohere/embed-v5.0-pro": {
+    "name": "Embed 5 Pro",
+    "family": "cohere-embed",
+    "created": "2026-09-30",
+    "modalities": {
+      "input": ["text"],
+      "output": ["embeddings"]
+    },
+    "context": 128000,
+    "providers": {}
+  },
+  "cohere/north-small-translate-1-0": {
+    "name": "North Small Translate",
+    "family": "north",
+    "created": "2026-09-09",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 32768,
+    "capabilities": ["temperature"],
+    "providers": {
+      "cohere": {
+        "id": "north-small-translate-09-2026",
+        "output": 16000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/tiny-aya-earth": {
+    "name": "Tiny Aya Earth",
+    "created": "2026-02-17",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 8000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "tiny-aya-earth",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/tiny-aya-fire": {
+    "name": "Tiny Aya Fire",
+    "created": "2026-02-17",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 8000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "tiny-aya-fire",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/tiny-aya-global": {
+    "name": "Tiny Aya Global",
+    "created": "2026-02-17",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 8000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "tiny-aya-global",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  },
+  "cohere/tiny-aya-water": {
+    "name": "Tiny Aya Water",
+    "created": "2026-02-17",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 8000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "cohere": {
+        "id": "tiny-aya-water",
+        "output": 8000,
+        "reasoning": false
+      }
+    }
+  }
+}

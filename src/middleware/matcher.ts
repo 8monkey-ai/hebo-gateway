@@ -4,6 +4,7 @@ import { logger } from "../logger/index.ts";
 import type { ModelId } from "../models/types.ts";
 import type { ProviderId } from "../providers/types.ts";
 import { addSpanEvent } from "../telemetry/span.ts";
+import { compileGlob } from "../utils/glob.ts";
 import {
   forwardParamsEmbeddingMiddleware,
   forwardParamsMiddleware,
@@ -45,7 +46,7 @@ class SimpleMatcher {
       transcription: entry.transcription ? [...entry.transcription] : undefined,
     };
 
-    this.rules.push({ pattern, test: compilePattern(pattern), stored });
+    this.rules.push({ pattern, test: compileGlob(pattern), stored });
   }
 
   match(key: string): MiddlewareEntries[] {
@@ -174,19 +175,3 @@ export const modelMiddlewareMatcher = new ModelMiddlewareMatcher();
 export type { ModelMiddlewareMatcher };
 
 const toArray = <T>(v: T | readonly T[]): T[] => (Array.isArray(v) ? v : [v as T]);
-
-function compilePattern(pattern: string): (key: string) => boolean {
-  if (!pattern.includes("*")) return (key) => key === pattern;
-
-  // Escape only characters that are `SyntaxCharacter`s: in unicode mode `\-` is an
-  // invalid identity escape, and `-` is not special outside a character class anyway.
-  const re = new RegExp(
-    `^${pattern
-      .split("*")
-      .map((p) => p.replaceAll(/[\\^$+?.()|[\]{}]/gu, "\\$&"))
-      .join(".*")}$`,
-    "u",
-  );
-
-  return (key) => re.test(key);
-}

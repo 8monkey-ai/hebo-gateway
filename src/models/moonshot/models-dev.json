@@ -1,0 +1,190 @@
+{
+  "moonshotai/kimi-k2.5": {
+    "name": "Kimi K2.5",
+    "family": "kimi-k2",
+    "created": "2026-01-27",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "moonshotai.kimi-k2.5",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "moonshotai/kimi-k2.6": {
+    "name": "Kimi K2.6",
+    "family": "kimi-k2",
+    "created": "2026-04-20",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": {
+        "id": "kimi-k2.6",
+        "output": 262144,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K2.6",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "chutes": {
+        "id": "moonshotai/Kimi-K2.6-TEE",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "moonshotai/kimi-k2.7-code": {
+    "name": "Kimi K2.7 Code",
+    "family": "kimi-k2",
+    "created": "2026-06-12",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": {
+        "id": "kimi-k2.7-code",
+        "output": 262144,
+        "reasoning": {}
+      }
+    }
+  },
+  "moonshotai/kimi-k3": {
+    "name": "Kimi K3",
+    "family": "kimi-k3",
+    "created": "2026-07-16",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": {
+        "id": "kimi-k3",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "alibaba": {
+        "id": "kimi-k3",
+        "output": 1048576,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "moonshotai.kimi-k3",
+        "profile": "required",
+        "output": 128000,
+        "reasoning": {}
+      },
+      "togetherai": {
+        "id": "moonshotai/Kimi-K3",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["none", "low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K3",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/kimi-k3",
+        "output": 1048576,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"]
+        }
+      },
+      "chutes": {
+        "id": "moonshotai/Kimi-K3-TEE",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "moonshotai/kimi-k3.1-pro": {
+    "name": "Kimi K3.1 Pro Highspeed",
+    "family": "kimi-k3",
+    "created": "2026-10-23",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "moonshot": {
+        "id": "kimi-k3.1-pro",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "moonshotai.kimi-k3.1",
+        "profile": "required",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "togetherai": {
+        "id": "moonshotai/Kimi-K3.1-Pro",
+        "output": 1048576,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K3.1-Pro",
+        "output": 943718,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/kimi-k3p1-pro",
+        "output": 1048576,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"]
+        }
+      }
+    }
+  }
+}

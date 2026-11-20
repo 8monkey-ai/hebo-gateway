@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { MockProviderV4 } from "ai/test";
 
 import { parseResponse } from "../../../test/helpers/http.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
 import { models } from "./handler.ts";
 
 const baseUrl = "http://localhost/models";
@@ -13,8 +14,8 @@ describe("Models Handler", () => {
       anthropic: new MockProviderV4(),
       google: new MockProviderV4(),
     },
-    models: {
-      "anthropic/claude-opus-4.5": {
+    models: defineModelCatalog({
+      "anthropic/claude-opus-4-5-20251101": {
         name: "Claude Opus 4.5",
         created: "2025-09-29T10:00:00.000Z",
         knowledge: "2025-07",
@@ -36,7 +37,7 @@ describe("Models Handler", () => {
         context: 128000,
         providers: ["google"],
       },
-    },
+    }),
   });
 
   test("should list models via GET request with realistic data (exact match)", async () => {
@@ -49,7 +50,7 @@ describe("Models Handler", () => {
       object: "list",
       data: [
         {
-          id: "anthropic/claude-opus-4.5",
+          id: "anthropic/claude-opus-4-5-20251101",
           object: "model",
           created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
           owned_by: "anthropic",
@@ -83,13 +84,13 @@ describe("Models Handler", () => {
   });
 
   test("should return a single model by ID", async () => {
-    const request = new Request(`${baseUrl}/anthropic/claude-opus-4.5`, { method: "GET" });
+    const request = new Request(`${baseUrl}/anthropic/claude-opus-4-5-20251101`, { method: "GET" });
 
     const res = await endpoint.handler(request);
     const data = await parseResponse(res);
 
     expect(data).toEqual({
-      id: "anthropic/claude-opus-4.5",
+      id: "anthropic/claude-opus-4-5-20251101",
       object: "model",
       created: Math.floor(Date.parse("2025-09-29T10:00:00.000Z") / 1000),
       owned_by: "anthropic",
@@ -113,7 +114,9 @@ describe("Models Handler", () => {
     }) => {
       const res = await models({
         providers: { openai: new MockProviderV4() },
-        models: { "test/model": { modalities, providers: ["openai"] } },
+        models: defineModelCatalog({
+          "test/model": { modalities, providers: ["openai"] },
+        }),
       }).handler(new Request(`${baseUrl}/test/model`, { method: "GET" }));
       const data = (await parseResponse(res)) as { architecture: { modality?: string } };
       return data.architecture.modality;

@@ -3,11 +3,19 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 import {
-  type ModelCatalog,
+  type ModelId,
   type ProviderRegistry,
   defineModelCatalog,
   gateway,
 } from "../../../src/index.ts";
+// oxlint-disable no-unassigned-import
+// Registers the models (and model middleware) of every lab under test.
+import "../../../src/models/anthropic/index.ts";
+import "../../../src/models/google/index.ts";
+import "../../../src/models/microsoft/index.ts";
+import "../../../src/models/openai/index.ts";
+import "../../../src/models/xai/index.ts";
+// oxlint-enable no-unassigned-import
 import { withCanonicalIdsForBedrock } from "../../../src/providers/bedrock/index.ts";
 import { withCanonicalIdsForVertex } from "../../../src/providers/vertex/index.ts";
 
@@ -27,11 +35,11 @@ export const GOOGLE_VERTEX_API_KEY = process.env["GOOGLE_VERTEX_API_KEY"];
 export const GOOGLE_VERTEX_PROJECT = process.env["GOOGLE_VERTEX_PROJECT"];
 export const GOOGLE_VERTEX_LOCATION = process.env["GOOGLE_VERTEX_LOCATION"] ?? "us-central1";
 
+// Every server uses the bundled models.dev snapshot, so runs do not depend on the live catalog.
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type ModelCatalogInput = ModelCatalog | (() => ModelCatalog);
 
 export interface TestServer {
   server: ReturnType<typeof Bun.serve>;
@@ -42,7 +50,7 @@ export interface TestServer {
 // Bedrock
 // ---------------------------------------------------------------------------
 
-export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestServer {
+export function createBedrockTestServer(...models: ModelId[]): TestServer {
   // Prevent @ai-sdk/amazon-bedrock from inheriting CI's AWS_SESSION_TOKEN,
   // which conflicts with the static BEDROCK_* credentials.
   delete process.env["AWS_SESSION_TOKEN"];
@@ -67,8 +75,8 @@ export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestSe
     providers: {
       bedrock: withCanonicalIdsForBedrock(bedrock),
     },
-    models: defineModelCatalog(...presets),
-    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+    models: defineModelCatalog(models),
+    advanced: { catalog: { source: false }, timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({
@@ -84,7 +92,7 @@ export function createBedrockTestServer(...presets: ModelCatalogInput[]): TestSe
 // Vertex
 // ---------------------------------------------------------------------------
 
-export function createVertexTestServer(...presets: ModelCatalogInput[]): TestServer {
+export function createVertexTestServer(...models: ModelId[]): TestServer {
   const vertex = createVertex({
     apiKey: GOOGLE_VERTEX_API_KEY!,
     project: GOOGLE_VERTEX_PROJECT!,
@@ -97,8 +105,8 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
     providers: {
       vertex: withCanonicalIdsForVertex(vertex),
     },
-    models: defineModelCatalog(...presets),
-    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+    models: defineModelCatalog(models),
+    advanced: { catalog: { source: false }, timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({
@@ -114,16 +122,13 @@ export function createVertexTestServer(...presets: ModelCatalogInput[]): TestSer
 // Generic
 // ---------------------------------------------------------------------------
 
-export function createTestServer(
-  providers: ProviderRegistry,
-  ...presets: ModelCatalogInput[]
-): TestServer {
+export function createTestServer(providers: ProviderRegistry, ...models: ModelId[]): TestServer {
   const gw = gateway({
     basePath: "/v1",
     logger: { level: "warn" },
     providers,
-    models: defineModelCatalog(...presets),
-    advanced: { timeouts: { normal: 120_000, flex: 360_000 } },
+    models: defineModelCatalog(models),
+    advanced: { catalog: { source: false }, timeouts: { normal: 120_000, flex: 360_000 } },
   });
 
   const server = Bun.serve({

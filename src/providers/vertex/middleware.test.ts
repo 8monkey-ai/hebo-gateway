@@ -4,7 +4,7 @@ import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { vertexGemma4ThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware.ts";
+import { vertexGemmaThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware.ts";
 
 const vertexServiceTierCases = [
   {
@@ -107,8 +107,8 @@ const vertexGemmaThinkingCases = [
 ] as const;
 
 for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
-  test(`vertexGemma4ThinkingMiddleware > ${name}`, async () => {
-    const result = await vertexGemma4ThinkingMiddleware.transformParams!({
+  test(`vertexGemmaThinkingMiddleware > ${name}`, async () => {
+    const result = await vertexGemmaThinkingMiddleware.transformParams!({
       type: "generate",
       params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
       model: new MockLanguageModelV4({
@@ -121,13 +121,16 @@ for (const { name, vertex, expected } of vertexGemmaThinkingCases) {
   });
 }
 
-const nonGemmaModelIds = ["openai/gpt-oss-120b-maas", "google/gemma-3-27b"] as const;
+const nonGemmaModelIds = [
+  "openai/gpt-oss-120b-maas",
+  "meta/llama-4-scout-17b-instruct-maas",
+] as const;
 
 for (const modelId of nonGemmaModelIds) {
-  test(`vertexGemma4ThinkingMiddleware > leaves ${modelId} untouched`, async () => {
+  test(`vertexGemmaThinkingMiddleware > leaves ${modelId} untouched`, async () => {
     const vertex = { reasoning: { enabled: true, effort: "medium" }, reasoningEffort: "medium" };
 
-    const result = await vertexGemma4ThinkingMiddleware.transformParams!({
+    const result = await vertexGemmaThinkingMiddleware.transformParams!({
       type: "generate",
       params: { prompt: [], providerOptions: { vertex: structuredClone(vertex) } },
       model: new MockLanguageModelV4({ modelId, provider: "vertex.maas.chat" }),
@@ -137,17 +140,17 @@ for (const modelId of nonGemmaModelIds) {
   });
 }
 
-test("vertexGemma4ThinkingMiddleware > is registered only for the maas endpoint", () => {
-  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat")).toContain(
-    vertexGemma4ThinkingMiddleware,
+test("vertexGemmaThinkingMiddleware > is registered only for the maas endpoint", () => {
+  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b-it", "vertex.maas.chat")).toContain(
+    vertexGemmaThinkingMiddleware,
   );
-  expect(modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "google.vertex.chat")).not.toContain(
-    vertexGemma4ThinkingMiddleware,
-  );
+  expect(
+    modelMiddlewareMatcher.for("google/gemma-4-26b-a4b-it", "google.vertex.chat"),
+  ).not.toContain(vertexGemmaThinkingMiddleware);
 });
 
-test("vertexGemma4ThinkingMiddleware > enable_thinking reaches the provider", async () => {
-  const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b", "vertex.maas.chat");
+test("vertexGemmaThinkingMiddleware > enable_thinking reaches the provider", async () => {
+  const chain = modelMiddlewareMatcher.for("google/gemma-4-26b-a4b-it", "vertex.maas.chat");
   const model = new MockLanguageModelV4({
     modelId: "google/gemma-4-26b-a4b-it-maas",
     provider: "vertex.maas.chat",

@@ -1,0 +1,21 @@
+{
+  "microsoft/phi-4-mini": {
+    "name": "Phi-4-mini",
+    "family": "phi",
+    "created": "2024-12-11",
+    "knowledge": "2023-10",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "azure": {
+        "id": "phi-4-mini",
+        "output": 4096,
+        "reasoning": false
+      }
+    }
+  }
+}

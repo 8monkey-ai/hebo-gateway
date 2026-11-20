@@ -3,40 +3,42 @@ import type { LanguageModelMiddleware } from "ai";
 
 import type { ChatCompletionsReasoningConfig } from "../../endpoints/chat-completions/schema.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
+import { reasoningControls, resolveReasoning } from "../../middleware/reasoning.ts";
+import { specOf } from "../registry.ts";
 
-const FIREWORKS_MAX_OUTPUT_TOKENS = 131072;
-
+/**
+ * Maps the reasoning params no lab middleware took (e.g. for labs without one) to what the
+ * model takes per its spec (models.dev). Models without one get a thinking toggle.
+ */
 export const fireworksReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const fireworks = params.providerOptions?.["fireworks"] as FireworksLanguageModelOptions;
-    if (!fireworks || typeof fireworks !== "object") return params;
-
-    const reasoning = fireworks["reasoning" as keyof typeof fireworks] as
-      | ChatCompletionsReasoningConfig
+  transformParams: async ({ params, model }) => {
+    const fireworks = params.providerOptions?.["fireworks"] as
+      | (FireworksLanguageModelOptions & {
+          reasoning?: ChatCompletionsReasoningConfig;
+          // Read by the OpenAI-compatible chat model underneath.
+          reasoningEffort?: string;
+        })
       | undefined;
+    const reasoning = fireworks?.reasoning;
     if (!reasoning) return params;
 
-    if (!reasoning.enabled) {
-      fireworks.thinking = { type: "disabled" };
-    } else if (reasoning.max_tokens) {
-      fireworks.thinking = { type: "enabled", budgetTokens: reasoning.max_tokens };
-    } else if (reasoning.effort) {
-      fireworks.thinking = {
-        type: "enabled",
-        budgetTokens: calculateReasoningBudgetFromEffort(
-          reasoning.effort,
-          params.maxOutputTokens ?? FIREWORKS_MAX_OUTPUT_TOKENS,
-          1024,
-        ),
-      };
-    } else {
-      fireworks.thinking = { type: "enabled" };
-    }
+    fireworks.reasoning = undefined;
+    const spec = specOf(model);
+    const controls = reasoningControls(spec, { toggle: true });
+    if (!controls) return params;
+    const resolved = resolveReasoning(reasoning, controls, params.maxOutputTokens ?? spec.output);
+    if (!resolved) return params;
 
-    delete fireworks["reasoning" as keyof typeof fireworks];
+    if (controls.toggle || resolved.budget !== undefined) {
+      fireworks.thinking = resolved.enabled
+        ? { type: "enabled", budgetTokens: resolved.budget }
+        : { type: "disabled" };
+    }
+    if (resolved.effort) {
+      fireworks.reasoningEffort = resolved.effort;
+    }
 
     return params;
   },

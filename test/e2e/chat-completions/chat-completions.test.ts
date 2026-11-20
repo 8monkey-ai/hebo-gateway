@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import OpenAI, { APIError } from "openai";
 import type { ChatCompletionMessageFunctionToolCall } from "openai/resources/chat/completions";
 
-import { gptOss120b } from "../../../src/models/openai/index.ts";
 import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server.ts";
 import { createBedrockTestServer, type TestServer } from "../shared/server.ts";
 import {
@@ -32,7 +31,7 @@ let baseUrl: string;
 
 describe.skipIf(!hasCredentials)("Chat Completions E2E (Bedrock - gpt-oss-120b)", () => {
   beforeAll(() => {
-    testServer = createBedrockTestServer(gptOss120b());
+    testServer = createBedrockTestServer("openai/gpt-oss-120b");
     baseUrl = testServer.baseUrl;
     client = new OpenAI({
       apiKey: "not-needed",

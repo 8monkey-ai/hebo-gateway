@@ -7,7 +7,6 @@ import type {
   ResponseOutputText,
 } from "openai/resources/responses/responses";
 
-import { gemini3FlashPreview } from "../../../src/models/google/index.ts";
 import { GOOGLE_VERTEX_API_KEY, GOOGLE_VERTEX_PROJECT } from "../shared/server.ts";
 import { createVertexTestServer, type TestServer } from "../shared/server.ts";
 import { RESPONSE_WEATHER_TOOL as WEATHER_TOOL } from "../shared/tools.ts";
@@ -42,7 +41,7 @@ let client: OpenAI;
 
 describe.skipIf(!hasVertexCredentials)("Responses E2E (Vertex - thought_signature)", () => {
   beforeAll(() => {
-    testServer = createVertexTestServer(gemini3FlashPreview());
+    testServer = createVertexTestServer("google/gemini-3-flash-preview");
     client = new OpenAI({
       apiKey: "not-needed",
       baseURL: `${testServer.baseUrl}/v1`,
