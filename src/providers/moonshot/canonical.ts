@@ -4,7 +4,7 @@ import { registerModelsDevHosts } from "../../models/models-dev.ts";
 import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
 
-registerModelsDevHosts("moonshot", { moonshotai: [] });
+registerModelsDevHosts("moonshot", { moonshotai: {} });
 
 export const withCanonicalIdsForMoonshot = (
   provider: MoonshotAIProvider,

@@ -112,7 +112,7 @@ describe("fromModelsDev", () => {
 
   test("maps models.dev providers to gateway providers of the same ID, or registered by their adapter", () => {
     const listing = { models: { m: chat({ canonical_model_id: "zhipuai/glm-9" }) } };
-    registerModelsDevHosts("acme-cloud", { "acme-ai": ["@acme/sdk"] });
+    registerModelsDevHosts("acme-cloud", { "acme-ai": { sdks: ["@acme/sdk"] } });
     const api: ModelsDevApi = {
       groq: listing,
       "acme-ai": {
@@ -177,11 +177,6 @@ describe("fromModelsDev", () => {
     const api: ModelsDevApi = {
       groq: listing(["../../v1/files", "gpt-x?alt=1"]),
       deepinfra: listing(["openai/gpt-x"]),
-      "amazon-bedrock": listing([
-        "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.openai.gpt-x",
-        "xx.openai.gpt-x",
-        "us.zz.openai.gpt-x",
-      ]),
     };
 
     expect(convert(api)["openai/gpt-x"]?.providers).toEqual({
@@ -231,24 +226,36 @@ describe("fromModelsDev", () => {
     expect(nativeIds(convert(api)["openai/x-1"]?.providers)).toEqual({ openai: "x-1" });
   });
 
-  test("picks the native ID named like the model, and skips routers", () => {
+  test("picks the native ID named like the model", () => {
     const api: ModelsDevApi = {
-      minimax: { models: { "MiniMax-M9": chat(), "MiniMax-M9-highspeed": chat() } },
-      "fireworks-ai": {
-        models: {
-          "accounts/fireworks/routers/minimax-latest": chat({
-            canonical_model_id: "minimax/MiniMax-M9",
-          }),
-          "accounts/fireworks/models/minimax-m9": chat({
-            canonical_model_id: "minimax/MiniMax-M9",
-          }),
-        },
-      },
+      minimax: { models: { "MiniMax-M9-highspeed": chat(), "MiniMax-M9": chat() } },
     };
 
     expect(nativeIds(convert(api)["minimax/MiniMax-M9"]?.providers)).toEqual({
       minimax: "MiniMax-M9",
-      fireworks: "accounts/fireworks/models/minimax-m9",
+    });
+  });
+
+  test("lets a provider adapter pick the listing and add spec fields", () => {
+    registerModelsDevHosts("acme-cloud", {
+      "acme-picky": {
+        pick: (_id, listings) => {
+          const listing = listings.find(({ nativeId }) => nativeId.endsWith("-b"));
+          return listing && { ...listing, spec: { output: 1 } };
+        },
+      },
+    });
+    const api: ModelsDevApi = {
+      "acme-picky": {
+        models: {
+          "gpt-x-a": chat({ canonical_model_id: "openai/gpt-x" }),
+          "gpt-x-b": chat({ canonical_model_id: "openai/gpt-x" }),
+        },
+      },
+    };
+
+    expect(convert(api)["openai/gpt-x"]?.providers).toEqual({
+      "acme-cloud": { id: "gpt-x-b", output: 1 },
     });
   });
 
@@ -262,46 +269,6 @@ describe("fromModelsDev", () => {
 
     expect(nativeIds(convert(api)["anthropic/claude-x"]?.providers)).toEqual({
       anthropic: "claude-x",
-    });
-  });
-
-  test("collapses Bedrock inference profiles and marks Mantle models", () => {
-    const bedrock = (id: string, model: ModelsDevModel = {}) => [
-      id,
-      chat({
-        canonical_model_id: `openai/${id.split(".").at(-1)!.replace(/-1:0$/u, "")}`,
-        ...model,
-      }),
-    ];
-    const mantle = { provider: { npm: "@ai-sdk/amazon-bedrock/mantle" } };
-    const api: ModelsDevApi = {
-      "amazon-bedrock": {
-        models: Object.fromEntries([
-          // Converse on demand, and through a profile.
-          bedrock("openai.gpt-a"),
-          bedrock("us.openai.gpt-a"),
-          // Profiles only.
-          bedrock("global.openai.gpt-b"),
-          // Mantle, its profiles are ignored.
-          bedrock("openai.gpt-c", mantle),
-          bedrock("us.openai.gpt-c"),
-          // Converse wins over Mantle; a `us-gov` profile is no reason to use profiles.
-          bedrock("openai.gpt-d", mantle),
-          bedrock("openai.gpt-d-1:0"),
-          bedrock("us-gov.openai.gpt-d-1:0"),
-        ]) as Record<string, ModelsDevModel>,
-      },
-    };
-
-    const providers = Object.entries(convert(api)).map(([id, m]) => {
-      const { id: native, profile, route } = m!.providers.bedrock!;
-      return [id, { id: native, profile, route }];
-    });
-    expect(Object.fromEntries(providers)).toEqual({
-      "openai/gpt-a": { id: "openai.gpt-a", profile: "optional" },
-      "openai/gpt-b": { id: "openai.gpt-b", profile: "required" },
-      "openai/gpt-c": { id: "openai.gpt-c", route: "mantle" },
-      "openai/gpt-d": { id: "openai.gpt-d-1:0" },
     });
   });
 

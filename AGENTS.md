@@ -56,7 +56,7 @@ If priorities conflict, apply this order:
 - `src/models/catalog.ts`: lab registry, `defineModelCatalog`, catalog loading and fallback.
 - `src/models/family.ts`: model families (`all`, `latest`, version and named groups).
 - `src/models/*/presets.ts`: lab registration (namespace, provider, snapshot, gap-filling extras), model ID types and family exports. The only place a lab is named.
-- `src/models/*/models-dev.json`: bundled models.dev snapshot per lab (`bun run models:sync`, run by the scheduled `models-sync` workflow).
+- `src/models/*/models-dev.json`: bundled models.dev snapshot per lab (refreshed with `bun run models:sync` and committed).
 - `src/models/*/middleware.ts`: model-family middleware.
 - `src/providers/*/canonical.ts`: provider-wide native ID rules (inference profiles, Mantle, MaaS).
 - `src/providers/registry.ts`: canonical ID adapter wrapper and provider resolution logic.

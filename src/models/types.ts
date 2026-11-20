@@ -61,27 +61,20 @@ export type ReasoningControls = {
 
 /**
  * A model as a provider serves it, per models.dev. Middleware reads it with `specOf(model)`, so
- * new models need no code change. Every field is optional:
- * custom models carry none of them.
+ * new models need no code change. Every field is optional: custom models carry none of them.
+ * Provider adapters may add their own fields with `declare module`.
  */
-export type ModelSpec = {
+export interface ModelSpec {
   /**
    * Provider-native model ID. Left to the provider when unset: its `extraMapping`, or its
    * fallback rule (usually the canonical ID without its namespace).
    */
   id?: string;
-  /**
-   * Bedrock: served through a cross-region inference profile, `required` (only) or
-   * `optional` (on demand too). The configured profile prefixes `id`.
-   */
-  profile?: "required" | "optional";
-  /** Bedrock: served by the OpenAI-compatible Mantle endpoint. */
-  route?: "mantle";
   /** Maximum output tokens. */
   output?: number;
   /** Reasoning controls. `false`: the model doesn't reason, unset: unknown. */
   reasoning?: ReasoningControls | false;
-};
+}
 
 /**
  * Providers serving a models.dev model, mapped to how they serve it. Key order is the routing

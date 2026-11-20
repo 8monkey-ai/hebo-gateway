@@ -11,8 +11,8 @@ import { withCanonicalIds } from "../registry.ts";
 
 // Claude has its own models.dev provider. MaaS models are listed as OpenAI-compatible.
 registerModelsDevHosts("vertex", {
-  "google-vertex": ["@ai-sdk/google-vertex/anthropic", "@ai-sdk/openai-compatible"],
-  "google-vertex-anthropic": [],
+  "google-vertex": { sdks: ["@ai-sdk/google-vertex/anthropic", "@ai-sdk/openai-compatible"] },
+  "google-vertex-anthropic": {},
 });
 
 /**
