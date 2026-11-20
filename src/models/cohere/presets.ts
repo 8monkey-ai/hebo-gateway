@@ -1,6 +1,6 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelsDevCatalog, ModelsDevCatalogModel } from "../types.ts";
+import type { ModelsDevCatalog, ModelsDevCatalogModel, SnapshotIds } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
 const embedV3 = (name: string, bedrock?: string): ModelsDevCatalogModel => ({
@@ -12,17 +12,22 @@ const embedV3 = (name: string, bedrock?: string): ModelsDevCatalogModel => ({
   providers: { cohere: {}, ...(bedrock && { bedrock: { id: bedrock }, azure: {} }) },
 });
 
-// Not on models.dev yet.
+// Not on models.dev yet, or not on these providers.
 const extras: ModelsDevCatalog = {
-  // models.dev only lists it on Cohere: Bedrock and Azure are filled in.
   "cohere/embed-v4.0": {
     name: "Embed v4.0",
     family: "cohere-embed",
     created: "2025-04-15",
     modalities: { input: ["text"], output: ["embeddings"] },
     context: 128_000,
-    providers: { bedrock: { id: "{ip}cohere.embed-v4:0" }, azure: {} },
+    providers: {
+      cohere: {},
+      bedrock: { id: "cohere.embed-v4:0", profile: "required" },
+      azure: {},
+    },
   },
+  "cohere/embed-v5.0-fast": { providers: { cohere: {} } },
+  "cohere/embed-v5.0-pro": { providers: { cohere: {} } },
   "cohere/embed-english-v3.0": embedV3("Cohere Embed English v3", "cohere.embed-english-v3"),
   "cohere/embed-english-light-v3.0": embedV3("Cohere Embed English Light v3"),
   "cohere/embed-multilingual-v3.0": embedV3(
@@ -41,9 +46,8 @@ const lab = registerModels({
 
 // Adds the snapshot's model IDs to `CanonicalModelId`.
 declare module "../types.ts" {
-  interface CanonicalModelIds extends Record<
-    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
-    true
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
   > {}
 }
 

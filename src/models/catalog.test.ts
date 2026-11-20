@@ -3,9 +3,14 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { models } from "../endpoints/models/handler.ts";
-import { getModelSpec, getModelSpecs, specOf, withCanonicalIds } from "../providers/registry.ts";
+import { modelSpecsFor, specOf, withCanonicalIds } from "../providers/registry.ts";
 import { claude } from "./anthropic/presets.ts";
-import { createModelCatalog, defineModelCatalog, registerModels } from "./catalog.ts";
+import {
+  createModelCatalog,
+  defineModelCatalog,
+  MAX_CATALOG_SIZE,
+  registerModels,
+} from "./catalog.ts";
 import { defineModelFamily } from "./family.ts";
 import type { ModelsDevApi } from "./models-dev.ts";
 import type { CatalogModel, ModelsDevCatalog, ModelsDevCatalogModel } from "./types.ts";
@@ -134,11 +139,9 @@ describe("defineModelCatalog", () => {
   });
 
   test("lab extras fill a provider missing upstream", () => {
-    const c = withCanonicalIds(new MockProviderV4());
-    const a = withCanonicalIds(new MockProviderV4());
     const out = createModelCatalog(
       defineModelCatalog("acme/rocket-1"),
-      { ...providers, a, c },
+      { ...providers, c: new MockProviderV4() },
       offline,
     ).current!;
 
@@ -147,8 +150,8 @@ describe("defineModelCatalog", () => {
       ...listed(ACME["acme/rocket-1"]),
       providers: ["a", "b", "c"],
     });
-    expect(getModelSpecs(c)?.get("acme/rocket-1")).toEqual({ id: "native-c-Rocket 1" });
-    expect(getModelSpecs(a)?.get("acme/rocket-1")).toBe(ACME["acme/rocket-1"]!.providers["a"]);
+    expect(modelSpecsFor("c").get("acme/rocket-1")).toEqual({ id: "native-c-Rocket 1" });
+    expect(modelSpecsFor("a").get("acme/rocket-1")).toBe(ACME["acme/rocket-1"]!.providers["a"]);
   });
 
   test("families only match models of their lab", () => {
@@ -183,12 +186,6 @@ describe("createModelCatalog", () => {
     });
   });
 
-  test("hands the model specs to the providers wrapped with withCanonicalIds", () => {
-    const a = withCanonicalIds(new MockProviderV4());
-    createModelCatalog(defineModelCatalog("acme/anvil-2"), { a }, offline);
-    expect(getModelSpecs(a)?.get("acme/anvil-2")).toBe(ACME["acme/anvil-2"]!.providers["a"]);
-  });
-
   test("shares the model specs with every instance wrapped for the same provider ID", () => {
     const seen: string[] = [];
     const byokBase = new MockProviderV4();
@@ -202,7 +199,6 @@ describe("createModelCatalog", () => {
     // E.g. created per request in a `resolveProvider` hook, with the customer's credentials.
     const byok = withCanonicalIds(byokBase, { providerId: "a" });
 
-    expect(getModelSpec(byok, "acme/anvil-2")).toBe(ACME["acme/anvil-2"]!.providers["a"]);
     // Middleware reads the spec off the model it is given.
     const anvil = byok.languageModel("acme/anvil-2") as MockLanguageModelV4;
     expect(specOf(anvil)).toBe(ACME["acme/anvil-2"]!.providers["a"]!);
@@ -216,8 +212,14 @@ describe("createModelCatalog", () => {
       namespace: "early",
       snapshot: { "early/m-1": { name: "M 1", providers: { early: { id: "native-m-1" } } } },
     });
-    const provider = withCanonicalIds(new MockProviderV4(), { providerId: "early" });
-    expect(getModelSpec(provider, "early/m-1")).toEqual({ id: "native-m-1" });
+    const seen: string[] = [];
+    const base = new MockProviderV4();
+    base.languageModel = (id: string) => {
+      seen.push(id);
+      return new MockLanguageModelV4({ modelId: id });
+    };
+    withCanonicalIds(base, { providerId: "early" }).languageModel("early/m-1");
+    expect(seen).toEqual(["native-m-1"]);
   });
 
   test("leaves the native IDs of custom models to the provider", () => {
@@ -227,7 +229,10 @@ describe("createModelCatalog", () => {
       seen.push(id);
       return new MockLanguageModelV4({ modelId: id });
     };
-    const a = withCanonicalIds(base, { mapping: { "acme/rocket-6": "rocket-six" } });
+    const a = withCanonicalIds(base, {
+      providerId: "a",
+      mapping: { "acme/rocket-6": "rocket-six" },
+    });
     createModelCatalog(
       defineModelCatalog({
         "acme/rocket-5": custom("Rocket 5", "2026-10-01"),
@@ -237,7 +242,7 @@ describe("createModelCatalog", () => {
       offline,
     );
 
-    expect(getModelSpecs(a)?.get("acme/rocket-5")).toEqual({});
+    expect(modelSpecsFor("a").get("acme/rocket-5")).toBeUndefined();
     a.languageModel("acme/rocket-5");
     a.languageModel("acme/rocket-6");
     expect(seen).toEqual(["rocket-5", "rocket-six"]);
@@ -311,14 +316,55 @@ describe("live catalog", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("falls back to the bundled snapshot when loading fails", async () => {
-    spyOn(globalThis, "fetch").mockResolvedValue(new Response("down", { status: 503 }));
+  test("falls back to the bundled snapshot when loading fails twice", async () => {
+    const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("down", { status: 503 }),
+    );
     const spec = defineModelCatalog(claude["v4.x"]);
 
     const loaded = await createModelCatalog(spec, anthropic, source()).load();
     const bundled = createModelCatalog(spec, anthropic, offline).current;
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(Object.keys(loaded).length).toBeGreaterThan(0);
     expect(loaded).toEqual(bundled!);
+  });
+
+  test("retries a failed load once", async () => {
+    const fetchSpy = spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("ECONNRESET"))
+      .mockResolvedValueOnce(Response.json(API));
+
+    const loaded = await createModelCatalog(
+      defineModelCatalog("anthropic/claude-live-*"),
+      anthropic,
+      source(),
+    ).load();
+    expect(Object.keys(loaded)).toEqual(["anthropic/claude-live-9"]);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    const { signal } = fetchSpy.mock.calls[0]![1] as RequestInit;
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("does not read responses larger than the size limit", async () => {
+    const chunk = new Uint8Array(1024 * 1024);
+    const oversized = () =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            controller.enqueue(chunk);
+          },
+        }),
+      );
+    // Declared too large, then streamed past the limit without a length.
+    const declared = new Response("{}", {
+      headers: { "content-length": String(MAX_CATALOG_SIZE + 1) },
+    });
+    spyOn(globalThis, "fetch").mockResolvedValueOnce(declared).mockResolvedValueOnce(oversized());
+
+    const spec = defineModelCatalog(claude["v4.x"]);
+    const loaded = await createModelCatalog(spec, anthropic, source()).load();
+    expect(loaded).toEqual(createModelCatalog(spec, anthropic, offline).current!);
   });
 
   test("falls back to the bundled snapshot when the payload has no usable model", async () => {

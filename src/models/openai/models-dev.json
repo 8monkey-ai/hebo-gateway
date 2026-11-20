@@ -124,11 +124,7 @@
     },
     "context": 16000,
     "capabilities": ["attachments"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4o-mini-transcribe"
-      }
-    }
+    "providers": {}
   },
   "openai/gpt-4o-transcribe": {
     "name": "GPT-4o Transcribe",
@@ -141,11 +137,7 @@
     },
     "context": 16000,
     "capabilities": ["attachments"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4o-transcribe"
-      }
-    }
+    "providers": {}
   },
   "openai/gpt-5": {
     "name": "GPT-5",
@@ -510,7 +502,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-5.4",
+        "id": "openai.gpt-5.4",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh"]
@@ -629,7 +622,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-5.5",
+        "id": "openai.gpt-5.5",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh"]
@@ -727,7 +721,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-5.6-luna",
+        "id": "openai.gpt-5.6-luna",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]
@@ -762,7 +757,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-5.6-sol",
+        "id": "openai.gpt-5.6-sol",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]
@@ -797,7 +793,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-5.6-terra",
+        "id": "openai.gpt-5.6-terra",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]
@@ -832,7 +829,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6-astra",
+        "id": "openai.gpt-6-astra",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -867,7 +865,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6-luna",
+        "id": "openai.gpt-6-luna",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]
@@ -902,7 +901,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6-sol",
+        "id": "openai.gpt-6-sol",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]
@@ -937,7 +937,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6.1-sol",
+        "id": "openai.gpt-6.1-sol",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -972,7 +973,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6.1-terra",
+        "id": "openai.gpt-6.1-terra",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]
@@ -1007,7 +1009,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6.2-astra",
+        "id": "openai.gpt-6.2-astra",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -1042,7 +1045,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:openai.gpt-6.2-sol",
+        "id": "openai.gpt-6.2-sol",
+        "route": "mantle",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -1066,11 +1070,7 @@
       "output": ["transcription"]
     },
     "capabilities": ["attachments"],
-    "providers": {
-      "openai": {
-        "id": "gpt-live-transcribe"
-      }
-    }
+    "providers": {}
   },
   "openai/gpt-oss-120b": {
     "name": "gpt-oss-120b",
@@ -1213,11 +1213,7 @@
     },
     "context": 16000,
     "capabilities": ["attachments"],
-    "providers": {
-      "openai": {
-        "id": "gpt-realtime-whisper"
-      }
-    }
+    "providers": {}
   },
   "openai/gpt-transcribe": {
     "name": "GPT-Transcribe",
@@ -1228,11 +1224,7 @@
       "output": ["transcription"]
     },
     "capabilities": ["attachments", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-transcribe"
-      }
-    }
+    "providers": {}
   },
   "openai/o3": {
     "name": "o3",
@@ -1349,11 +1341,7 @@
       "output": ["transcription"]
     },
     "capabilities": ["attachments"],
-    "providers": {
-      "openai": {
-        "id": "whisper-1"
-      }
-    }
+    "providers": {}
   },
   "openai/whisper-large-v3": {
     "name": "Whisper",

@@ -6,8 +6,11 @@ import "../providers/bedrock/canonical.ts";
 import "../providers/fireworks/canonical.ts";
 import "../providers/moonshot/canonical.ts";
 import "../providers/vertex/canonical.ts";
+// Registers every lab module.
+import "../../test/helpers/catalog.ts";
 // oxlint-enable no-unassigned-import
 import { CANONICAL_PROVIDER_IDS } from "../providers/types.ts";
+import { getRegisteredLabs } from "./catalog.ts";
 import {
   fromModelsDev,
   type ModelsDevApi,
@@ -15,7 +18,7 @@ import {
   type ModelsDevModel,
   registerModelsDevHosts,
 } from "./models-dev.ts";
-import type { ModelCatalog, ModelSpecs } from "./types.ts";
+import type { ModelsDevCatalog, ModelSpecs } from "./types.ts";
 
 const SNAPSHOTS = new Bun.Glob("*/models-dev.json");
 
@@ -135,7 +138,7 @@ describe("fromModelsDev", () => {
     expect(convert(api)).toEqual({});
   });
 
-  test("maps specialized types and assigns closed-weight ones to their lab", () => {
+  test("maps specialized types, kept without a gateway provider only when lab extras name one", () => {
     const api: ModelsDevApi = {
       vercel: {
         models: {
@@ -146,19 +149,44 @@ describe("fromModelsDev", () => {
           }),
           "openai/whisper-9": chat({
             type: "transcription",
-            open_weights: true,
             canonical_model_id: "openai/whisper-9",
             modalities: { input: ["audio"], output: ["text"] },
           }),
         },
       },
     };
+    const labs = LABS.map((lab) =>
+      lab.namespace === "voyageai"
+        ? { ...lab, extras: { "voyageai/voyage-9": { providers: { voyage: {} } } } }
+        : lab,
+    );
 
-    const catalog = convert(api);
+    const catalog = convert(api, labs);
     expect(catalog["voyageai/voyage-9"]?.modalities?.output).toEqual(["embeddings"]);
-    expect(nativeIds(catalog["voyageai/voyage-9"]?.providers)).toEqual({ voyage: "voyage-9" });
-    // Open weights can be served by anyone, so the lab is not assumed to.
+    // No listing is invented for the lab: its extras fill it in when the catalog loads.
+    expect(catalog["voyageai/voyage-9"]?.providers).toEqual({});
     expect(catalog["openai/whisper-9"]).toBeUndefined();
+  });
+
+  test("skips listings whose native ID is not a plain ID", () => {
+    const listing = (ids: string[]) => ({
+      models: Object.fromEntries(
+        ids.map((id) => [id, chat({ canonical_model_id: "openai/gpt-x" })]),
+      ),
+    });
+    const api: ModelsDevApi = {
+      groq: listing(["../../v1/files", "gpt-x?alt=1"]),
+      deepinfra: listing(["openai/gpt-x"]),
+      "amazon-bedrock": listing([
+        "arn:aws:bedrock:us-east-1:123456789012:inference-profile/us.openai.gpt-x",
+        "xx.openai.gpt-x",
+        "us.zz.openai.gpt-x",
+      ]),
+    };
+
+    expect(convert(api)["openai/gpt-x"]?.providers).toEqual({
+      deepinfra: { id: "openai/gpt-x" },
+    });
   });
 
   test("matches listings without canonical ID by an unambiguous model name", () => {
@@ -265,12 +293,15 @@ describe("fromModelsDev", () => {
       },
     };
 
-    const providers = Object.entries(convert(api)).map(([id, m]) => [id, nativeIds(m!.providers)]);
+    const providers = Object.entries(convert(api)).map(([id, m]) => {
+      const { id: native, profile, route } = m!.providers.bedrock!;
+      return [id, { id: native, profile, route }];
+    });
     expect(Object.fromEntries(providers)).toEqual({
-      "openai/gpt-a": { bedrock: "{ip?}openai.gpt-a" },
-      "openai/gpt-b": { bedrock: "{ip}openai.gpt-b" },
-      "openai/gpt-c": { bedrock: "mantle:openai.gpt-c" },
-      "openai/gpt-d": { bedrock: "openai.gpt-d-1:0" },
+      "openai/gpt-a": { id: "openai.gpt-a", profile: "optional" },
+      "openai/gpt-b": { id: "openai.gpt-b", profile: "required" },
+      "openai/gpt-c": { id: "openai.gpt-c", route: "mantle" },
+      "openai/gpt-d": { id: "openai.gpt-d-1:0" },
     });
   });
 
@@ -342,13 +373,19 @@ describe("fromModelsDev", () => {
 });
 
 describe("bundled snapshots", () => {
-  test("only reference gateway providers", async () => {
+  test("only reference gateway providers, or lab extras fill them in", async () => {
     const known = new Set<string>(CANONICAL_PROVIDER_IDS);
     for await (const file of SNAPSHOTS.scan(import.meta.dir)) {
-      const snapshot = (await Bun.file(`${import.meta.dir}/${file}`).json()) as ModelCatalog;
+      const snapshot = (await Bun.file(`${import.meta.dir}/${file}`).json()) as ModelsDevCatalog;
       for (const [id, model] of Object.entries(snapshot)) {
         const providers = Object.keys(model!.providers);
-        expect(providers.length, id).toBeGreaterThan(0);
+        if (providers.length === 0) {
+          const labs = [...getRegisteredLabs().values()];
+          expect(
+            labs.some((lab) => lab.extras?.[id]),
+            id,
+          ).toBe(true);
+        }
         for (const provider of providers) expect(known.has(provider), id).toBe(true);
       }
     }

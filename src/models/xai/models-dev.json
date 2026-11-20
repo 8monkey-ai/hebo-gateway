@@ -84,7 +84,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:xai.grok-4.3",
+        "id": "xai.grok-4.3",
+        "route": "mantle",
         "output": 131072,
         "reasoning": {
           "effort": ["none", "low", "medium", "high"]
@@ -137,7 +138,8 @@
         }
       },
       "bedrock": {
-        "id": "mantle:xai.grok-4.6",
+        "id": "xai.grok-4.6",
+        "route": "mantle",
         "output": 500000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh"]
@@ -179,7 +181,8 @@
         }
       },
       "bedrock": {
-        "id": "{ip}xai.grok-4.7",
+        "id": "xai.grok-4.7",
+        "profile": "required",
         "output": 500000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh"]
@@ -229,10 +232,6 @@
     },
     "context": 15000,
     "capabilities": ["attachments"],
-    "providers": {
-      "xai": {
-        "id": "grok-voice-transcribe-2.0"
-      }
-    }
+    "providers": {}
   }
 }

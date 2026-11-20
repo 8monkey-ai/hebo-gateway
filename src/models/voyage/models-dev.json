@@ -8,11 +8,7 @@
       "output": ["embeddings"]
     },
     "context": 32000,
-    "providers": {
-      "voyage": {
-        "id": "voyage-4"
-      }
-    }
+    "providers": {}
   },
   "voyageai/voyage-4-large": {
     "name": "voyage-4-large",
@@ -23,11 +19,7 @@
       "output": ["embeddings"]
     },
     "context": 32000,
-    "providers": {
-      "voyage": {
-        "id": "voyage-4-large"
-      }
-    }
+    "providers": {}
   },
   "voyageai/voyage-4-lite": {
     "name": "voyage-4-lite",
@@ -38,10 +30,6 @@
       "output": ["embeddings"]
     },
     "context": 32000,
-    "providers": {
-      "voyage": {
-        "id": "voyage-4-lite"
-      }
-    }
+    "providers": {}
   }
 }

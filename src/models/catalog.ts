@@ -1,6 +1,6 @@
 import { logger } from "../logger/index.ts";
-import { getModelSpecs, modelSpecsFor } from "../providers/registry.ts";
-import type { ProviderId, ProviderRegistry } from "../providers/types.ts";
+import { modelSpecsFor } from "../providers/registry.ts";
+import type { ProviderRegistry } from "../providers/types.ts";
 import { compileGlob } from "../utils/glob.ts";
 import {
   fromModelsDev,
@@ -17,18 +17,16 @@ import type {
   ModelSpec,
 } from "./types.ts";
 
-export const DEFAULT_CATALOG_TIMEOUT_MS = 5000;
+export const DEFAULT_CATALOG_TIMEOUT_MS = 2000;
+
+/** Largest catalog response read, in bytes (`models.dev/api.json` is about 7 MB). */
+export const MAX_CATALOG_SIZE = 25 * 1024 * 1024;
 
 // --- Lab registry --------------------------------------------------------------------------
 
 export type ModelLabConfig = ModelsDevLab & {
   /** models.dev snapshot bundled with the release, used when the live catalog cannot load. */
   snapshot: ModelsDevCatalog;
-  /**
-   * Models (or providers of a model) not on models.dev yet, in the snapshot's shape (native
-   * IDs included). They only fill gaps: a model or provider listed upstream always wins.
-   */
-  extras?: ModelsDevCatalog;
 };
 
 /** A registered lab, e.g. to define its model families with `defineModelFamily`. */
@@ -228,8 +226,9 @@ export type ModelCatalogSourceConfig = {
    */
   source?: string | false;
   /**
-   * Timeout for loading `source`, in milliseconds.
-   * @default 5000
+   * Timeout for each attempt at loading `source`, in milliseconds. A failed attempt is
+   * retried once.
+   * @default 2000
    */
   timeout?: number;
 };
@@ -237,9 +236,39 @@ export type ModelCatalogSourceConfig = {
 export type ModelCatalogStore = {
   /** The catalog, once loaded. */
   readonly current: ModelCatalog | undefined;
-  /** Loads the catalog once. Never rejects: falls back to the bundled snapshot. */
+  /**
+   * Loads the catalog once, falling back to the bundled snapshot. Only rejects when no model
+   * is served by a configured provider.
+   */
   load(): Promise<ModelCatalog>;
 };
+
+/** Reads a JSON body, failing past `MAX_CATALOG_SIZE` bytes instead of buffering it all. */
+const readJson = async (res: Response): Promise<unknown> => {
+  if (Number(res.headers.get("content-length")) > MAX_CATALOG_SIZE || !res.body) {
+    throw new Error(res.body ? "response too large" : "empty response");
+  }
+
+  // Decoded as it arrives, so the raw bytes are never held twice.
+  const decoder = new TextDecoder();
+  const reader = res.body.getReader();
+  let text = "";
+  let size = 0;
+  for (;;) {
+    // oxlint-disable-next-line no-await-in-loop
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_CATALOG_SIZE) {
+      void reader.cancel();
+      throw new Error("response too large");
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return JSON.parse(text + decoder.decode()) as unknown;
+};
+
+const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
 
 // Shared by every gateway (and endpoint) in the process that loads the same source.
 const remote = new Map<string, Promise<ModelsDevCatalog | null>>();
@@ -249,12 +278,20 @@ const fetchCatalog = (url: string, read: readonly ModelLab[], timeout: number) =
   let pending = remote.get(key);
   if (pending) return pending;
 
+  const attempt = async () => {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await readJson(res)) as ModelsDevApi;
+  };
+
   pending = (async () => {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const api = await attempt().catch((error: unknown) => {
+        logger.warn({ err: toError(error) }, `[models] could not load ${url}, retrying`);
+        return attempt();
+      });
 
-      const catalog = fromModelsDev((await res.json()) as ModelsDevApi, read);
+      const catalog = fromModelsDev(api, read);
       const count = Object.keys(catalog).length;
       if (count === 0) throw new Error("no models found");
 
@@ -262,7 +299,7 @@ const fetchCatalog = (url: string, read: readonly ModelLab[], timeout: number) =
       return catalog;
     } catch (error) {
       logger.warn(
-        { err: error instanceof Error ? error : new Error(String(error)) },
+        { err: toError(error) },
         `[models] could not load ${url}, using the bundled catalog`,
       );
       return null;
@@ -275,7 +312,7 @@ const fetchCatalog = (url: string, read: readonly ModelLab[], timeout: number) =
 
 /**
  * Builds the gateway catalog from the `spec` (every registered lab when omitted), keeping
- * only configured providers. Their model specs are handed to the providers wrapped with
+ * only configured providers. The live model specs are handed to the providers wrapped with
  * `withCanonicalIds`.
  */
 export function createModelCatalog(
@@ -303,10 +340,6 @@ export function createModelCatalog(
   }
 
   const build = (upstream: ModelsDevCatalog) => {
-    // Every model of the read labs, also for providers created outside the config (BYOK).
-    shareSpecs(upstream, true);
-    shareSpecs(extras, false);
-
     // Custom models, then lab extras, fill the models missing upstream. Lab extras also fill
     // the providers missing from an upstream model.
     const source: ModelsDevCatalog = { ...upstream };
@@ -321,55 +354,47 @@ export function createModelCatalog(
     const out: ModelCatalog = {};
     for (const id in selected) {
       const model = selected[id]!;
-      const kept: ProviderId[] = [];
-      for (const p in model.providers) {
-        if (!providers[p]) continue;
-        kept.push(p);
-        // Specs (native IDs, reasoning controls, …) are handed to the providers wrapped with
-        // `withCanonicalIds`, where middleware reads them.
-        getModelSpecs(providers[p])?.set(id, model.providers[p]!);
-      }
+      const kept = Object.keys(model.providers).filter((p) => providers[p] !== undefined);
       if (kept.length > 0) out[id] = { ...model, providers: kept };
     }
     return out;
   };
 
-  const source = options.source ?? MODELS_DEV_API_URL;
+  let current: ModelCatalog | undefined;
 
-  // Nothing to fetch: the bundled snapshot is all that is used, or only custom models are.
-  if (source === false || namespaces.length === 0) {
-    const catalog = build(bundled);
+  // The live catalog, else the bundled one (whose specs lab modules share when registered).
+  const settle = (upstream: ModelsDevCatalog | null) => {
+    let catalog: ModelCatalog | undefined;
+    if (upstream) {
+      // Every model of the read labs, also for providers created outside the config (BYOK).
+      shareSpecs(upstream, true);
+      shareSpecs(extras, false);
+      catalog = build(upstream);
+      if (Object.keys(catalog).length === 0) {
+        logger.warn(`[models] no live model matches the configured providers`);
+        catalog = undefined;
+      }
+    }
+    catalog ??= build(bundled);
     if (Object.keys(catalog).length === 0) {
       throw new Error(
         "No models configured: import a lab module (e.g. @hebo-ai/gateway/models/openai) or set config.models, served by a configured provider",
       );
     }
-    return { current: catalog, load: () => Promise.resolve(catalog) };
-  }
+    return (current = catalog);
+  };
 
-  let current: ModelCatalog | undefined;
-  let pending: Promise<ModelCatalog> | undefined;
+  const source = options.source ?? MODELS_DEV_API_URL;
+  const timeout = options.timeout ?? DEFAULT_CATALOG_TIMEOUT_MS;
+  // Nothing to fetch when only the bundled snapshot or only custom models are used: settled
+  // right away, so an empty catalog fails at startup.
+  const url = source === false || namespaces.length === 0 ? undefined : source;
+  let pending = url === undefined ? Promise.resolve(settle(null)) : undefined;
 
   return {
     get current() {
       return current;
     },
-    load() {
-      pending ??= fetchCatalog(source, read, options.timeout ?? DEFAULT_CATALOG_TIMEOUT_MS).then(
-        (upstream) => {
-          let catalog = upstream ? build(upstream) : undefined;
-          if (!catalog || Object.keys(catalog).length === 0) {
-            if (catalog) logger.warn(`[models] no live model matches the configured providers`);
-            catalog = build(bundled);
-          }
-          if (Object.keys(catalog).length === 0) {
-            logger.warn(`[models] no model is served by a configured provider`);
-          }
-          current = catalog;
-          return catalog;
-        },
-      );
-      return pending;
-    },
+    load: () => (pending ??= fetchCatalog(url!, read, timeout).then(settle)),
   };
 }

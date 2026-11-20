@@ -1,4 +1,5 @@
 import { ReasoningEffortSchema } from "../endpoints/shared/schema.ts";
+import { logger } from "../logger/index.ts";
 import {
   CANONICAL_PROVIDER_IDS,
   type CanonicalProviderId,
@@ -42,7 +43,6 @@ export type ModelsDevModel = {
   temperature?: boolean;
   knowledge?: string;
   release_date?: string;
-  open_weights?: boolean;
   modalities?: { input?: string[]; output?: string[] };
   limit?: { context?: number; output?: number };
   /** Set when the model is served by another SDK / API than the provider's default. */
@@ -70,6 +70,12 @@ export type ModelsDevLab = {
    * releases that would need special-casing in its middleware.
    */
   exclude?: readonly string[];
+  /**
+   * Models (or providers of a model) not on models.dev yet, in the snapshot's shape. They only
+   * fill gaps: a model or provider listed upstream always wins. A model models.dev lists on
+   * none of the gateway providers is kept when its extras name one.
+   */
+  extras?: ModelsDevCatalog;
 };
 
 /** A models.dev provider backing a gateway provider. */
@@ -125,16 +131,33 @@ const TYPES = new Set([undefined, "chat", "embedding", "transcription"]);
 // Outputs at least one gateway endpoint can produce.
 const SERVED = new Set<Output>(["text", "embeddings", "transcription"]);
 
-// models.dev rarely lists embedding / transcription models under the lab's own provider,
-// so closed-weight ones are assumed to be served by their lab.
-const SPECIALIZED = new Set(["embedding", "transcription"]);
-
 const MANTLE = "@ai-sdk/amazon-bedrock/mantle";
 
 /** Bedrock cross-region inference profile prefixes. `us-gov` is opt-in only. */
 const BEDROCK_GEO = /^(global|us|eu|apac|au|ca|jp|in|us-gov)\./u;
 
+/**
+ * Native IDs end up in request URLs (e.g. Google's `/models/{id}:generateContent`, Azure
+ * deployments) unencoded, so upstream ones must stay plain IDs: no `..`, `?`, `#`, `%`, … .
+ */
+const NATIVE_ID = /^[\w.:/@-]{1,200}$/u;
+
+/** A Bedrock ID still carrying a profile-like prefix once a known one is stripped. */
+const BEDROCK_PROFILE_LIKE = /^[a-z]+(?:-[a-z]+)*\.[a-z]+\./u;
+
+/**
+ * Whether a native ID is safe to call `provider` with. On Bedrock, an ARN or an unknown
+ * inference profile prefix would also bypass the configured inference profile.
+ */
+const isSafeNativeId = (provider: ProviderId, nativeId: string) => {
+  if (!NATIVE_ID.test(nativeId) || nativeId.includes("..")) return false;
+  if (provider !== "bedrock") return true;
+  const bare = nativeId.replace(BEDROCK_GEO, "");
+  return !bare.startsWith("arn:") && !BEDROCK_PROFILE_LIKE.test(bare);
+};
+
 type Listing = { nativeId: string; model: ModelsDevModel };
+type BedrockListing = Listing & Pick<ModelSpec, "profile" | "route">;
 type Entry = { model: ModelsDevModel; rank: number; listings: Map<ProviderId, Listing[]> };
 
 // First-party providers often list their own models without `canonical_model_id`, the
@@ -181,10 +204,10 @@ const indexCanonicalIds = (api: ModelsDevApi, labOf: ReadonlyMap<string, string>
 
 /**
  * Bedrock lists a model once per inference profile (`us.`, `global.`, …) and sometimes
- * once more on Mantle. Prefers Converse, collapsing the profiles into `{ip}` (required) or
- * `{ip?}` (optional, when the bare ID is listed too), then Mantle.
+ * once more on Mantle. Prefers Converse, collapsing the profiles into a `required` profile,
+ * or an `optional` one when the bare ID is listed too, then Mantle.
  */
-const pickBedrockId = (listings: readonly Listing[]): Listing | undefined => {
+const pickBedrockId = (listings: readonly Listing[]): BedrockListing | undefined => {
   const bare = new Map<
     string,
     { converse?: boolean; mantle?: boolean; geo?: boolean; model: ModelsDevModel }
@@ -201,16 +224,20 @@ const pickBedrockId = (listings: readonly Listing[]): Listing | undefined => {
 
   const ids = [...bare.keys()];
   ids.sort((a, b) => a.length - b.length);
-  const pick = (nativeId: string, id: string) => ({ nativeId, model: bare.get(id)!.model });
+  const pick = (nativeId: string, extra: Pick<ModelSpec, "profile" | "route">) => ({
+    nativeId,
+    model: bare.get(nativeId)!.model,
+    ...extra,
+  });
 
   const converse = ids.find((id) => bare.get(id)!.converse);
-  if (converse) return pick(bare.get(converse)!.geo ? `{ip?}${converse}` : converse, converse);
+  if (converse) return pick(converse, bare.get(converse)!.geo ? { profile: "optional" } : {});
 
   const mantle = ids.find((id) => bare.get(id)!.mantle);
-  if (mantle) return pick(`mantle:${mantle}`, mantle);
+  if (mantle) return pick(mantle, { route: "mantle" });
 
   const profile = ids.find((id) => bare.get(id)!.geo);
-  return profile ? pick(`{ip}${profile}`, profile) : undefined;
+  return profile ? pick(profile, { profile: "required" }) : undefined;
 };
 
 /**
@@ -261,8 +288,8 @@ const toReasoningControls = (
 };
 
 /** How a provider serves a model: its native ID, output limit and reasoning controls. */
-const toModelSpec = (nativeId: string, model: ModelsDevModel): ModelSpec => {
-  const out: ModelSpec = { id: nativeId };
+const toModelSpec = ({ nativeId, model, ...extra }: BedrockListing): ModelSpec => {
+  const out: ModelSpec = { id: nativeId, ...extra };
   // Neither applies to embedding / transcription models.
   if (model.type !== undefined && model.type !== "chat") return out;
 
@@ -306,10 +333,10 @@ const toCatalogModel = (model: ModelsDevModel, providers: ModelSpecs): ModelsDev
 
 /**
  * Builds a gateway catalog from `models.dev/api.json`, keyed by the models.dev canonical
- * (lab) model ID, for the given labs. Each model maps the gateway providers that
- * serve it to how they serve it: native ID, output limit and reasoning controls. Deprecated listings and unsupported model types are
- * ignored. Metadata comes from the lab's own listing when there is one, otherwise from the
- * preferred gateway provider.
+ * (lab) model ID, for the given labs. Each model maps the gateway providers that serve it to
+ * how they serve it: native ID, output limit and reasoning controls. Deprecated listings,
+ * unsupported model types and listings with unsafe native IDs are ignored. Metadata comes
+ * from the lab's own listing when there is one, otherwise from the preferred gateway provider.
  */
 export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): ModelsDevCatalog {
   const byNamespace = new Map<string, ModelsDevLab>();
@@ -347,7 +374,6 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
 
       const namespace = id.split("/", 1)[0]!;
       if (!byNamespace.has(namespace) || excluded.some((test) => test(id))) continue;
-      const lab = byNamespace.get(namespace)!.provider;
 
       let entry = entries.get(id);
       // The lab's own listing is the most authoritative source of metadata.
@@ -357,13 +383,14 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
 
       // Listings served through an SDK the adapter does not speak are left out.
       const npm = model.provider?.npm;
-      if (provider && (npm === undefined || backed.sdks.includes(npm))) {
-        const list = entry.listings.get(provider) ?? [];
-        list.push({ nativeId, model });
-        entry.listings.set(provider, list);
+      if (!backed || (npm !== undefined && !backed.sdks.includes(npm))) continue;
+      if (!isSafeNativeId(backed.provider, nativeId)) {
+        logger.warn(`[models] ${id} not served on ${backed.provider}: invalid native ID`);
+        continue;
       }
-      const specialized = SPECIALIZED.has(model.type!) && model.open_weights !== true;
-      if (lab && specialized && !entry.listings.has(lab)) entry.listings.set(lab, []);
+      const list = entry.listings.get(backed.provider) ?? [];
+      list.push({ nativeId, model });
+      entry.listings.set(backed.provider, list);
     }
   }
 
@@ -375,7 +402,7 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
     const { model, listings } = entries.get(id)!;
 
     // The lab's own provider first, then the others in preference order.
-    const lab = byNamespace.get(id.split("/", 1)[0]!)!.provider;
+    const { provider: lab, extras } = byNamespace.get(id.split("/", 1)[0]!)!;
     const ordered = [...listings.keys()].filter((p) => p !== lab);
     ordered.sort((a, b) => rankOf(a) - rankOf(b));
     if (lab && listings.has(lab)) ordered.unshift(lab);
@@ -383,14 +410,11 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
     const providers: Record<string, ModelSpec> = {};
     for (const provider of ordered) {
       const list = listings.get(provider)!;
-      if (list.length === 0) {
-        providers[provider] = { id: id.slice(id.indexOf("/") + 1) };
-        continue;
-      }
       const listing = provider === "bedrock" ? pickBedrockId(list) : pickNativeId(id, list);
-      if (listing) providers[provider] = toModelSpec(listing.nativeId, listing.model);
+      if (listing) providers[provider] = toModelSpec(listing);
     }
-    if (Object.keys(providers).length === 0) continue;
+    // Lab extras may name the providers models.dev doesn't list it on.
+    if (Object.keys(providers).length === 0 && !extras?.[id]) continue;
 
     const catalogModel = toCatalogModel(model, providers);
     if (!catalogModel.modalities!.output.some((m) => SERVED.has(m))) continue;

@@ -1,4 +1,4 @@
-import type { ProviderV3, ProviderV4 } from "@ai-sdk/provider";
+import type { LanguageModelV3, LanguageModelV4, ProviderV3, ProviderV4 } from "@ai-sdk/provider";
 import {
   customProvider,
   type EmbeddingModel,
@@ -58,8 +58,6 @@ export const resolveProvider = (args: {
   return provider;
 };
 
-const kModelSpecs = Symbol.for("hebo.gateway.model-specs");
-
 /** Canonical model ID -> how the provider serves it, filled from the catalog once it loads. */
 export type ModelSpecMap = Map<ModelId, ModelSpec>;
 
@@ -98,30 +96,26 @@ export const setModelSpec = <M extends ServedModel>(model: M, spec: ModelSpec | 
   return model;
 };
 
-/** Attaches a model spec map to a provider, read back with `getModelSpecs`. */
-export const withModelSpecs = <P extends ProviderV4>(provider: P, specs: ModelSpecMap): P =>
-  Object.assign(provider, { [kModelSpecs]: specs });
-
-/** Model spec map of a provider wrapped with `withCanonicalIds`, if any. */
-export const getModelSpecs = (provider: ProviderV4) =>
-  (provider as { [kModelSpecs]?: ModelSpecMap })[kModelSpecs];
-
-/** How `provider` serves a model, as loaded from the catalog. */
-export const getModelSpec = (provider: ProviderV4, modelId: ModelId) =>
-  getModelSpecs(provider)?.get(modelId);
+/** A catalog spec that carries a native ID. */
+export type NativeModelSpec = ModelSpec & { id: string };
 
 export type CanonicalIdsOptions = {
   /**
-   * Gateway provider ID (e.g. `bedrock`): every instance wrapped for it shares the model
-   * specs loaded from the catalog (see `modelSpecsFor`). Without it, the instance only gets
-   * the specs of the catalog it is configured in.
+   * Gateway provider ID (e.g. `bedrock`), as the provider is keyed in `config.providers`.
+   * Every instance wrapped for it shares the model specs loaded from the catalog (see
+   * `modelSpecsFor`).
    */
-  providerId?: ProviderId;
+  providerId: ProviderId;
   /**
    * Canonical -> provider-native IDs that win over the catalog. Values may use `{key}`
    * placeholders from `options.template`.
    */
   mapping?: Partial<Record<ModelId, string>>;
+  /**
+   * Native ID to call the provider with for a catalog spec, e.g. to apply its Bedrock
+   * inference profile. @default spec.id
+   */
+  nativeId?: (spec: NativeModelSpec) => string;
   /** Transform for model IDs that neither `mapping` nor the catalog knows. */
   options?: {
     /** @default true */
@@ -137,17 +131,23 @@ export type CanonicalIdsOptions = {
 };
 
 /**
+ * A provider to wrap. Its `languageModel` also receives the catalog spec of the model, e.g. to
+ * route it (Bedrock Mantle).
+ */
+export type CanonicalIdsProvider = (ProviderV3 | ProviderV4) & {
+  languageModel(modelId: string, spec?: ModelSpec): LanguageModelV3 | LanguageModelV4;
+};
+
+/**
  * `provider` also accepts the previous (`v3`) specification because some
  * community providers still target it (voyage, zhipu). The returned provider is
  * always `v4`: `customProvider` normalizes the fallback for us.
  */
-export const withCanonicalIds = (
-  provider: ProviderV3 | ProviderV4,
-  config: CanonicalIdsOptions = {},
-) => {
+export const withCanonicalIds = (provider: CanonicalIdsProvider, config: CanonicalIdsOptions) => {
   const {
     providerId,
     mapping,
+    nativeId = (spec: NativeModelSpec) => spec.id,
     options: {
       stripNamespace = true,
       normalizeDelimiters = false,
@@ -191,28 +191,40 @@ export const withCanonicalIds = (
     return out;
   };
 
-  const specs: ModelSpecMap = providerId ? modelSpecsFor(providerId) : new Map();
+  const specs = modelSpecsFor(providerId);
 
-  // Explicit mapping, then the catalog, then the fallback transform.
-  const resolve = (id: string) => {
-    const native = mapping?.[id] ?? specs.get(id)?.id;
+  // Explicit mapping, then the catalog, then the fallback transform. Only explicit mappings
+  // are templated: catalog IDs come from upstream data.
+  const resolve = (id: string, spec: ModelSpec | undefined) => {
+    const explicit = mapping?.[id];
     const mapped =
-      native === undefined ? applyFallbackAffixes(normalizeId(id)) : applyTemplate(native);
+      explicit === undefined
+        ? spec?.id === undefined
+          ? applyFallbackAffixes(normalizeId(id))
+          : nativeId(spec as NativeModelSpec)
+        : applyTemplate(explicit);
     if (mapped !== id) logger.debug(`[canonical] mapped ${id} to ${mapped}`);
     return mapped;
   };
 
   // Each model records its spec, read by middleware with `specOf`.
-  const languageModel = (id: string): LanguageModel =>
-    setModelSpec(provider.languageModel(resolve(id)), specs.get(id));
-  const embeddingModel = (id: string): EmbeddingModel =>
-    setModelSpec(provider.embeddingModel(resolve(id)), specs.get(id));
+  const languageModel = (id: string): LanguageModel => {
+    const spec = specs.get(id);
+    return setModelSpec(provider.languageModel(resolve(id, spec), spec), spec);
+  };
+  const embeddingModel = (id: string): EmbeddingModel => {
+    const spec = specs.get(id);
+    return setModelSpec(provider.embeddingModel(resolve(id, spec)), spec);
+  };
   // Optional in the provider spec: only wrapped when the provider supports transcription.
   const transcriptionModel: ((id: string) => TranscriptionModel) | undefined =
     provider.transcriptionModel &&
-    ((id) => setModelSpec(provider.transcriptionModel!(resolve(id)), specs.get(id)));
+    ((id) => {
+      const spec = specs.get(id);
+      return setModelSpec(provider.transcriptionModel!(resolve(id, spec)), spec);
+    });
 
-  const wrapped = customProvider({
+  return customProvider({
     fallbackProvider: {
       ...provider,
       // Community providers may omit `specificationVersion`. Anything that is
@@ -225,6 +237,4 @@ export const withCanonicalIds = (
       ...(transcriptionModel && { transcriptionModel }),
     } as ProviderV3 | ProviderV4,
   });
-
-  return withModelSpecs(wrapped, specs);
 };

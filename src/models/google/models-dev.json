@@ -135,11 +135,7 @@
     },
     "context": 98304,
     "capabilities": ["attachments"],
-    "providers": {
-      "vertex": {
-        "id": "gemini-3.5-transcribe"
-      }
-    }
+    "providers": {}
   },
   "google/gemini-3.5-transcribe-live": {
     "name": "Gemini 3.5 Transcribe Live",
@@ -150,11 +146,7 @@
       "output": ["transcription"]
     },
     "capabilities": ["attachments"],
-    "providers": {
-      "vertex": {
-        "id": "gemini-3.5-transcribe-live"
-      }
-    }
+    "providers": {}
   },
   "google/gemini-3.7-flash": {
     "name": "Gemini 3.7 Flash",
@@ -308,11 +300,7 @@
     },
     "context": 8192,
     "capabilities": ["attachments"],
-    "providers": {
-      "vertex": {
-        "id": "gemini-embedding-2"
-      }
-    }
+    "providers": {}
   },
   "google/gemma-3-12b-it": {
     "name": "Gemma 3 12B IT",
@@ -388,7 +376,8 @@
         "reasoning": {}
       },
       "bedrock": {
-        "id": "mantle:google.gemma-4-26b-a4b",
+        "id": "google.gemma-4-26b-a4b",
+        "route": "mantle",
         "output": 32768,
         "reasoning": {
           "effort": ["none", "high"]
@@ -415,7 +404,8 @@
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
       "bedrock": {
-        "id": "mantle:google.gemma-4-31b",
+        "id": "google.gemma-4-31b",
+        "route": "mantle",
         "output": 32768,
         "reasoning": {
           "effort": ["none", "high"]
@@ -449,7 +439,8 @@
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
       "bedrock": {
-        "id": "mantle:google.gemma-4-e2b",
+        "id": "google.gemma-4-e2b",
+        "route": "mantle",
         "output": 8192,
         "reasoning": {
           "effort": ["none", "high"]
@@ -466,11 +457,7 @@
       "output": ["embeddings"]
     },
     "context": 2048,
-    "providers": {
-      "vertex": {
-        "id": "text-embedding-005"
-      }
-    }
+    "providers": {}
   },
   "google/text-multilingual-embedding-002": {
     "name": "Text Multilingual Embedding 002",
@@ -481,10 +468,6 @@
       "output": ["embeddings"]
     },
     "context": 2048,
-    "providers": {
-      "vertex": {
-        "id": "text-multilingual-embedding-002"
-      }
-    }
+    "providers": {}
   }
 }

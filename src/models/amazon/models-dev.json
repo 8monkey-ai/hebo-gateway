@@ -12,7 +12,8 @@
     "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
     "providers": {
       "bedrock": {
-        "id": "{ip?}amazon.nova-2-lite-v1:0",
+        "id": "amazon.nova-2-lite-v1:0",
+        "profile": "optional",
         "output": 65535,
         "reasoning": {
           "toggle": true,
@@ -34,7 +35,8 @@
     "capabilities": ["attachments", "tool_call", "temperature"],
     "providers": {
       "bedrock": {
-        "id": "{ip?}amazon.nova-lite-v1:0",
+        "id": "amazon.nova-lite-v1:0",
+        "profile": "optional",
         "output": 10000,
         "reasoning": false
       }
@@ -53,7 +55,8 @@
     "capabilities": ["tool_call", "temperature"],
     "providers": {
       "bedrock": {
-        "id": "{ip?}amazon.nova-micro-v1:0",
+        "id": "amazon.nova-micro-v1:0",
+        "profile": "optional",
         "output": 10000,
         "reasoning": false
       }
@@ -72,7 +75,8 @@
     "capabilities": ["attachments", "tool_call", "temperature"],
     "providers": {
       "bedrock": {
-        "id": "{ip?}amazon.nova-pro-v1:0",
+        "id": "amazon.nova-pro-v1:0",
+        "profile": "optional",
         "output": 10000,
         "reasoning": false
       }

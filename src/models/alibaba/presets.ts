@@ -1,6 +1,6 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelsDevCatalog, ModelsDevCatalogModel } from "../types.ts";
+import type { ModelsDevCatalog, ModelsDevCatalogModel, SnapshotIds } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
 const embedding = (name: string, deepinfra: string, azure = true): ModelsDevCatalogModel => ({
@@ -28,9 +28,8 @@ const lab = registerModels({
 
 // Adds the snapshot's model IDs to `CanonicalModelId`.
 declare module "../types.ts" {
-  interface CanonicalModelIds extends Record<
-    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
-    true
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
   > {}
 }
 

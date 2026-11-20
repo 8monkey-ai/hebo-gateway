@@ -374,7 +374,8 @@
         }
       },
       "bedrock": {
-        "id": "{ip}zai.glm-5.3",
+        "id": "zai.glm-5.3",
+        "profile": "required",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]

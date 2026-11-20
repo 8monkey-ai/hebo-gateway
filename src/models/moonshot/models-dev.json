@@ -101,7 +101,8 @@
         }
       },
       "bedrock": {
-        "id": "{ip}moonshotai.kimi-k3",
+        "id": "moonshotai.kimi-k3",
+        "profile": "required",
         "output": 128000,
         "reasoning": {}
       },
@@ -155,7 +156,8 @@
         }
       },
       "bedrock": {
-        "id": "{ip}moonshotai.kimi-k3.1",
+        "id": "moonshotai.kimi-k3.1",
+        "profile": "required",
         "output": 1048576,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh", "max"]

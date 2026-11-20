@@ -66,12 +66,17 @@ export type ReasoningControls = {
  */
 export type ModelSpec = {
   /**
-   * Provider-native model ID. Bedrock IDs may start with `{ip}` (inference profile required)
-   * or `{ip?}` (inference profile optional), and `mantle:` (served by Bedrock Mantle). Left to
-   * the provider when unset: its `extraMapping`, or its fallback rule (usually the canonical
-   * ID without its namespace).
+   * Provider-native model ID. Left to the provider when unset: its `extraMapping`, or its
+   * fallback rule (usually the canonical ID without its namespace).
    */
   id?: string;
+  /**
+   * Bedrock: served through a cross-region inference profile, `required` (only) or
+   * `optional` (on demand too). The configured profile prefixes `id`.
+   */
+  profile?: "required" | "optional";
+  /** Bedrock: served by the OpenAI-compatible Mantle endpoint. */
+  route?: "mantle";
   /** Maximum output tokens. */
   output?: number;
   /** Reasoning controls. `false`: the model doesn't reason, unset: unknown. */
@@ -92,3 +97,9 @@ export type ModelsDevCatalogModel = Omit<CatalogModel, "providers"> & {
 export type ModelsDevCatalog = {
   [K in ModelId]?: ModelsDevCatalogModel;
 };
+
+/**
+ * The model IDs of a bundled snapshot, for lab modules to add to `CanonicalModelIds`:
+ * `interface CanonicalModelIds extends SnapshotIds<typeof import("./models-dev.json", …)> {}`.
+ */
+export type SnapshotIds<T> = { [K in keyof T]: true };

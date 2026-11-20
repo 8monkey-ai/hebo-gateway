@@ -197,6 +197,8 @@ const myProvider = withCanonicalIds(
     apiKey: process.env["MY_PROVIDER_API_KEY"],
   }),
   {
+    // As keyed in `providers` below: instances wrapped for the same ID share the catalog's native IDs.
+    providerId: "myProvider",
     mapping: {
       "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
       "anthropic/claude-sonnet-4-6": "claude-sonnet-4-6",
@@ -217,9 +219,9 @@ const gw = gateway({
 
 ### Models
 
-The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the models.dev snapshot bundled with the installed release if that fails (or times out after 5 seconds). New models therefore show up without upgrading the gateway.
+The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the models.dev snapshot bundled with the installed release if that fails. A failed attempt (error or 2-second timeout) is retried once before falling back, so the first request waits at most two attempts. New models therefore show up without upgrading the gateway.
 
-Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it, in the order of `CANONICAL_PROVIDER_IDS` after the lab's own provider; the first one serves the request. A gateway provider is backed by the models.dev provider of the same ID, except for adapters that register other ones when imported (`bedrock` → `amazon-bedrock`, `vertex` → `google-vertex`, `fireworks` → `fireworks-ai`, `moonshot` → `moonshotai`) with `registerModelsDevHosts`. How each provider serves a model stays internal: the catalog hands the native ID, output limit and reasoning controls models.dev lists to the providers wrapped with `withCanonicalIds`, and model middleware is built from them (see [Model Middleware](#model-middleware)). Every instance of a `withCanonicalIdsFor*` wrapper shares them, so providers created per request (e.g. BYOK providers returned by a `resolveProvider` hook) resolve the same native IDs as the configured ones.
+Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it, in the order of `CANONICAL_PROVIDER_IDS` after the lab's own provider; the first one serves the request. A gateway provider is backed by the models.dev provider of the same ID, except for adapters that register other ones when imported (`bedrock` → `amazon-bedrock`, `vertex` → `google-vertex`, `fireworks` → `fireworks-ai`, `moonshot` → `moonshotai`). How each provider serves a model stays internal: the catalog hands the native ID, output limit and reasoning controls models.dev lists to the providers wrapped with `withCanonicalIds`, and model middleware is built from them (see [Model Middleware](#model-middleware)). Every instance of a `withCanonicalIdsFor*` wrapper shares them, so providers created per request (e.g. BYOK providers returned by a `resolveProvider` hook) resolve the same native IDs as the configured ones.
 
 #### Model Families
 
@@ -313,8 +315,8 @@ const gw = gateway({
       // Any URL serving the models.dev `api.json` shape works (default: "https://models.dev/api.json").
       // `false` only uses the snapshots bundled with the release.
       source: false,
-      // Timeout for loading `source`, in milliseconds (default: 5000).
-      timeout: 5000,
+      // Timeout for each attempt at loading `source`, in milliseconds (default: 2000). A failed attempt is retried once.
+      timeout: 2000,
     },
   },
 });
@@ -323,7 +325,12 @@ const gw = gateway({
 > [!TIP]
 > On runtimes with tight per-request CPU limits (e.g. Cloudflare Workers free plan), parsing the full models.dev catalog on the first request can be too expensive. Use `source: false`, or point `source` at a smaller, self-hosted copy.
 
-The bundled snapshots live in `src/models/<lab>/models-dev.json` and are refreshed with `bun run models:sync` before every release.
+The bundled snapshots live in `src/models/<lab>/models-dev.json`. A scheduled workflow refreshes them with `bun run models:sync` and opens a pull request, so each release bundles reviewed data.
+
+Data loaded from `source` is treated as untrusted:
+
+- Responses larger than 25 MB are not read.
+- Provider-native IDs must be plain IDs (letters, digits and `._:/@-`, no `..`, at most 200 characters), since some SDKs put them into request URLs unencoded. On Bedrock, ARNs and unknown inference profile prefixes are rejected too, so the configured `inferenceProfile` always applies. A provider listing with any other ID is skipped.
 
 #### Model Middleware
 

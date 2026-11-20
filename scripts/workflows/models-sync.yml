@@ -1,0 +1,68 @@
+# To enable, move this file to `.github/workflows/models-sync.yml`.
+
+name: Sync models.dev snapshots
+
+# Refreshes the models.dev snapshots bundled with each lab (`src/models/<lab>/models-dev.json`)
+# and opens a PR for review, so a release only ever bundles reviewed and tested data.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: models-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - run: bun install --frozen-lockfile
+
+      # Lists every change to a model's reasoning controls, which model middleware is built from.
+      - name: Sync
+        run: bun run models:sync | tee "$RUNNER_TEMP/sync.log"
+
+      - name: Test
+        id: test
+        continue-on-error: true
+        run: bun run check && bun run test
+
+      - name: Describe
+        id: describe
+        env:
+          TEST_OUTCOME: ${{ steps.test.outcome }}
+        run: |
+          delimiter="EOF_$(openssl rand -hex 8)"
+          {
+            echo "body<<$delimiter"
+            echo "Automated refresh of the bundled models.dev snapshots (\`bun run models:sync\`)."
+            echo
+            echo "- Checks and tests: **$TEST_OUTCOME**"
+            echo "- Review the reasoning-control changes below: model middleware is built from them."
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/sync.log"
+            echo '```'
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/models-dev-sync
+          delete-branch: true
+          add-paths: src/models/*/models-dev.json
+          commit-message: "chore: sync models.dev snapshots"
+          title: "chore: sync models.dev snapshots"
+          body: ${{ steps.describe.outputs.body }}

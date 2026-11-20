@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 
 import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
+import { modelSpecsFor } from "../registry.ts";
 import { withCanonicalIdsForBedrock } from "./canonical.ts";
 
 /** Wraps a Bedrock provider and hands it the bundled catalog's native IDs, as a gateway does. */
@@ -72,6 +73,28 @@ test("withCanonicalIdsForBedrock > serves Cohere Embed v4, which models.dev only
     "bedrock",
   ]);
   expect(provider.embeddingModel("cohere/embed-v4.0").modelId).toBe("us.cohere.embed-v4:0");
+});
+
+test("withCanonicalIdsForBedrock > applies the inference profile and route of the catalog spec", () => {
+  const specs = modelSpecsFor("bedrock");
+  specs.set("acme/optional", { id: "acme.optional-v1:0", profile: "optional" });
+  specs.set("acme/required", { id: "acme.required-v1:0", profile: "required" });
+  specs.set("acme/mantle", { id: "acme.mantle", route: "mantle" });
+  // Upstream IDs are used as is: never templated, nor routed by their text.
+  specs.set("acme/literal", { id: "mantle:{ip}acme.literal" });
+
+  const bedrock = createAmazonBedrock({ region: "us-east-1" });
+  const preferred = withCanonicalIdsForBedrock(bedrock, { inferenceProfile: { geo: "eu" } });
+  const avoid = withCanonicalIdsForBedrock(bedrock, { inferenceProfile: { mode: "avoid" } });
+
+  expect(preferred.languageModel("acme/optional").modelId).toBe("eu.acme.optional-v1:0");
+  expect(avoid.languageModel("acme/optional").modelId).toBe("acme.optional-v1:0");
+  expect(avoid.languageModel("acme/required").modelId).toBe("us.acme.required-v1:0");
+  expect(preferred.languageModel("acme/mantle").provider).toBe("bedrock-mantle.responses");
+
+  const literal = preferred.languageModel("acme/literal");
+  expect(literal.modelId).toBe("mantle:{ip}acme.literal");
+  expect(literal.provider).toBe("amazon-bedrock");
 });
 
 type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;

@@ -17,7 +17,7 @@ import type { ModelSpec } from "../models/types.ts";
 import { withCanonicalIdsForAzure } from "../providers/azure/canonical.ts";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical.ts";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical.ts";
-import { getModelSpecs, resolveProvider, specOf, withCanonicalIds } from "./registry.ts";
+import { modelSpecsFor, resolveProvider, specOf, withCanonicalIds } from "./registry.ts";
 import type { ProviderRegistry } from "./types.ts";
 
 /** The gateway catalog for `id`, from the bundled snapshot: it hands out the native IDs. */
@@ -147,8 +147,8 @@ test("catalog native IDs win over the fallback transform, explicit mappings over
   const voyage = withCanonicalIdsForVoyage(createVoyage({ apiKey: "test-key" }), {
     "voyageai/voyage-pinned": "voyage-pinned-2",
   });
-  getModelSpecs(voyage)!.set("voyageai/voyage-9", { id: "voyage-9-native" });
-  getModelSpecs(voyage)!.set("voyageai/voyage-pinned", { id: "ignored" });
+  modelSpecsFor("voyage").set("voyageai/voyage-9", { id: "voyage-9-native" });
+  modelSpecsFor("voyage").set("voyageai/voyage-pinned", { id: "ignored" });
 
   expect(voyage.embeddingModel("voyageai/voyage-9").modelId).toBe("voyage-9-native");
   expect(voyage.embeddingModel("voyageai/voyage-pinned").modelId).toBe("voyage-pinned-2");
@@ -161,7 +161,7 @@ test("middleware reads the spec of the model it wraps", async () => {
     new MockLanguageModelV4({ provider: "spec-test", modelId: id });
   const provider = withCanonicalIds(base, { providerId: "spec-test" });
   const spec: ModelSpec = { id: "m-native", output: 1234 };
-  getModelSpecs(provider)!.set("acme/m", spec);
+  modelSpecsFor("spec-test").set("acme/m", spec);
 
   const seen: ModelSpec[] = [];
   const reader: LanguageModelMiddleware = {

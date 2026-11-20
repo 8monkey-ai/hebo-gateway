@@ -1,19 +1,24 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelsDevCatalog } from "../types.ts";
+import type { ModelsDevCatalog, SnapshotIds } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
+
+// models.dev lists it on no gateway provider: xAI serves it.
+const extras: ModelsDevCatalog = {
+  "xai/grok-voice-transcribe-2.0": { providers: { xai: {} } },
+};
 
 const lab = registerModels({
   namespace: "xai",
   provider: "xai",
   snapshot: snapshot as ModelsDevCatalog,
+  extras,
 });
 
 // Adds the snapshot's model IDs to `CanonicalModelId`.
 declare module "../types.ts" {
-  interface CanonicalModelIds extends Record<
-    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
-    true
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
   > {}
 }
 

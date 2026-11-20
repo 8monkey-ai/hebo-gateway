@@ -1,6 +1,6 @@
 import { registerModels } from "../catalog.ts";
 import { defineModelFamily } from "../family.ts";
-import type { ModelsDevCatalog, ModelsDevCatalogModel } from "../types.ts";
+import type { ModelsDevCatalog, ModelsDevCatalogModel, SnapshotIds } from "../types.ts";
 import snapshot from "./models-dev.json" with { type: "json" };
 
 const embedding = (name: string, created: string): ModelsDevCatalogModel => ({
@@ -14,6 +14,9 @@ const embedding = (name: string, created: string): ModelsDevCatalogModel => ({
 
 // Voyage is not a models.dev provider, which only lists its newest models.
 const extras: ModelsDevCatalog = {
+  "voyageai/voyage-4": { providers: { voyage: {} } },
+  "voyageai/voyage-4-large": { providers: { voyage: {} } },
+  "voyageai/voyage-4-lite": { providers: { voyage: {} } },
   "voyageai/voyage-3.5": embedding("Voyage 3.5", "2025-05-20"),
   "voyageai/voyage-3.5-lite": embedding("Voyage 3.5 Lite", "2025-05-20"),
   "voyageai/voyage-3-large": embedding("Voyage 3 Large", "2025-01-07"),
@@ -29,9 +32,8 @@ const lab = registerModels({
 
 // Adds the snapshot's model IDs to `CanonicalModelId`.
 declare module "../types.ts" {
-  interface CanonicalModelIds extends Record<
-    keyof typeof import("./models-dev.json", { with: { type: "json" } }),
-    true
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
   > {}
 }
 

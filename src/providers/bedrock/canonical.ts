@@ -13,7 +13,7 @@ import type { LanguageModelV4 } from "@ai-sdk/provider";
 
 import { logger } from "../../logger/index.ts";
 import { registerModelsDevHosts } from "../../models/models-dev.ts";
-import type { ModelId } from "../../models/types.ts";
+import type { ModelId, ModelSpec } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
 
 registerModelsDevHosts("bedrock", { "amazon-bedrock": ["@ai-sdk/amazon-bedrock/mantle"] });
@@ -189,9 +189,6 @@ const memoize = (create: (id: string) => LanguageModelV4) => {
   };
 };
 
-/** Native IDs of models served by the OpenAI-compatible Mantle endpoint (see the catalog). */
-const MANTLE_PREFIX = "mantle:";
-
 export type BedrockInferenceProfileOptions = {
   /** @default "preferred" */
   mode?: "preferred" | "avoid";
@@ -209,7 +206,7 @@ export type BedrockCanonicalConfig = {
   extraMapping?: Partial<Record<ModelId, string>>;
   /**
    * Settings for the nested Mantle provider, which serves the models the catalog lists on
-   * Mantle (e.g. GPT-5.x, native IDs starting with `mantle:`). `region` and
+   * Mantle (e.g. GPT-5.x). `region` and
    * custom headers are inherited from the wrapped provider; credentials are not, so set them
    * here unless the ambient AWS environment already carries them.
    */
@@ -251,11 +248,11 @@ export const withCanonicalIdsForBedrock = (
     return anthropic.languageModel(id);
   });
 
-  // Routes on the native ID the canonical ID resolved to.
-  const languageModel = (id: string) => {
-    if (id.startsWith(MANTLE_PREFIX)) {
+  // Routes on the catalog spec, then on the native ID the canonical ID resolved to.
+  const languageModel = (id: string, spec?: ModelSpec) => {
+    if (spec?.route === "mantle") {
       logger.debug(`[canonical] serving ${id} from mantle`);
-      return mantleModel(id.slice(MANTLE_PREFIX.length));
+      return mantleModel(id);
     }
     if (config.anthropic !== false && id.includes("anthropic.claude")) {
       logger.debug(`[canonical] serving ${id} from invoke`);
@@ -269,6 +266,8 @@ export const withCanonicalIdsForBedrock = (
     {
       providerId: "bedrock",
       mapping: config.extraMapping,
+      nativeId: ({ id, profile }) =>
+        profile === "required" || (profile === "optional" && !avoid) ? `${ip}${id}` : id,
       options: {
         stripNamespace: false,
         namespaceSeparator: ".",

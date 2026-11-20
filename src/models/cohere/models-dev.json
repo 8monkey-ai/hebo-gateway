@@ -223,11 +223,7 @@
       "output": ["embeddings"]
     },
     "context": 128000,
-    "providers": {
-      "cohere": {
-        "id": "embed-v4.0"
-      }
-    }
+    "providers": {}
   },
   "cohere/embed-v5.0-fast": {
     "name": "Embed 5 Fast",
@@ -238,11 +234,7 @@
       "output": ["embeddings"]
     },
     "context": 128000,
-    "providers": {
-      "cohere": {
-        "id": "embed-v5.0-fast"
-      }
-    }
+    "providers": {}
   },
   "cohere/embed-v5.0-pro": {
     "name": "Embed 5 Pro",
@@ -253,11 +245,7 @@
       "output": ["embeddings"]
     },
     "context": 128000,
-    "providers": {
-      "cohere": {
-        "id": "embed-v5.0-pro"
-      }
-    }
+    "providers": {}
   },
   "cohere/north-small-translate-1-0": {
     "name": "North Small Translate",
