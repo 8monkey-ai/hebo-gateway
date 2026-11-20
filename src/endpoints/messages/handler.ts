@@ -12,7 +12,7 @@ import { GatewayError } from "../../errors/gateway.ts";
 import { winterCgHandler } from "../../lifecycle.ts";
 import { logger } from "../../logger/index.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { getModelSpec, resolveProvider } from "../../providers/registry.ts";
+import { resolveProvider } from "../../providers/registry.ts";
 import {
   getGenAiGeneralAttributes,
   recordTimePerOutputToken,
@@ -101,11 +101,7 @@ export const messages = (config: GatewayConfig): Endpoint => {
 
     const languageModelWithMiddleware = wrapLanguageModel({
       model: languageModel,
-      middleware: modelMiddlewareMatcher.for(
-        ctx.resolvedModelId,
-        languageModel.provider,
-        getModelSpec(ctx.provider, ctx.resolvedModelId),
-      ),
+      middleware: modelMiddlewareMatcher.for(ctx.resolvedModelId, languageModel.provider),
     });
 
     if (stream) {

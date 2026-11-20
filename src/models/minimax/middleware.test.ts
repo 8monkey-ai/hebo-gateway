@@ -9,12 +9,12 @@ import { minimaxReasoningMiddleware } from "./middleware.ts";
 
 test("minimax middlewares > matching model resolves reasoning middleware", () => {
   expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: "minimax/MiniMax-M3" })).toContain(
-    minimaxReasoningMiddleware(),
+    minimaxReasoningMiddleware,
   );
 });
 
 const optionsOf = async (spec: ModelSpec, reasoning: JSONObject) =>
-  (await transform(minimaxReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions;
+  (await transform(minimaxReasoningMiddleware, withReasoning(reasoning), { spec })).providerOptions;
 
 // MiniMax M3 takes a thinking toggle, M3.1 Flash effort levels.
 const M3: ModelSpec = { reasoning: { toggle: true } };
@@ -40,8 +40,13 @@ describe("minimaxReasoningMiddleware", () => {
 
   test("leaves requests without reasoning untouched", async () => {
     expect(
-      (await transform(minimaxReasoningMiddleware(M3_1), { providerOptions: { unknown: {} } }))
-        .providerOptions,
+      (
+        await transform(
+          minimaxReasoningMiddleware,
+          { providerOptions: { unknown: {} } },
+          { spec: M3_1 },
+        )
+      ).providerOptions,
     ).toEqual({ unknown: {} });
   });
 });

@@ -76,6 +76,28 @@ export const modelSpecsFor = (providerId: ProviderId): ModelSpecMap => {
   return specs;
 };
 
+type ServedModel = { readonly provider: string; readonly modelId: string };
+
+const NO_SPEC: ModelSpec = Object.freeze({});
+
+// SDK models by `provider:modelId` (native ID) -> the spec they were created with.
+const served = new Map<string, ModelSpec>();
+
+/**
+ * Spec (models.dev data such as reasoning controls) of a model created by a provider wrapped
+ * with `withCanonicalIds`, so middleware adapts to new models without a code change. Reads the
+ * `model` passed to middleware: wrapped models keep the inner `provider` and `modelId`. Empty
+ * for models without one (e.g. custom models).
+ */
+export const specOf = (model: ServedModel): ModelSpec =>
+  served.get(`${model.provider}:${model.modelId}`) ?? NO_SPEC;
+
+/** Records the spec `specOf` returns for `model`. */
+export const setModelSpec = <M extends ServedModel>(model: M, spec: ModelSpec | undefined): M => {
+  if (spec) served.set(`${model.provider}:${model.modelId}`, spec);
+  return model;
+};
+
 /** Attaches a model spec map to a provider, read back with `getModelSpecs`. */
 export const withModelSpecs = <P extends ProviderV4>(provider: P, specs: ModelSpecMap): P =>
   Object.assign(provider, { [kModelSpecs]: specs });
@@ -180,11 +202,15 @@ export const withCanonicalIds = (
     return mapped;
   };
 
-  const languageModel: (id: string) => LanguageModel = (id) => provider.languageModel(id);
-  const embeddingModel: (id: string) => EmbeddingModel = (id) => provider.embeddingModel(id);
+  // Each model records its spec, read by middleware with `specOf`.
+  const languageModel = (id: string): LanguageModel =>
+    setModelSpec(provider.languageModel(resolve(id)), specs.get(id));
+  const embeddingModel = (id: string): EmbeddingModel =>
+    setModelSpec(provider.embeddingModel(resolve(id)), specs.get(id));
   // Optional in the provider spec: only wrapped when the provider supports transcription.
   const transcriptionModel: ((id: string) => TranscriptionModel) | undefined =
-    provider.transcriptionModel && ((id) => provider.transcriptionModel!(id));
+    provider.transcriptionModel &&
+    ((id) => setModelSpec(provider.transcriptionModel!(resolve(id)), specs.get(id)));
 
   const wrapped = customProvider({
     fallbackProvider: {
@@ -194,11 +220,9 @@ export const withCanonicalIds = (
       // through its v2 shim, which reads the deprecated `textEmbeddingModel`
       // and would bypass the overrides below.
       specificationVersion: provider.specificationVersion === "v4" ? "v4" : "v3",
-      languageModel: (id: string) => languageModel(resolve(id)),
-      embeddingModel: (id: string) => embeddingModel(resolve(id)),
-      ...(transcriptionModel && {
-        transcriptionModel: (id: string) => transcriptionModel(resolve(id)),
-      }),
+      languageModel,
+      embeddingModel,
+      ...(transcriptionModel && { transcriptionModel }),
     } as ProviderV3 | ProviderV4,
   });
 

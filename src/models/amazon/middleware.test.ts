@@ -10,7 +10,7 @@ import { novaDimensionsMiddleware, novaReasoningMiddleware } from "./middleware.
 test("nova middleware > matching patterns", () => {
   for (const id of ["amazon/nova-2-lite", "amazon/nova-3-pro"]) {
     expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
-      novaReasoningMiddleware(),
+      novaReasoningMiddleware,
     );
   }
 
@@ -26,7 +26,7 @@ test("nova middleware > matching patterns", () => {
 });
 
 const configOf = async (spec: ModelSpec, reasoning: JSONObject) =>
-  (await transform(novaReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions?.[
+  (await transform(novaReasoningMiddleware, withReasoning(reasoning), { spec })).providerOptions?.[
     "amazon"
   ]?.["reasoningConfig"];
 
@@ -52,8 +52,9 @@ describe("novaReasoningMiddleware", () => {
 
   test("drops reasoning for models that don't reason", async () => {
     const result = await transform(
-      novaReasoningMiddleware({ reasoning: false }),
+      novaReasoningMiddleware,
       withReasoning({ enabled: true, effort: "high" }),
+      { spec: { reasoning: false } },
     );
     expect(result.providerOptions).toEqual({ unknown: {} });
   });

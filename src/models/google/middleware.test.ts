@@ -21,7 +21,7 @@ import {
 test("geminiReasoningMiddleware > matches every Gemini, prompt caching only Gemini 3", () => {
   for (const id of ["google/gemini-3.7-flash", "google/gemini-4-argon", "google/gemini-5-pro"]) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(geminiReasoningMiddleware());
+    expect(middleware).toContain(geminiReasoningMiddleware);
     expect(middleware.includes(geminiPromptCachingMiddleware)).toBe(
       id.startsWith("google/gemini-3"),
     );
@@ -67,9 +67,8 @@ test("geminiDimensionsMiddleware > matching patterns", () => {
 });
 
 const thinkingOf = async (spec: ModelSpec, reasoning: JSONObject): Promise<unknown> =>
-  (await transform(geminiReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions?.[
-    "google"
-  ]?.["thinkingConfig"];
+  (await transform(geminiReasoningMiddleware, withReasoning(reasoning), { spec }))
+    .providerOptions?.["google"]?.["thinkingConfig"];
 
 // models.dev thinking levels of a few models.
 const FLASH_3: ModelSpec = { reasoning: { effort: ["minimal", "low", "medium", "high"] } };
@@ -111,7 +110,7 @@ describe("geminiReasoningMiddleware", () => {
   test("passes explicit thinking options through", async () => {
     const params = withReasoning({ enabled: true, effort: "high" });
     params.providerOptions!["unknown"]!["thinking_config"] = { thinking_budget: 100 };
-    const result = await transform(geminiReasoningMiddleware(GEMINI_4), params);
+    const result = await transform(geminiReasoningMiddleware, params, { spec: GEMINI_4 });
     expect(result.providerOptions?.["google"]).toBeUndefined();
   });
 });

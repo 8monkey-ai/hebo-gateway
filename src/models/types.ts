@@ -71,8 +71,8 @@ export type ReasoningControls = {
 };
 
 /**
- * A model as a provider serves it, per models.dev. Middleware is built from it (see
- * `modelMiddlewareMatcher`), so new models need no code change. Every field is optional:
+ * A model as a provider serves it, per models.dev. Middleware reads it with `specOf(model)`, so
+ * new models need no code change. Every field is optional:
  * custom models carry none of them.
  */
 export type ModelSpec = {

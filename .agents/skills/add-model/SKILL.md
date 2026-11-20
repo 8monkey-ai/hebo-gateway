@@ -13,12 +13,12 @@ The model catalog is **not** maintained in this repo. It comes from [models.dev]
 
 So a new model usually needs **no change here**. Changes are needed when:
 
-- models.dev does not list the model (yet): add a lab extra, and open an upstream PR,
+- models.dev does not list the model, or one of its providers (yet): add a lab extra, and open an upstream PR,
 - the model needs request translation (model or provider middleware),
 - the model does not fit its family's `version` pattern or a named group,
 - a new lab or provider is added.
 
-Fix wrong data upstream on models.dev. Extras only fill gaps: they are ignored once models.dev lists the same ID, so there is no merging and no way to override upstream data.
+Fix wrong data upstream on models.dev. Extras only fill gaps: a missing model, or a provider missing from a model models.dev lists. Once models.dev lists the model (or that provider), its data is used instead, so there is no way to override upstream data.
 
 ## Step 1: Find the Model on models.dev
 
@@ -46,9 +46,11 @@ jq '."<canonical-id>"' src/models/<lab>/models-dev.json
 - **Bedrock**: Converse first (`{ip?}` prefix when inference profiles are listed too, `{ip}` when only profiles are), then Mantle (`mantle:` prefix).
 - **Others**: the ID named like the model, then the shortest; Fireworks routers last.
 
-## Step 2: Fill Gaps (only if models.dev lacks the model)
+## Step 2: Fill Gaps (only if models.dev lacks the model or a provider)
 
 Add the entry to the `extras` of `registerModels` in `src/models/<lab>/presets.ts` (see `microsoft`, `voyage`, `cohere`). Extras use the snapshot's shape: `providers` maps each provider serving it, in routing order, to its spec. Leave the spec empty (`{}`) when the provider's derived ID (usually the canonical ID without namespace) is what it serves; set `id` otherwise (e.g. `{ deepinfra: { id: "Qwen/Qwen3-Embedding-8B" } }`). Verify the metadata against the lab's docs; keep it minimal rather than speculative.
+
+For a provider missing from a model models.dev lists, the extra only needs that provider (e.g. `cohere/embed-v4.0` on Bedrock); upstream providers keep their data and order, the filled ones come last. Keep the model metadata on the entry anyway: it is used if models.dev drops the model.
 
 ## Step 3: Check the Model Family
 
@@ -68,7 +70,7 @@ Middlewares bridge OpenAI-compatible request parameters to provider-native optio
 
 Registered via `modelMiddlewareMatcher.useForModel()` when the lab module is imported, and matched by canonical model ID patterns. Patterns cover the whole lab (e.g. `anthropic/claude-*`, `deepseek/*`), never single versions: a new model must get the middleware without a code change.
 
-What differs per model comes from its **model spec** (models.dev data per provider: native ID, output limit, reasoning controls), not from its ID. Middleware that needs it is defined with `defineSpecMiddleware((spec) => …)` and reads the controls with `reasoningControls(spec, FALLBACK)`, where `FALLBACK` describes the lab's current generation (used for models without data). `resolveReasoning` maps the request to what the model takes; the middleware only writes the result in the lab's API shape.
+What differs per model comes from its **model spec** (models.dev data per provider: native ID, output limit, reasoning controls), not from its ID. Middleware that needs it reads it with `specOf(model)` (the `model` passed to `transformParams`) and gets the controls with `reasoningControls(spec, FALLBACK)`, where `FALLBACK` describes the lab's current generation (used for models without data). `resolveReasoning` maps the request to what the model takes; the middleware only writes the result in the lab's API shape.
 
 | Category       | When needed                                                                             | Example                                                                                         |
 | -------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -90,7 +92,7 @@ Registered via `modelMiddlewareMatcher.useForProvider()` and matched by provider
 | **Reasoning**     | `bedrock`, `fireworks`      | Translates reasoning params into provider-native format (e.g., Bedrock `reasoningConfig`, Fireworks `thinking`) |
 | **Caching**       | `bedrock`                   | Maps `cache_control` → Bedrock `cachePoint` with provider-specific TTL handling                                 |
 
-Provider-level middleware can also be defined with `defineSpecMiddleware` to read the model spec (e.g. `bedrockMantleReasoningMiddleware`). Some middlewares filter internally by native model ID (e.g. `bedrockPromptCachingMiddleware` only applies to `nova` and `claude`); update those filters when needed.
+Provider-level middleware can read the model spec with `specOf(model)` too (e.g. `bedrockMantleReasoningMiddleware`). Some middlewares filter internally by native model ID (e.g. `bedrockPromptCachingMiddleware` only applies to `nova` and `claude`); update those filters when needed.
 
 ## Step 5: New Lab or Provider
 

@@ -13,7 +13,6 @@ import { claudeReasoningMiddleware } from "../../models/anthropic/middleware.ts"
 // Also registers the model-level GPT middlewares the full chain below relies on.
 import { openAIReasoningMiddleware } from "../../models/openai/middleware.ts";
 import type { ModelSpec } from "../../models/types.ts";
-import { getModelSpec } from "../registry.ts";
 import { withCanonicalIdsForBedrock } from "./canonical.ts";
 import {
   bedrockAnthropicBetaMiddleware,
@@ -50,7 +49,7 @@ test("bedrock middlewares > matching provider resolves the reasoning middleware"
       modelId,
       providerId: "amazon-bedrock",
     });
-    expect(middleware).toContain(bedrockReasoningMiddleware());
+    expect(middleware).toContain(bedrockReasoningMiddleware);
     expect(middleware).toContain(bedrockServiceTierMiddleware);
   }
 });
@@ -106,10 +105,11 @@ test("bedrock middlewares > matching provider resolves prompt caching middleware
 
 const reasoningConfigOf = async (bedrock: Record<string, unknown>, reasoning?: false) => {
   const result = await transform(
-    bedrockReasoningMiddleware(reasoning === false ? { reasoning } : {}),
+    bedrockReasoningMiddleware,
     {
       providerOptions: { bedrock: bedrock as never },
     },
+    { spec: reasoning === false ? { reasoning } : {} },
   );
   return JSON.parse(JSON.stringify(result.providerOptions!["bedrock"])) as Record<string, unknown>;
 };
@@ -300,9 +300,9 @@ test("bedrock middlewares > Mantle provider resolves only the Mantle middleware"
     providerId: "bedrock-mantle.responses",
   });
 
-  expect(middleware).toContain(bedrockMantleReasoningMiddleware());
+  expect(middleware).toContain(bedrockMantleReasoningMiddleware);
   // The Converse translations must not touch OpenAI-shaped requests.
-  expect(middleware).not.toContain(bedrockReasoningMiddleware());
+  expect(middleware).not.toContain(bedrockReasoningMiddleware);
   expect(middleware).not.toContain(bedrockServiceTierMiddleware);
 });
 
@@ -313,15 +313,19 @@ test("bedrock middlewares > native provider does not resolve the Mantle middlewa
     providerId: "amazon-bedrock",
   });
 
-  expect(middleware).not.toContain(bedrockMantleReasoningMiddleware());
+  expect(middleware).not.toContain(bedrockMantleReasoningMiddleware);
 });
 
 test.each([{ reasoning: { effort: ["low", "high"] } }, {}] as ModelSpec[])(
   "bedrockMantleReasoningMiddleware > forces the reasoning shape for reasoning models (%o)",
   async (spec) => {
-    const result = await transform(bedrockMantleReasoningMiddleware(spec), {
-      providerOptions: { openai: { reasoningEffort: "high" } },
-    });
+    const result = await transform(
+      bedrockMantleReasoningMiddleware,
+      {
+        providerOptions: { openai: { reasoningEffort: "high" } },
+      },
+      { spec },
+    );
     expect(result.providerOptions!["openai"]).toEqual({
       reasoningEffort: "high",
       forceReasoning: true,
@@ -330,9 +334,13 @@ test.each([{ reasoning: { effort: ["low", "high"] } }, {}] as ModelSpec[])(
 );
 
 test("bedrockMantleReasoningMiddleware > skips models that don't reason", async () => {
-  const result = await transform(bedrockMantleReasoningMiddleware({ reasoning: false }), {
-    providerOptions: { openai: {} },
-  });
+  const result = await transform(
+    bedrockMantleReasoningMiddleware,
+    {
+      providerOptions: { openai: {} },
+    },
+    { spec: { reasoning: false } },
+  );
   expect(result.providerOptions!["openai"]).toEqual({});
 });
 
@@ -353,13 +361,12 @@ test("bedrock middlewares > GPT-5.x on Mantle keeps reasoning through the full c
 
   const modelId = "openai/gpt-5.6-sol";
   const model = provider.languageModel(modelId);
-  const spec = getModelSpec(provider, modelId);
-  const middleware = modelMiddlewareMatcher.for(modelId, model.provider, spec);
+  const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
   const wrapped = wrapLanguageModel({ model, middleware });
 
   // The canonical ID still matches `openai/*`, so the GPT reasoning translation applies.
-  expect(middleware).toContain(openAIReasoningMiddleware(spec));
-  expect(middleware).toContain(bedrockMantleReasoningMiddleware(spec));
+  expect(middleware).toContain(openAIReasoningMiddleware);
+  expect(middleware).toContain(bedrockMantleReasoningMiddleware);
 
   try {
     await wrapped.doGenerate({
@@ -393,7 +400,7 @@ test("bedrock middlewares > the Anthropic provider keeps none of the Converse tr
   expect(middleware).toContain(bedrockAnthropicServiceTierMiddleware);
   expect(middleware).toContain(bedrockAnthropicBetaMiddleware);
   expect(middleware).not.toContain(bedrockServiceTierMiddleware);
-  expect(middleware).not.toContain(bedrockReasoningMiddleware());
+  expect(middleware).not.toContain(bedrockReasoningMiddleware);
   expect(middleware).not.toContain(bedrockPromptCachingMiddleware);
 });
 
@@ -498,17 +505,16 @@ const anthropicModel = (canonicalId: string) => {
   return {
     model: provider.languageModel(canonicalId),
     captured,
-    spec: getModelSpec(provider, canonicalId),
   };
 };
 
 test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape through the chain", async () => {
   const modelId = "anthropic/claude-opus-4-6";
-  const { model, captured, spec } = anthropicModel(modelId);
-  const middleware = modelMiddlewareMatcher.for(modelId, model.provider, spec);
+  const { model, captured } = anthropicModel(modelId);
+  const middleware = modelMiddlewareMatcher.for(modelId, model.provider);
   const wrapped = wrapLanguageModel({ model, middleware });
 
-  expect(middleware).toContain(claudeReasoningMiddleware(spec));
+  expect(middleware).toContain(claudeReasoningMiddleware);
 
   try {
     await wrapped.doGenerate({
@@ -534,10 +540,10 @@ test("bedrock middlewares > Claude on InvokeModel keeps the Anthropic shape thro
 
 test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic", async () => {
   const modelId = "anthropic/claude-opus-4-6";
-  const { model, captured, spec } = anthropicModel(modelId);
+  const { model, captured } = anthropicModel(modelId);
   const wrapped = wrapLanguageModel({
     model,
-    middleware: modelMiddlewareMatcher.for(modelId, model.provider, spec),
+    middleware: modelMiddlewareMatcher.for(modelId, model.provider),
   });
 
   try {
@@ -571,10 +577,10 @@ test("bedrock middlewares > Claude on InvokeModel caches like native Anthropic",
 
 test("bedrock middlewares > unsupported client betas never reach InvokeModel", async () => {
   const modelId = "anthropic/claude-opus-4-6";
-  const { model, captured, spec } = anthropicModel(modelId);
+  const { model, captured } = anthropicModel(modelId);
   const wrapped = wrapLanguageModel({
     model,
-    middleware: modelMiddlewareMatcher.for(modelId, model.provider, spec),
+    middleware: modelMiddlewareMatcher.for(modelId, model.provider),
   });
 
   try {
@@ -627,7 +633,7 @@ test("bedrock middlewares > mid-conversation system turns reach InvokeModel", as
 
 test("bedrockReasoningMiddleware > rejects unsupported between_tools thinking", () => {
   expect(
-    transform(bedrockReasoningMiddleware(), {
+    transform(bedrockReasoningMiddleware, {
       providerOptions: { bedrock: { thinking: { type: "between_tools" } } },
     }),
   ).rejects.toThrow("Bedrock reasoningConfig does not support between_tools thinking.");

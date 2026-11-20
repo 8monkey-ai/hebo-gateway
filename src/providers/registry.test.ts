@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createAzure } from "@ai-sdk/azure";
-import { MockProviderV4 } from "ai/test";
+import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
+import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 import { createVoyage } from "voyage-ai-provider";
 
 import { createModelCatalog, defineModelCatalog } from "../models/catalog.ts";
@@ -11,11 +12,12 @@ import "../models/anthropic/index.ts";
 import "../models/microsoft/index.ts";
 import "../models/openai/index.ts";
 import "../models/voyage/index.ts";
+import type { ModelSpec } from "../models/types.ts";
 // oxlint-enable no-unassigned-import
 import { withCanonicalIdsForAzure } from "../providers/azure/canonical.ts";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical.ts";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical.ts";
-import { getModelSpecs, resolveProvider } from "./registry.ts";
+import { getModelSpecs, resolveProvider, specOf, withCanonicalIds } from "./registry.ts";
 import type { ProviderRegistry } from "./types.ts";
 
 /** The gateway catalog for `id`, from the bundled snapshot: it hands out the native IDs. */
@@ -151,4 +153,36 @@ test("catalog native IDs win over the fallback transform, explicit mappings over
   expect(voyage.embeddingModel("voyageai/voyage-9").modelId).toBe("voyage-9-native");
   expect(voyage.embeddingModel("voyageai/voyage-pinned").modelId).toBe("voyage-pinned-2");
   expect(voyage.embeddingModel("voyageai/voyage-unknown").modelId).toBe("voyage-unknown");
+});
+
+test("middleware reads the spec of the model it wraps", async () => {
+  const base = new MockProviderV4();
+  base.languageModel = (id: string) =>
+    new MockLanguageModelV4({ provider: "spec-test", modelId: id });
+  const provider = withCanonicalIds(base, { providerId: "spec-test" });
+  const spec: ModelSpec = { id: "m-native", output: 1234 };
+  getModelSpecs(provider)!.set("acme/m", spec);
+
+  const seen: ModelSpec[] = [];
+  const reader: LanguageModelMiddleware = {
+    specificationVersion: "v3",
+    // oxlint-disable-next-line require-await
+    transformParams: async ({ params, model }) => {
+      seen.push(specOf(model));
+      return params;
+    },
+  };
+  const model = wrapLanguageModel({
+    model: provider.languageModel("acme/m"),
+    middleware: [reader, reader],
+  });
+  try {
+    await model.doGenerate({ prompt: [] });
+  } catch {
+    // The mock model does not generate: only the middleware chain is asserted on.
+  }
+
+  expect(seen).toEqual([spec, spec]);
+  // Models without one (e.g. custom models) read an empty spec.
+  expect(specOf(provider.languageModel("acme/unknown"))).toEqual({});
 });

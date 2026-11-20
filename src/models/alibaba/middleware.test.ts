@@ -10,14 +10,17 @@ import { qwenReasoningMiddleware } from "./middleware.ts";
 test("qwenReasoningMiddleware > matches every Alibaba model", () => {
   for (const id of ["alibaba/qwen3.6-plus", "alibaba/qwen4-max"]) {
     expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
-      qwenReasoningMiddleware(),
+      qwenReasoningMiddleware,
     );
   }
 });
 
 const optionsOf = async (spec: ModelSpec, reasoning: JSONObject, maxOutputTokens?: number) =>
-  (await transform(qwenReasoningMiddleware(spec), withReasoning(reasoning, { maxOutputTokens })))
-    .providerOptions;
+  (
+    await transform(qwenReasoningMiddleware, withReasoning(reasoning, { maxOutputTokens }), {
+      spec: spec,
+    })
+  ).providerOptions;
 
 const QWEN: ModelSpec = { output: 65_536, reasoning: { toggle: true, budget: {} } };
 
@@ -62,8 +65,8 @@ describe("qwenReasoningMiddleware", () => {
 
   test("leaves requests without reasoning untouched", async () => {
     const params = { providerOptions: { unknown: {}, alibaba: { enableThinking: true } } };
-    expect((await transform(qwenReasoningMiddleware(QWEN), params)).providerOptions).toEqual(
-      params.providerOptions,
-    );
+    expect(
+      (await transform(qwenReasoningMiddleware, params, { spec: QWEN })).providerOptions,
+    ).toEqual(params.providerOptions);
   });
 });

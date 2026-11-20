@@ -14,6 +14,15 @@ const embedV3 = (name: string, bedrock?: string): ModelsDevCatalogModel => ({
 
 // Not on models.dev yet.
 const extras: ModelsDevCatalog = {
+  // models.dev only lists it on Cohere.
+  "cohere/embed-v4.0": {
+    name: "Embed v4.0",
+    family: "cohere-embed",
+    created: "2025-04-15",
+    modalities: { input: ["text"], output: ["embeddings"] },
+    context: 128_000,
+    providers: { bedrock: { id: "{ip}cohere.embed-v4:0" } },
+  },
   "cohere/embed-english-v3.0": embedV3("Cohere Embed English v3", "cohere.embed-english-v3"),
   "cohere/embed-english-light-v3.0": embedV3("Cohere Embed English Light v3"),
   "cohere/embed-multilingual-v3.0": embedV3(

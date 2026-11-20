@@ -66,6 +66,14 @@ test("withCanonicalIdsForBedrock > maps the embedding models missing from models
   );
 });
 
+test("withCanonicalIdsForBedrock > serves Cohere Embed v4, which models.dev only lists on Cohere", () => {
+  const provider = withBundledCatalog(createAmazonBedrock({ region: "us-east-1" }));
+  expect(loadBundledCatalog("bedrock", provider)["cohere/embed-v4.0"]?.providers).toEqual([
+    "bedrock",
+  ]);
+  expect(provider.embeddingModel("cohere/embed-v4.0").modelId).toBe("us.cohere.embed-v4:0");
+});
+
 type BedrockSettings = Parameters<typeof createAmazonBedrock>[0] & object;
 type CanonicalConfig = Parameters<typeof withCanonicalIdsForBedrock>[1] & object;
 type CapturedRequest = { url: string; headers: Headers };

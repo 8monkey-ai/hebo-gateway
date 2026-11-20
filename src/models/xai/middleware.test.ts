@@ -10,13 +10,13 @@ import { xaiReasoningMiddleware } from "./middleware.ts";
 test("xai middleware > matches every xAI model", () => {
   for (const id of ["xai/grok-4.3", "xai/grok-4.7", "xai/grok-5"]) {
     expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
-      xaiReasoningMiddleware(),
+      xaiReasoningMiddleware,
     );
   }
 });
 
 const effortOf = async (spec: ModelSpec, reasoning: JSONObject) => {
-  const result = await transform(xaiReasoningMiddleware(spec), withReasoning(reasoning));
+  const result = await transform(xaiReasoningMiddleware, withReasoning(reasoning), { spec });
   return result.providerOptions?.["xai"]?.["reasoningEffort"];
 };
 
@@ -43,8 +43,9 @@ describe("xaiReasoningMiddleware", () => {
 
   test("sends no effort to models that take none", async () => {
     const result = await transform(
-      xaiReasoningMiddleware(GROK_4_20),
+      xaiReasoningMiddleware,
       withReasoning({ enabled: true, effort: "high" }),
+      { spec: GROK_4_20 },
     );
     expect(result.providerOptions).toEqual({ unknown: {} });
   });

@@ -10,13 +10,14 @@ import { deepseekReasoningMiddleware } from "./middleware.ts";
 test("deepseek middleware > matches every DeepSeek model", () => {
   for (const id of ["deepseek/deepseek-v4-pro", "deepseek/deepseek-v5"]) {
     expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
-      deepseekReasoningMiddleware(),
+      deepseekReasoningMiddleware,
     );
   }
 });
 
 const optionsOf = async (spec: ModelSpec, reasoning: JSONObject) =>
-  (await transform(deepseekReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions;
+  (await transform(deepseekReasoningMiddleware, withReasoning(reasoning), { spec }))
+    .providerOptions;
 
 const V4: ModelSpec = { reasoning: { toggle: true, effort: ["low", "high", "max"] } };
 
@@ -61,10 +62,17 @@ describe("deepseekReasoningMiddleware", () => {
   });
 
   test("leaves requests without reasoning untouched", async () => {
-    expect((await transform(deepseekReasoningMiddleware(V4), {})).providerOptions).toBeUndefined();
     expect(
-      (await transform(deepseekReasoningMiddleware(V4), { providerOptions: { unknown: {} } }))
-        .providerOptions,
+      (await transform(deepseekReasoningMiddleware, {}, { spec: V4 })).providerOptions,
+    ).toBeUndefined();
+    expect(
+      (
+        await transform(
+          deepseekReasoningMiddleware,
+          { providerOptions: { unknown: {} } },
+          { spec: V4 },
+        )
+      ).providerOptions,
     ).toEqual({ unknown: {} });
   });
 });

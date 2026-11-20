@@ -27,9 +27,15 @@ for (const path of new Bun.Glob("*/models-dev.json").scanSync({
 })) {
   Object.assign(snapshots, JSON.parse(readFileSync(path, "utf8")) as ModelsDevCatalog);
 }
-// Lab extras fill the gaps, as in the catalog.
+// Lab extras fill the missing models and providers, as in the catalog.
 for (const lab of getRegisteredLabs().values()) {
-  for (const id in lab.extras) snapshots[id] ??= lab.extras[id];
+  for (const id in lab.extras) {
+    const extra = lab.extras[id]!;
+    const model = snapshots[id];
+    snapshots[id] = model
+      ? { ...model, providers: { ...extra.providers, ...model.providers } }
+      : extra;
+  }
 }
 
 /** Native ID of `modelId` on `provider` in the bundled snapshots (or lab extras), if listed. */

@@ -4,7 +4,7 @@ import type { OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings/index.ts";
-import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import {
   nearestEffort,
   reasoningControls,
@@ -15,6 +15,7 @@ import {
   type TranscriptionModelMiddleware,
   wordSegmentsMiddleware,
 } from "../../middleware/transcription.ts";
+import { specOf } from "../../providers/registry.ts";
 import type { ReasoningControls } from "../types.ts";
 
 // Convert `dimensions` (OpenAI) to `outputDimensionality` (Google)
@@ -45,33 +46,32 @@ const GEMINI: ReasoningControls = { effort: ["low", "medium", "high"] };
 // https://ai.google.dev/gemini-api/docs/thinking#thinking-levels
 type ThinkingLevel = NonNullable<GoogleLanguageModelOptions["thinkingConfig"]>["thinkingLevel"];
 
-export const geminiReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => {
-  const controls = reasoningControls(spec, GEMINI);
-  return {
-    specificationVersion: "v3",
-    // oxlint-disable-next-line require-await
-    transformParams: async ({ params }) => {
-      // If thinking options exist, just pass through
-      if (params.providerOptions?.["unknown"]?.["thinking_config"]) return params;
+export const geminiReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    const spec = specOf(model);
+    const controls = reasoningControls(spec, GEMINI);
+    // If thinking options exist, just pass through
+    if (params.providerOptions?.["unknown"]?.["thinking_config"]) return params;
 
-      const reasoning = takeReasoning(params);
-      if (!reasoning || !controls) return params;
+    const reasoning = takeReasoning(params);
+    if (!reasoning || !controls) return params;
 
-      const target = (params.providerOptions!["google"] ??= {}) as GoogleLanguageModelOptions;
-      const effort = resolveReasoning(reasoning, controls)?.effort;
-      const thinkingConfig = (target.thinkingConfig ??= {});
-      if (effort) {
-        thinkingConfig.thinkingLevel = (
-          effort === "none" ? nearestEffort(effort, controls.effort!) : effort
-        ) as ThinkingLevel;
-      }
-      // FUTURE: warn that max_tokens (unsupported) was ignored
-      thinkingConfig.includeThoughts = reasoning.enabled ? !reasoning.exclude : false;
+    const target = (params.providerOptions!["google"] ??= {}) as GoogleLanguageModelOptions;
+    const effort = resolveReasoning(reasoning, controls)?.effort;
+    const thinkingConfig = (target.thinkingConfig ??= {});
+    if (effort) {
+      thinkingConfig.thinkingLevel = (
+        effort === "none" ? nearestEffort(effort, controls.effort!) : effort
+      ) as ThinkingLevel;
+    }
+    // FUTURE: warn that max_tokens (unsupported) was ignored
+    thinkingConfig.includeThoughts = reasoning.enabled ? !reasoning.exclude : false;
 
-      return params;
-    },
-  };
-});
+    return params;
+  },
+};
 
 // https://ai.google.dev/gemini-api/docs/caching
 // FUTURE: auto-create cached_content for message-level cache_control blocks

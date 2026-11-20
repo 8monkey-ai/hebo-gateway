@@ -16,20 +16,9 @@ test("claude middleware > matches every Claude model", () => {
     "anthropic/claude-opus-7",
   ]) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(claudeReasoningMiddleware());
+    expect(middleware).toContain(claudeReasoningMiddleware);
     expect(middleware).toContain(claudePromptCachingMiddleware);
   }
-});
-
-test("claude middleware > is built from the model spec", () => {
-  const spec: ModelSpec = { reasoning: { effort: ["low", "high"] } };
-  const middleware = modelMiddlewareMatcher.resolve({
-    kind: "text",
-    modelId: "anthropic/claude-opus-5-5",
-    spec,
-  });
-  expect(middleware).toContain(claudeReasoningMiddleware(spec));
-  expect(middleware).not.toContain(claudeReasoningMiddleware());
 });
 
 test("claudePromptCachingMiddleware > should not auto-enable top-level cache control", async () => {
@@ -112,8 +101,11 @@ const OPUS_5: ModelSpec = {
 };
 
 const anthropicOptions = async (spec: ModelSpec, reasoning: JSONObject, maxOutputTokens?: number) =>
-  (await transform(claudeReasoningMiddleware(spec), withReasoning(reasoning, { maxOutputTokens })))
-    .providerOptions;
+  (
+    await transform(claudeReasoningMiddleware, withReasoning(reasoning, { maxOutputTokens }), {
+      spec: spec,
+    })
+  ).providerOptions;
 
 describe("claudeReasoningMiddleware", () => {
   test.each([
@@ -203,7 +195,7 @@ describe("claudeReasoningMiddleware", () => {
 
   test("leaves requests without reasoning untouched", async () => {
     const params = { prompt: [], providerOptions: { unknown: {} } };
-    const result = await claudeReasoningMiddleware().transformParams!({
+    const result = await claudeReasoningMiddleware.transformParams!({
       type: "generate",
       params,
       model: new MockLanguageModelV4(),

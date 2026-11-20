@@ -10,7 +10,7 @@ import { cohereDimensionsMiddleware, cohereReasoningMiddleware } from "./middlew
 test("cohere middleware > matching patterns", () => {
   for (const id of ["cohere/command-a-reasoning-08-2025", "cohere/north-mini-code-1-0"]) {
     expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
-      cohereReasoningMiddleware(),
+      cohereReasoningMiddleware,
     );
   }
 
@@ -23,8 +23,11 @@ test("cohere middleware > matching patterns", () => {
 });
 
 const thinkingOf = async (spec: ModelSpec, reasoning: JSONObject, maxOutputTokens?: number) =>
-  (await transform(cohereReasoningMiddleware(spec), withReasoning(reasoning, { maxOutputTokens })))
-    .providerOptions?.["cohere"]?.["thinking"];
+  (
+    await transform(cohereReasoningMiddleware, withReasoning(reasoning, { maxOutputTokens }), {
+      spec: spec,
+    })
+  ).providerOptions?.["cohere"]?.["thinking"];
 
 const COMMAND_A: ModelSpec = { output: 32_000, reasoning: { toggle: true, budget: { min: 1 } } };
 
@@ -64,8 +67,9 @@ describe("cohereReasoningMiddleware", () => {
 
   test("drops reasoning for models that don't reason", async () => {
     const result = await transform(
-      cohereReasoningMiddleware({ reasoning: false }),
+      cohereReasoningMiddleware,
       withReasoning({ enabled: true, effort: "high" }),
+      { spec: { reasoning: false } },
     );
     expect(result.providerOptions).toEqual({ unknown: {} });
   });

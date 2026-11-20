@@ -9,16 +9,20 @@ import { fireworksReasoningMiddleware } from "./middleware.ts";
 
 test("fireworks middlewares > matching provider resolves reasoning middleware", () => {
   expect(modelMiddlewareMatcher.resolve({ kind: "text", providerId: "fireworks" })).toContain(
-    fireworksReasoningMiddleware(),
+    fireworksReasoningMiddleware,
   );
 });
 
 const fireworksOf = async (spec: ModelSpec, reasoning: JSONObject, maxOutputTokens?: number) =>
   (
-    await transform(fireworksReasoningMiddleware(spec), {
-      maxOutputTokens,
-      providerOptions: { fireworks: { reasoning } },
-    })
+    await transform(
+      fireworksReasoningMiddleware,
+      {
+        maxOutputTokens,
+        providerOptions: { fireworks: { reasoning } },
+      },
+      { spec },
+    )
   ).providerOptions?.["fireworks"];
 
 describe("fireworksReasoningMiddleware", () => {
@@ -53,7 +57,7 @@ describe("fireworksReasoningMiddleware", () => {
   });
 
   test("passes through when no reasoning", async () => {
-    const result = await transform(fireworksReasoningMiddleware(), {
+    const result = await transform(fireworksReasoningMiddleware, {
       providerOptions: { fireworks: { promptCacheKey: "k" } },
     });
     expect(result.providerOptions?.["fireworks"]).toEqual({ promptCacheKey: "k" });

@@ -3,12 +3,17 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 
 import { models } from "../endpoints/models/handler.ts";
-import { getModelSpec, getModelSpecs, withCanonicalIds } from "../providers/registry.ts";
+import { getModelSpec, getModelSpecs, specOf, withCanonicalIds } from "../providers/registry.ts";
 import { claude } from "./anthropic/presets.ts";
 import { createModelCatalog, defineModelCatalog, registerModels } from "./catalog.ts";
 import { defineModelFamily } from "./family.ts";
 import type { ModelsDevApi } from "./models-dev.ts";
-import type { CatalogModel, ModelsDevCatalog, ModelsDevCatalogModel } from "./types.ts";
+import type {
+  CatalogModel,
+  ModelCatalog,
+  ModelsDevCatalog,
+  ModelsDevCatalogModel,
+} from "./types.ts";
 
 // A models.dev model, with the spec of each provider.
 const model = (name: string, created: string, extra: Partial<ModelsDevCatalogModel> = {}) =>
@@ -52,6 +57,11 @@ const acme = registerModels({
     "acme/rocket-4": model("Rocket 4", "2026-09-01"),
     // Already listed upstream: the upstream entry wins.
     "acme/rocket-2": model("Rocket 2 (extra)", "2026-06-01"),
+    // A provider missing upstream is filled in; listed ones keep their upstream spec.
+    "acme/rocket-1": {
+      name: "Rocket 1 (extra)",
+      providers: { c: { id: "native-c-Rocket 1" }, a: { id: "ignored" } },
+    },
   },
 });
 
@@ -128,6 +138,24 @@ describe("defineModelCatalog", () => {
     expect(out["acme/rocket-4"]!.name).toBe("Rocket 4");
   });
 
+  test("lab extras fill a provider missing upstream", () => {
+    const c = withCanonicalIds(new MockProviderV4());
+    const a = withCanonicalIds(new MockProviderV4());
+    const out = createModelCatalog(
+      defineModelCatalog("acme/rocket-1"),
+      { ...providers, a, c },
+      offline,
+    ).current!;
+
+    // Upstream data and provider order win, the missing provider comes last.
+    expect(out["acme/rocket-1"]).toEqual({
+      ...listed(ACME["acme/rocket-1"]),
+      providers: ["a", "b", "c"],
+    });
+    expect(getModelSpecs(c)?.get("acme/rocket-1")).toEqual({ id: "native-c-Rocket 1" });
+    expect(getModelSpecs(a)?.get("acme/rocket-1")).toBe(ACME["acme/rocket-1"]!.providers["a"]);
+  });
+
   test("families only match models of their lab", () => {
     registerModels({
       namespace: "other",
@@ -137,6 +165,40 @@ describe("defineModelCatalog", () => {
       },
     });
     expect(Object.keys(resolve(rocket.all, "other/anvil-9"))).not.toContain("other/rocket-9");
+  });
+
+  test("groups also work as arrays of presets, as before", () => {
+    const ids = [
+      "acme/rocket-1",
+      "acme/rocket-1.5",
+      "acme/rocket-2",
+      "acme/rocket-3",
+      "acme/rocket-4",
+    ];
+    expect(rocket.all.length).toBe(5);
+    expect(rocket.all.map((preset) => Object.keys(preset())[0])).toEqual(ids);
+    expect([...rocket.all].length).toBe(5);
+    expect(([] as unknown[]).concat(rocket.stable).length).toBe(2);
+
+    // A preset lists its model, and selects it like a group.
+    const [first] = rocket.stable;
+    expect({ ...first!({ name: "Renamed" }) } as ModelCatalog).toEqual({
+      // Bundled data, lab extras included (provider `c`).
+      "acme/rocket-1": {
+        ...listed(ACME["acme/rocket-1"]),
+        name: "Renamed",
+        providers: ["a", "b", "c"],
+      },
+    });
+    expect(Object.keys(resolve(first))).toEqual(["acme/rocket-1"]);
+
+    expect(
+      resolve(rocket.all.filter((preset) => Object.keys(preset())[0] !== "acme/rocket-3")),
+    ).toEqual(resolve(rocket.all.slice(0, 3), rocket.all.at(-1)));
+    expect(resolve(...rocket["v1.x"]!.map((preset) => preset({ providers: ["b"] })))).toEqual({
+      "acme/rocket-1": { ...ACME["acme/rocket-1"], providers: ["b"] },
+      "acme/rocket-1.5": { ...ACME["acme/rocket-1.5"], providers: ["b"] },
+    });
   });
 
   test("skips undefined inputs and flattens arrays", () => {
@@ -180,7 +242,9 @@ describe("createModelCatalog", () => {
     const byok = withCanonicalIds(byokBase, { providerId: "a" });
 
     expect(getModelSpec(byok, "acme/anvil-2")).toBe(ACME["acme/anvil-2"]!.providers["a"]);
-    byok.languageModel("acme/anvil-2");
+    // Middleware reads the spec off the model it is given.
+    const anvil = byok.languageModel("acme/anvil-2") as MockLanguageModelV4;
+    expect(specOf(anvil)).toBe(ACME["acme/anvil-2"]!.providers["a"]!);
     // Also models the catalog did not select, as with the hand-written mappings before.
     byok.languageModel("acme/rocket-1");
     expect(seen).toEqual(["native-Anvil 2", "native-Rocket 1"]);

@@ -1,9 +1,10 @@
 import type { OpenAIChatLanguageModelOptions, OpenAIEmbeddingModelOptions } from "@ai-sdk/openai";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
 import type { TranscriptionModelMiddleware } from "../../middleware/transcription.ts";
+import { specOf } from "../../providers/registry.ts";
 import { type ReasoningControls, REASONING_EFFORTS } from "../types.ts";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
@@ -30,27 +31,26 @@ const GPT: ReasoningControls = { effort: REASONING_EFFORTS };
 
 // Effort levels come from the model spec (models.dev): sending one a model does not list only
 // earns a warning and a silently dropped field, so it is narrowed to the nearest one here.
-export const openAIReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => {
-  const controls = reasoningControls(spec, GPT);
-  return {
-    specificationVersion: "v3",
-    // oxlint-disable-next-line require-await
-    transformParams: async ({ params }) => {
-      const reasoning = takeReasoning(params);
-      if (!reasoning || !controls) return params;
+export const openAIReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    const spec = specOf(model);
+    const controls = reasoningControls(spec, GPT);
+    const reasoning = takeReasoning(params);
+    if (!reasoning || !controls) return params;
 
-      // FUTURE: warn that reasoning.max_tokens (not supported) was ignored
-      const effort = resolveReasoning(reasoning, controls)?.effort;
-      if (effort) {
-        (
-          (params.providerOptions!["openai"] ??= {}) as OpenAIChatLanguageModelOptions
-        ).reasoningEffort = effort as OpenAIChatLanguageModelOptions["reasoningEffort"];
-      }
+    // FUTURE: warn that reasoning.max_tokens (not supported) was ignored
+    const effort = resolveReasoning(reasoning, controls)?.effort;
+    if (effort) {
+      (
+        (params.providerOptions!["openai"] ??= {}) as OpenAIChatLanguageModelOptions
+      ).reasoningEffort = effort as OpenAIChatLanguageModelOptions["reasoningEffort"];
+    }
 
-      return params;
-    },
-  };
-});
+    return params;
+  },
+};
 
 // https://developers.openai.com/api/docs/guides/prompt-caching/
 export const openAIPromptCachingMiddleware: LanguageModelMiddleware = {

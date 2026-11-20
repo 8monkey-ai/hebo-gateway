@@ -250,6 +250,18 @@ const models = defineModelCatalog(
 
 Groups are resolved when the catalog loads, so a new release joins `all`, `latest` and its version groups without a gateway release. This also means `latest` can change on restart: list exact IDs to pin the catalog. When `models` is omitted, every model of the imported labs is exposed.
 
+Groups can also be used as arrays of single-model presets (`map`, `filter`, `length`, spreading, …). Calling a preset returns its model keyed by ID, so `Object.keys(preset())[0]` is the model ID:
+
+```ts
+const models = defineModelCatalog(
+  claude.all
+    .filter((preset) => !Object.keys(preset())[0]!.includes("haiku"))
+    .map((preset) => preset({ providers: ["bedrock"] })),
+);
+```
+
+The array lists the models of the snapshots bundled with the release (the presets themselves still read the live catalog). Pass a group as is to also pick up models released after it.
+
 Out-of-the-box model families:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`: `qwen` (`embeddings`)
@@ -329,33 +341,32 @@ The bundled snapshots live in `src/models/<lab>/models-dev.json` and are refresh
 
 Each lab module registers middleware for all of its models (e.g. `anthropic/claude-*`), which maps the gateway's provider-agnostic params (reasoning, prompt caching, dimensions, …) to the lab's API. What differs per model and provider comes from models.dev, not from model IDs: the effort levels a model takes, whether reasoning can be turned off, whether it takes a thinking budget, and its output limit. A new model therefore gets the right mapping on restart, without a gateway release. Models without that data (e.g. user-defined ones) are treated like the lab's current generation.
 
-Custom middleware can use the same data with `defineSpecMiddleware`, which builds the middleware once per model spec:
+Custom middleware can read the same data with `specOf(model)`, for the `model` it is given:
 
 ```ts
 import {
-  defineSpecMiddleware,
   modelMiddlewareMatcher,
   reasoningControls,
   resolveReasoning,
+  specOf,
   takeReasoning,
 } from "@hebo-ai/gateway";
 import type { LanguageModelMiddleware } from "ai";
 
-const acmeReasoning = defineSpecMiddleware((spec): LanguageModelMiddleware => {
-  // The model's controls, or these when models.dev has none. `undefined`: it takes none.
-  const controls = reasoningControls(spec, { effort: ["low", "high"] });
-  return {
-    specificationVersion: "v3",
-    transformParams: async ({ params }) => {
-      const reasoning = takeReasoning(params);
-      if (!reasoning || !controls) return params;
+const acmeReasoning: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  transformParams: async ({ params, model }) => {
+    const reasoning = takeReasoning(params);
+    const spec = specOf(model);
+    // The model's controls, or these when models.dev has none. `undefined`: it takes none.
+    const controls = reasoningControls(spec, { effort: ["low", "high"] });
+    if (!reasoning || !controls) return params;
 
-      const resolved = resolveReasoning(reasoning, controls, spec.output);
-      if (resolved?.effort) (params.providerOptions!["acme"] ??= {})["effort"] = resolved.effort;
-      return params;
-    },
-  };
-});
+    const resolved = resolveReasoning(reasoning, controls, spec.output);
+    if (resolved?.effort) (params.providerOptions!["acme"] ??= {})["effort"] = resolved.effort;
+    return params;
+  },
+};
 
 modelMiddlewareMatcher.useForModel("acme/*", { language: [acmeReasoning] });
 ```

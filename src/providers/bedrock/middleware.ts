@@ -12,7 +12,8 @@ import type {
   ChatCompletionsServiceTier,
 } from "../../endpoints/chat-completions/schema.ts";
 import { logger } from "../../logger/index.ts";
-import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { specOf } from "../registry.ts";
 
 // Bedrock serves the default tier when the tier is omitted, so `auto` maps to nothing.
 // https://docs.aws.amazon.com/bedrock/latest/userguide/service-tiers-inference.html
@@ -59,10 +60,10 @@ type BedrockReasoningOptions = BedrockProviderOptions &
  * `reasoningEffort`). Converse takes all of it as `reasoningConfig`, which the SDK maps per
  * model. Dropped for models that don't reason per their spec (models.dev).
  */
-export const bedrockReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => ({
+export const bedrockReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
+  transformParams: async ({ params, model }) => {
     const bedrock = params.providerOptions?.["bedrock"] as BedrockReasoningOptions | undefined;
     if (!bedrock) return params;
 
@@ -72,7 +73,7 @@ export const bedrockReasoningMiddleware = defineSpecMiddleware((spec): LanguageM
     bedrock.thinking = undefined;
     bedrock.effort = undefined;
     bedrock.reasoningEffort = undefined;
-    if (spec.reasoning === false) return params;
+    if (specOf(model).reasoning === false) return params;
 
     const target = (bedrock.reasoningConfig ??= {});
     if (thinking && typeof thinking === "object") {
@@ -98,7 +99,7 @@ export const bedrockReasoningMiddleware = defineSpecMiddleware((spec): LanguageM
 
     return params;
   },
-}));
+};
 
 function toBedrockCachePoint(modelId: string, cacheControl?: ChatCompletionsCacheControl) {
   const out: { type: "default"; ttl?: string } = { type: "default" };
@@ -158,24 +159,19 @@ export const bedrockPromptCachingMiddleware: LanguageModelMiddleware = {
 // model cannot recognize as a reasoning model: it would send `max_tokens` plus `temperature`
 // and drop `reasoning` entirely. So reasoning is forced unless the model spec (models.dev)
 // says it doesn't reason.
-export const bedrockMantleReasoningMiddleware = defineSpecMiddleware(
-  (spec): LanguageModelMiddleware => {
-    const reasons = spec.reasoning !== false;
-    return {
-      specificationVersion: "v3",
-      // oxlint-disable-next-line require-await
-      transformParams: async ({ params }) => {
-        if (!reasons) return params;
+export const bedrockMantleReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    if (specOf(model).reasoning === false) return params;
 
-        const openai = ((params.providerOptions ??= {})["openai"] ??=
-          {}) as OpenAILanguageModelResponsesOptions;
-        openai.forceReasoning = true;
+    const openai = ((params.providerOptions ??= {})["openai"] ??=
+      {}) as OpenAILanguageModelResponsesOptions;
+    openai.forceReasoning = true;
 
-        return params;
-      },
-    };
+    return params;
   },
-);
+};
 
 modelMiddlewareMatcher.useForProvider("amazon-bedrock", {
   language: [

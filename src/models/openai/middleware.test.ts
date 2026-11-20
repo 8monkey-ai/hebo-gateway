@@ -18,7 +18,7 @@ import {
 test("openAI middleware > matching patterns", () => {
   for (const id of ["openai/gpt-5.4-mini", "openai/gpt-6-sol", "openai/gpt-oss-20b", "openai/o3"]) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(openAIReasoningMiddleware());
+    expect(middleware).toContain(openAIReasoningMiddleware);
     expect(middleware).toContain(openAIPromptCachingMiddleware);
   }
 
@@ -59,9 +59,8 @@ test("openAIPromptCachingMiddleware > should map key and retention", async () =>
 });
 
 const effortOf = async (spec: ModelSpec, reasoning: JSONObject) =>
-  (await transform(openAIReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions?.[
-    "openai"
-  ]?.["reasoningEffort"];
+  (await transform(openAIReasoningMiddleware, withReasoning(reasoning), { spec }))
+    .providerOptions?.["openai"]?.["reasoningEffort"];
 
 // models.dev effort levels of a few models.
 const GPT_5: ModelSpec = { reasoning: { effort: ["minimal", "low", "medium", "high"] } };
@@ -98,8 +97,9 @@ describe("openAIReasoningMiddleware", () => {
 
   test("drops reasoning for models that don't reason", async () => {
     const result = await transform(
-      openAIReasoningMiddleware({ reasoning: false }),
+      openAIReasoningMiddleware,
       withReasoning({ enabled: true, effort: "high" }),
+      { spec: { reasoning: false } },
     );
     expect(result.providerOptions).toEqual({ unknown: {} });
   });
@@ -111,13 +111,10 @@ describe("openAIReasoningMiddleware", () => {
   // `reasoning_effort` used to be forwarded verbatim, over the mapped effort.
   test("the mapped effort reaches the provider", async () => {
     let params = withReasoning({ enabled: false, effort: "none" });
-    for (const middleware of modelMiddlewareMatcher.for(
-      "openai/gpt-6.1-sol",
-      "openai.responses",
-      GPT_6_1_SOL,
-    )) {
+    for (const middleware of modelMiddlewareMatcher.for("openai/gpt-6.1-sol", "openai.responses")) {
+      if (!middleware.transformParams) continue;
       // oxlint-disable-next-line no-await-in-loop
-      if (middleware.transformParams) params = await transform(middleware, params);
+      params = await transform(middleware, params, { spec: GPT_6_1_SOL });
     }
     expect(params.providerOptions).toEqual({ openai: { reasoningEffort: "low" } });
   });

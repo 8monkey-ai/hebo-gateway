@@ -1,7 +1,7 @@
 import type { LanguageModelMiddleware } from "ai";
 
 import type { ReasoningControls } from "../models/types.ts";
-import { defineSpecMiddleware, type SpecMiddleware } from "./matcher.ts";
+import { specOf } from "../providers/registry.ts";
 import { reasoningControls, resolveReasoning, takeReasoning } from "./reasoning.ts";
 
 /**
@@ -12,26 +12,23 @@ import { reasoningControls, resolveReasoning, takeReasoning } from "./reasoning.
 export function thinkingReasoningMiddleware(
   namespace: string,
   fallback: ReasoningControls,
-): SpecMiddleware<LanguageModelMiddleware> {
-  return defineSpecMiddleware((spec): LanguageModelMiddleware => {
-    const controls = reasoningControls(spec, fallback);
-    return {
-      specificationVersion: "v3",
-      // oxlint-disable-next-line require-await
-      transformParams: async ({ params }) => {
-        const reasoning = takeReasoning(params);
-        if (!reasoning || !controls) return params;
+): LanguageModelMiddleware {
+  return {
+    specificationVersion: "v3",
+    // oxlint-disable-next-line require-await
+    transformParams: async ({ params, model }) => {
+      const reasoning = takeReasoning(params);
+      const controls = reasoningControls(specOf(model), fallback);
+      if (!reasoning || !controls) return params;
 
-        const resolved = resolveReasoning(reasoning, controls);
-        if (!resolved) return params;
+      const resolved = resolveReasoning(reasoning, controls);
+      if (!resolved) return params;
 
-        const target = (params.providerOptions![namespace] ??= {});
-        if (controls.toggle)
-          target["thinking"] = { type: resolved.enabled ? "enabled" : "disabled" };
-        if (resolved.effort) target["reasoningEffort"] = resolved.effort;
+      const target = (params.providerOptions![namespace] ??= {});
+      if (controls.toggle) target["thinking"] = { type: resolved.enabled ? "enabled" : "disabled" };
+      if (resolved.effort) target["reasoningEffort"] = resolved.effort;
 
-        return params;
-      },
-    };
-  });
+      return params;
+    },
+  };
 }

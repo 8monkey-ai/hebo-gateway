@@ -2,8 +2,9 @@ import type { CohereEmbeddingModelOptions, CohereLanguageModelOptions } from "@a
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings/index.ts";
-import { defineSpecMiddleware, modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
+import { specOf } from "../../providers/registry.ts";
 import type { ReasoningControls } from "../types.ts";
 
 // Convert `dimensions` (OpenAI) to `outputDimension` (Cohere)
@@ -32,29 +33,28 @@ export const cohereDimensionsMiddleware: EmbeddingModelMiddleware = {
 const COMMAND: ReasoningControls = { toggle: true, budget: {} };
 
 // Cohere takes a thinking toggle, with a token budget on the models that list one (models.dev).
-export const cohereReasoningMiddleware = defineSpecMiddleware((spec): LanguageModelMiddleware => {
-  const controls = reasoningControls(spec, COMMAND);
-  return {
-    specificationVersion: "v3",
-    // oxlint-disable-next-line require-await
-    transformParams: async ({ params }) => {
-      const reasoning = takeReasoning(params);
-      if (!reasoning || !controls) return params;
+export const cohereReasoningMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params, model }) => {
+    const spec = specOf(model);
+    const controls = reasoningControls(spec, COMMAND);
+    const reasoning = takeReasoning(params);
+    if (!reasoning || !controls) return params;
 
-      const resolved = resolveReasoning(reasoning, controls, params.maxOutputTokens ?? spec.output);
-      if (!resolved) return params;
+    const resolved = resolveReasoning(reasoning, controls, params.maxOutputTokens ?? spec.output);
+    if (!resolved) return params;
 
-      const target = (params.providerOptions!["cohere"] ??= {}) as CohereLanguageModelOptions;
-      target.thinking = resolved.enabled
-        ? resolved.budget === undefined
-          ? { type: "enabled" }
-          : { type: "enabled", tokenBudget: resolved.budget }
-        : { type: "disabled" };
+    const target = (params.providerOptions!["cohere"] ??= {}) as CohereLanguageModelOptions;
+    target.thinking = resolved.enabled
+      ? resolved.budget === undefined
+        ? { type: "enabled" }
+        : { type: "enabled", tokenBudget: resolved.budget }
+      : { type: "disabled" };
 
-      return params;
-    },
-  };
-});
+    return params;
+  },
+};
 
 modelMiddlewareMatcher.useForModel("cohere/embed-*", { embedding: [cohereDimensionsMiddleware] });
 

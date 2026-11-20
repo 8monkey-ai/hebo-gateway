@@ -9,12 +9,13 @@ import { moonshotReasoningMiddleware } from "./middleware.ts";
 
 test("moonshot middlewares > matching model resolves reasoning middleware", () => {
   expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: "moonshotai/kimi-k3" })).toContain(
-    moonshotReasoningMiddleware(),
+    moonshotReasoningMiddleware,
   );
 });
 
 const optionsOf = async (spec: ModelSpec, reasoning: JSONObject) =>
-  (await transform(moonshotReasoningMiddleware(spec), withReasoning(reasoning))).providerOptions;
+  (await transform(moonshotReasoningMiddleware, withReasoning(reasoning), { spec }))
+    .providerOptions;
 
 // Kimi K2.6 takes a thinking toggle, K3 effort levels.
 const K2_6: ModelSpec = { reasoning: { toggle: true } };
@@ -50,8 +51,13 @@ describe("moonshotReasoningMiddleware", () => {
 
   test("leaves requests without reasoning untouched", async () => {
     expect(
-      (await transform(moonshotReasoningMiddleware(K3), { providerOptions: { unknown: {} } }))
-        .providerOptions,
+      (
+        await transform(
+          moonshotReasoningMiddleware,
+          { providerOptions: { unknown: {} } },
+          { spec: K3 },
+        )
+      ).providerOptions,
     ).toEqual({ unknown: {} });
   });
 });
