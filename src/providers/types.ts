@@ -1,24 +1,29 @@
 import { type ProviderV4 } from "@ai-sdk/provider";
 
+/**
+ * Gateway providers with an adapter in `@hebo-ai/gateway/providers/<provider>`, in routing
+ * preference order: when several serve a model, the catalog lists them in this order (after
+ * the lab's own provider). Labs first, then clouds, then hosts.
+ */
 export const CANONICAL_PROVIDER_IDS = [
-  "alibaba",
   "anthropic",
-  "azure",
-  "bedrock",
-  "chutes",
+  "openai",
+  "alibaba",
   "cohere",
-  "deepinfra",
   "deepseek",
-  "fireworks",
-  "groq",
   "minimax",
   "moonshot",
-  "openai",
-  "togetherai",
-  "vertex",
-  "voyage",
   "xai",
   "zai",
+  "voyage",
+  "bedrock",
+  "vertex",
+  "azure",
+  "groq",
+  "togetherai",
+  "deepinfra",
+  "fireworks",
+  "chutes",
 ] as const;
 
 export type CanonicalProviderId = (typeof CANONICAL_PROVIDER_IDS)[number];

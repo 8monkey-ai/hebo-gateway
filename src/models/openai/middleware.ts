@@ -1,11 +1,12 @@
 import type { OpenAIChatLanguageModelOptions, OpenAIEmbeddingModelOptions } from "@ai-sdk/openai";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
+import { ReasoningEffortSchema } from "../../endpoints/shared/schema.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
 import type { TranscriptionModelMiddleware } from "../../middleware/transcription.ts";
 import { specOf } from "../../providers/registry.ts";
-import { type ReasoningControls, REASONING_EFFORTS } from "../types.ts";
+import type { ReasoningControls } from "../types.ts";
 
 // Convert `dimensions` (OpenAI) to `dimensions` (OpenAI)
 export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -27,7 +28,7 @@ export const openAIDimensionsMiddleware: EmbeddingModelMiddleware = {
 };
 
 // Takes any effort, for models without reasoning data (e.g. custom ones).
-const GPT: ReasoningControls = { effort: REASONING_EFFORTS };
+const GPT: ReasoningControls = { effort: ReasoningEffortSchema.options };
 
 // Effort levels come from the model spec (models.dev): sending one a model does not list only
 // earns a warning and a silently dropped field, so it is narrowed to the nearest one here.

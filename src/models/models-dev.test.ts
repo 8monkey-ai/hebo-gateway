@@ -1,11 +1,19 @@
 import { describe, expect, test } from "bun:test";
 
+// Provider adapters register the models.dev providers backing them when their ID differs.
+// oxlint-disable no-unassigned-import
+import "../providers/bedrock/canonical.ts";
+import "../providers/fireworks/canonical.ts";
+import "../providers/moonshot/canonical.ts";
+import "../providers/vertex/canonical.ts";
+// oxlint-enable no-unassigned-import
 import { CANONICAL_PROVIDER_IDS } from "../providers/types.ts";
 import {
   fromModelsDev,
   type ModelsDevApi,
   type ModelsDevLab,
   type ModelsDevModel,
+  registerModelsDevHosts,
 } from "./models-dev.ts";
 import type { ModelCatalog, ModelSpecs } from "./types.ts";
 
@@ -97,6 +105,26 @@ describe("fromModelsDev", () => {
     };
 
     expect(Object.keys(convert(api))).toEqual(["openai/gpt-new"]);
+  });
+
+  test("maps models.dev providers to gateway providers of the same ID, or registered by their adapter", () => {
+    const listing = { models: { m: chat({ canonical_model_id: "zhipuai/glm-9" }) } };
+    registerModelsDevHosts("acme-cloud", { "acme-ai": ["@acme/sdk"] });
+    const api: ModelsDevApi = {
+      groq: listing,
+      "acme-ai": {
+        models: {
+          m: chat({ canonical_model_id: "zhipuai/glm-9", provider: { npm: "@acme/sdk" } }),
+        },
+      },
+      "acme-other": listing,
+    };
+
+    // Canonical providers first, then the others.
+    expect(nativeIds(convert(api)["zhipuai/glm-9"]?.providers)).toEqual({
+      groq: "m",
+      "acme-cloud": "m",
+    });
   });
 
   test("skips models that no gateway provider serves", () => {

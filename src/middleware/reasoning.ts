@@ -1,12 +1,11 @@
 import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
 
-import type { ChatCompletionsReasoningConfig } from "../endpoints/chat-completions/schema.ts";
 import {
-  type ModelSpec,
-  type ReasoningControls,
-  type ReasoningEffortLevel,
-  REASONING_EFFORTS,
-} from "../models/types.ts";
+  type ChatCompletionsReasoningConfig,
+  type ChatCompletionsReasoningEffort,
+  ChatCompletionsReasoningEffortSchema,
+} from "../endpoints/chat-completions/schema.ts";
+import type { ModelSpec, ReasoningControls } from "../models/types.ts";
 import { calculateReasoningBudgetFromEffort } from "./utils.ts";
 
 /** Output limit assumed for reasoning budgets when neither the request nor the model sets one. */
@@ -40,15 +39,17 @@ export function reasoningControls(
   return controls && (controls.effort || controls.toggle || controls.budget) ? controls : undefined;
 }
 
-const rank = (effort: ReasoningEffortLevel) => REASONING_EFFORTS.indexOf(effort);
+// Effort levels, lowest first.
+const EFFORTS = ChatCompletionsReasoningEffortSchema.options;
+const rank = (effort: ChatCompletionsReasoningEffort) => EFFORTS.indexOf(effort);
 
 /** The level closest to `effort` that the model takes, ties going up. Never `none`. */
 export function nearestEffort(
-  effort: ReasoningEffortLevel,
-  levels: readonly ReasoningEffortLevel[],
-): ReasoningEffortLevel | undefined {
+  effort: ChatCompletionsReasoningEffort,
+  levels: readonly ChatCompletionsReasoningEffort[],
+): ChatCompletionsReasoningEffort | undefined {
   const wanted = rank(effort);
-  let best: ReasoningEffortLevel | undefined;
+  let best: ChatCompletionsReasoningEffort | undefined;
   let distance = Infinity;
   for (const level of levels) {
     if (level === "none") continue;
@@ -65,7 +66,7 @@ export type ResolvedReasoning = {
   /** Whether the model should reason. */
   enabled: boolean;
   /** Effort level, one the model takes (`none` included). */
-  effort?: ReasoningEffortLevel;
+  effort?: ChatCompletionsReasoningEffort;
   /** Token budget, for models that take one. */
   budget?: number;
 };

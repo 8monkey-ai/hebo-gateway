@@ -12,8 +12,11 @@ import {
 import type { LanguageModelV4 } from "@ai-sdk/provider";
 
 import { logger } from "../../logger/index.ts";
+import { registerModelsDevHosts } from "../../models/models-dev.ts";
 import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
+
+registerModelsDevHosts("bedrock", { "amazon-bedrock": ["@ai-sdk/amazon-bedrock/mantle"] });
 
 type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;
 

@@ -3,7 +3,8 @@ import { describe, expect, test } from "bun:test";
 import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
 
 import { bundledSpecs } from "../../test/helpers/catalog.ts";
-import { REASONING_EFFORTS, type ReasoningControls } from "../models/types.ts";
+import { ReasoningEffortSchema } from "../endpoints/shared/schema.ts";
+import type { ReasoningControls } from "../models/types.ts";
 import { nearestEffort, reasoningControls, resolveReasoning, takeReasoning } from "./reasoning.ts";
 
 describe("nearestEffort", () => {
@@ -66,7 +67,9 @@ describe("resolveReasoning", () => {
   test("only resolves to levels each bundled model lists", () => {
     const requests = [
       { enabled: false, effort: "none" as const },
-      ...REASONING_EFFORTS.filter((e) => e !== "none").map((e) => ({ enabled: true, effort: e })),
+      ...ReasoningEffortSchema.options
+        .filter((e) => e !== "none")
+        .map((e) => ({ enabled: true, effort: e })),
     ];
 
     for (const [id, provider, spec] of bundledSpecs()) {

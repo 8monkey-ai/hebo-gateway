@@ -1,4 +1,9 @@
-import type { CanonicalProviderId } from "../providers/types.ts";
+import { ReasoningEffortSchema } from "../endpoints/shared/schema.ts";
+import {
+  CANONICAL_PROVIDER_IDS,
+  type CanonicalProviderId,
+  type ProviderId,
+} from "../providers/types.ts";
 import { compileGlob } from "../utils/glob.ts";
 import {
   type CatalogModel,
@@ -7,7 +12,6 @@ import {
   type ModelSpec,
   type ModelSpecs,
   type ReasoningControls,
-  REASONING_EFFORTS,
 } from "./types.ts";
 
 /**
@@ -68,44 +72,40 @@ export type ModelsDevLab = {
   exclude?: readonly string[];
 };
 
-/**
- * models.dev providers that back each gateway provider, with the SDKs (`provider.npm`) the
- * gateway adapter can serve besides the default one. Key order is the provider preference
- * used when a model is served by several of them (after its own lab).
- */
-const HOSTS: Record<CanonicalProviderId, Record<string, readonly string[]>> = {
-  anthropic: { anthropic: [] },
-  openai: { openai: [] },
-  alibaba: { alibaba: [] },
-  cohere: { cohere: [] },
-  deepseek: { deepseek: [] },
-  minimax: { minimax: [] },
-  moonshot: { moonshotai: [] },
-  xai: { xai: [] },
-  zai: { zai: [] },
-  // Not listed as a provider on models.dev: only serves its own lab (`ModelsDevLab.provider`).
-  voyage: {},
-  bedrock: { "amazon-bedrock": ["@ai-sdk/amazon-bedrock/mantle"] },
-  vertex: {
-    "google-vertex": ["@ai-sdk/google-vertex/anthropic", "@ai-sdk/openai-compatible"],
-    "google-vertex-anthropic": [],
-  },
-  azure: { azure: [] },
-  groq: { groq: [] },
-  togetherai: { togetherai: [] },
-  deepinfra: { deepinfra: [] },
-  fireworks: { "fireworks-ai": [] },
-  chutes: { chutes: [] },
+/** A models.dev provider backing a gateway provider. */
+type Host = {
+  provider: ProviderId;
+  /** SDKs (`provider.npm`) the gateway adapter serves besides the provider's default one. */
+  sdks: readonly string[];
 };
 
-const PROVIDER_ORDER = Object.keys(HOSTS) as CanonicalProviderId[];
+// models.dev providers whose ID differs from the gateway provider they back.
+const aliases = new Map<string, Host>();
 
-/** models.dev provider -> gateway provider. */
-const HOST_OF = new Map<string, CanonicalProviderId>(
-  PROVIDER_ORDER.flatMap((provider) =>
-    Object.keys(HOSTS[provider]).map((host) => [host, provider] as const),
-  ),
-);
+/**
+ * Maps a gateway provider to the models.dev providers backing it, with the SDKs
+ * (`provider.npm`) its adapter serves besides the default one, e.g.
+ * `registerModelsDevHosts("bedrock", { "amazon-bedrock": ["@ai-sdk/amazon-bedrock/mantle"] })`.
+ * Provider adapters (`@hebo-ai/gateway/providers/<provider>`) call it when imported. Without
+ * it, a gateway provider is backed by the models.dev provider of the same ID.
+ */
+export function registerModelsDevHosts(
+  provider: ProviderId,
+  hosts: Readonly<Record<string, readonly string[]>>,
+): void {
+  for (const host in hosts) aliases.set(host, { provider, sdks: hosts[host]! });
+}
+
+const PROVIDERS = new Set<string>(CANONICAL_PROVIDER_IDS);
+
+const hostOf = (host: string): Host | undefined =>
+  aliases.get(host) ?? (PROVIDERS.has(host) ? { provider: host, sdks: [] } : undefined);
+
+// Provider preference, after the lab's own: `CANONICAL_PROVIDER_IDS` order, then the others.
+const rankOf = (provider: ProviderId) => {
+  const rank = CANONICAL_PROVIDER_IDS.indexOf(provider as CanonicalProviderId);
+  return rank === -1 ? CANONICAL_PROVIDER_IDS.length : rank;
+};
 
 type Input = NonNullable<CatalogModel["modalities"]>["input"][number];
 type Output = NonNullable<CatalogModel["modalities"]>["output"][number];
@@ -135,7 +135,7 @@ const MANTLE = "@ai-sdk/amazon-bedrock/mantle";
 const BEDROCK_GEO = /^(global|us|eu|apac|au|ca|jp|in|us-gov)\./u;
 
 type Listing = { nativeId: string; model: ModelsDevModel };
-type Entry = { model: ModelsDevModel; rank: number; listings: Map<CanonicalProviderId, Listing[]> };
+type Entry = { model: ModelsDevModel; rank: number; listings: Map<ProviderId, Listing[]> };
 
 // First-party providers often list their own models without `canonical_model_id`, the
 // provider-native ID being the lab one.
@@ -253,7 +253,7 @@ const toReasoningControls = (
       out.budget = budget;
     } else if (option?.type === "effort" && Array.isArray(option.values)) {
       const values = new Set(option.values);
-      const effort = REASONING_EFFORTS.filter((e) => values.has(e));
+      const effort = ReasoningEffortSchema.options.filter((e) => values.has(e));
       if (effort.length > 0) out.effort = effort;
     }
   }
@@ -330,9 +330,10 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
     const models = listing?.models;
     if (!models || typeof models !== "object") continue;
 
-    const provider = HOST_OF.get(host);
-    const sdks = provider && HOSTS[provider][host];
-    const rank = provider === undefined ? PROVIDER_ORDER.length : PROVIDER_ORDER.indexOf(provider);
+    const backed = hostOf(host);
+    const provider = backed?.provider;
+    // Other listings only add metadata, ranked last.
+    const rank = provider === undefined ? CANONICAL_PROVIDER_IDS.length + 1 : rankOf(provider);
 
     for (const [nativeId, model] of Object.entries(models)) {
       if (!model || typeof model !== "object") continue;
@@ -356,7 +357,7 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
 
       // Listings served through an SDK the adapter does not speak are left out.
       const npm = model.provider?.npm;
-      if (provider && (npm === undefined || sdks!.includes(npm))) {
+      if (provider && (npm === undefined || backed.sdks.includes(npm))) {
         const list = entry.listings.get(provider) ?? [];
         list.push({ nativeId, model });
         entry.listings.set(provider, list);
@@ -375,7 +376,8 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
 
     // The lab's own provider first, then the others in preference order.
     const lab = byNamespace.get(id.split("/", 1)[0]!)!.provider;
-    const ordered = PROVIDER_ORDER.filter((p) => p !== lab && listings.has(p));
+    const ordered = [...listings.keys()].filter((p) => p !== lab);
+    ordered.sort((a, b) => rankOf(a) - rankOf(b));
     if (lab && listings.has(lab)) ordered.unshift(lab);
 
     const providers: Record<string, ModelSpec> = {};

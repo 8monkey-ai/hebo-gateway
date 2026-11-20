@@ -5,8 +5,15 @@ import {
   type GoogleVertexMaasProviderSettings,
 } from "@ai-sdk/google-vertex/maas";
 
+import { registerModelsDevHosts } from "../../models/models-dev.ts";
 import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
+
+// Claude has its own models.dev provider. MaaS models are listed as OpenAI-compatible.
+registerModelsDevHosts("vertex", {
+  "google-vertex": ["@ai-sdk/google-vertex/anthropic", "@ai-sdk/openai-compatible"],
+  "google-vertex-anthropic": [],
+});
 
 /**
  * `createVertex` keeps `project` and `googleAuthOptions` in a closure, so the resolved

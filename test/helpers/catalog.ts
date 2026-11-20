@@ -7,9 +7,16 @@ import type { ModelCatalog, ModelsDevCatalog, ModelSpec } from "../../src/models
 
 const MODELS_DIR = `${import.meta.dir}/../../src/models`;
 
-// Registers every lab module, found on disk. Loaded synchronously: with a top-level await,
+// Registers every lab module and provider adapter, found on disk. Loaded synchronously: with a top-level await,
 // Bun runs some test files before this module is initialized.
 for (const path of new Bun.Glob("*/index.ts").scanSync({ cwd: MODELS_DIR, absolute: true })) {
+  require(path);
+}
+// Provider adapters register the models.dev providers backing them.
+for (const path of new Bun.Glob("*/canonical.ts").scanSync({
+  cwd: `${MODELS_DIR}/../providers`,
+  absolute: true,
+})) {
   require(path);
 }
 

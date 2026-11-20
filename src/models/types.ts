@@ -1,3 +1,4 @@
+import type { ReasoningEffort } from "../endpoints/shared/schema.ts";
 import type { ProviderId } from "../providers/types.ts";
 
 /**
@@ -45,25 +46,13 @@ export type ModelCatalog = {
   [K in ModelId]?: CatalogModel;
 };
 
-/** Reasoning effort levels, lowest first. */
-export const REASONING_EFFORTS = [
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-] as const;
-export type ReasoningEffortLevel = (typeof REASONING_EFFORTS)[number];
-
 /**
  * How a model takes reasoning controls on a provider (models.dev `reasoning_options`). A
  * model that lists none of them can't be controlled.
  */
 export type ReasoningControls = {
   /** Effort levels the model takes, lowest first. `none` turns reasoning off. */
-  effort?: readonly ReasoningEffortLevel[];
+  effort?: readonly ReasoningEffort[];
   /** Reasoning can be switched on and off. */
   toggle?: boolean;
   /** Reasoning takes a token budget. */

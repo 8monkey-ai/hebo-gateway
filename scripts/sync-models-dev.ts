@@ -1,7 +1,8 @@
 /**
  * Refreshes the models.dev snapshots bundled with each lab (`src/models/<lab>/models-dev.json`),
  * which the gateway falls back to when the live catalog cannot be loaded. Labs are found on
- * disk: each `src/models/<lab>/presets.ts` registers its namespace when imported.
+ * disk: each `src/models/<lab>/presets.ts` registers its namespace when imported, and each
+ * `src/providers/<provider>/canonical.ts` the models.dev providers backing it.
  *
  *   bun run models:sync
  */
@@ -10,6 +11,13 @@ import { fromModelsDev, MODELS_DEV_API_URL, type ModelsDevApi } from "../src/mod
 import type { ModelsDevCatalog } from "../src/models/types.ts";
 
 const root = new URL("../src/models/", import.meta.url).pathname;
+
+// Provider adapters register the models.dev providers that back them when imported.
+const adapters = new URL("../src/providers/", import.meta.url).pathname;
+for (const path of new Bun.Glob("*/canonical.ts").scanSync({ cwd: adapters })) {
+  // oxlint-disable-next-line no-await-in-loop
+  await import(`${adapters}${path}`);
+}
 const presets = [...new Bun.Glob("*/presets.ts").scanSync({ cwd: root })];
 presets.sort();
 

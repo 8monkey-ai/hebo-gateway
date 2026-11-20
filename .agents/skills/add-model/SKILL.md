@@ -30,7 +30,7 @@ curl -s 'https://models.dev/api.json' | jq -c 'to_entries[] | .key as $p | .valu
   | select((.value.canonical_model_id // .key) | test("<SEARCH_TERM>")) | {provider: $p, id: .key, canonical: .value.canonical_model_id, status: .value.status, type: .value.type, npm: .value.provider.npm}'
 ```
 
-Relevant fields: `canonical_model_id` (`<lab>/<model>`), `family`, `status` (`deprecated` listings are ignored, `alpha` / `beta` are kept out of `latest`), `type` (`embedding` / `transcription`; image, video, speech, ... are ignored), `provider.npm` (listings served through an SDK the adapter does not speak are ignored, see `HOSTS`), `release_date`, `knowledge`, `limit.context`, `modalities`, `attachment`, `reasoning`, `tool_call`, `structured_output`, `temperature`, `open_weights`.
+Relevant fields: `canonical_model_id` (`<lab>/<model>`), `family`, `status` (`deprecated` listings are ignored, `alpha` / `beta` are kept out of `latest`), `type` (`embedding` / `transcription`; image, video, speech, ... are ignored), `provider.npm` (listings served through an SDK the adapter does not speak are ignored, see `registerModelsDevHosts`), `release_date`, `knowledge`, `limit.context`, `modalities`, `attachment`, `reasoning`, `tool_call`, `structured_output`, `temperature`, `open_weights`.
 
 The canonical ID used by the gateway is the models.dev one (`canonical_model_id`, or `<lab>/<id>` for first-party listings without it), e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`, `minimax/MiniMax-M3`. Do not invent IDs.
 
@@ -100,7 +100,7 @@ Provider-level middleware can read the model spec with `specOf(model)` too (e.g.
   1. Create `src/models/<lab>/presets.ts` (copy an existing one): `registerModels` with the `namespace`, the gateway `provider` the lab runs (omit if none) and its models.dev first-party `host` (only when it differs from the namespace, e.g. `zai` for `zhipuai`), the `declare module` block, and its families. Add `index.ts` and an empty `models-dev.json` (`{}`).
   2. Run `bun run models:sync`: it finds the lab on disk and writes its snapshot.
   3. Add the `./models/<lab>` export to `package.json`. Tests pick the lab up from disk.
-- **New provider adapter**: add it to `CANONICAL_PROVIDER_IDS` (`src/providers/types.ts`), map it to its models.dev provider ID(s) in `HOSTS` with the SDKs it speaks besides the default (key order = provider preference), create `src/providers/<provider>/` with a `withCanonicalIdsFor*` adapter (only provider-wide rules: native IDs come from the catalog), add the package export and a case to `src/providers/catalog-ids.test.ts`.
+- **New provider adapter**: add it to `CANONICAL_PROVIDER_IDS` (`src/providers/types.ts`, in provider preference order). Use the models.dev provider ID as gateway provider ID when possible; otherwise, or when the adapter speaks SDKs besides the models.dev default, call `registerModelsDevHosts` in its `canonical.ts` (see Bedrock, Vertex). Create `src/providers/<provider>/` with a `withCanonicalIdsFor*` adapter (only provider-wide rules: native IDs come from the catalog), add the package export and a case to `src/providers/catalog-ids.test.ts`.
 
 ### Canonicalization options reference
 
