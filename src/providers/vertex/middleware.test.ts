@@ -4,7 +4,11 @@ import type { LanguageModelV4CallOptions } from "@ai-sdk/provider";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { vertexGemmaThinkingMiddleware, vertexServiceTierMiddleware } from "./middleware.ts";
+import {
+  vertexAnthropicServiceTierMiddleware,
+  vertexGemmaThinkingMiddleware,
+  vertexServiceTierMiddleware,
+} from "./middleware.ts";
 
 const vertexServiceTierCases = [
   {
@@ -86,6 +90,26 @@ test("vertexServiceTierMiddleware > should not override pre-set headers", async 
     "x-vertex-ai-llm-shared-request-type": "priority",
   });
   expect(result.providerOptions!["vertex"]).toEqual({});
+});
+
+test("vertexAnthropicServiceTierMiddleware > maps the tier to Vertex headers for Claude", async () => {
+  const result = await vertexAnthropicServiceTierMiddleware.transformParams!({
+    type: "generate",
+    params: { prompt: [], providerOptions: { anthropic: { serviceTier: "scale" } } },
+    model: new MockLanguageModelV4({ modelId: "claude-sonnet-5-5" }),
+  });
+
+  expect(result.headers).toEqual({ "x-vertex-ai-llm-request-type": "dedicated" });
+  expect(result.providerOptions!["anthropic"]!["serviceTier"]).toBeUndefined();
+});
+
+test("Claude on Vertex gets the Vertex Anthropic service tier middleware", () => {
+  const middleware = modelMiddlewareMatcher.for(
+    "anthropic/claude-sonnet-5-5",
+    "googleVertex.anthropic.messages",
+  );
+  expect(middleware).toContain(vertexAnthropicServiceTierMiddleware);
+  expect(middleware).not.toContain(vertexServiceTierMiddleware);
 });
 
 const vertexGemmaThinkingCases = [

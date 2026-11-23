@@ -37,7 +37,13 @@ export const gpt = defineModelFamily(lab, {
 });
 
 export const gptOss = defineModelFamily(lab, {
-  version: /^gpt-oss-/u,
+  version: /^gpt-oss-\d+b$/u,
+});
+
+// Safety classifiers, not chat models. models.dev files them under the `gpt-oss` family, so
+// they would otherwise join `gptOss.all` and, being newer, replace it as `gptOss.latest`.
+export const gptOssSafeguard = defineModelFamily(lab, {
+  version: /^gpt-oss-safeguard-\d+b$/u,
 });
 
 export const textEmbeddings = defineModelFamily(lab, {

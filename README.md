@@ -147,7 +147,7 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
-Provider-native IDs come from the [model catalog](#models): models.dev lists each model under the native ID every provider serves it with, so a new model works on all of its providers without a gateway release. Adapters only add the rules that apply to a whole provider (Bedrock inference profiles and Mantle, Vertex MaaS). IDs the catalog does not know fall back to the canonical ID without its namespace. Pass an extra mapping to override either:
+Provider-native IDs come from the [model catalog](#models): models.dev lists each model under the native ID every provider serves it with, so a new model works on all of its providers without a gateway release. Adapters only add the rules that apply to a whole provider (Bedrock inference profiles and Mantle, Vertex MaaS and Claude). IDs the catalog does not know fall back to the canonical ID without its namespace. Pass an extra mapping to override either:
 
 ```ts
 const deepinfra = withCanonicalIdsForDeepInfra(createDeepInfra(), {
@@ -264,7 +264,7 @@ Out-of-the-box model families:
 - **Microsoft** — `@hebo-ai/gateway/models/microsoft`: `maiTranscribe`
 - **MiniMax** — `@hebo-ai/gateway/models/minimax`: `minimax`
 - **Moonshot** — `@hebo-ai/gateway/models/moonshot`: `kimi` (version groups use `k`, e.g. `kimi["k3.x"]`)
-- **OpenAI** — `@hebo-ai/gateway/models/openai`: `gpt` (`codex`, `pro`, `transcription`), `gptOss`, `textEmbeddings`
+- **OpenAI** — `@hebo-ai/gateway/models/openai`: `gpt` (`codex`, `pro`, `transcription`), `gptOss`, `gptOssSafeguard`, `textEmbeddings`
 - **Voyage** — `@hebo-ai/gateway/models/voyage`: `voyage`
 - **xAI** — `@hebo-ai/gateway/models/xai`: `grok` (`transcription`)
 - **Z.ai** — `@hebo-ai/gateway/models/zai`: `glm`

@@ -75,6 +75,15 @@ describe("bundled model families", () => {
     expect(catalog["cohere/embed-v4.0"]?.providers).toEqual(["cohere", "bedrock", "azure"]);
   });
 
+  test("gpt-oss leaves the Safeguard classifiers to their own family", () => {
+    expect(ids(openai.gptOss.all)).toEqual(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+    expect(ids(openai.gptOss.latest)).toEqual(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+    expect(ids(openai.gptOssSafeguard.all)).toEqual([
+      "openai/gpt-oss-safeguard-120b",
+      "openai/gpt-oss-safeguard-20b",
+    ]);
+  });
+
   test("named groups select by pattern", () => {
     const opus = ids(anthropic.claude.opus);
     expect(opus.length).toBeGreaterThan(0);

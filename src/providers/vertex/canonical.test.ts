@@ -51,6 +51,13 @@ test("Gemini 4 models resolve without an explicit mapping", () => {
   }
 });
 
+test("Claude routes to the Vertex Anthropic provider under its bare ID", () => {
+  const provider = withCanonicalIdsForVertex(vertex);
+  const model = provider.languageModel("anthropic/claude-sonnet-5-5");
+  expect(model.modelId).toBe("claude-sonnet-5-5");
+  expect(model.provider).toBe("googleVertex.anthropic.messages");
+});
+
 // ---------------------------------------------------------------------------
 // The MaaS override inherits the provider's project and credentials
 // ---------------------------------------------------------------------------
@@ -126,6 +133,39 @@ test("MaaS override falls back to GOOGLE_VERTEX_PROJECT when no project is confi
   const { url } = await captureMaasRequest({ location: "us-central1" });
 
   expect(url).toContain("/projects/test-project/");
+});
+
+test("Claude is sent to rawPredict on the global endpoint with the provider's credentials", async () => {
+  let captured: { url: string; headers: Headers; body: Record<string, unknown> } | undefined;
+  const provider = withCanonicalIdsForVertex(
+    createVertex({
+      project: "my-project",
+      location: "us-central1",
+      googleAuthOptions: authClientFor("configured-token"),
+      fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+        captured = {
+          url: input instanceof Request ? input.url : input.toString(),
+          headers: new Headers(init?.headers),
+          body: JSON.parse(init?.body as string) as Record<string, unknown>,
+        };
+        throw new Error("captured");
+      }) as unknown as typeof fetch,
+    }),
+  );
+
+  try {
+    await provider
+      .languageModel("anthropic/claude-sonnet-5-5")
+      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+  } catch {
+    // expected
+  }
+
+  expect(captured!.url).toBe(
+    "https://aiplatform.googleapis.com/v1/projects/my-project/locations/global/publishers/anthropic/models/claude-sonnet-5-5:rawPredict",
+  );
+  expect(captured!.headers.get("authorization")).toBe("Bearer configured-token");
+  expect(captured!.body["anthropic_version"]).toBe("vertex-2023-10-16");
 });
 
 // ---------------------------------------------------------------------------

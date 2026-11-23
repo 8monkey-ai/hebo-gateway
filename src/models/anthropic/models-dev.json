@@ -26,7 +26,7 @@
         }
       },
       "vertex": {
-        "id": "claude-fable-5@default",
+        "id": "claude-fable-5",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -69,7 +69,7 @@
         }
       },
       "vertex": {
-        "id": "claude-fable-5-1@default",
+        "id": "claude-fable-5-1",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -105,7 +105,7 @@
         }
       },
       "vertex": {
-        "id": "claude-fable-5-2@default",
+        "id": "claude-fable-5-2",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -143,7 +143,7 @@
         }
       },
       "vertex": {
-        "id": "claude-haiku-5-5@default",
+        "id": "claude-haiku-5-5",
         "output": 128000,
         "reasoning": {
           "toggle": true,
@@ -187,7 +187,7 @@
         }
       },
       "vertex": {
-        "id": "claude-opus-4-6@default",
+        "id": "claude-opus-4-6",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "max"],
@@ -227,7 +227,7 @@
         }
       },
       "vertex": {
-        "id": "claude-opus-4-7@default",
+        "id": "claude-opus-4-7",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -264,7 +264,7 @@
         }
       },
       "vertex": {
-        "id": "claude-opus-4-8@default",
+        "id": "claude-opus-4-8",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -301,7 +301,7 @@
         }
       },
       "vertex": {
-        "id": "claude-opus-5@default",
+        "id": "claude-opus-5",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -337,7 +337,7 @@
         }
       },
       "vertex": {
-        "id": "claude-opus-5-5@default",
+        "id": "claude-opus-5-5",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]
@@ -380,7 +380,7 @@
         }
       },
       "vertex": {
-        "id": "claude-sonnet-4-6@default",
+        "id": "claude-sonnet-4-6",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "max"],
@@ -421,7 +421,7 @@
         }
       },
       "vertex": {
-        "id": "claude-sonnet-5@default",
+        "id": "claude-sonnet-5",
         "output": 128000,
         "reasoning": {
           "toggle": true,
@@ -458,7 +458,7 @@
         }
       },
       "vertex": {
-        "id": "claude-sonnet-5-5@default",
+        "id": "claude-sonnet-5-5",
         "output": 128000,
         "reasoning": {
           "effort": ["low", "medium", "high", "xhigh", "max"]

@@ -22,6 +22,31 @@ function setHeaderIfMissing(
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/flex-paygo
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/provisioned-throughput/use-provisioned-throughput
 // https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/GenerateContentResponse#TrafficType
+function applyServiceTier(
+  headers: Record<string, string | undefined>,
+  tier: ChatCompletionsServiceTier | undefined,
+) {
+  switch (tier) {
+    case "flex":
+      setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
+      setHeaderIfMissing(headers, VERTEX_SHARED_REQUEST_TYPE_HEADER, "flex");
+      break;
+    case "priority":
+      setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
+      setHeaderIfMissing(headers, VERTEX_SHARED_REQUEST_TYPE_HEADER, "priority");
+      break;
+    case "scale":
+      setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "dedicated");
+      break;
+    case "default":
+      setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
+      break;
+    case "auto":
+    case undefined:
+      break;
+  }
+}
+
 export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // eslint-disable-next-line require-await
@@ -30,36 +55,39 @@ export const vertexServiceTierMiddleware: LanguageModelMiddleware = {
     if (!vertex || typeof vertex !== "object") return params;
 
     const tier = vertex["serviceTier"] as ChatCompletionsServiceTier | undefined;
-    const headers = (params.headers ??= {});
+    if (tier === undefined) return params;
 
-    switch (tier) {
-      case undefined:
-        return params;
-      case "flex":
-        setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
-        setHeaderIfMissing(headers, VERTEX_SHARED_REQUEST_TYPE_HEADER, "flex");
-        break;
-      case "priority":
-        setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
-        setHeaderIfMissing(headers, VERTEX_SHARED_REQUEST_TYPE_HEADER, "priority");
-        break;
-      case "scale":
-        setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "dedicated");
-        break;
-      case "default":
-        setHeaderIfMissing(headers, VERTEX_REQUEST_TYPE_HEADER, "shared");
-        break;
-      case "auto":
-        break;
-    }
-
+    applyServiceTier((params.headers ??= {}), tier);
     delete vertex["serviceTier"];
+    return params;
+  },
+};
+
+// Claude on Vertex reads `anthropic` provider options, but Vertex takes no Anthropic service
+// tier: the gateway tier maps to the same Vertex headers as for Gemini instead.
+export const vertexAnthropicServiceTierMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  // oxlint-disable-next-line require-await
+  transformParams: async ({ params }) => {
+    const anthropic = params.providerOptions?.["anthropic"];
+    if (!anthropic || typeof anthropic !== "object") return params;
+
+    const tier = anthropic["serviceTier"] as ChatCompletionsServiceTier | undefined;
+    if (tier === undefined) return params;
+
+    // Undefined rather than deleted, as for Bedrock's nested Anthropic provider.
+    anthropic["serviceTier"] = undefined;
+    applyServiceTier((params.headers ??= {}), tier);
     return params;
   },
 };
 
 modelMiddlewareMatcher.useForProvider(["google.vertex.*"], {
   language: [vertexServiceTierMiddleware],
+});
+
+modelMiddlewareMatcher.useForProvider(["googleVertex.anthropic*"], {
+  language: [vertexAnthropicServiceTierMiddleware],
 });
 
 // Matches both the canonical id (`google/gemma-4-26b-a4b-it`) and the MaaS-specific one
