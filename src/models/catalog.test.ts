@@ -120,6 +120,34 @@ describe("defineModelCatalog", () => {
     });
   });
 
+  test("applies a per-model override function to every selected model", () => {
+    const free = new Set(["acme/rocket-2"]);
+    const seen: [string, readonly string[]][] = [];
+    const out = resolve(
+      rocket["v2"]!((id, m) => {
+        seen.push([id, m.providers]);
+        return { additionalProperties: { free: free.has(id) } };
+      }),
+      rocket["v1.x"]!((id) =>
+        id === "acme/rocket-1" ? undefined : { additionalProperties: { free: free.has(id) } },
+      ),
+    );
+
+    expect(seen).toEqual([["acme/rocket-2", ["a", "b"]]]);
+    expect(out["acme/rocket-2"]!.additionalProperties).toEqual({ free: true });
+    expect(out["acme/rocket-1.5"]!.additionalProperties).toEqual({ free: false });
+    // `undefined` leaves the model unchanged.
+    expect(out["acme/rocket-1"]!.additionalProperties).toBeUndefined();
+  });
+
+  test("a per-model override function can narrow providers", () => {
+    expect(
+      resolve(rocket["v2"]!((_, m) => ({ providers: m.providers.filter((p) => p === "b") }))),
+    ).toEqual({
+      "acme/rocket-2": { ...ACME["acme/rocket-2"], providers: ["b"] },
+    });
+  });
+
   test("custom models only fill gaps, and groups see them", () => {
     const rocket5 = custom("Rocket 5", "2026-10-01");
     const out = resolve(rocket.latest, {
@@ -314,6 +342,16 @@ describe("live catalog", () => {
     // Another gateway in the same process reuses the response.
     await createModelCatalog(spec, anthropic, options).load();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test("per-model override functions also apply to models released after the build", async () => {
+    spyOn(globalThis, "fetch").mockResolvedValue(Response.json(API));
+    const tier = (id: string) => ({ additionalProperties: { free: id.endsWith("-9") } });
+    const store = createModelCatalog(defineModelCatalog(claude.all(tier)), anthropic, source());
+
+    expect((await store.load())["anthropic/claude-live-9"]!.additionalProperties).toEqual({
+      free: true,
+    });
   });
 
   test("falls back to the bundled snapshot when loading fails twice", async () => {

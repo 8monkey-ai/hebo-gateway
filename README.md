@@ -252,6 +252,15 @@ const models = defineModelCatalog(
 
 Groups are resolved when the catalog loads, so a new release joins `all`, `latest` and its version groups without a gateway release. This also means `latest` can change on restart: list exact IDs to pin the catalog. When `models` is omitted, every model of the imported labs is exposed.
 
+To set different values per model, pass a function instead of an object. It is called with each selected model's ID and entry when the catalog loads, so models released later go through it too. Return the changes for that model, or `undefined` to leave it unchanged. `model.providers` lists every provider models.dev knows for the model; unconfigured ones are dropped afterwards.
+
+```ts
+const FREE = new Set(["openai/gpt-5.5"]);
+const tier = (id: string) => ({ additionalProperties: { free: FREE.has(id) } });
+
+const models = defineModelCatalog(claude.all(tier), gpt.all(tier));
+```
+
 Out-of-the-box model families:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`: `qwen` (`embeddings`)

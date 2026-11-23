@@ -65,8 +65,14 @@ export const getRegisteredLabs = (): ReadonlyMap<string, ModelLab> => labs;
 
 const kSelect = Symbol.for("hebo.gateway.model-selection");
 
-/** Changes applied to every selected model. `providers` narrows and reorders the providers. */
-export type ModelOverride = Partial<CatalogModel>;
+/**
+ * Changes applied to every selected model. `providers` narrows and reorders the providers.
+ * A function is called once per selected model when the catalog loads (so models released
+ * later get one too), e.g. to set `additionalProperties` per model ID.
+ */
+export type ModelOverride =
+  | Partial<CatalogModel>
+  | ((id: ModelId, model: CatalogModel) => Partial<CatalogModel> | undefined);
 
 /** Models picked from the loaded catalog, e.g. `claude.latest`. */
 export type ModelSelection = {
@@ -81,16 +87,21 @@ export type ModelSelection = {
 export type ModelGroup = ModelSelection & ((override?: ModelOverride) => ModelSelection);
 
 const applyOverride = (
+  id: ModelId,
   model: ModelsDevCatalogModel,
   override?: ModelOverride,
 ): ModelsDevCatalogModel => {
-  if (!override) return model;
-  const { providers, ...rest } = override;
+  const changes =
+    typeof override === "function"
+      ? override(id, { ...model, providers: Object.keys(model.providers) })
+      : override;
+  if (!changes) return model;
+  const { providers, ...rest } = changes;
   if (!providers) return { ...model, ...rest };
 
   const picked: Record<string, ModelSpec> = {};
-  for (const id of providers) {
-    if (id in model.providers) picked[id] = model.providers[id]!;
+  for (const p of providers) {
+    if (p in model.providers) picked[p] = model.providers[p]!;
   }
   return { ...model, ...rest, providers: picked };
 };
@@ -188,7 +199,7 @@ export function defineModelCatalog(...inputs: ModelCatalogInput[]): ModelCatalog
       const { namespaces: read, select, override } = input[kSelect];
       for (const ns of read) namespaces.add(ns);
       steps.push((source, out) => {
-        for (const id of select(source)) out[id] = applyOverride(source[id]!, override);
+        for (const id of select(source)) out[id] = applyOverride(id, source[id]!, override);
       });
       return;
     }
