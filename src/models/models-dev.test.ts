@@ -236,6 +236,55 @@ describe("fromModelsDev", () => {
     });
   });
 
+  test("takes metadata from the listing named like the model, not an alias or a regional one", () => {
+    const api: ModelsDevApi = {
+      openai: {
+        models: {
+          "gpt-daybreak-blue-latest": chat({
+            name: "Daybreak Blue",
+            canonical_model_id: "openai/gpt-9-sol",
+          }),
+          "gpt-9-sol": chat({ name: "GPT-9 Sol" }),
+        },
+      },
+      "amazon-bedrock": {
+        models: {
+          "us-gov.openai.gpt-oss-9b-1:0": chat({
+            name: "gpt-oss-9b (GovCloud)",
+            canonical_model_id: "openai/gpt-oss-9b",
+          }),
+          "openai.gpt-oss-9b-1:0": chat({
+            name: "gpt-oss-9b",
+            canonical_model_id: "openai/gpt-oss-9b",
+          }),
+        },
+      },
+    };
+
+    const catalog = convert(api);
+    expect(catalog["openai/gpt-9-sol"]?.name).toBe("GPT-9 Sol");
+    expect(catalog["openai/gpt-oss-9b"]?.name).toBe("gpt-oss-9b");
+  });
+
+  test("ignores moving `-latest` aliases", () => {
+    const api: ModelsDevApi = {
+      openai: {
+        models: {
+          "gpt-chat-latest": chat({
+            name: "GPT Chat Latest",
+            canonical_model_id: "openai/gpt-9-instant",
+          }),
+          "gpt-9": chat({ name: "GPT-9" }),
+          "gpt-9-latest": chat({ name: "GPT Latest", canonical_model_id: "openai/gpt-9" }),
+        },
+      },
+    };
+
+    const catalog = convert(api);
+    expect(Object.keys(catalog)).toEqual(["openai/gpt-9"]);
+    expect(nativeIds(catalog["openai/gpt-9"]?.providers)).toEqual({ openai: "gpt-9" });
+  });
+
   test("lets a provider adapter pick the listing and add spec fields", () => {
     registerModelsDevHosts("acme-cloud", {
       "acme-picky": {

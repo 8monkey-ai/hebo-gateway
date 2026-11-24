@@ -42,7 +42,7 @@
     }
   },
   "google/gemini-3.1-pro-preview": {
-    "name": "Gemini Pro Latest",
+    "name": "Gemini 3.1 Pro Preview",
     "family": "gemini-pro",
     "created": "2026-02-19",
     "knowledge": "2025-01",

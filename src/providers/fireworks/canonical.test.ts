@@ -25,7 +25,7 @@ test("fireworks-ai > prefers model listings over routers", () => {
       models: {
         "accounts/fireworks/routers/minimax-m9": listing("minimax/MiniMax-M9"),
         "accounts/fireworks/models/minimax-m9-fast": listing("minimax/MiniMax-M9"),
-        "accounts/fireworks/routers/minimax-latest": listing("minimax/MiniMax-M10"),
+        "accounts/fireworks/routers/minimax-m10-fast": listing("minimax/MiniMax-M10"),
       },
     },
   };
@@ -36,6 +36,6 @@ test("fireworks-ai > prefers model listings over routers", () => {
   });
   // Only listed as a router: served from it.
   expect(catalog["minimax/MiniMax-M10"]?.providers).toEqual({
-    fireworks: { id: "accounts/fireworks/routers/minimax-latest" },
+    fireworks: { id: "accounts/fireworks/routers/minimax-m10-fast" },
   });
 });

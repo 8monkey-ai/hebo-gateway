@@ -151,9 +151,18 @@ const NATIVE_ID = /^[\w.:/@-]{1,200}$/u;
 
 const isSafeNativeId = (nativeId: string) => NATIVE_ID.test(nativeId) && !nativeId.includes("..");
 
+/**
+ * Moving aliases (e.g. OpenAI's `gpt-chat-latest`) point to whichever model is current, so
+ * they neither pin a model nor carry its name.
+ */
+const isMovingAlias = (nativeId: string) => nativeId.endsWith("-latest");
+
 type Entry = {
   model: ModelsDevModel;
   rank: number;
+  /** models.dev provider and native ID of the listing `model` comes from. */
+  host: string;
+  nativeId: string;
   listings: Map<ProviderId, { host: Host; list: ModelsDevListing[] }>;
 };
 
@@ -200,27 +209,26 @@ const indexCanonicalIds = (api: ModelsDevApi, labOf: ReadonlyMap<string, string>
 };
 
 /**
- * Picks one provider-native ID when a provider lists several for the same model (aliases,
- * `-highspeed` variants): the one named like the model, then the shortest.
+ * Whether listing `a` is preferred over `b` for model `id` when a provider lists it under
+ * several native IDs (aliases, regions, `-highspeed` variants): the one named like the model,
+ * then the shortest.
  */
+const isPreferred = (id: string, a: string, b: string) => {
+  const name = id.slice(id.indexOf("/") + 1).toLowerCase();
+  const score = (nativeId: string) =>
+    nativeId.slice(nativeId.lastIndexOf("/") + 1).toLowerCase() === name ? 0 : 1;
+  const diff = score(a) - score(b);
+  return diff === 0 ? a.length < b.length : diff < 0;
+};
+
+/** Picks one provider-native ID when a provider lists several for the same model. */
 export const pickNativeId = (
   id: string,
   listings: readonly ModelsDevListing[],
 ): ModelsDevListing | undefined => {
-  const name = id.slice(id.indexOf("/") + 1).toLowerCase();
-  const score = (nativeId: string) =>
-    nativeId.slice(nativeId.lastIndexOf("/") + 1).toLowerCase() === name ? 0 : 1;
-
   let best: ModelsDevListing | undefined;
   for (const listing of listings) {
-    const { nativeId } = listing;
-    if (
-      best === undefined ||
-      score(nativeId) < score(best.nativeId) ||
-      (score(nativeId) === score(best.nativeId) && nativeId.length < best.nativeId.length)
-    ) {
-      best = listing;
-    }
+    if (best === undefined || isPreferred(id, listing.nativeId, best.nativeId)) best = listing;
   }
   return best;
 };
@@ -296,7 +304,8 @@ const toCatalogModel = (model: ModelsDevModel, providers: ModelSpecs): ModelsDev
  * Builds a gateway catalog from `models.dev/api.json`, keyed by the models.dev canonical
  * (lab) model ID, for the given labs. Each model maps the gateway providers that serve it to
  * how they serve it: native ID, output limit and reasoning controls. Deprecated listings,
- * unsupported model types and listings with unsafe native IDs are ignored. Metadata comes
+ * moving `-latest` aliases, unsupported model types and listings with unsafe native IDs are
+ * ignored. Metadata comes
  * from the lab's own listing when there is one, otherwise from the preferred gateway provider.
  */
 export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): ModelsDevCatalog {
@@ -326,6 +335,7 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
     for (const [nativeId, model] of Object.entries(models)) {
       if (!model || typeof model !== "object") continue;
       if (model.status === "deprecated" || !TYPES.has(model.type)) continue;
+      if (isMovingAlias(nativeId)) continue;
 
       // Only gateway hosts are worth matching by name: other listings just add metadata.
       const id =
@@ -337,10 +347,17 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
       if (!byNamespace.has(namespace) || excluded.some((test) => test(id))) continue;
 
       let entry = entries.get(id);
-      // The lab's own listing is the most authoritative source of metadata.
+      // The lab's own listing is the most authoritative source of metadata. Within a provider,
+      // the listing named like the model beats aliases and regional ones ("… (GovCloud)").
       const ownRank = labOf.get(host) === namespace ? -1 : rank;
-      if (!entry) entries.set(id, (entry = { model, rank: ownRank, listings: new Map() }));
-      else if (ownRank < entry.rank) Object.assign(entry, { model, rank: ownRank });
+      if (!entry) {
+        entries.set(id, (entry = { model, rank: ownRank, host, nativeId, listings: new Map() }));
+      } else if (
+        ownRank < entry.rank ||
+        (host === entry.host && isPreferred(id, nativeId, entry.nativeId))
+      ) {
+        Object.assign(entry, { model, rank: ownRank, host, nativeId });
+      }
 
       // Listings served through an SDK the adapter does not speak are left out.
       const npm = model.provider?.npm;

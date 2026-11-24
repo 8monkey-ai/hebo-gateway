@@ -1,6 +1,6 @@
 {
   "amazon/nova-2-lite": {
-    "name": "Nova 2 Lite (EU)",
+    "name": "Nova 2 Lite",
     "family": "nova",
     "created": "2025-12-02",
     "knowledge": "2025-10",
@@ -43,7 +43,7 @@
     }
   },
   "amazon/nova-micro": {
-    "name": "Nova Micro (US)",
+    "name": "Nova Micro",
     "family": "nova-micro",
     "created": "2024-12-03",
     "knowledge": "2024-10",
@@ -63,7 +63,7 @@
     }
   },
   "amazon/nova-pro": {
-    "name": "Nova Pro (US)",
+    "name": "Nova Pro",
     "family": "nova-pro",
     "created": "2024-12-03",
     "knowledge": "2024-10",
