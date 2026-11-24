@@ -18,7 +18,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with any Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
-- 🗂️ Model catalog sourced from models.dev on startup: new models need no gateway release.
+- 🗂️ Model catalog loaded from models.dev: new models need no gateway release.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
@@ -147,7 +147,7 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
-Provider-native IDs come from the [model catalog](#models): models.dev lists each model under the native ID every provider serves it with, so a new model works on all of its providers without a gateway release. Adapters only add the rules that apply to a whole provider (Bedrock inference profiles and Mantle, Vertex MaaS and Claude). IDs the catalog does not know fall back to the canonical ID without its namespace. Pass an extra mapping to override either:
+Adapters look up each provider's own model ID in the [model catalog](#models), so new models work without a gateway release. For models the catalog doesn't know, they use the model ID without the lab prefix. To use a different ID, pass an extra mapping:
 
 ```ts
 const deepinfra = withCanonicalIdsForDeepInfra(createDeepInfra(), {
@@ -164,7 +164,7 @@ const bedrock = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-eas
 });
 ```
 
-It additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so the models models.dev only lists there (e.g. GPT-5.x) resolve through it while everything else keeps using Converse. Mantle is available in [fewer regions](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) than `bedrock-runtime`, so set `mantle.region` when the wrapped provider points somewhere Mantle does not serve. Mantle inherits the wrapped provider’s region and custom headers, but not its credentials: those never leave the `createAmazonBedrock` closure, and its request signing is bound to the `bedrock` service while Mantle requires `bedrock-mantle`. By default Mantle therefore reads the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`), which needs no configuration at all. To pass credentials explicitly, declare them once and hand them to both:
+It additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so models that are only served there (e.g. GPT-5.x) resolve through it while everything else keeps using Converse. Mantle is available in [fewer regions](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) than `bedrock-runtime`, so set `mantle.region` when the wrapped provider points somewhere Mantle does not serve. Mantle inherits the wrapped provider’s region and custom headers, but not its credentials: those never leave the `createAmazonBedrock` closure, and its request signing is bound to the `bedrock` service while Mantle requires `bedrock-mantle`. By default Mantle therefore reads the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`), which needs no configuration at all. To pass credentials explicitly, declare them once and hand them to both:
 
 ```ts
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
@@ -175,7 +175,7 @@ const settings = { region: "us-east-1", apiKey: process.env["BEDROCK_API_KEY"] }
 const bedrock = withCanonicalIdsForBedrock(createAmazonBedrock(settings), { mantle: settings });
 ```
 
-For Azure, the native ID is the deployment name: the model name models.dev lists, e.g. `openai/gpt-5.6-luna` uses the Azure deployment `gpt-5.6-luna`. Pass an extra mapping as the second argument when your deployment has a custom name.
+For Azure, the deployment name defaults to the model name, e.g. `openai/gpt-5.6-luna` uses the Azure deployment `gpt-5.6-luna`. Pass an extra mapping as the second argument when your deployment has a custom name.
 
 ```ts
 import { createAzure } from "@ai-sdk/azure";
@@ -197,7 +197,7 @@ const myProvider = withCanonicalIds(
     apiKey: process.env["MY_PROVIDER_API_KEY"],
   }),
   {
-    // As keyed in `providers` below: instances wrapped for the same ID share the catalog's native IDs.
+    // Must match the key used in `providers` below
     providerId: "myProvider",
     mapping: {
       "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
@@ -219,20 +219,20 @@ const gw = gateway({
 
 ### Models
 
-The model catalog comes from [models.dev](https://models.dev). The gateway loads `https://models.dev/api.json` once, on the first request, and falls back to the models.dev snapshot bundled with the installed release if that fails. A failed attempt (error or 2-second timeout) is retried once before falling back, so the first request waits at most two attempts. New models therefore show up without upgrading the gateway.
+The model catalog comes from [models.dev](https://models.dev). The gateway loads it once, on the first request, so new models become available after a restart without upgrading the gateway. If models.dev can't be reached, the gateway uses the copy bundled with the installed release.
 
-Models are keyed by their canonical models.dev lab ID (`<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3`, `zhipuai/glm-5.3`). Each one lists the configured providers that serve it, in the order of `CANONICAL_PROVIDER_IDS` after the lab's own provider; the first one serves the request. A gateway provider is backed by the models.dev provider of the same ID, except for adapters that register other ones when imported (`bedrock` → `amazon-bedrock`, `vertex` → `google-vertex`, `fireworks` → `fireworks-ai`, `moonshot` → `moonshotai`). How each provider serves a model stays internal: the catalog hands the native ID, output limit and reasoning controls models.dev lists to the providers wrapped with `withCanonicalIds`, and model middleware is built from them (see [Model Middleware](#model-middleware)). Every instance of a `withCanonicalIdsFor*` wrapper shares them, so providers created per request (e.g. BYOK providers returned by a `resolveProvider` hook) resolve the same native IDs as the configured ones.
+Model IDs follow models.dev and take the form `<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3` or `zhipuai/glm-5.3`. Each model lists the configured providers that serve it. The lab's own provider comes first, and the first provider in the list handles the request.
 
 #### Model Families
 
-Hebo Gateway ships one module per lab under `@hebo-ai/gateway/models/<lab>`. Importing it registers the lab: its models become part of the catalog, and its model middleware applies to them. Models of labs you do not import are left out.
+Each lab has a module under `@hebo-ai/gateway/models/<lab>`. Importing it adds that lab's models to the catalog. Models from labs you don't import are left out.
 
-Each module also exports the lab's model families (e.g. `claude`, `gemini`, `llama`), which group its models:
+Each module exports the lab's model families (e.g. `claude`, `gemini`, `llama`). Each family offers these groups:
 
-- `all`: every model of the family, named groups included (e.g. embedding and transcription models).
-- `latest`: the newest stable release of each product line (e.g. Claude Opus, Sonnet, Haiku and Fable).
-- `vX` / `vX.Y`: one version (e.g. `claude["v4.6"]`), `vX.x`: one major version (e.g. `claude["v5.x"]`).
-- Named groups, e.g. `claude.opus`, `gpt.codex`, `gemini.embeddings`.
+- `all`: every model in the family.
+- `latest`: the newest stable model of each product line, e.g. Claude Opus, Sonnet, Haiku and Fable.
+- Version groups: `vX` / `vX.Y` for one version (e.g. `claude["v4.6"]`), and `vX.x` for one major version (e.g. `claude["v5.x"]`).
+- Named groups for some families, e.g. `claude.opus`, `gpt.codex`, `gemini.embeddings`.
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";
@@ -242,17 +242,17 @@ import { gpt } from "@hebo-ai/gateway/models/openai";
 const models = defineModelCatalog(
   // A family group
   claude["latest"],
-  // The same, served only by Bedrock (`providers` narrows and reorders, other fields replace)
+  // A group with overrides: `providers` narrows and reorders the providers
   claude["v5.x"]({ providers: ["bedrock"] }),
-  // Single models (IDs of imported labs autocomplete), or `*` patterns
+  // Single models (IDs autocomplete), or `*` patterns
   "openai/gpt-6-sol",
   "openai/gpt-oss-*",
 );
 ```
 
-Groups are resolved when the catalog loads, so a new release joins `all`, `latest` and its version groups without a gateway release. This also means `latest` can change on restart: list exact IDs to pin the catalog. When `models` is omitted, every model of the imported labs is exposed.
+Groups are worked out when the catalog loads, so new releases join `all`, `latest` and their version groups automatically. This means `latest` can change after a restart; list exact model IDs if you want a fixed catalog. If you don't set `models`, every model of the imported labs is exposed.
 
-To set different values per model, pass a function instead of an object. It is called with each selected model's ID and entry when the catalog loads, so models released later go through it too. Return the changes for that model, or `undefined` to leave it unchanged. `model.providers` lists every provider models.dev knows for the model; unconfigured ones are dropped afterwards.
+To set different values for each model, pass a function instead of an object. It receives each model's ID and entry, including models released later. Return the changes for that model, or `undefined` to leave it as it is:
 
 ```ts
 const FREE = new Set(["openai/gpt-5.5"]);
@@ -261,7 +261,7 @@ const tier = (id: string) => ({ additionalProperties: { free: FREE.has(id) } });
 const models = defineModelCatalog(claude.all(tier), gpt.all(tier));
 ```
 
-Out-of-the-box model families:
+Available model families:
 
 - **Alibaba** — `@hebo-ai/gateway/models/alibaba`: `qwen` (`embeddings`)
 - **Amazon** — `@hebo-ai/gateway/models/amazon`: `nova` (`embeddings`)
@@ -278,11 +278,14 @@ Out-of-the-box model families:
 - **xAI** — `@hebo-ai/gateway/models/xai`: `grok` (`transcription`)
 - **Z.ai** — `@hebo-ai/gateway/models/zai`: `glm`
 
-All of them also have `all`, `latest` and version groups.
+Named groups are listed in brackets.
+
+> [!NOTE]
+> Claude 4.5 models are not included.
 
 #### User-defined Models
 
-Until models.dev lists a model, add it yourself by following the `CatalogModel` type. Custom models only fill gaps: once models.dev lists the same ID, its entry is used instead.
+If models.dev doesn't list a model yet, you can add it yourself using the `CatalogModel` type. Once models.dev lists the same ID, its entry is used instead.
 
 ```ts
 const models = defineModelCatalog(claude["latest"], {
@@ -308,77 +311,56 @@ const models = defineModelCatalog(claude["latest"], {
 ```
 
 > [!NOTE]
-> The only mandatory property is `providers`, everything else is optional metadata. Custom models are visible to the family groups in the same `defineModelCatalog` call: the example above makes Claude Opus 6 part of `claude["latest"]`.
+> The only mandatory property is `providers`, everything else is optional metadata. Models you add count towards the family groups in the same `defineModelCatalog` call, so the example above adds Claude Opus 6 to `claude["latest"]`.
 >
-> Providers resolve the native ID of a custom model like any ID the catalog does not know, through the adapter's fallback rule: usually the canonical ID without its namespace (`claude-opus-6`), on Bedrock `us.anthropic.claude-opus-6-v1:0`. When a provider serves it under a different ID, pass that ID in the adapter's extra mapping, e.g. `withCanonicalIdsForBedrock(bedrock, { extraMapping: { "anthropic/claude-opus-6": "{ip}anthropic.claude-opus-6" } })`.
+> By default a provider calls the model by its ID without the lab prefix (`claude-opus-6`). If the provider uses a different ID, set it with the adapter's extra mapping (see [Providers](#providers)).
 
 #### Catalog Source
 
 ```ts
 const gw = gateway({
-  providers: {
-    // ...
-  },
+  // ...
   advanced: {
     catalog: {
-      // Any URL serving the models.dev `api.json` shape works (default: "https://models.dev/api.json").
-      // `false` only uses the snapshots bundled with the release.
+      // URL of a models.dev-compatible `api.json` (default: "https://models.dev/api.json").
+      // `false` uses only the copy bundled with the release.
       source: false,
-      // Timeout for each attempt at loading `source`, in milliseconds (default: 2000). A failed attempt is retried once.
+      // Timeout per attempt in milliseconds (default: 2000). A failed attempt is retried once.
       timeout: 2000,
     },
   },
 });
 ```
 
+The first requests wait for the catalog to load. Responses over 25 MB and invalid provider model IDs are ignored.
+
 > [!TIP]
-> On runtimes with tight per-request CPU limits (e.g. Cloudflare Workers free plan), parsing the full models.dev catalog on the first request can be too expensive. Use `source: false`, or point `source` at a smaller, self-hosted copy.
-
-The bundled snapshots live in `src/models/<lab>/models-dev.json`. They are refreshed with `bun run models:sync` and committed, so each release bundles reviewed data. `bun run models:check` lists how they differ from the live models.dev data without writing anything, and exits non-zero if they do.
-
-Data loaded from `source` is treated as untrusted:
-
-- Responses larger than 25 MB are not read.
-- Provider-native IDs must be plain IDs (letters, digits and `._:/@-`, no `..`, at most 200 characters), since some SDKs put them into request URLs unencoded. On Bedrock, ARNs and unknown inference profile prefixes are rejected too, so the configured `inferenceProfile` always applies. A provider listing with any other ID is skipped.
+> On runtimes with tight per-request CPU limits (e.g. the Cloudflare Workers free plan), parsing the full models.dev catalog can be too expensive. Use `source: false`, or point `source` at a smaller copy you host yourself.
 
 #### Model Middleware
 
-Each lab module registers middleware for all of its models (e.g. `anthropic/claude-*`), which maps the gateway's provider-agnostic params (reasoning, prompt caching, dimensions, …) to the lab's API. What differs per model and provider comes from models.dev, not from model IDs: the effort levels a model takes, whether reasoning can be turned off, whether it takes a thinking budget, and its output limit. A new model therefore gets the right mapping on restart, without a gateway release. Models without that data (e.g. user-defined ones) are treated like the lab's current generation.
+Each lab module includes middleware that maps the gateway's parameters (reasoning, prompt caching, dimensions, …) to that lab's API. It uses each model's reasoning options and output limit from models.dev, so new models are handled correctly without a gateway release.
 
-Custom middleware can read the same data with `specOf(model)`, for the `model` it is given:
+Your own middleware can read the same data with `specOf(model)`:
 
 ```ts
-import {
-  modelMiddlewareMatcher,
-  reasoningControls,
-  resolveReasoning,
-  specOf,
-  takeReasoning,
-} from "@hebo-ai/gateway";
+import { modelMiddlewareMatcher, specOf } from "@hebo-ai/gateway";
 import type { LanguageModelMiddleware } from "ai";
 
-const acmeReasoning: LanguageModelMiddleware = {
+const acmeMaxTokens: LanguageModelMiddleware = {
   specificationVersion: "v3",
   transformParams: async ({ params, model }) => {
-    const reasoning = takeReasoning(params);
-    const spec = specOf(model);
-    // The model's controls, or these when models.dev has none. `undefined`: it takes none.
-    const controls = reasoningControls(spec, { effort: ["low", "high"] });
-    if (!reasoning || !controls) return params;
-
-    const resolved = resolveReasoning(reasoning, controls, spec.output);
-    if (resolved?.effort) (params.providerOptions!["acme"] ??= {})["effort"] = resolved.effort;
+    // The model's output limit and reasoning options, if models.dev lists them
+    const { output } = specOf(model);
+    if (output && !params.maxOutputTokens) params.maxOutputTokens = output;
     return params;
   },
 };
 
-modelMiddlewareMatcher.useForModel("acme/*", { language: [acmeReasoning] });
+modelMiddlewareMatcher.useForModel("acme/*", { language: [acmeMaxTokens] });
 ```
 
-> [!NOTE]
-> Claude 4.5 models are not part of the catalog: unlike every later Claude model, they can't think adaptively.
-
-The sync script lists every change to the reasoning controls of a bundled model, so upstream data changes show up in review.
+`takeReasoning`, `reasoningControls` and `resolveReasoning` are also exported, if you need to map reasoning parameters the same way the built-in middleware does.
 
 ### Hooks
 
@@ -745,7 +727,7 @@ It supports:
 - `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration`, timestamped `segments` and, for providers that return word timings (xAI, Vertex Gemini with `timestamp_granularities: ["word"]`), OpenAI-style `words: [{ word, start, end }]`. Built from the AI SDK's normalized result; word-level providers return an empty `segments` array rather than one segment per word.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
-- Transcription middleware for OpenAI (`openai/gpt-transcribe`), xAI (`xai/grok-voice-transcribe-2.0`), Vertex (`google/gemini-3.5-transcribe`) and Azure Speech (`microsoft/mai-transcribe-2`).
+- Built-in support for OpenAI (`openai/gpt-transcribe`), xAI (`xai/grok-voice-transcribe-2.0`), Vertex (`google/gemini-3.5-transcribe`) and Azure Speech (`microsoft/mai-transcribe-2`).
 
 ```ts
 import fs from "node:fs";
@@ -878,8 +860,8 @@ Normalization rules:
 - `enabled` -> fall-back to model default if none provided
 - `max_tokens`: fall-back to model default if model supports
 - `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`
-- `effort` -> the nearest level the model takes (per models.dev), ties going up, e.g. `xhigh` -> `max` on Claude Opus 4.6
-- Off (`enabled: false` or `effort: "none"`) -> the model's reasoning toggle, else its `none` level, else its lowest level for models that always reason
+- `effort` -> the nearest level the model supports, rounding up, e.g. `xhigh` -> `max` on Claude Opus 4.6
+- Off (`enabled: false` or `effort: "none"`) -> turns reasoning off, or uses the lowest level for models that always reason
 - Generic `effort` -> budget = percentage of `max_tokens`, for models that take a budget
   - `none`: 0%
   - `minimal`: 10%
