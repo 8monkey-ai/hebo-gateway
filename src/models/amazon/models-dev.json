@@ -62,6 +62,27 @@
       }
     }
   },
+  "amazon/nova-premier": {
+    "name": "Nova Premier (US)",
+    "family": "nova-premier",
+    "status": "deprecated",
+    "created": "2025-04-30",
+    "knowledge": "2024-10",
+    "modalities": {
+      "input": ["text", "image", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "amazon.nova-premier-v1:0",
+        "profile": "required",
+        "output": 10000,
+        "reasoning": false
+      }
+    }
+  },
   "amazon/nova-pro": {
     "name": "Nova Pro",
     "family": "nova-pro",

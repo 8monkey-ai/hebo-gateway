@@ -1,4 +1,24 @@
 {
+  "alibaba/qvq-max": {
+    "name": "QVQ Max",
+    "family": "qvq",
+    "status": "deprecated",
+    "created": "2025-03-25",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qvq-max",
+        "output": 8192,
+        "reasoning": {}
+      }
+    }
+  },
   "alibaba/qwen-flash": {
     "name": "Qwen Flash",
     "family": "qwen-flash",
@@ -59,6 +79,46 @@
       }
     }
   },
+  "alibaba/qwen-mt-turbo": {
+    "name": "Qwen-MT Turbo",
+    "family": "qwen-mt-turbo",
+    "status": "deprecated",
+    "created": "2025-01",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 16384,
+    "capabilities": ["temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen-mt-turbo",
+        "output": 8192,
+        "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen-omni-turbo": {
+    "name": "Qwen-Omni Turbo",
+    "family": "qwen-omni",
+    "status": "deprecated",
+    "created": "2025-01-19",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image", "audio", "video"],
+      "output": ["text", "audio"]
+    },
+    "context": 32768,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen-omni-turbo",
+        "output": 2048,
+        "reasoning": false
+      }
+    }
+  },
   "alibaba/qwen-plus": {
     "name": "Qwen Plus",
     "family": "qwen-plus",
@@ -100,6 +160,49 @@
       }
     }
   },
+  "alibaba/qwen-turbo": {
+    "name": "Qwen Turbo",
+    "family": "qwen-turbo",
+    "status": "deprecated",
+    "created": "2024-11-01",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen-turbo",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
+    }
+  },
+  "alibaba/qwen-vl-max": {
+    "name": "Qwen-VL Max",
+    "family": "qwen-vl-max",
+    "status": "deprecated",
+    "created": "2024-04-08",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen-vl-max",
+        "output": 8192,
+        "reasoning": false
+      }
+    }
+  },
   "alibaba/qwen-vl-ocr": {
     "name": "Qwen-VL OCR",
     "family": "qwen-vl",
@@ -116,6 +219,111 @@
         "id": "qwen-vl-ocr",
         "output": 4096,
         "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen-vl-plus": {
+    "name": "Qwen-VL Plus",
+    "family": "qwen-vl-plus",
+    "status": "deprecated",
+    "created": "2024-01-25",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen-vl-plus",
+        "output": 8192,
+        "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen2-5-omni-7b": {
+    "name": "Qwen2.5-Omni 7B",
+    "family": "qwen-omni",
+    "status": "deprecated",
+    "created": "2024-12",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image", "audio", "video"],
+      "output": ["text", "audio"]
+    },
+    "context": 32768,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen2-5-omni-7b",
+        "output": 2048,
+        "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen2.5-7b-instruct": {
+    "name": "Qwen2.5 7B Instruct",
+    "family": "qwen",
+    "status": "deprecated",
+    "created": "2024-09-19",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 32768,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "togetherai": {
+        "id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+        "output": 32768,
+        "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen3-14b": {
+    "name": "Qwen3 14B",
+    "family": "qwen",
+    "status": "deprecated",
+    "created": "2025-04",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-14b",
+        "output": 8192,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
+    }
+  },
+  "alibaba/qwen3-235b-a22b": {
+    "name": "Qwen3 235B (Web)",
+    "family": "qwen",
+    "status": "deprecated",
+    "created": "2025-04-28",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-235b-a22b",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
       }
     }
   },
@@ -138,6 +346,11 @@
       "deepinfra": {
         "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
         "output": 16384,
+        "reasoning": false
+      },
+      "togetherai": {
+        "id": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "output": 262144,
         "reasoning": false
       }
     }
@@ -183,6 +396,36 @@
         "id": "Qwen/Qwen3-32B",
         "output": 16384,
         "reasoning": {}
+      },
+      "alibaba": {
+        "id": "qwen3-32b",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
+    }
+  },
+  "alibaba/qwen3-8b": {
+    "name": "Qwen3 8B",
+    "family": "qwen",
+    "status": "deprecated",
+    "created": "2025-04-29",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 32768,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-8b",
+        "output": 8192,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
       }
     }
   },
@@ -203,6 +446,31 @@
       }
     }
   },
+  "alibaba/qwen3-coder-30b-a3b-instruct": {
+    "name": "Qwen3 Coder 30B A3B Instruct",
+    "family": "qwen-coder",
+    "status": "deprecated",
+    "created": "2025-07-31",
+    "knowledge": "2025-07",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-coder-30b-a3b-instruct",
+        "output": 65536,
+        "reasoning": false
+      },
+      "bedrock": {
+        "id": "qwen.qwen3-coder-30b-a3b-v1:0",
+        "output": 131072,
+        "reasoning": false
+      }
+    }
+  },
   "alibaba/qwen3-coder-480b-a35b-instruct": {
     "name": "Qwen3 Coder 480B A35B Instruct Turbo",
     "family": "qwen-coder",
@@ -218,6 +486,21 @@
       "deepinfra": {
         "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct-Turbo",
         "output": 66536,
+        "reasoning": false
+      },
+      "alibaba": {
+        "id": "qwen3-coder-480b-a35b-instruct",
+        "output": 65536,
+        "reasoning": false
+      },
+      "bedrock": {
+        "id": "qwen.qwen3-coder-480b-a35b-v1:0",
+        "output": 65536,
+        "reasoning": false
+      },
+      "togetherai": {
+        "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
+        "output": 262144,
         "reasoning": false
       }
     }
@@ -257,6 +540,31 @@
         "id": "qwen.qwen3-coder-next",
         "output": 65536,
         "reasoning": false
+      },
+      "togetherai": {
+        "id": "Qwen/Qwen3-Coder-Next-FP8",
+        "output": 262144,
+        "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen3-coder-plus": {
+    "name": "Qwen3 Coder Plus",
+    "family": "qwen-coder-plus",
+    "status": "deprecated",
+    "created": "2025-07-23",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-coder-plus",
+        "output": 65536,
+        "reasoning": false
       }
     }
   },
@@ -283,7 +591,7 @@
     "providers": {}
   },
   "alibaba/qwen3-embedding-8b": {
-    "name": "Qwen3 Embedding 8B",
+    "name": "Qwen3-Embedding-8B",
     "family": "qwen-embedding",
     "created": "2025-06-05",
     "modalities": {
@@ -292,6 +600,31 @@
     },
     "context": 32768,
     "providers": {}
+  },
+  "alibaba/qwen3-max": {
+    "name": "qwen3-max-2025-09-23",
+    "family": "qwen-max",
+    "status": "deprecated",
+    "created": "2025-09-23",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 258048,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-max",
+        "output": 65536,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3-Max",
+        "output": 65536,
+        "reasoning": false
+      }
+    }
   },
   "alibaba/qwen3-next-80b-a3b-instruct": {
     "name": "Qwen3-Next 80B-A3B Instruct",
@@ -314,6 +647,33 @@
         "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
         "output": 32768,
         "reasoning": false
+      },
+      "alibaba": {
+        "id": "qwen3-next-80b-a3b-instruct",
+        "output": 32768,
+        "reasoning": false
+      }
+    }
+  },
+  "alibaba/qwen3-next-80b-a3b-thinking": {
+    "name": "Qwen3 Next 80B A3B Thinking",
+    "family": "qwen",
+    "status": "deprecated",
+    "created": "2025-09",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 65536,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-next-80b-a3b-thinking",
+        "output": 32768,
+        "reasoning": {
+          "budget": {}
+        }
       }
     }
   },
@@ -334,6 +694,28 @@
         "output": 16384,
         "reasoning": {
           "toggle": true
+        }
+      }
+    }
+  },
+  "alibaba/qwen3-vl-235b-a22b": {
+    "name": "Qwen3-VL 235B-A22B",
+    "family": "qwen-vl",
+    "status": "deprecated",
+    "created": "2025-04",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3-vl-235b-a22b",
+        "output": 32768,
+        "reasoning": {
+          "budget": {}
         }
       }
     }
@@ -442,6 +824,11 @@
           "toggle": true,
           "budget": {}
         }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.5-122B-A10B",
+        "output": 65536,
+        "reasoning": {}
       }
     }
   },
@@ -531,6 +918,13 @@
       "chutes": {
         "id": "Qwen/Qwen3.5-397B-A17B-TEE",
         "output": 65536,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "Qwen/Qwen3.5-397B-A17B",
+        "output": 130000,
         "reasoning": {
           "toggle": true
         }
@@ -637,6 +1031,13 @@
         "reasoning": {
           "toggle": true
         }
+      },
+      "groq": {
+        "id": "qwen/qwen3.6-27b",
+        "output": 16384,
+        "reasoning": {
+          "effort": ["none"]
+        }
       }
     }
   },
@@ -679,6 +1080,29 @@
     "providers": {
       "alibaba": {
         "id": "qwen3.6-flash",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {}
+        }
+      }
+    }
+  },
+  "alibaba/qwen3.6-max-preview": {
+    "name": "Qwen3.6 Max Preview",
+    "family": "qwen-max",
+    "status": "deprecated",
+    "created": "2026-04-20",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 245760,
+    "capabilities": ["temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwen3.6-max-preview",
         "output": 65536,
         "reasoning": {
           "toggle": true,
@@ -808,6 +1232,13 @@
         "output": 131072,
         "reasoning": {
           "effort": ["none", "low", "medium", "xhigh"]
+        }
+      },
+      "deepinfra": {
+        "id": "Qwen/Qwen3.8-2.4T-A95B",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "medium", "xhigh"]
         }
       }
     }
@@ -976,6 +1407,26 @@
       "chutes": {
         "id": "Qwen/Qwen4-Max",
         "output": 131072,
+        "reasoning": {}
+      }
+    }
+  },
+  "alibaba/qwq-plus": {
+    "name": "QwQ Plus",
+    "family": "qwq",
+    "status": "deprecated",
+    "created": "2025-03-05",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "alibaba": {
+        "id": "qwq-plus",
+        "output": 8192,
         "reasoning": {}
       }
     }

@@ -157,8 +157,12 @@ const isSafeNativeId = (nativeId: string) => NATIVE_ID.test(nativeId) && !native
  */
 const isMovingAlias = (nativeId: string) => nativeId.endsWith("-latest");
 
+const isDeprecated = (model: ModelsDevModel) => model.status === "deprecated";
+
 type Entry = {
   model: ModelsDevModel;
+  /** Metadata comes from a deprecated listing only when every listing is deprecated. */
+  deprecated: boolean;
   rank: number;
   /** models.dev provider and native ID of the listing `model` comes from. */
   host: string;
@@ -268,7 +272,11 @@ const toModelSpec = ({ nativeId, model, spec }: ModelsDevPick): ModelSpec => {
   return out;
 };
 
-const toCatalogModel = (model: ModelsDevModel, providers: ModelSpecs): ModelsDevCatalogModel => {
+const toCatalogModel = (
+  model: ModelsDevModel,
+  providers: ModelSpecs,
+  deprecated: boolean,
+): ModelsDevCatalogModel => {
   const input = (model.modalities?.input ?? [])
     .map((m) => INPUTS.get(m))
     .filter((m) => m !== undefined);
@@ -291,7 +299,8 @@ const toCatalogModel = (model: ModelsDevModel, providers: ModelSpecs): ModelsDev
   const out: Omit<ModelsDevCatalogModel, "providers"> = {};
   if (model.name) out.name = model.name;
   if (model.family) out.family = model.family;
-  if (model.status === "alpha" || model.status === "beta") out.status = model.status;
+  if (deprecated) out.status = "deprecated";
+  else if (model.status === "alpha" || model.status === "beta") out.status = model.status;
   if (model.release_date) out.created = model.release_date;
   if (model.knowledge) out.knowledge = model.knowledge;
   out.modalities = { input, output };
@@ -303,10 +312,13 @@ const toCatalogModel = (model: ModelsDevModel, providers: ModelSpecs): ModelsDev
 /**
  * Builds a gateway catalog from `models.dev/api.json`, keyed by the models.dev canonical
  * (lab) model ID, for the given labs. Each model maps the gateway providers that serve it to
- * how they serve it: native ID, output limit and reasoning controls. Deprecated listings,
- * moving `-latest` aliases, unsupported model types and listings with unsafe native IDs are
- * ignored. Metadata comes
+ * how they serve it: native ID, output limit and reasoning controls. Moving `-latest` aliases,
+ * unsupported model types and listings with unsafe native IDs are ignored. Metadata comes
  * from the lab's own listing when there is one, otherwise from the preferred gateway provider.
+ *
+ * Deprecated listings are kept, but only used when nothing else is: a provider serves the
+ * model from a current listing if it has one, providers serving only deprecated listings come
+ * last, and a model is `deprecated` when every provider serving it only has deprecated ones.
  */
 export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): ModelsDevCatalog {
   const byNamespace = new Map<string, ModelsDevLab>();
@@ -334,7 +346,7 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
 
     for (const [nativeId, model] of Object.entries(models)) {
       if (!model || typeof model !== "object") continue;
-      if (model.status === "deprecated" || !TYPES.has(model.type)) continue;
+      if (!TYPES.has(model.type)) continue;
       if (isMovingAlias(nativeId)) continue;
 
       // Only gateway hosts are worth matching by name: other listings just add metadata.
@@ -347,16 +359,21 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
       if (!byNamespace.has(namespace) || excluded.some((test) => test(id))) continue;
 
       let entry = entries.get(id);
-      // The lab's own listing is the most authoritative source of metadata. Within a provider,
-      // the listing named like the model beats aliases and regional ones ("… (GovCloud)").
+      // Current listings beat deprecated ones. Then the lab's own listing is the most
+      // authoritative source of metadata. Within a provider, the listing named like the model
+      // beats aliases and regional ones ("… (GovCloud)").
+      const deprecated = isDeprecated(model);
       const ownRank = labOf.get(host) === namespace ? -1 : rank;
       if (!entry) {
-        entries.set(id, (entry = { model, rank: ownRank, host, nativeId, listings: new Map() }));
+        entry = { model, deprecated, rank: ownRank, host, nativeId, listings: new Map() };
+        entries.set(id, entry);
       } else if (
-        ownRank < entry.rank ||
-        (host === entry.host && isPreferred(id, nativeId, entry.nativeId))
+        deprecated === entry.deprecated
+          ? ownRank < entry.rank ||
+            (host === entry.host && isPreferred(id, nativeId, entry.nativeId))
+          : entry.deprecated
       ) {
-        Object.assign(entry, { model, rank: ownRank, host, nativeId });
+        Object.assign(entry, { model, deprecated, rank: ownRank, host, nativeId });
       }
 
       // Listings served through an SDK the adapter does not speak are left out.
@@ -377,7 +394,8 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
   ids.sort();
 
   for (const id of ids) {
-    const { model, listings } = entries.get(id)!;
+    const entry = entries.get(id)!;
+    const { model, listings } = entry;
 
     // The lab's own provider first, then the others in preference order.
     const { provider: lab, extras } = byNamespace.get(id.split("/", 1)[0]!)!;
@@ -385,16 +403,22 @@ export function fromModelsDev(api: ModelsDevApi, labs: Iterable<ModelsDevLab>): 
     ordered.sort((a, b) => rankOf(a) - rankOf(b));
     if (lab && listings.has(lab)) ordered.unshift(lab);
 
-    const providers: Record<string, ModelSpec> = {};
+    // Providers serving the model from current listings first, then deprecated-only ones.
+    const current: Record<string, ModelSpec> = {};
+    const stale: Record<string, ModelSpec> = {};
     for (const provider of ordered) {
       const { host, list } = listings.get(provider)!;
-      const listing = (host.pick ?? pickNativeId)(id, list);
-      if (listing) providers[provider] = toModelSpec(listing);
+      const live = list.filter((listing) => !isDeprecated(listing.model));
+      const listing = (host.pick ?? pickNativeId)(id, live.length > 0 ? live : list);
+      if (listing) (live.length > 0 ? current : stale)[provider] = toModelSpec(listing);
     }
+    const providers = { ...current, ...stale };
+    const served = Object.keys(providers).length > 0;
     // Lab extras may name the providers models.dev doesn't list it on.
-    if (Object.keys(providers).length === 0 && !extras?.[id]) continue;
+    if (!served && !extras?.[id]) continue;
 
-    const catalogModel = toCatalogModel(model, providers);
+    const deprecated = served ? Object.keys(current).length === 0 : entry.deprecated;
+    const catalogModel = toCatalogModel(model, providers, deprecated);
     if (!catalogModel.modalities!.output.some((m) => SERVED.has(m))) continue;
 
     out[id] = catalogModel;

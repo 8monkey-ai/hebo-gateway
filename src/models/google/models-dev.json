@@ -1,4 +1,81 @@
 {
+  "google/gemini-2.5-flash": {
+    "name": "Gemini 2.5 Flash",
+    "family": "gemini-flash",
+    "status": "deprecated",
+    "created": "2025-06-17",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "audio", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "gemini-2.5-flash",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "min": 0,
+            "max": 24576
+          }
+        }
+      }
+    }
+  },
+  "google/gemini-2.5-flash-lite": {
+    "name": "Gemini 2.5 Flash-Lite",
+    "family": "gemini-flash-lite",
+    "status": "deprecated",
+    "created": "2025-06-17",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "audio", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "gemini-2.5-flash-lite",
+        "output": 65536,
+        "reasoning": {
+          "toggle": true,
+          "budget": {
+            "min": 512,
+            "max": 24576
+          }
+        }
+      }
+    }
+  },
+  "google/gemini-2.5-pro": {
+    "name": "Gemini 2.5 Pro",
+    "family": "gemini-pro",
+    "status": "deprecated",
+    "created": "2025-06-17",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text", "image", "audio", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "gemini-2.5-pro",
+        "output": 65536,
+        "reasoning": {
+          "budget": {
+            "min": 128,
+            "max": 32768
+          }
+        }
+      }
+    }
+  },
   "google/gemini-3-flash-preview": {
     "name": "Gemini 3 Flash Preview",
     "family": "gemini-flash",
@@ -147,6 +224,28 @@
     },
     "capabilities": ["attachments"],
     "providers": {}
+  },
+  "google/gemini-3.6-flash": {
+    "name": "Gemini 3.6 Flash",
+    "family": "gemini-flash",
+    "status": "deprecated",
+    "created": "2026-07-21",
+    "knowledge": "2026-03",
+    "modalities": {
+      "input": ["text", "image", "video", "audio", "file"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "gemini-3.6-flash",
+        "output": 65536,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      }
+    }
   },
   "google/gemini-3.7-flash": {
     "name": "Gemini 3.7 Flash",
@@ -318,6 +417,11 @@
         "id": "google/gemma-3-12b-it",
         "output": 131072,
         "reasoning": false
+      },
+      "bedrock": {
+        "id": "google.gemma-3-12b-it",
+        "output": 8192,
+        "reasoning": false
       }
     }
   },
@@ -337,6 +441,11 @@
         "id": "google/gemma-3-27b-it",
         "output": 131072,
         "reasoning": false
+      },
+      "bedrock": {
+        "id": "google.gemma-3-27b-it",
+        "output": 8192,
+        "reasoning": false
       }
     }
   },
@@ -355,6 +464,11 @@
       "deepinfra": {
         "id": "google/gemma-3-4b-it",
         "output": 131072,
+        "reasoning": false
+      },
+      "bedrock": {
+        "id": "google.gemma-3-4b-it",
+        "output": 4096,
         "reasoning": false
       }
     }
@@ -444,6 +558,27 @@
         "output": 8192,
         "reasoning": {
           "effort": ["none", "high"]
+        }
+      }
+    }
+  },
+  "google/gemma-4-E4B-it": {
+    "name": "Gemma 4 E4B",
+    "family": "gemma",
+    "status": "deprecated",
+    "created": "2026-04-02",
+    "modalities": {
+      "input": ["text", "image", "audio"],
+      "output": ["text"]
+    },
+    "context": 65536,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "deepinfra": {
+        "id": "google/gemma-4-E4B-it",
+        "output": 8192,
+        "reasoning": {
+          "toggle": true
         }
       }
     }

@@ -230,7 +230,7 @@ Each lab has a module under `@hebo-ai/gateway/models/<lab>`. Importing it adds t
 Each module exports the lab's model families (e.g. `claude`, `gemini`, `llama`). Each family offers these groups:
 
 - `all`: every model in the family.
-- `latest`: the newest stable model of each product line, e.g. Claude Opus, Sonnet, Haiku and Fable.
+- `latest`: the newest stable model of each product line, e.g. Claude Opus, Sonnet, Haiku and Fable. Preview and deprecated models are never part of it.
 - Version groups: `vX` / `vX.Y` for one version (e.g. `claude["v4.6"]`), and `vX.x` for one major version (e.g. `claude["v5.x"]`).
 - Named groups for some families, e.g. `claude.opus`, `gpt.codex`, `gemini.embeddings`.
 
@@ -249,6 +249,8 @@ const models = defineModelCatalog(
   "openai/gpt-oss-*",
 );
 ```
+
+Models that models.dev marks deprecated stay in `all`, their version and named groups, and can still be requested. `/models` lists them with `status: "deprecated"`. Providers that only serve a deprecated version of a model are tried last.
 
 Groups are worked out when the catalog loads, so new releases join `all`, `latest` and their version groups automatically. This means `latest` can change after a restart; list exact model IDs if you want a fixed catalog. If you don't set `models`, every model of the imported labs is exposed.
 
@@ -762,6 +764,7 @@ Official documentation: [OpenAI API Reference](https://developers.openai.com/api
 It supports:
 
 - Comprehensive model metadata (capabilities, context limits, knowledge cutoffs).
+- `status`: `deprecated` for models their providers are retiring (`alpha` / `beta` for pre-release ones). models.dev has no retirement dates, so OpenRouter's `expiration_date` isn't set; add it through `additionalProperties` if you know the date.
 - Canonical model ID resolution.
 - Provider-specific availability filtering.
 

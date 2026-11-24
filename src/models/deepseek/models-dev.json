@@ -1,4 +1,30 @@
 {
+  "deepseek/deepseek-r1": {
+    "name": "DeepSeek R1 (Turbo)",
+    "family": "deepseek-r",
+    "status": "deprecated",
+    "created": "2025-01-20",
+    "knowledge": "2024-07",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 64000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "deepseek.r1-v1:0",
+        "profile": "optional",
+        "output": 32768,
+        "reasoning": {}
+      },
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-R1",
+        "output": 163839,
+        "reasoning": {}
+      }
+    }
+  },
   "deepseek/deepseek-r1-0528": {
     "name": "DeepSeek-R1-0528",
     "family": "deepseek-r",
@@ -33,6 +59,30 @@
         "id": "deepseek-ai/DeepSeek-V3",
         "output": 8192,
         "reasoning": false
+      },
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-V3",
+        "output": 131072,
+        "reasoning": false
+      }
+    }
+  },
+  "deepseek/deepseek-v3-0324": {
+    "name": "DeepSeek V3 0324",
+    "family": "deepseek",
+    "status": "deprecated",
+    "created": "2025-03-24",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 75000,
+    "capabilities": ["tool_call", "temperature"],
+    "providers": {
+      "deepinfra": {
+        "id": "deepseek-ai/DeepSeek-V3-0324",
+        "output": 163840,
+        "reasoning": false
       }
     }
   },
@@ -50,6 +100,20 @@
       "deepinfra": {
         "id": "deepseek-ai/DeepSeek-V3.1",
         "output": 8192,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "bedrock": {
+        "id": "deepseek.v3-v1:0",
+        "output": 81920,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-V3-1",
+        "output": 131072,
         "reasoning": {
           "toggle": true
         }
@@ -151,6 +215,14 @@
         "output": 131072,
         "reasoning": {
           "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-V4-Flash-0731",
+        "output": 384000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["high", "max"]
         }
       }
     }

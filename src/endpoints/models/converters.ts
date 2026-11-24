@@ -9,7 +9,6 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
     modalities,
     additionalProperties,
     family: _family,
-    status: _status,
     ...rest
   } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);

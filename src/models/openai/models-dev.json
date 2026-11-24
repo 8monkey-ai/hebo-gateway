@@ -1,4 +1,184 @@
 {
+  "openai/gpt-4-turbo": {
+    "name": "GPT-4 Turbo",
+    "family": "gpt",
+    "status": "deprecated",
+    "created": "2023-11-06",
+    "knowledge": "2023-12",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "azure": {
+        "id": "gpt-4-turbo",
+        "output": 4096,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4.1": {
+    "name": "GPT-4.1",
+    "family": "gpt",
+    "status": "deprecated",
+    "created": "2025-04-14",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": {
+        "id": "gpt-4.1",
+        "output": 32768,
+        "reasoning": false
+      },
+      "azure": {
+        "id": "gpt-4.1",
+        "output": 32768,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4.1-mini": {
+    "name": "GPT-4.1 mini",
+    "family": "gpt-mini",
+    "status": "deprecated",
+    "created": "2025-04-14",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": {
+        "id": "gpt-4.1-mini",
+        "output": 32768,
+        "reasoning": false
+      },
+      "azure": {
+        "id": "gpt-4.1-mini",
+        "output": 32768,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4.1-nano": {
+    "name": "GPT-4.1 Nano",
+    "family": "gpt-nano",
+    "status": "deprecated",
+    "created": "2025-04-14",
+    "knowledge": "2024-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "azure": {
+        "id": "gpt-4.1-nano",
+        "output": 32768,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4o": {
+    "name": "GPT-4o",
+    "family": "gpt",
+    "status": "deprecated",
+    "created": "2024-05-13",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": {
+        "id": "gpt-4o",
+        "output": 16384,
+        "reasoning": false
+      },
+      "azure": {
+        "id": "gpt-4o",
+        "output": 16384,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4o-2024-08-06": {
+    "name": "GPT-4o",
+    "family": "gpt",
+    "status": "deprecated",
+    "created": "2024-08-06",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": {
+        "id": "gpt-4o-2024-08-06",
+        "output": 16384,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4o-2024-11-20": {
+    "name": "GPT-4o",
+    "family": "gpt",
+    "status": "deprecated",
+    "created": "2024-11-20",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": {
+        "id": "gpt-4o-2024-11-20",
+        "output": 16384,
+        "reasoning": false
+      }
+    }
+  },
+  "openai/gpt-4o-mini": {
+    "name": "GPT-4o mini",
+    "family": "gpt-mini",
+    "status": "deprecated",
+    "created": "2024-07-18",
+    "knowledge": "2023-09",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "openai": {
+        "id": "gpt-4o-mini",
+        "output": 16384,
+        "reasoning": false
+      },
+      "azure": {
+        "id": "gpt-4o-mini",
+        "output": 16384,
+        "reasoning": false
+      }
+    }
+  },
   "openai/gpt-4o-mini-transcribe": {
     "name": "GPT-4o mini Transcribe",
     "family": "gpt-transcribe-mini",
@@ -38,6 +218,13 @@
     "capabilities": ["attachments", "reasoning", "tool_call"],
     "providers": {
       "azure": {
+        "id": "gpt-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      },
+      "openai": {
         "id": "gpt-5",
         "output": 128000,
         "reasoning": {
@@ -85,6 +272,13 @@
         "reasoning": {
           "effort": ["minimal", "low", "medium", "high"]
         }
+      },
+      "openai": {
+        "id": "gpt-5-mini",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
       }
     }
   },
@@ -101,6 +295,13 @@
     "capabilities": ["attachments", "reasoning", "tool_call"],
     "providers": {
       "azure": {
+        "id": "gpt-5-nano",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["minimal", "low", "medium", "high"]
+        }
+      },
+      "openai": {
         "id": "gpt-5-nano",
         "output": 128000,
         "reasoning": {
@@ -127,6 +328,13 @@
         "reasoning": {
           "effort": ["high"]
         }
+      },
+      "openai": {
+        "id": "gpt-5-pro",
+        "output": 272000,
+        "reasoning": {
+          "effort": ["high"]
+        }
       }
     }
   },
@@ -143,6 +351,13 @@
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
       "azure": {
+        "id": "gpt-5.1",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high"]
+        }
+      },
+      "openai": {
         "id": "gpt-5.1",
         "output": 128000,
         "reasoning": {
@@ -302,6 +517,13 @@
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh"]
         }
+      },
+      "openai": {
+        "id": "gpt-5.3-codex",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh"]
+        }
       }
     }
   },
@@ -382,6 +604,13 @@
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
       "azure": {
+        "id": "gpt-5.4-nano",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["none", "low", "medium", "high", "xhigh"]
+        }
+      },
+      "openai": {
         "id": "gpt-5.4-nano",
         "output": 128000,
         "reasoning": {
@@ -1000,6 +1229,28 @@
     "capabilities": ["attachments", "temperature"],
     "providers": {}
   },
+  "openai/o1": {
+    "name": "OpenAI: o1",
+    "family": "o",
+    "status": "deprecated",
+    "created": "2024-12-05",
+    "knowledge": "2025-01",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["reasoning"],
+    "providers": {
+      "azure": {
+        "id": "o1",
+        "output": 100000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
+    }
+  },
   "openai/o3": {
     "name": "o3",
     "family": "o",
@@ -1014,6 +1265,79 @@
     "providers": {
       "azure": {
         "id": "o3",
+        "output": 100000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      },
+      "openai": {
+        "id": "o3",
+        "output": 100000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
+    }
+  },
+  "openai/o3-mini": {
+    "name": "OpenAI o3 Mini",
+    "family": "o-mini",
+    "status": "deprecated",
+    "created": "2024-12-20",
+    "knowledge": "2023-10",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["reasoning", "tool_call"],
+    "providers": {
+      "azure": {
+        "id": "o3-mini",
+        "output": 100000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
+    }
+  },
+  "openai/o3-pro": {
+    "name": "o3 Pro",
+    "family": "o-pro",
+    "status": "deprecated",
+    "created": "2025-06-10",
+    "knowledge": "2024-05",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "openai": {
+        "id": "o3-pro",
+        "output": 100000,
+        "reasoning": {
+          "effort": ["low", "medium", "high"]
+        }
+      }
+    }
+  },
+  "openai/o4-mini": {
+    "name": "o4-mini",
+    "family": "o-mini",
+    "status": "deprecated",
+    "created": "2025-04-16",
+    "knowledge": "2024-05",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "azure": {
+        "id": "o4-mini",
         "output": 100000,
         "reasoning": {
           "effort": ["low", "medium", "high"]

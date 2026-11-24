@@ -95,11 +95,10 @@ describe("fromModelsDev", () => {
     ]);
   });
 
-  test("ignores deprecated listings, unsupported types and unknown labs", () => {
+  test("ignores unsupported types and unknown labs", () => {
     const api: ModelsDevApi = {
       openai: {
         models: {
-          "gpt-old": chat({ status: "deprecated" }),
           "gpt-image": chat({ type: "image", modalities: { input: ["text"], output: ["image"] } }),
           "gpt-new": chat(),
         },
@@ -108,6 +107,41 @@ describe("fromModelsDev", () => {
     };
 
     expect(Object.keys(convert(api))).toEqual(["openai/gpt-new"]);
+  });
+
+  test("keeps models deprecated on every provider, marked deprecated", () => {
+    const api: ModelsDevApi = {
+      "google-vertex": {
+        models: {
+          "gemini-old": chat({ canonical_model_id: "google/gemini-old", status: "deprecated" }),
+        },
+      },
+    };
+
+    const out = fromModelsDev(api, [{ namespace: "google" }]);
+    expect(out["google/gemini-old"]?.status).toBe("deprecated");
+    expect(nativeIds(out["google/gemini-old"]?.providers)).toEqual({ vertex: "gemini-old" });
+  });
+
+  test("prefers current listings: deprecated-only providers come last, metadata from current ones", () => {
+    const id = "zhipuai/glm-9";
+    const api: ModelsDevApi = {
+      // The lab's own listing is deprecated, a host still serves it.
+      zai: { models: { "glm-9": chat({ name: "Old name", status: "deprecated" }) } },
+      // Deprecated alias next to a current listing on the same provider.
+      deepinfra: {
+        models: {
+          "zai-org/GLM-9": chat({ canonical_model_id: id, name: "GLM 9" }),
+          "glm-9": chat({ canonical_model_id: id, status: "deprecated" }),
+        },
+      },
+    };
+
+    const model = convert(api)[id]!;
+    expect(model.status).toBeUndefined();
+    expect(model.name).toBe("GLM 9");
+    // `zai` would come first as the lab's own provider.
+    expect(nativeIds(model.providers)).toEqual({ deepinfra: "zai-org/GLM-9", zai: "glm-9" });
   });
 
   test("maps models.dev providers to gateway providers of the same ID, or registered by their adapter", () => {

@@ -114,6 +114,21 @@ describe("defineModelCatalog", () => {
     expect(latest).toEqual(["acme/anvil-2", "acme/rocket-4"]);
   });
 
+  test("keeps deprecated models in their groups, but not in latest", () => {
+    const retro = registerModels({
+      namespace: "retro",
+      snapshot: {
+        "retro/jet-1": model("Jet 1", "2026-01-01"),
+        "retro/jet-2": model("Jet 2", "2026-06-01", { status: "deprecated" }),
+      },
+    });
+    const jet = defineModelFamily(retro, { version: /^jet-(\d+)$/u });
+
+    expect(Object.keys(resolve(jet.latest))).toEqual(["retro/jet-1"]);
+    expect(Object.keys(resolve(jet.all))).toEqual(["retro/jet-1", "retro/jet-2"]);
+    expect(resolve(jet["v2"])["retro/jet-2"]?.status).toBe("deprecated");
+  });
+
   test("applies group overrides, narrowing and reordering providers", () => {
     expect(resolve(rocket["v2"]!({ name: "Renamed", providers: ["b", "missing"] }))).toEqual({
       "acme/rocket-2": { ...ACME["acme/rocket-2"], name: "Renamed", providers: ["b"] },

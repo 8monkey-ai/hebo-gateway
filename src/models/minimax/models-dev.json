@@ -1,4 +1,52 @@
 {
+  "minimax/MiniMax-M2": {
+    "name": "MiniMax-M2",
+    "family": "minimax-m",
+    "status": "deprecated",
+    "created": "2025-10-27",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 196608,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "minimax": {
+        "id": "MiniMax-M2",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "bedrock": {
+        "id": "minimax.minimax-m2",
+        "output": 128000,
+        "reasoning": {}
+      }
+    }
+  },
+  "minimax/MiniMax-M2.1": {
+    "name": "MiniMax-M2.1",
+    "family": "minimax-m",
+    "status": "deprecated",
+    "created": "2025-12-23",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 204800,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "minimax": {
+        "id": "MiniMax-M2.1",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "bedrock": {
+        "id": "minimax.minimax-m2.1",
+        "output": 131072,
+        "reasoning": {}
+      }
+    }
+  },
   "minimax/MiniMax-M2.5": {
     "name": "MiniMax-M2.5",
     "family": "minimax-m",
@@ -13,6 +61,88 @@
       "bedrock": {
         "id": "minimax.minimax-m2.5",
         "output": 98304,
+        "reasoning": {}
+      },
+      "minimax": {
+        "id": "MiniMax-M2.5",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "togetherai": {
+        "id": "MiniMaxAI/MiniMax-M2.5",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "deepinfra": {
+        "id": "MiniMaxAI/MiniMax-M2.5",
+        "output": 131072,
+        "reasoning": {}
+      }
+    }
+  },
+  "minimax/MiniMax-M2.5-highspeed": {
+    "name": "MiniMax-M2.5-highspeed",
+    "family": "minimax-m",
+    "status": "deprecated",
+    "created": "2026-02-13",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 204800,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "minimax": {
+        "id": "MiniMax-M2.5-highspeed",
+        "output": 131072,
+        "reasoning": {}
+      }
+    }
+  },
+  "minimax/MiniMax-M2.7": {
+    "name": "minimax-m2.7",
+    "family": "minimax-m",
+    "status": "deprecated",
+    "created": "2026-03-18",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 196608,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "minimax": {
+        "id": "MiniMax-M2.7",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "togetherai": {
+        "id": "MiniMaxAI/MiniMax-M2.7",
+        "output": 131072,
+        "reasoning": {}
+      },
+      "deepinfra": {
+        "id": "MiniMaxAI/MiniMax-M2.7",
+        "output": 131072,
+        "reasoning": {}
+      }
+    }
+  },
+  "minimax/MiniMax-M2.7-highspeed": {
+    "name": "MiniMax-M2.7-highspeed",
+    "family": "minimax-m",
+    "status": "deprecated",
+    "created": "2026-03-18",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 204800,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "minimax": {
+        "id": "MiniMax-M2.7-highspeed",
+        "output": 131072,
         "reasoning": {}
       }
     }

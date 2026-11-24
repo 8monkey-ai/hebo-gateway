@@ -6,8 +6,9 @@ import snapshot from "./models-dev.json" with { type: "json" };
 const lab = registerModels({
   namespace: "anthropic",
   provider: "anthropic",
-  // Claude 4.5 can't think adaptively, which every later model does without a budget.
-  exclude: ["claude-*-4-5*"],
+  // Claude 4.5 and older (4, 4.1) can't think adaptively, which every later model does
+  // without a budget.
+  exclude: ["claude-*-4-5*", "claude-*-4-1-*", "claude-*-4-2025*"],
   snapshot: snapshot as ModelsDevCatalog,
 });
 

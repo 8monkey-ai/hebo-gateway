@@ -1,4 +1,24 @@
 {
+  "moonshotai/kimi-k2-thinking": {
+    "name": "Kimi K2 Thinking",
+    "family": "kimi",
+    "status": "deprecated",
+    "created": "2025-11-06",
+    "knowledge": "2024-08",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 262144,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "moonshot.kimi-k2-thinking",
+        "output": 16000,
+        "reasoning": {}
+      }
+    }
+  },
   "moonshotai/kimi-k2.5": {
     "name": "Kimi K2.5",
     "family": "kimi",
@@ -14,6 +34,13 @@
       "bedrock": {
         "id": "moonshotai.kimi-k2.5",
         "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K2.5",
+        "output": 32768,
         "reasoning": {
           "toggle": true
         }
@@ -71,6 +98,13 @@
         "id": "kimi-k2.7-code",
         "output": 262144,
         "reasoning": {}
+      },
+      "deepinfra": {
+        "id": "moonshotai/Kimi-K2.7-Code",
+        "output": 262144,
+        "reasoning": {
+          "toggle": true
+        }
       }
     }
   },

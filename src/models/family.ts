@@ -6,7 +6,8 @@ import type { ModelId, ModelsDevCatalog } from "./types.ts";
  * A model family (e.g. `claude`), resolved against the catalog when it loads, so new
  * releases join their groups without a gateway release:
  * - `all`: every model of the family, named groups included
- * - `latest`: the newest stable release of each models.dev family (e.g. Opus, Sonnet, Haiku)
+ * - `latest`: the newest stable release of each models.dev family (e.g. Opus, Sonnet, Haiku),
+ *   leaving out pre-release and deprecated models
  * - `v5.5` / `v5`: one version, `v5.x`: one major version
  * - named groups (e.g. `opus`)
  */

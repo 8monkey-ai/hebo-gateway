@@ -177,6 +177,13 @@
         "reasoning": {
           "toggle": true
         }
+      },
+      "bedrock": {
+        "id": "zai.glm-4.7",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
       }
     }
   },
@@ -198,6 +205,18 @@
         "reasoning": {
           "toggle": true
         }
+      },
+      "bedrock": {
+        "id": "zai.glm-4.7-flash",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-4.7-Flash",
+        "output": 16384,
+        "reasoning": {}
       }
     }
   },
@@ -246,6 +265,27 @@
         "reasoning": {
           "toggle": true
         }
+      },
+      "vertex": {
+        "id": "zai-org/glm-5-maas",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
       }
     }
   },
@@ -290,6 +330,20 @@
       "chutes": {
         "id": "zai-org/GLM-5.1-TEE",
         "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5.1",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5.1",
+        "output": 16384,
         "reasoning": {
           "toggle": true
         }

@@ -107,6 +107,20 @@ describe("Models Handler", () => {
     });
   });
 
+  test("lists deprecated models with their status", async () => {
+    const res = await models({
+      providers: { google: new MockProviderV4() },
+      models: defineModelCatalog({
+        "google/gemini-old": { name: "Gemini Old", status: "deprecated", providers: ["google"] },
+      }),
+    }).handler(new Request(`${baseUrl}/google/gemini-old`, { method: "GET" }));
+
+    expect(await parseResponse(res)).toMatchObject({
+      id: "google/gemini-old",
+      status: "deprecated",
+    });
+  });
+
   describe("architecture.modality", () => {
     const modalityOf = async (modalities: {
       input: ("text" | "image" | "file" | "audio" | "video")[];

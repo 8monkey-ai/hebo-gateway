@@ -21,8 +21,11 @@ export type CatalogModel = {
   name?: string;
   /** models.dev family (product line), e.g. `claude-opus`. Each one has its own `latest`. */
   family?: string;
-  /** Pre-release models (`alpha` / `beta`) are never part of `latest`. */
-  status?: "alpha" | "beta";
+  /**
+   * Pre-release (`alpha` / `beta`) and `deprecated` models stay in their groups, but are never
+   * part of `latest`.
+   */
+  status?: "alpha" | "beta" | "deprecated";
   created?: string;
   knowledge?: string;
   modalities?: {

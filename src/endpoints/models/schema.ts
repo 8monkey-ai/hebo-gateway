@@ -27,6 +27,8 @@ export const ModelSchema = z.looseObject({
     .optional()
     .meta({ extension: true }),
   capabilities: z.array(z.string()).readonly().optional().meta({ extension: true }),
+  /** Deprecated models are still served, but may be retired by their providers at any time. */
+  status: z.enum(["alpha", "beta", "deprecated"]).optional().meta({ extension: true }),
 });
 export type Model = z.infer<typeof ModelSchema>;
 

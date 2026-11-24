@@ -1,4 +1,51 @@
 {
+  "meta/llama-3.1-70b-instruct": {
+    "name": "Llama 3.1 70B Instruct",
+    "family": "llama",
+    "status": "deprecated",
+    "created": "2024-07-23",
+    "knowledge": "2023-12",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "meta.llama3-1-70b-instruct-v1:0",
+        "profile": "optional",
+        "output": 4096,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/llama-3.1-8b-instruct": {
+    "name": "Llama 3.1 8B",
+    "family": "llama",
+    "status": "deprecated",
+    "created": "2024-07-23",
+    "knowledge": "2023-12",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["tool_call", "structured_output", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "meta.llama3-1-8b-instruct-v1:0",
+        "profile": "optional",
+        "output": 4096,
+        "reasoning": false
+      },
+      "groq": {
+        "id": "llama-3.1-8b-instant",
+        "output": 131072,
+        "reasoning": false
+      }
+    }
+  },
   "meta/llama-3.3-70b-instruct": {
     "name": "Llama-3.3-70B-Instruct",
     "family": "llama",
@@ -18,6 +65,48 @@
       },
       "deepinfra": {
         "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "output": 16384,
+        "reasoning": false
+      },
+      "bedrock": {
+        "id": "meta.llama3-3-70b-instruct-v1:0",
+        "profile": "optional",
+        "output": 4096,
+        "reasoning": false
+      },
+      "groq": {
+        "id": "llama-3.3-70b-versatile",
+        "output": 32768,
+        "reasoning": false
+      },
+      "togetherai": {
+        "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "output": 131072,
+        "reasoning": false
+      }
+    }
+  },
+  "meta/llama-4-maverick-17b-instruct": {
+    "name": "Llama 4 Maverick 17B Instruct",
+    "family": "llama",
+    "status": "deprecated",
+    "created": "2025-04-05",
+    "knowledge": "2024-08",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 1048576,
+    "capabilities": ["attachments", "temperature"],
+    "providers": {
+      "bedrock": {
+        "id": "meta.llama4-maverick-17b-instruct-v1:0",
+        "profile": "optional",
+        "output": 8192,
+        "reasoning": false
+      },
+      "deepinfra": {
+        "id": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
         "output": 16384,
         "reasoning": false
       }
@@ -43,6 +132,12 @@
       "deepinfra": {
         "id": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
         "output": 16384,
+        "reasoning": false
+      },
+      "bedrock": {
+        "id": "meta.llama4-scout-17b-instruct-v1:0",
+        "profile": "optional",
+        "output": 8192,
         "reasoning": false
       }
     }

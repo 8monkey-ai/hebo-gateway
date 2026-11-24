@@ -30,7 +30,7 @@ curl -s 'https://models.dev/api.json' | jq -c 'to_entries[] | .key as $p | .valu
   | select((.value.canonical_model_id // .key) | test("<SEARCH_TERM>")) | {provider: $p, id: .key, canonical: .value.canonical_model_id, status: .value.status, type: .value.type, npm: .value.provider.npm}'
 ```
 
-Relevant fields: `canonical_model_id` (`<lab>/<model>`), `family`, `status` (`deprecated` listings are ignored, `alpha` / `beta` are kept out of `latest`), `type` (`embedding` / `transcription`; image, video, speech, ... are ignored), `provider.npm` (listings served through an SDK the adapter does not speak are ignored, see `registerModelsDevHosts`), `release_date`, `knowledge`, `limit.context`, `modalities`, `attachment`, `reasoning`, `tool_call`, `structured_output`, `temperature`.
+Relevant fields: `canonical_model_id` (`<lab>/<model>`), `family`, `status` (`deprecated` listings are kept but used only when a provider has no current one, and mark the model `deprecated` when every provider only has deprecated ones; `deprecated` / `alpha` / `beta` models are kept out of `latest`), `type` (`embedding` / `transcription`; image, video, speech, ... are ignored), `provider.npm` (listings served through an SDK the adapter does not speak are ignored, see `registerModelsDevHosts`), `release_date`, `knowledge`, `limit.context`, `modalities`, `attachment`, `reasoning`, `tool_call`, `structured_output`, `temperature`.
 
 Listings whose native ID is not a plain ID (`[\w.:/@-]`, no `..`, at most 200 characters), or a Bedrock ARN / unknown inference profile prefix, are skipped: upstream data is untrusted.
 

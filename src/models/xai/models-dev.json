@@ -1,4 +1,43 @@
 {
+  "xai/grok-4.1-fast": {
+    "name": "xAI Grok 4.1 Fast Non-Reasoning",
+    "family": "grok",
+    "status": "deprecated",
+    "created": "2025-11-19",
+    "knowledge": "2025-11",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 2000000,
+    "capabilities": ["attachments", "tool_call", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "xai/grok-4.1-fast-non-reasoning",
+        "output": 30000,
+        "reasoning": false
+      }
+    }
+  },
+  "xai/grok-4.1-fast-reasoning": {
+    "name": "Grok 4.1 Fast Reasoning",
+    "family": "grok",
+    "status": "deprecated",
+    "created": "2025-11-19",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 2000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "vertex": {
+        "id": "xai/grok-4.1-fast-reasoning",
+        "output": 30000,
+        "reasoning": {}
+      }
+    }
+  },
   "xai/grok-4.20-0309-non-reasoning": {
     "name": "Grok 4.20 (Non-Reasoning)",
     "family": "grok",
