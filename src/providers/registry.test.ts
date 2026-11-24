@@ -2,16 +2,27 @@ import { expect, test } from "bun:test";
 
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { createAzure } from "@ai-sdk/azure";
+import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
+import { MockLanguageModelV4, MockProviderV4 } from "ai/test";
 import { createVoyage } from "voyage-ai-provider";
 
-import { claudeHaiku45 } from "../models/anthropic/presets.ts";
-import { maiTranscribe2 } from "../models/microsoft/presets.ts";
-import { gpt56Sol } from "../models/openai/presets.ts";
-import { voyage4Lite } from "../models/voyage/presets.ts";
+import { createModelCatalog, defineModelCatalog } from "../models/catalog.ts";
+// oxlint-disable no-unassigned-import
+import "../models/anthropic/index.ts";
+import "../models/microsoft/index.ts";
+import "../models/openai/index.ts";
+import "../models/voyage/index.ts";
+import type { ModelSpec } from "../models/types.ts";
+// oxlint-enable no-unassigned-import
 import { withCanonicalIdsForAzure } from "../providers/azure/canonical.ts";
 import { withCanonicalIdsForBedrock } from "../providers/bedrock/canonical.ts";
 import { withCanonicalIdsForVoyage } from "../providers/voyage/canonical.ts";
-import { resolveProvider } from "./registry.ts";
+import { modelSpecsFor, resolveProvider, specOf, withCanonicalIds } from "./registry.ts";
+import type { ProviderRegistry } from "./types.ts";
+
+/** The gateway catalog for `id`, from the bundled snapshot: it hands out the native IDs. */
+const catalog = (providers: ProviderRegistry, id: string) =>
+  createModelCatalog(defineModelCatalog(id), providers, { source: false }).current!;
 
 test("Voyage 4 Lite ID transformation in gateway config", () => {
   const config = {
@@ -22,19 +33,15 @@ test("Voyage 4 Lite ID transformation in gateway config", () => {
         }),
       ),
     },
-    models: {
-      ...voyage4Lite({
-        providers: ["voyage"],
-      }),
-    },
   };
+  const models = catalog(config.providers, "voyageai/voyage-4-lite");
 
-  const modelId = "voyage/voyage-4-lite";
+  const modelId = "voyageai/voyage-4-lite";
 
   // 1. Resolve the provider for embeddings
   const provider = resolveProvider({
     providers: config.providers,
-    models: config.models,
+    models,
     modelId,
     operation: "embeddings",
   });
@@ -58,18 +65,14 @@ test("GPT-5.6 Sol resolves through Bedrock's Mantle endpoint in gateway config",
         createAmazonBedrock({ region: "us-east-1", apiKey: "test-key" }),
       ),
     },
-    models: {
-      ...gpt56Sol({
-        providers: ["bedrock"],
-      }),
-    },
   };
+  const models = catalog(config.providers, "openai/gpt-5.6-sol");
 
   const modelId = "openai/gpt-5.6-sol";
 
   const provider = resolveProvider({
     providers: config.providers,
-    models: config.models,
+    models,
     modelId,
     operation: "chat",
   });
@@ -80,25 +83,21 @@ test("GPT-5.6 Sol resolves through Bedrock's Mantle endpoint in gateway config",
   expect(languageModel.provider).toBe("bedrock-mantle.responses");
 });
 
-test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
+test("Claude Haiku 5.5 resolves through Bedrock's InvokeModel endpoint", () => {
   const config = {
     providers: {
       bedrock: withCanonicalIdsForBedrock(
         createAmazonBedrock({ region: "us-east-1", apiKey: "test-key" }),
       ),
     },
-    models: {
-      ...claudeHaiku45({
-        providers: ["bedrock"],
-      }),
-    },
   };
+  const models = catalog(config.providers, "anthropic/claude-haiku-5-5");
 
-  const modelId = "anthropic/claude-haiku-4.5";
+  const modelId = "anthropic/claude-haiku-5-5";
 
   const provider = resolveProvider({
     providers: config.providers,
-    models: config.models,
+    models,
     modelId,
     operation: "chat",
   });
@@ -106,7 +105,7 @@ test("Claude Haiku 4.5 resolves through Bedrock's InvokeModel endpoint", () => {
   const languageModel = provider.languageModel(modelId);
 
   // Same Bedrock ID as on Converse, but served with the Anthropic request shape.
-  expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
+  expect(languageModel.modelId).toBe("us.anthropic.claude-haiku-5-5");
   expect(languageModel.provider).toBe("bedrock.anthropic.messages");
 });
 
@@ -115,16 +114,15 @@ test("MAI-Transcribe 2 resolves through Azure for transcriptions", () => {
     providers: {
       azure: withCanonicalIdsForAzure(createAzure({ resourceName: "test", apiKey: "test-key" })),
     },
-    models: {
-      ...maiTranscribe2(),
-    },
   };
+  // Not on models.dev yet: added by the lab module.
+  const models = catalog(config.providers, "microsoft/mai-transcribe-2");
 
   const modelId = "microsoft/mai-transcribe-2";
 
   const provider = resolveProvider({
     providers: config.providers,
-    models: config.models,
+    models,
     modelId,
     operation: "transcriptions",
   });
@@ -138,9 +136,53 @@ test("transcriptions reject models without transcription output", () => {
   expect(() =>
     resolveProvider({
       providers: {},
-      models: { ...gpt56Sol() },
+      models: catalog({ openai: new MockProviderV4() }, "openai/gpt-5.6-sol"),
       modelId: "openai/gpt-5.6-sol",
       operation: "transcriptions",
     }),
   ).toThrow("Model 'openai/gpt-5.6-sol' does not support 'transcription' output");
+});
+
+test("catalog native IDs win over the fallback transform, explicit mappings over both", () => {
+  const voyage = withCanonicalIdsForVoyage(createVoyage({ apiKey: "test-key" }), {
+    "voyageai/voyage-pinned": "voyage-pinned-2",
+  });
+  modelSpecsFor("voyage").set("voyageai/voyage-9", { id: "voyage-9-native" });
+  modelSpecsFor("voyage").set("voyageai/voyage-pinned", { id: "ignored" });
+
+  expect(voyage.embeddingModel("voyageai/voyage-9").modelId).toBe("voyage-9-native");
+  expect(voyage.embeddingModel("voyageai/voyage-pinned").modelId).toBe("voyage-pinned-2");
+  expect(voyage.embeddingModel("voyageai/voyage-unknown").modelId).toBe("voyage-unknown");
+});
+
+test("middleware reads the spec of the model it wraps", async () => {
+  const base = new MockProviderV4();
+  base.languageModel = (id: string) =>
+    new MockLanguageModelV4({ provider: "spec-test", modelId: id });
+  const provider = withCanonicalIds(base, { providerId: "spec-test" });
+  const spec: ModelSpec = { id: "m-native", output: 1234 };
+  modelSpecsFor("spec-test").set("acme/m", spec);
+
+  const seen: ModelSpec[] = [];
+  const reader: LanguageModelMiddleware = {
+    specificationVersion: "v3",
+    // oxlint-disable-next-line require-await
+    transformParams: async ({ params, model }) => {
+      seen.push(specOf(model));
+      return params;
+    },
+  };
+  const model = wrapLanguageModel({
+    model: provider.languageModel("acme/m"),
+    middleware: [reader, reader],
+  });
+  try {
+    await model.doGenerate({ prompt: [] });
+  } catch {
+    // The mock model does not generate: only the middleware chain is asserted on.
+  }
+
+  expect(seen).toEqual([spec, spec]);
+  // Models without one (e.g. custom models) read an empty spec.
+  expect(specOf(provider.languageModel("acme/unknown"))).toEqual({});
 });

@@ -8,7 +8,6 @@ import type {
   ResponseReasoningItem,
 } from "openai/resources/responses/responses";
 
-import { claudeSonnet46 } from "../../../src/models/anthropic/index.ts";
 import { BEDROCK_ACCESS_KEY_ID, BEDROCK_SECRET_ACCESS_KEY } from "../shared/server.ts";
 import { createBedrockTestServer, type TestServer } from "../shared/server.ts";
 import {
@@ -21,7 +20,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const hasCredentials = !!(BEDROCK_ACCESS_KEY_ID && BEDROCK_SECRET_ACCESS_KEY) || true;
-const MODEL = "anthropic/claude-sonnet-4.6";
+const MODEL = "anthropic/claude-sonnet-4-6";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,7 +52,7 @@ let baseUrl: string;
 
 describe.skipIf(!hasCredentials)("Responses E2E (Bedrock - Claude Sonnet 4.6)", () => {
   beforeAll(() => {
-    testServer = createBedrockTestServer(claudeSonnet46());
+    testServer = createBedrockTestServer("anthropic/claude-sonnet-4-6");
     baseUrl = testServer.baseUrl;
     client = new OpenAI({
       apiKey: "not-needed",

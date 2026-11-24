@@ -9,72 +9,15 @@ import {
   type BedrockMantleProviderSettings,
   createBedrockMantle,
 } from "@ai-sdk/amazon-bedrock/mantle";
-import type { LanguageModelV4, ProviderV4 } from "@ai-sdk/provider";
-import { customProvider, type LanguageModel } from "ai";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 
 import { logger } from "../../logger/index.ts";
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import { registerModelsDevHosts } from "../../models/models-dev.ts";
+import type { ModelId, ModelSpec } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
+import { BEDROCK_MODELS_DEV_HOST } from "./models-dev.ts";
 
-// For a list of all models with their IDs and InferenceTypes check:
-//   https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html
-// OR
-//   aws bedrock list-foundation-models --region us-east-1 \
-//     --query "modelSummaries[].{id:modelId,mode:join(',', inferenceTypesSupported)}" \
-//     --output table
-const MAPPING = {
-  // Require Inference Profiles and can't be resolved from standard name mapping
-  "anthropic/claude-opus-5.5": "{ip}anthropic.claude-opus-5-5",
-  "anthropic/claude-sonnet-5.5": "{ip}anthropic.claude-sonnet-5-5",
-  "anthropic/claude-haiku-5.5": "{ip}anthropic.claude-haiku-5-5",
-  "anthropic/claude-opus-5": "{ip}anthropic.claude-opus-5",
-  "anthropic/claude-sonnet-5": "{ip}anthropic.claude-sonnet-5",
-  "anthropic/claude-haiku-4.5": "{ip}anthropic.claude-haiku-4-5-20251001-v1:0",
-  "anthropic/claude-fable-5.1": "{ip}anthropic.claude-fable-5-1",
-  "anthropic/claude-fable-5": "{ip}anthropic.claude-fable-5",
-  "anthropic/claude-opus-4.8": "{ip}anthropic.claude-opus-4-8",
-  "anthropic/claude-opus-4.7": "{ip}anthropic.claude-opus-4-7",
-  "anthropic/claude-sonnet-4.6": "{ip}anthropic.claude-sonnet-4-6",
-  "anthropic/claude-opus-4.6": "{ip}anthropic.claude-opus-4-6-v1",
-  "anthropic/claude-opus-4.5": "{ip}anthropic.claude-opus-4-5-20251101-v1:0",
-  "cohere/embed-v4.0": "{ip}cohere.embed-v4:0",
-  "meta/llama-3.1-70b": "{ip}meta.llama3-1-70b-instruct-v1:0",
-  "meta/llama-3.1-405b": "{ip}meta.llama3-1-405b-instruct-v1:0",
-  "meta/llama-3.2-1b": "{ip}meta.llama3-2-1b-instruct-v1:0",
-  "meta/llama-3.2-3b": "{ip}meta.llama3-2-3b-instruct-v1:0",
-  "meta/llama-3.2-11b": "{ip}meta.llama3-2-11b-instruct-v1:0",
-  "meta/llama-3.2-90b": "{ip}meta.llama3-2-90b-instruct-v1:0",
-  "meta/llama-4-scout": "{ip}meta.llama4-scout-17b-instruct-v1:0",
-  "meta/llama-4-maverick": "{ip}meta.llama4-maverick-17b-instruct-v1:0",
-  // On-demand only models, ensure that {ip} is never added
-  "amazon/nova-2-multimodal-embeddings": "amazon.nova-2-multimodal-embeddings-v1:0",
-  "cohere/embed-english-v3.0": "cohere.embed-english-v3",
-  "cohere/embed-multilingual-v3.0": "cohere.embed-multilingual-v3",
-  "meta/llama-3.3-70b": "meta.llama3-3-70b-instruct-v1:0",
-  "meta/llama-3.1-8b": "meta.llama3-1-8b-instruct-v1:0",
-  "google/gemma-3-4b": "google.gemma-3-4b-it",
-  "google/gemma-3-12b": "google.gemma-3-12b-it",
-  "google/gemma-3-27b": "google.gemma-3-27b-it",
-  "openai/gpt-oss-20b": "openai.gpt-oss-20b-1:0",
-  "openai/gpt-oss-120b": "openai.gpt-oss-120b-1:0",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
-
-// Served only from the OpenAI-compatible Mantle endpoint, never from Converse/Invoke on
-// `bedrock-runtime`. Their IDs keep the dotted version, take no inference profile prefix
-// and no `-v1:0` postfix, so they bypass the mapping above entirely.
-//   https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html
-const MANTLE_MAPPING = {
-  "openai/gpt-5.5": "openai.gpt-5.5",
-  "openai/gpt-5.6-sol": "openai.gpt-5.6-sol",
-  "openai/gpt-5.6-terra": "openai.gpt-5.6-terra",
-  "openai/gpt-5.6-luna": "openai.gpt-5.6-luna",
-  "openai/gpt-6-astra": "openai.gpt-6-astra",
-  "openai/gpt-6-sol": "openai.gpt-6-sol",
-  "openai/gpt-6-luna": "openai.gpt-6-luna",
-  "openai/gpt-6.1-sol": "openai.gpt-6.1-sol",
-  "openai/gpt-6.2-astra": "openai.gpt-6.2-astra",
-  "openai/gpt-6.2-sol": "openai.gpt-6.2-sol",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
+registerModelsDevHosts("bedrock", { "amazon-bedrock": BEDROCK_MODELS_DEV_HOST });
 
 type BedrockFetch = NonNullable<AmazonBedrockAnthropicProviderSettings["fetch"]>;
 
@@ -229,39 +172,21 @@ const resolveAnthropic = (
 };
 
 /**
- * Lookups are keyed by the caller-supplied id, and `anthropic/*` resolves for any id, so the
- * memo is bounded like `ModelMiddlewareMatcher`'s: the gateway only ever asks for catalog
- * ids, but `withCanonicalIdsForBedrock` is public API.
+ * Lookups are keyed by the caller-supplied id, so the memo is bounded like
+ * `ModelMiddlewareMatcher`'s: the gateway only ever asks for catalog ids, but
+ * `withCanonicalIdsForBedrock` is public API.
  */
 const MAX_MEMOIZED_MODELS = 500;
 
-/** Routes `anthropic/*` lookups to the nested InvokeModel provider, created on first use. */
-const nestAnthropic = (
-  base: ProviderV4,
-  provider: AmazonBedrockProvider,
-  settings?: AmazonBedrockAnthropicProviderSettings,
-): ProviderV4 => {
-  let anthropic: AmazonBedrockAnthropicProvider | undefined;
+const memoize = (create: (id: string) => LanguageModelV4) => {
   const models = new Map<string, LanguageModelV4>();
-
-  return {
-    ...base,
-    languageModel: (id) => {
-      if (!id.startsWith("anthropic/")) return base.languageModel(id);
-
-      let model = models.get(id);
-      if (model) return model;
-
-      // The Converse model resolves the canonical ID without issuing a request, and
-      // InvokeModel takes the exact same IDs, inference profiles included.
-      const bedrockId = base.languageModel(id).modelId;
-      logger.debug(`[canonical] mapped ${id} to ${bedrockId} (invoke)`);
-      anthropic ??= resolveAnthropic(provider, settings);
-      model = anthropic.languageModel(bedrockId);
-      if (models.size >= MAX_MEMOIZED_MODELS) models.clear();
-      models.set(id, model);
-      return model;
-    },
+  return (id: string) => {
+    let model = models.get(id);
+    if (model) return model;
+    model = create(id);
+    if (models.size >= MAX_MEMOIZED_MODELS) models.clear();
+    models.set(id, model);
+    return model;
   };
 };
 
@@ -279,9 +204,10 @@ const resolveInferenceProfile = ({ geo = "us", arn }: BedrockInferenceProfileOpt
 
 export type BedrockCanonicalConfig = {
   inferenceProfile?: BedrockInferenceProfileOptions;
-  extraMapping?: Record<ModelId, string>;
+  extraMapping?: Partial<Record<ModelId, string>>;
   /**
-   * Settings for the nested Mantle provider, which serves the GPT-5.x models. `region` and
+   * Settings for the nested Mantle provider, which serves the models the catalog lists on
+   * Mantle (e.g. GPT-5.x). `region` and
    * custom headers are inherited from the wrapped provider; credentials are not, so set them
    * here unless the ambient AWS environment already carries them.
    */
@@ -299,54 +225,59 @@ export const withCanonicalIdsForBedrock = (
   provider: AmazonBedrockProvider,
   config: BedrockCanonicalConfig = {},
 ) => {
-  const base = withCanonicalIds(provider, {
-    mapping: {
-      ...MAPPING,
-      ...config.extraMapping,
-    },
-    options: {
-      stripNamespace: false,
-      namespaceSeparator: ".",
-      normalizeDelimiters: true,
-      prefix:
-        config.inferenceProfile?.mode === "avoid"
-          ? ""
-          : resolveInferenceProfile(config.inferenceProfile),
-      template: {
-        ip: resolveInferenceProfile(config.inferenceProfile),
-      },
-      postfix: config.inferenceProfile?.mode === "avoid" ? "" : "-v1:0",
-    },
-  });
+  const ip = resolveInferenceProfile(config.inferenceProfile);
+  const avoid = config.inferenceProfile?.mode === "avoid";
 
   // Deferred so incomplete settings surface at model construction, not at wrap time.
   let mantle: BedrockMantleProvider | undefined;
-  const models = new Map<string, LanguageModel>();
-  const mantleModel = (canonicalId: string, mantleId: string) => {
-    let model = models.get(canonicalId);
-    if (model) return model;
+  let anthropic: AmazonBedrockAnthropicProvider | undefined;
 
-    logger.debug(`[canonical] mapped ${canonicalId} to ${mantleId} (mantle)`);
+  // Served only from Mantle, never from Converse/Invoke on `bedrock-runtime`.
+  //   https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html
+  const mantleModel = memoize((id) => {
     mantle ??= resolveMantle(provider, config.mantle);
     // These models expect the Responses API; Chat Completions is the Mantle default.
-    model = mantle.responses(mantleId);
-    models.set(canonicalId, model);
-    return model;
+    return mantle.responses(id);
+  });
+
+  // InvokeModel takes the exact same IDs as Converse, inference profiles included.
+  const anthropicModel = memoize((id) => {
+    anthropic ??= resolveAnthropic(
+      provider,
+      config.anthropic === false ? undefined : config.anthropic,
+    );
+    return anthropic.languageModel(id);
+  });
+
+  // Routes on the catalog spec, then on the native ID the canonical ID resolved to.
+  const languageModel = (id: string, spec?: ModelSpec) => {
+    if (spec?.route === "mantle") {
+      logger.debug(`[canonical] serving ${id} from mantle`);
+      return mantleModel(id);
+    }
+    if (config.anthropic !== false && id.includes("anthropic.claude")) {
+      logger.debug(`[canonical] serving ${id} from invoke`);
+      return anthropicModel(id);
+    }
+    return provider.languageModel(id);
   };
 
-  const languageModels = {} as Record<string, LanguageModel>;
-  for (const [canonicalId, mantleId] of Object.entries(MANTLE_MAPPING)) {
-    // Lazy, so the nested provider is only created once one of its models is requested.
-    Object.defineProperty(languageModels, canonicalId, {
-      enumerable: true,
-      get: () => mantleModel(canonicalId, mantleId),
-    });
-  }
-
-  // Claude is open-ended (every `anthropic/*` ID, mapped or not), so it is routed on lookup
-  // rather than enumerated like the Mantle models above.
-  const fallbackProvider =
-    config.anthropic === false ? base : nestAnthropic(base, provider, config.anthropic);
-
-  return customProvider({ languageModels, fallbackProvider });
+  return withCanonicalIds(
+    { ...provider, languageModel },
+    {
+      providerId: "bedrock",
+      mapping: config.extraMapping,
+      nativeId: ({ id, profile }) =>
+        profile === "required" || (profile === "optional" && !avoid) ? `${ip}${id}` : id,
+      options: {
+        stripNamespace: false,
+        namespaceSeparator: ".",
+        normalizeDelimiters: true,
+        prefix: avoid ? "" : ip,
+        // `{ip}`: the model is only served through an inference profile, `{ip?}`: on demand too.
+        template: { ip, "ip?": avoid ? "" : ip },
+        postfix: avoid ? "" : "-v1:0",
+      },
+    },
+  );
 };

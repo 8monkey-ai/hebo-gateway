@@ -1,0 +1,522 @@
+{
+  "zhipuai/glm-4.5": {
+    "name": "GLM-4.5",
+    "family": "glm",
+    "created": "2025-07-28",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.5",
+        "output": 98304,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.5-air": {
+    "name": "GLM-4.5-Air",
+    "family": "glm-air",
+    "created": "2025-07-28",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.5-air",
+        "output": 98304,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.5-flash": {
+    "name": "GLM-4.5-Flash",
+    "family": "glm-flash",
+    "created": "2025-07-28",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.5-flash",
+        "output": 98304,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.5v": {
+    "name": "GLM-4.5V",
+    "family": "glmv",
+    "created": "2025-08-11",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 64000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.5v",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.6": {
+    "name": "GLM-4.6",
+    "family": "glm",
+    "created": "2025-09-30",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 204800,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.6",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-4.6",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.6v": {
+    "name": "GLM-4.6V",
+    "family": "glmv",
+    "created": "2025-12-08",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.6v",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.6v-flash": {
+    "name": "GLM-4.6V-Flash",
+    "family": "glmv-flash",
+    "created": "2025-12-08",
+    "modalities": {
+      "input": ["text", "image", "video"],
+      "output": ["text"]
+    },
+    "context": 128000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.6v-flash",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.7": {
+    "name": "GLM-4.7",
+    "family": "glm",
+    "created": "2025-12-22",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 204800,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.7",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-4.7",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "bedrock": {
+        "id": "zai.glm-4.7",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-4.7-flash": {
+    "name": "GLM-4.7-Flash",
+    "family": "glm-flash",
+    "created": "2026-01-19",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.7-flash",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "bedrock": {
+        "id": "zai.glm-4.7-flash",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-4.7-Flash",
+        "output": 16384,
+        "reasoning": {}
+      }
+    }
+  },
+  "zhipuai/glm-4.7-flashx": {
+    "name": "GLM-4.7-FlashX",
+    "family": "glm-flash",
+    "created": "2026-01-19",
+    "knowledge": "2025-04",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-4.7-flashx",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5": {
+    "name": "GLM-5",
+    "family": "glm",
+    "created": "2026-02-12",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 204800,
+    "capabilities": ["reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "bedrock": {
+        "id": "zai.glm-5",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "vertex": {
+        "id": "zai-org/glm-5-maas",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5-turbo": {
+    "name": "GLM-5-Turbo",
+    "family": "glm-turbo",
+    "created": "2026-03-16",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5-turbo",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5.1": {
+    "name": "GLM-5.1",
+    "family": "glm",
+    "created": "2026-04-07",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5.1",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "chutes": {
+        "id": "zai-org/GLM-5.1-TEE",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5.1",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5.1",
+        "output": 16384,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5.2": {
+    "name": "GLM-5.2",
+    "family": "glm",
+    "created": "2026-06-13",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5.2",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["high", "max"]
+        }
+      },
+      "alibaba": {
+        "id": "glm-5.2",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["high", "max"]
+        }
+      },
+      "vertex": {
+        "id": "zai-org/glm-5.2-maas",
+        "output": 64000,
+        "reasoning": {
+          "toggle": true
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5.2",
+        "output": 164000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5.2",
+        "output": 32768,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["high", "max"]
+        }
+      },
+      "chutes": {
+        "id": "zai-org/GLM-5.2-TEE",
+        "output": 65535,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5.3": {
+    "name": "GLM-5.3",
+    "family": "glm",
+    "created": "2026-08-14",
+    "modalities": {
+      "input": ["text"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5.3",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "zai.glm-5.3",
+        "profile": "required",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5.3",
+        "output": 262144,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5.3",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/glm-5p3",
+        "output": 262144,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5.3-flash": {
+    "name": "GLM-5.3-Flash",
+    "family": "glm-flash",
+    "created": "2026-08-26",
+    "modalities": {
+      "input": ["text", "image", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5.3-flash",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "togetherai": {
+        "id": "zai-org/GLM-5.3-Flash",
+        "output": 400000,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "zai-org/GLM-5.3-Flash",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      },
+      "fireworks": {
+        "id": "accounts/fireworks/models/glm-5p3-flash",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "high", "max"]
+        }
+      }
+    }
+  },
+  "zhipuai/glm-5v-turbo": {
+    "name": "GLM-5V-Turbo",
+    "family": "glmv-turbo",
+    "created": "2026-04-01",
+    "modalities": {
+      "input": ["text", "image", "video", "file"],
+      "output": ["text"]
+    },
+    "context": 200000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "temperature"],
+    "providers": {
+      "zai": {
+        "id": "glm-5v-turbo",
+        "output": 131072,
+        "reasoning": {
+          "toggle": true
+        }
+      }
+    }
+  }
+}

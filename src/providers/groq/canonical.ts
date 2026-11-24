@@ -1,20 +1,14 @@
 import { type GroqProvider } from "@ai-sdk/groq";
 
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
-
-const MAPPING = {
-  "meta/llama-3.1-8b": "llama-3.1-8b-instant",
-  "meta/llama-3.3-70b": "llama-3.3-70b-versatile",
-  "meta/llama-4-scout": "meta-llama/llama-4-scout-17b-16e-instruct",
-  "alibaba/qwen3.8-27b": "qwen/qwen3.8-27b",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForGroq = (
   provider: GroqProvider,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
+    providerId: "groq",
+    mapping: extraMapping,
     options: { stripNamespace: false },
   });

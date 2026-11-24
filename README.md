@@ -18,7 +18,7 @@ Learn more in our blog post: [Yet Another AI Gateway?](https://hebo.ai/blog/2601
 - 🔌 Integrate into your existing Hono, Elysia, Next.js & TanStack apps.
 - 🧩 Provider registry compatible with any Vercel AI SDK providers.
 - 🧭 Canonical model IDs and parameter naming across providers.
-- 🗂️ Model catalog with extensible metadata capabilities.
+- 🗂️ Model catalog loaded from models.dev: new models need no gateway release.
 - 🪝 Hook system to customize routing, auth, rate limits, and shape responses.
 - 👁️ Observability via OTel GenAI semantic conventions (Langfuse-compatible).
 - 🧰 Low-level OpenAI-compatible schema, converters, and middleware helpers.
@@ -55,7 +55,7 @@ Start by creating a gateway instance with at least one provider and a few models
 ```ts
 import { createGroq } from "@ai-sdk/groq";
 import { gateway, defineModelCatalog } from "@hebo-ai/gateway";
-import { gptOss20b, gptOss } from "@hebo-ai/gateway/models/openai";
+import { gptOss } from "@hebo-ai/gateway/models/openai";
 import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 export const gw = gateway({
@@ -71,9 +71,9 @@ export const gw = gateway({
 
   // MODEL CATALOG
   models: defineModelCatalog(
-    // Choose a pre-configured preset
-    gptOss20b,
-    // Or add a whole model family
+    // Pick a single model
+    "openai/gpt-oss-20b",
+    // Or a whole model family
     gptOss["all"],
   ),
 });
@@ -147,6 +147,14 @@ import { withCanonicalIdsForGroq } from "@hebo-ai/gateway/providers/groq";
 
 If you need a provider that is not on that list, Hebo Gateway’s provider registry also accepts any **Vercel AI SDK Provider**.
 
+Adapters look up each provider's own model ID in the [model catalog](#models), so new models work without a gateway release. For models the catalog doesn't know, they use the model ID without the lab prefix. To use a different ID, pass an extra mapping:
+
+```ts
+const deepinfra = withCanonicalIdsForDeepInfra(createDeepInfra(), {
+  "moonshotai/kimi-k3.1-pro": "moonshotai/Kimi-K3.1-Pro",
+});
+```
+
 `withCanonicalIdsForBedrock` nests two further Bedrock endpoints. Claude models resolve through [`InvokeModel`](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages.html), which takes the Anthropic request shape verbatim — mid-conversation `system` turns (what Claude Code sends), `anthropic_beta` features and native `cache_control` are all unavailable on Converse. It inherits the base URL, custom headers **and** credentials of the wrapped provider, because `InvokeModel` signs for the same service and host as Converse, so no extra configuration is needed. Pass `anthropic` settings to override any of that, or `anthropic: false` to keep Claude on Converse. A forwarded `anthropic-beta` header is filtered to the [betas Bedrock implements](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html), since Bedrock rejects the first-party-only ones Claude Code sends by default; the betas a request actually needs are still added by the provider.
 
 ```ts
@@ -156,7 +164,7 @@ const bedrock = withCanonicalIdsForBedrock(createAmazonBedrock({ region: "us-eas
 });
 ```
 
-It additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so GPT-5.x models resolve through it while everything else keeps using Converse. Mantle is available in [fewer regions](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) than `bedrock-runtime`, so set `mantle.region` when the wrapped provider points somewhere Mantle does not serve. Mantle inherits the wrapped provider’s region and custom headers, but not its credentials: those never leave the `createAmazonBedrock` closure, and its request signing is bound to the `bedrock` service while Mantle requires `bedrock-mantle`. By default Mantle therefore reads the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`), which needs no configuration at all. To pass credentials explicitly, declare them once and hand them to both:
+It additionally nests Bedrock’s OpenAI-compatible [Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) endpoint, so models that are only served there (e.g. GPT-5.x) resolve through it while everything else keeps using Converse. Mantle is available in [fewer regions](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-mantle.html) than `bedrock-runtime`, so set `mantle.region` when the wrapped provider points somewhere Mantle does not serve. Mantle inherits the wrapped provider’s region and custom headers, but not its credentials: those never leave the `createAmazonBedrock` closure, and its request signing is bound to the `bedrock` service while Mantle requires `bedrock-mantle`. By default Mantle therefore reads the ambient AWS environment (`AWS_BEARER_TOKEN_BEDROCK`, or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`), which needs no configuration at all. To pass credentials explicitly, declare them once and hand them to both:
 
 ```ts
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
@@ -167,7 +175,7 @@ const settings = { region: "us-east-1", apiKey: process.env["BEDROCK_API_KEY"] }
 const bedrock = withCanonicalIdsForBedrock(createAmazonBedrock(settings), { mantle: settings });
 ```
 
-For Azure, the adapter removes the canonical namespace. For example, `openai/gpt-5.6-luna` uses the Azure deployment `gpt-5.6-luna`. Pass an extra mapping as the second argument when your deployment has a custom name.
+For Azure, the deployment name defaults to the model name, e.g. `openai/gpt-5.6-luna` uses the Azure deployment `gpt-5.6-luna`. Pass an extra mapping as the second argument when your deployment has a custom name.
 
 ```ts
 import { createAzure } from "@ai-sdk/azure";
@@ -180,7 +188,7 @@ For custom provider setups, wrap the provider instance with `withCanonicalIds` a
 
 ```ts
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { gateway, withCanonicalIds } from "@hebo-ai/gateway";
+import { defineModelCatalog, gateway, withCanonicalIds } from "@hebo-ai/gateway";
 
 const myProvider = withCanonicalIds(
   createOpenAICompatible({
@@ -189,9 +197,11 @@ const myProvider = withCanonicalIds(
     apiKey: process.env["MY_PROVIDER_API_KEY"],
   }),
   {
+    // Must match the key used in `providers` below
+    providerId: "myProvider",
     mapping: {
       "openai/gpt-4.1-mini": "gpt-4.1-mini-custom",
-      "anthropic/claude-sonnet-4.6": "claude-sonnet-4-6",
+      "anthropic/claude-sonnet-4-6": "claude-sonnet-4-6",
     },
   },
 );
@@ -200,126 +210,159 @@ const gw = gateway({
   providers: {
     myProvider,
   },
-  models: {
-    // ...your models pointing at canonical IDs above
-  },
+  models: defineModelCatalog({
+    // ...your own models, served by the custom provider
+    "acme/support-bot": { name: "Support Bot", providers: ["myProvider"] },
+  }),
 });
 ```
 
 ### Models
 
-Start with the built-in model presets when possible. They give you ready-to-use catalog entries with canonical IDs, metadata, and default provider lists.
+The model catalog comes from [models.dev](https://models.dev). The gateway loads it once, on the first request, so new models become available after a restart without upgrading the gateway. If models.dev can't be reached, the gateway uses the copy bundled with the installed release.
 
-Built-in preset families are available for `Alibaba Qwen`, `Amazon Nova`, `Anthropic Claude`, `Cohere Command/Embed`, `DeepSeek`, `Google Gemini`, `Meta Llama`, `Microsoft MAI-Transcribe`, `MiniMax`, `Moonshot Kimi`, `OpenAI GPT/GPT-OSS`, `Voyage`, `xAI Grok`, and `Z.ai GLM`.
+Model IDs follow models.dev and take the form `<lab>/<model>`, e.g. `anthropic/claude-sonnet-4-6`, `moonshotai/kimi-k3` or `zhipuai/glm-5.3`. Each model lists the configured providers that serve it. The lab's own provider comes first, and the first provider in the list handles the request.
 
-#### Model Presets
+#### Model Families
 
-Hebo Gateway ships a set of model presets under `@hebo-ai/gateway/models`. Use these when you want ready-to-use catalog entries with sane defaults for common SOTA models.
+Each lab has a module under `@hebo-ai/gateway/models/<lab>`. Importing it adds that lab's models to the catalog. Models from labs you don't import are left out.
 
-Presets come in two forms:
+Each module exports the lab's model families (e.g. `claude`, `gemini`, `llama`). Each family offers these groups:
 
-- Individual presets (e.g. `gptOss20b`, `claudeSonnet46`) for a single model.
-- Family presets (e.g. `claude`, `gemini`, `llama`) which group multiple models and expose helpers like `latest`, `all`, `vX` (e.g. `claude["v4.5"]`).
+- `all`: every model in the family.
+- `latest`: the newest stable model of each product line, e.g. Claude Opus, Sonnet, Haiku and Fable. Preview and deprecated models are never part of it.
+- Version groups: `vX` / `vX.Y` for one version (e.g. `claude["v4.6"]`), and `vX.x` for one major version (e.g. `claude["v5.x"]`).
+- Named groups for some families, e.g. `claude.opus`, `gpt.codex`, `gemini.embeddings`.
 
 ```ts
 import { defineModelCatalog } from "@hebo-ai/gateway";
-import { claudeSonnet46, claude } from "@hebo-ai/gateway/models/anthropic";
-import { gptOss20b } from "@hebo-ai/gateway/models/openai";
+import { claude } from "@hebo-ai/gateway/models/anthropic";
+import { gpt } from "@hebo-ai/gateway/models/openai";
 
-// Individual preset
 const models = defineModelCatalog(
-  gptOss20b({ providers: ["groq"] }),
-  claudeSonnet46({ providers: ["bedrock"] }),
-);
-
-// Family preset (pick a group and apply the same override to each)
-const modelsFromFamily = defineModelCatalog(
-  claude["latest"].map((preset) => preset({ providers: ["anthropic"] })),
+  // A family group
+  claude["latest"],
+  // A group with overrides: `providers` narrows and reorders the providers
+  claude["v5.x"]({ providers: ["bedrock"] }),
+  // Single models (IDs autocomplete), or `*` patterns
+  "openai/gpt-6-sol",
+  "openai/gpt-oss-*",
 );
 ```
 
-Out-of-the-box model presets:
+Models that models.dev marks deprecated stay in `all`, their version and named groups, and can still be requested. They are never part of `latest`, and providers that only serve a deprecated version of a model are tried last. Their catalog entry (e.g. `ctx.models[id]` in hooks) has `status: "deprecated"`.
 
-- **Alibaba** — `@hebo-ai/gateway/models/alibaba`  
-  Qwen: `qwen` (`v3.5`, `v3.6`, `v3.7`, `v3.8`, `v3.x`, `embedding`, `embeddings`, `latest`, `all`)
+Groups are worked out when the catalog loads, so new releases join `all`, `latest` and their version groups automatically. This means `latest` can change after a restart; list exact model IDs if you want a fixed catalog. If you don't set `models`, every model of the imported labs is exposed.
 
-- **Amazon** — `@hebo-ai/gateway/models/amazon`  
-  Nova: `nova` (`v1`, `v2`, `v1.x`, `v2.x`, `latest`, `embeddings`, `all`)
+To set different values for each model, pass a function instead of an object. It receives each model's ID and entry, including models released later. Return the changes for that model, or `undefined` to leave it as it is:
 
-- **Anthropic** — `@hebo-ai/gateway/models/anthropic`  
-  Claude: `claude` (`v5.5`, `v5.1`, `v5`, `v4.8`, `v4.7`, `v4.6`, `v4.5`, `v5.x`, `v4.x`, `fable`, `haiku`, `sonnet`, `opus`, `latest`, `all`)
+```ts
+const FREE = new Set(["openai/gpt-5.5"]);
+const tier = (id: string) => ({ additionalProperties: { free: FREE.has(id) } });
 
-- **Cohere** — `@hebo-ai/gateway/models/cohere`  
-  Command: `command` (`A`, `R`, `latest`, `all`)
-  Embed: `embed` (`v4`, `v3`, `latest`, `all`)
-  North: `north` (`v1`, `v1.x`, `latest`, `all`)
+const models = defineModelCatalog(claude.all(tier), gpt.all(tier));
+```
 
-- **DeepSeek** — `@hebo-ai/gateway/models/deepseek`  
-  DeepSeek: `deepseek` (`v4`, `v4.1`, `v4.x`, `latest`, `all`)
+Available model families:
 
-- **Google** — `@hebo-ai/gateway/models/google`  
-  Gemini: `gemini` (`v3.1`, `v3.5`, `v3.6`, `v3.7`, `v3.8`, `v4`, `v3-preview`, `v3.x`, `v4.x`, `embeddings`, `transcription`, `latest`, `preview`, `all`)
-  Gemma: `gemma` (`v3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+- **Alibaba** — `@hebo-ai/gateway/models/alibaba`: `qwen` (`embeddings`)
+- **Amazon** — `@hebo-ai/gateway/models/amazon`: `nova` (`embeddings`)
+- **Anthropic** — `@hebo-ai/gateway/models/anthropic`: `claude` (`opus`, `sonnet`, `haiku`, `fable`)
+- **Cohere** — `@hebo-ai/gateway/models/cohere`: `command` (`A`, `R`), `embed`, `north`
+- **DeepSeek** — `@hebo-ai/gateway/models/deepseek`: `deepseek`
+- **Google** — `@hebo-ai/gateway/models/google`: `gemini` (`preview`, `embeddings`, `transcription`), `gemma`
+- **Meta** — `@hebo-ai/gateway/models/meta`: `llama`
+- **Microsoft** — `@hebo-ai/gateway/models/microsoft`: `maiTranscribe`
+- **MiniMax** — `@hebo-ai/gateway/models/minimax`: `minimax`
+- **Moonshot** — `@hebo-ai/gateway/models/moonshot`: `kimi` (version groups use `k`, e.g. `kimi["k3.x"]`)
+- **OpenAI** — `@hebo-ai/gateway/models/openai`: `gpt` (`codex`, `pro`, `transcription`), `gptOss`, `gptOssSafeguard`, `textEmbeddings`
+- **Voyage** — `@hebo-ai/gateway/models/voyage`: `voyage`
+- **xAI** — `@hebo-ai/gateway/models/xai`: `grok` (`transcription`)
+- **Z.ai** — `@hebo-ai/gateway/models/zai`: `glm`
 
-- **Meta** — `@hebo-ai/gateway/models/meta`  
-  Llama: `llama` (`v3.1`, `v3.2`, `v3.3`, `v4`, `v3.x`, `v4.x`, `latest`, `all`)
+Named groups are listed in brackets.
 
-- **Microsoft** — `@hebo-ai/gateway/models/microsoft`  
-  MAI-Transcribe: `maiTranscribe` (`v2`, `v2.x`, `latest`, `all`)
-
-- **MiniMax** — `@hebo-ai/gateway/models/minimax`  
-  MiniMax: `minimax` (`v2`, `v3`, `v2.x`, `v3.x`, `latest`, `all`)
-
-- **Moonshot** — `@hebo-ai/gateway/models/moonshot`  
-  Kimi: `kimi` (`k2.5`, `k2.6`, `k2.7`, `k3`, `k2.x`, `k3.x`, `latest`, `all`)
-
-- **OpenAI** — `@hebo-ai/gateway/models/openai`  
-  GPT: `gpt` (`v5.2`, `v5.3`, `v5.4`, `v5.5`, `v5.6`, `v6`, `v6.1`, `v6.2`, `v5.x`, `v6.x`, `codex`, `pro`, `transcription`, `latest`, `all`)
-  GPT-OSS: `gptOss` (`v1`, `v1.x`, `latest`, `all`)
-  Embeddings: `textEmbeddings` (`v3`, `v3.x`, `latest`, `all`)
-
-- **Voyage** — `@hebo-ai/gateway/models/voyage`  
-  Voyage: `voyage` (`v2`, `v3`, `v3.5`, `v4`, `v2.x`, `v3.x`, `v4.x`, `latest`, `all`)
-
-- **xAI** — `@hebo-ai/gateway/models/xai`  
-  Grok: `grok` (`v4.2`, `v4.3`, `v4.20`, `v4.5`, `v4.6`, `v4.7`, `transcription`, `latest`, `all`)
-
-- **Z.ai** — `@hebo-ai/gateway/models/zai`  
-  GLM: `glm` (`v5`, `v5.1`, `v5.2`, `v5.3`, `v5.x`, `latest`, `all`)
+> [!NOTE]
+> Claude 4.5 models are not included.
 
 #### User-defined Models
 
-If a built-in preset does not exist yet, you can always register your own model entries by following the `CatalogModel` type.
+If models.dev doesn't list a model yet, you can add it yourself using the `CatalogModel` type. Once models.dev lists the same ID, its entry is used instead.
 
 ```ts
-const gw = gateway({
-  providers: {
-    // ...
-  },
-  models: {
-    "openai/gpt-5.2": {
-      name: "GPT 5.2",
-      created: "2025-12-11",
-      knowledge: "2025-08",
-      modalities: {
-        input: ["text", "image", "file"],
-        output: ["text"],
-      },
-      context: 400000,
-      capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-      providers: ["openai"],
-      // Additional properties are merged into the model object
-      additionalProperties: {
-        customProperty: "customValue",
-      },
+const models = defineModelCatalog(claude["latest"], {
+  "anthropic/claude-opus-6": {
+    name: "Claude Opus 6",
+    family: "claude-opus",
+    created: "2027-01-10",
+    knowledge: "2026-09",
+    modalities: {
+      input: ["text", "image", "file"],
+      output: ["text"],
     },
-    // ...
+    context: 1000000,
+    capabilities: ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    // Providers serving the model, in routing order
+    providers: ["anthropic", "bedrock"],
+    // Additional properties are merged into the model object
+    additionalProperties: {
+      customProperty: "customValue",
+    },
   },
 });
 ```
 
 > [!NOTE]
-> The only mandatory property is the `providers` array, everything else is optional metadata.
+> The only mandatory property is `providers`, everything else is optional metadata. Models you add count towards the family groups in the same `defineModelCatalog` call, so the example above adds Claude Opus 6 to `claude["latest"]`.
+>
+> By default a provider calls the model by its ID without the lab prefix (`claude-opus-6`). If the provider uses a different ID, set it with the adapter's extra mapping (see [Providers](#providers)).
+
+#### Catalog Source
+
+```ts
+const gw = gateway({
+  // ...
+  advanced: {
+    catalog: {
+      // URL of a models.dev-compatible `api.json` (default: "https://models.dev/api.json").
+      // `false` uses only the copy bundled with the release.
+      source: false,
+      // Timeout per attempt in milliseconds (default: 2000). A failed attempt is retried once.
+      timeout: 2000,
+    },
+  },
+});
+```
+
+The first requests wait for the catalog to load. Responses over 25 MB and invalid provider model IDs are ignored.
+
+> [!TIP]
+> On runtimes with tight per-request CPU limits (e.g. the Cloudflare Workers free plan), parsing the full models.dev catalog can be too expensive. Use `source: false`, or point `source` at a smaller copy you host yourself.
+
+#### Model Middleware
+
+Each lab module includes middleware that maps the gateway's parameters (reasoning, prompt caching, dimensions, …) to that lab's API. It uses each model's reasoning options and output limit from models.dev, so new models are handled correctly without a gateway release.
+
+Your own middleware can read the same data with `specOf(model)`:
+
+```ts
+import { modelMiddlewareMatcher, specOf } from "@hebo-ai/gateway";
+import type { LanguageModelMiddleware } from "ai";
+
+const acmeMaxTokens: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  transformParams: async ({ params, model }) => {
+    // The model's output limit and reasoning options, if models.dev lists them
+    const { output } = specOf(model);
+    if (output && !params.maxOutputTokens) params.maxOutputTokens = output;
+    return params;
+  },
+};
+
+modelMiddlewareMatcher.useForModel("acme/*", { language: [acmeMaxTokens] });
+```
+
+`takeReasoning`, `reasoningControls` and `resolveReasoning` are also exported, if you need to map reasoning parameters the same way the built-in middleware does.
 
 ### Hooks
 
@@ -686,7 +729,7 @@ It supports:
 - `response_format`: `json` (default) returns `{ text, usage }`; `verbose_json` adds `task`, `language`, `duration`, timestamped `segments` and, for providers that return word timings (xAI, Vertex Gemini with `timestamp_granularities: ["word"]`), OpenAI-style `words: [{ word, start, end }]`. Built from the AI SDK's normalized result; word-level providers return an empty `segments` array rather than one segment per word.
 - Provider-specific params (e.g. `diarize`, `keyterm`, `chunking_strategy`) are forwarded as provider options, like on the other endpoints.
 - Flat usage: `input_tokens`, `output_tokens`, `total_tokens` and `seconds`, filled in with whatever the provider reports (falling back to the audio duration).
-- Built-in presets for OpenAI / Azure (`openai/gpt-transcribe`), Azure Speech (`microsoft/mai-transcribe-2`), xAI (`xai/grok-voice-transcribe-2.0`) and Vertex (`google/gemini-3.5-transcribe`).
+- Built-in support for OpenAI (`openai/gpt-transcribe`), xAI (`xai/grok-voice-transcribe-2.0`), Vertex (`google/gemini-3.5-transcribe`) and Azure Speech (`microsoft/mai-transcribe-2`).
 
 ```ts
 import fs from "node:fs";
@@ -721,6 +764,7 @@ Official documentation: [OpenAI API Reference](https://developers.openai.com/api
 It supports:
 
 - Comprehensive model metadata (capabilities, context limits, knowledge cutoffs).
+- `expiration_date`, as on OpenRouter: the date (`YYYY-MM-DD`) after which a model may be removed, otherwise `null`. models.dev has no retirement dates, so it's `null` unless you set it through `additionalProperties`, e.g. with a function override: `(_, model) => model.status === "deprecated" ? { additionalProperties: { expiration_date: "2026-12-31" } } : undefined`.
 - Canonical model ID resolution.
 - Provider-specific availability filtering.
 
@@ -808,7 +852,7 @@ In addition to the official `reasoning_effort` parameter, the chat completions e
 
 ```json
 {
-  "model": "anthropic/claude-4-sonnet",
+  "model": "anthropic/claude-sonnet-4-6",
   "messages": [{ "role": "user", "content": "Explain the tradeoffs." }],
   "reasoning": { "effort": "medium" }
 }
@@ -819,7 +863,9 @@ Normalization rules:
 - `enabled` -> fall-back to model default if none provided
 - `max_tokens`: fall-back to model default if model supports
 - `effort` supports: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`
-- Generic `effort` -> budget = percentage of `max_tokens`
+- `effort` -> the nearest level the model supports, rounding up, e.g. `xhigh` -> `max` on Claude Opus 4.6
+- Off (`enabled: false` or `effort: "none"`) -> turns reasoning off, or uses the lowest level for models that always reason
+- Generic `effort` -> budget = percentage of `max_tokens`, for models that take a budget
   - `none`: 0%
   - `minimal`: 10%
   - `low`: 20%
@@ -904,7 +950,7 @@ Accepted request fields:
 
 ```json
 {
-  "model": "anthropic/claude-sonnet-4.6",
+  "model": "anthropic/claude-sonnet-4-6",
   "messages": [
     {
       "role": "system",

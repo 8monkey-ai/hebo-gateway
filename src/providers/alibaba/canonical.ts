@@ -1,21 +1,13 @@
 import type { AlibabaProvider } from "@ai-sdk/alibaba";
 
-import type { CanonicalModelId, ModelId } from "../../models/types.ts";
+import type { ModelId } from "../../models/types.ts";
 import { withCanonicalIds } from "../registry.ts";
-
-const MAPPING = {
-  "alibaba/qwen3.5-397b": "qwen3.5-397b-a17b",
-  "alibaba/qwen3.5-122b": "qwen3.5-122b-a10b",
-  "alibaba/qwen3.5-35b": "qwen3.5-35b-a3b",
-  "alibaba/qwen3.5-0.8b": "qwen3.5-0.8b",
-  "alibaba/qwen3.6-flash": "qwen3.6-35b-a3b",
-  "alibaba/qwen3.8-2.4t": "qwen3.8-2.4t-a95b",
-} as const satisfies Partial<Record<CanonicalModelId, string>>;
 
 export const withCanonicalIdsForAlibaba = (
   provider: AlibabaProvider,
-  extraMapping?: Record<ModelId, string>,
+  extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
-    mapping: { ...MAPPING, ...extraMapping },
+    providerId: "alibaba",
+    mapping: extraMapping,
   });

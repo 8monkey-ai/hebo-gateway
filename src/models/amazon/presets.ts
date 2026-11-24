@@ -1,103 +1,36 @@
-import type { CanonicalProviderId } from "../../providers/types.ts";
-import { presetFor, type DeepPartial } from "../../utils/preset.ts";
-import type { CanonicalModelId, CatalogModel } from "../types.ts";
+import { registerModels } from "../catalog.ts";
+import { defineModelFamily } from "../family.ts";
+import type { ModelsDevCatalog, SnapshotIds } from "../types.ts";
+import snapshot from "./models-dev.json" with { type: "json" };
 
-const NOVA_TEXT_BASE = {
-  modalities: {
-    input: ["text"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["tool_call", "temperature"] as const,
-  providers: ["bedrock"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-const NOVA_MULTIMODAL_BASE = {
-  modalities: {
-    input: ["text", "image", "video", "file"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["attachments", "tool_call", "temperature"] as const,
-  providers: ["bedrock"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-const NOVA_EMBEDDINGS_BASE = {
-  modalities: {
-    input: ["text", "image", "audio", "video", "file"] as const,
-    output: ["embeddings"] as const,
-  },
-  providers: ["bedrock"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-export const novaMicro = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova-micro" as const, {
-  ...NOVA_TEXT_BASE,
-  name: "Nova Micro",
-  created: "2024-12-03",
-  knowledge: "2024-10",
-  context: 128000,
-} satisfies CatalogModel);
-
-export const novaLite = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova-lite" as const, {
-  ...NOVA_MULTIMODAL_BASE,
-  name: "Nova Lite",
-  created: "2024-12-03",
-  knowledge: "2024-10",
-  context: 300000,
-} satisfies CatalogModel);
-
-export const novaPro = presetFor<CanonicalModelId, CatalogModel>()("amazon/nova-pro" as const, {
-  ...NOVA_MULTIMODAL_BASE,
-  name: "Nova Pro",
-  created: "2024-12-03",
-  knowledge: "2024-10",
-  context: 300000,
-} satisfies CatalogModel);
-
-export const novaPremier = presetFor<CanonicalModelId, CatalogModel>()(
-  "amazon/nova-premier" as const,
-  {
-    ...NOVA_MULTIMODAL_BASE,
-    name: "Nova Premier",
-    created: "2024-12-03",
-    knowledge: "2024-10",
-    context: 1000000,
-  } satisfies CatalogModel,
-);
-
-export const nova2Lite = presetFor<CanonicalModelId, CatalogModel>()(
-  "amazon/nova-2-lite" as const,
-  {
-    ...NOVA_TEXT_BASE,
-    name: "Nova 2 Lite",
-    created: "2025-12-01",
-    knowledge: "2024-10",
-    context: 128000,
-  } satisfies CatalogModel,
-);
-
-export const nova2MultimodalEmbeddings = presetFor<CanonicalModelId, CatalogModel>()(
-  "amazon/nova-2-multimodal-embeddings" as const,
-  {
-    ...NOVA_EMBEDDINGS_BASE,
+// Not on models.dev yet.
+const extras: ModelsDevCatalog = {
+  "amazon/nova-2-multimodal-embeddings": {
     name: "Nova 2 Embeddings",
+    family: "nova-embeddings",
     created: "2025-10-28",
+    modalities: { input: ["text", "image", "audio", "video", "file"], output: ["embeddings"] },
     context: 8000,
-  } satisfies CatalogModel,
-);
+    providers: { bedrock: { id: "amazon.nova-2-multimodal-embeddings-v1:0" } },
+  },
+};
 
-const novaAtomic = {
-  v1: [novaMicro, novaLite, novaPro, novaPremier],
-  v2: [nova2Lite, nova2MultimodalEmbeddings],
-} as const;
+const lab = registerModels({
+  namespace: "amazon",
+  provider: "bedrock",
+  snapshot: snapshot as ModelsDevCatalog,
+  extras,
+});
 
-const novaGroups = {
-  "v1.x": [...novaAtomic["v1"]],
-  "v2.x": [...novaAtomic["v2"]],
-} as const;
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
+  > {}
+}
 
-export const nova = {
-  ...novaAtomic,
-  ...novaGroups,
-  latest: [...novaAtomic["v1"], ...novaAtomic["v2"]],
-  embeddings: [nova2MultimodalEmbeddings],
-  all: Object.values(novaAtomic).flat(),
-} as const;
+export const nova = defineModelFamily(lab, {
+  // Nova 1 models carry no version: `amazon/nova-pro`, `amazon/nova-2-lite`.
+  version: /^nova-(?:(\d+)-)?[a-z]+(?:-[a-z]+)*$/u,
+  groups: { embeddings: "nova-*-embeddings*" },
+});

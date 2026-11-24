@@ -1,125 +1,42 @@
-import type { CanonicalProviderId } from "../../providers/types.ts";
-import { presetFor, type DeepPartial } from "../../utils/preset.ts";
-import type { CanonicalModelId, CatalogModel } from "../types.ts";
+import { registerModels } from "../catalog.ts";
+import { defineModelFamily } from "../family.ts";
+import type { ModelsDevCatalog, ModelsDevCatalogModel, SnapshotIds } from "../types.ts";
+import snapshot from "./models-dev.json" with { type: "json" };
 
-const VOYAGE_BASE = {
-  modalities: {
-    input: ["text"] as const,
-    output: ["embeddings"] as const,
-  },
-  providers: ["voyage"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-export const voyage2Code = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-2-code" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 2 Code",
-    created: "2024-01-23",
-    context: 16000,
-  } satisfies CatalogModel,
-);
-
-export const voyage2Finance = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-2-finance" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 2 Finance",
-    created: "2024-06-03",
-    context: 32000,
-  } satisfies CatalogModel,
-);
-
-export const voyage2Law = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-2-law" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 2 Law",
-    created: "2024-04-15",
-    context: 16000,
-  } satisfies CatalogModel,
-);
-
-export const voyage3Code = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-3-code" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 3 Code",
-    created: "2024-12-04",
-    context: 32000,
-  } satisfies CatalogModel,
-);
-
-export const voyage3Large = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-3-large" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 3 Large",
-    created: "2025-01-07",
-    context: 32000,
-  } satisfies CatalogModel,
-);
-
-export const voyage35 = presetFor<CanonicalModelId, CatalogModel>()("voyage/voyage-3.5" as const, {
-  ...VOYAGE_BASE,
-  name: "Voyage 3.5",
-  created: "2025-05-20",
+const embedding = (name: string, created: string): ModelsDevCatalogModel => ({
+  name,
+  family: "voyage",
+  created,
+  modalities: { input: ["text"], output: ["embeddings"] },
   context: 32000,
-} satisfies CatalogModel);
+  providers: { voyage: {} },
+});
 
-export const voyage35Lite = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-3.5-lite" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 3.5 Lite",
-    created: "2025-05-20",
-    context: 32000,
-  } satisfies CatalogModel,
-);
+// Voyage is not a models.dev provider, which only lists its newest models.
+const extras: ModelsDevCatalog = {
+  "voyageai/voyage-4": { providers: { voyage: {} } },
+  "voyageai/voyage-4-large": { providers: { voyage: {} } },
+  "voyageai/voyage-4-lite": { providers: { voyage: {} } },
+  "voyageai/voyage-3.5": embedding("Voyage 3.5", "2025-05-20"),
+  "voyageai/voyage-3.5-lite": embedding("Voyage 3.5 Lite", "2025-05-20"),
+  "voyageai/voyage-3-large": embedding("Voyage 3 Large", "2025-01-07"),
+  "voyageai/voyage-code-3": embedding("Voyage Code 3", "2024-12-04"),
+};
 
-export const voyage4Lite = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-4-lite" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 4 Lite",
-    created: "2026-01-15",
-    context: 32000,
-  } satisfies CatalogModel,
-);
+const lab = registerModels({
+  namespace: "voyageai",
+  provider: "voyage",
+  snapshot: snapshot as ModelsDevCatalog,
+  extras,
+});
 
-export const voyage4 = presetFor<CanonicalModelId, CatalogModel>()("voyage/voyage-4" as const, {
-  ...VOYAGE_BASE,
-  name: "Voyage 4",
-  created: "2026-01-15",
-  context: 32000,
-} satisfies CatalogModel);
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
+  > {}
+}
 
-export const voyage4Large = presetFor<CanonicalModelId, CatalogModel>()(
-  "voyage/voyage-4-large" as const,
-  {
-    ...VOYAGE_BASE,
-    name: "Voyage 4 Large",
-    created: "2026-01-15",
-    context: 32000,
-  } satisfies CatalogModel,
-);
-
-const voyageAtomic = {
-  v2: [voyage2Code, voyage2Finance, voyage2Law],
-  v3: [voyage3Code, voyage3Large],
-  "v3.5": [voyage35, voyage35Lite],
-  v4: [voyage4Lite, voyage4, voyage4Large],
-} as const;
-
-const voyageGroups = {
-  "v2.x": [...voyageAtomic["v2"]],
-  "v3.x": [...voyageAtomic["v3"], ...voyageAtomic["v3.5"]],
-  "v4.x": [...voyageAtomic["v4"]],
-} as const;
-
-export const voyage = {
-  ...voyageAtomic,
-  ...voyageGroups,
-  latest: [voyage2Finance, voyage2Law, voyage3Code, voyage4Lite, voyage4, voyage4Large],
-  all: Object.values(voyageAtomic).flat(),
-} as const;
+export const voyage = defineModelFamily(lab, {
+  version: /^voyage-(?:[a-z]+-)?(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+});

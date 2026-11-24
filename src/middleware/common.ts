@@ -157,7 +157,11 @@ export function extractProviderNamespace(id: string): string {
   if (first === "bedrock-mantle") return "openai";
   // The nested Bedrock Anthropic provider (InvokeModel) is an Anthropic model, so it only
   // reads `anthropic` provider options — unlike the Converse models behind `amazon-bedrock`.
-  if (first === "bedrock" && second === "anthropic") return "anthropic";
+  // Vertex serves Claude through its own Anthropic provider (`googleVertex.anthropic.messages`)
+  // the same way.
+  if ((first === "bedrock" || first === "googleVertex") && second === "anthropic") {
+    return "anthropic";
+  }
   // FUTURE: map vertex to google once AI SDK support per-message level provider options
   if (first === "vertex" || second === "vertex") return "vertex";
   return first!;

@@ -2,12 +2,12 @@ import { expect, test } from "bun:test";
 
 import { createVertex } from "@ai-sdk/google-vertex";
 
-import { parseResponse, postJson } from "../../../test/helpers/http";
-import { chatCompletions } from "../../endpoints/chat-completions/handler";
-import type { ChatCompletions } from "../../endpoints/chat-completions/schema";
-import { defineModelCatalog } from "../../models/catalog";
-import { gemini36Flash } from "../../models/google/presets";
-import { withCanonicalIdsForVertex } from "./canonical";
+import { parseResponse, postJson } from "../../../test/helpers/http.ts";
+import { chatCompletions } from "../../endpoints/chat-completions/handler.ts";
+import type { ChatCompletions } from "../../endpoints/chat-completions/schema.ts";
+import { defineModelCatalog } from "../../models/catalog.ts";
+import { gemini } from "../../models/google/presets.ts";
+import { withCanonicalIdsForVertex } from "./canonical.ts";
 
 type GeminiRequest = { contents: { parts: { thoughtSignature?: string }[] }[] };
 
@@ -44,14 +44,16 @@ const endpoint = chatCompletions({
       }),
     ),
   },
-  models: defineModelCatalog(gemini36Flash),
+  // Served from the bundled models.dev snapshot.
+  models: defineModelCatalog(gemini["v3.7"]),
+  advanced: { catalog: { source: false } },
 });
 
 const send = async (messages: unknown[]) =>
   parseResponse<ChatCompletions>(
     await endpoint.handler(
       postJson("http://localhost/chat/completions", {
-        model: "google/gemini-3.6-flash",
+        model: "google/gemini-3.7-flash",
         tools: [{ type: "function", function: { name: "get_weather", parameters: {} } }],
         messages,
       }),

@@ -8,6 +8,7 @@ export const withCanonicalIdsForAzure = (
   extraMapping?: Partial<Record<ModelId, string>>,
 ) =>
   withCanonicalIds(provider, {
+    providerId: "azure",
     mapping: extraMapping,
     options: {
       stripNamespace: true,

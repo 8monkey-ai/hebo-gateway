@@ -38,6 +38,8 @@ describe("extractProviderNamespace", () => {
     expect(extractProviderNamespace("vertex.anthropic.messages")).toBe("vertex");
     // Bedrock serves Claude through InvokeModel, which takes the Anthropic request shape.
     expect(extractProviderNamespace("bedrock.anthropic.messages")).toBe("anthropic");
+    // So does Vertex, through its own Anthropic provider.
+    expect(extractProviderNamespace("googleVertex.anthropic.messages")).toBe("anthropic");
   });
 
   test("should handle Azure (default to first component)", () => {

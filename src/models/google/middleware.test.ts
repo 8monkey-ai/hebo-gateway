@@ -1,14 +1,16 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
+import type { JSONObject } from "@ai-sdk/provider";
 import { MockLanguageModelV4 } from "ai/test";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import {
   runTranscriptionChain,
   transcriptionProviderOptions,
 } from "../../../test/helpers/transcription.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
 import { wordSegmentsMiddleware } from "../../middleware/transcription.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import type { ModelSpec } from "../types.ts";
 import {
   geminiDimensionsMiddleware,
   geminiPromptCachingMiddleware,
@@ -16,45 +18,13 @@ import {
   geminiTranscribeMiddleware,
 } from "./middleware.ts";
 
-test("geminiReasoningMiddleware > matching patterns", () => {
-  const matching = [
-    "google/gemini-3-flash-preview",
-    "google/gemini-3.1-flash-lite",
-    "google/gemini-3.1-pro-preview",
-    "google/gemini-3.7-flash",
-    "google/gemini-3.8-flash",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
-
-  const nonMatching = [
-    "google/gemini-1.5-pro",
-    "google/gemini-2.5-flash-lite",
-    "google/gemini-2.5-flash",
-    "google/gemini-2.5-pro",
-  ];
-
-  for (const id of matching) {
+test("geminiReasoningMiddleware > matches every Gemini, prompt caching only Gemini 3", () => {
+  for (const id of ["google/gemini-3.7-flash", "google/gemini-4-argon", "google/gemini-5-pro"]) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
     expect(middleware).toContain(geminiReasoningMiddleware);
-    expect(middleware).toContain(geminiPromptCachingMiddleware);
-  }
-
-  for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).not.toContain(geminiReasoningMiddleware);
-  }
-});
-
-test("geminiReasoningMiddleware > matches Gemini 4 without explicit prompt caching", () => {
-  const ids = [
-    "google/gemini-4-hydrogen",
-    "google/gemini-4-argon",
-    "google/gemini-4-carbon",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
-
-  for (const id of ids) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(geminiReasoningMiddleware);
-    expect(middleware).not.toContain(geminiPromptCachingMiddleware);
+    expect(middleware.includes(geminiPromptCachingMiddleware)).toBe(
+      id.startsWith("google/gemini-3"),
+    );
   }
 });
 
@@ -82,10 +52,8 @@ test("geminiPromptCachingMiddleware > should map normalized cached_content", asy
 });
 
 test("geminiDimensionsMiddleware > matching patterns", () => {
-  const matching = ["google/gemini-embedding-2"] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
-  const nonMatching = [
-    "google/gemini-3-flash-preview",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
+  const matching = ["google/gemini-embedding-2"];
+  const nonMatching = ["google/gemini-3-flash-preview"];
 
   for (const id of matching) {
     const middleware = modelMiddlewareMatcher.resolve({ kind: "embedding", modelId: id });
@@ -98,300 +66,53 @@ test("geminiDimensionsMiddleware > matching patterns", () => {
   }
 });
 
-test("geminiReasoningMiddleware > should enable thinking for Gemini 3 Flash effort", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 2000,
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "medium" },
-      },
-    },
-  };
+const thinkingOf = async (spec: ModelSpec, reasoning: JSONObject): Promise<unknown> =>
+  (await transform(geminiReasoningMiddleware, withReasoning(reasoning), { spec }))
+    .providerOptions?.["google"]?.["thinkingConfig"];
 
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
+// models.dev thinking levels of a few models.
+const FLASH_3: ModelSpec = { reasoning: { effort: ["minimal", "low", "medium", "high"] } };
+const GEMINI_4: ModelSpec = { reasoning: { effort: ["low", "medium", "high"] } };
+const HYDROGEN: ModelSpec = { reasoning: { effort: ["low", "medium", "high", "xhigh"] } };
+
+describe("geminiReasoningMiddleware", () => {
+  test.each([
+    [FLASH_3, "minimal", "minimal"],
+    [GEMINI_4, "minimal", "low"],
+    [GEMINI_4, "max", "high"],
+    [HYDROGEN, "max", "xhigh"],
+    [GEMINI_4, "medium", "medium"],
+  ] as const)("maps to a level the model lists (%#)", async (spec, effort, thinkingLevel) => {
+    expect(await thinkingOf(spec, { enabled: true, effort })).toEqual({
+      thinkingLevel,
+      includeThoughts: true,
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 2000,
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: true,
-          thinkingLevel: "medium",
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("geminiReasoningMiddleware > should map medium effort for Gemini 3.1 Pro", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "medium" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-pro-preview" }),
+  test("maps off to the lowest level, without thoughts", async () => {
+    expect(await thinkingOf(FLASH_3, { enabled: false, effort: "none" })).toEqual({
+      thinkingLevel: "minimal",
+      includeThoughts: false,
+    });
+    expect(await thinkingOf(GEMINI_4, { enabled: false })).toEqual({
+      thinkingLevel: "low",
+      includeThoughts: false,
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: true,
-          thinkingLevel: "medium",
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("geminiReasoningMiddleware > should normalize none effort for Gemini 3.1 Flash Lite", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false, effort: "none" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "google/gemini-3.1-flash-lite" }),
+  test("excludes thoughts when asked", async () => {
+    expect(await thinkingOf(GEMINI_4, { enabled: true, effort: "high", exclude: true })).toEqual({
+      thinkingLevel: "high",
+      includeThoughts: false,
+    });
   });
 
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: false,
-          thinkingBudget: 0,
-        },
-      },
-      unknown: {},
-    },
+  test("passes explicit thinking options through", async () => {
+    const params = withReasoning({ enabled: true, effort: "high" });
+    params.providerOptions!["unknown"]!["thinking_config"] = { thinking_budget: 100 };
+    const result = await transform(geminiReasoningMiddleware, params, { spec: GEMINI_4 });
+    expect(result.providerOptions?.["google"]).toBeUndefined();
   });
-});
-
-test("geminiReasoningMiddleware > should handle disabled reasoning", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false, effort: "none" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: false,
-          thinkingBudget: 0,
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("geminiReasoningMiddleware > should default reasoning effort for Gemini 3 Flash", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "google/gemini-3-flash-preview" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-// Uses the provider-native id: newer Gemini 3.x minors must hit the same branch
-// without an added pattern, so 3.8+ needs no middleware change.
-test("geminiReasoningMiddleware > should map thinking level for Gemini 3.7 Flash", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "high" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "gemini-3.7-flash" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          thinkingLevel: "high",
-          includeThoughts: true,
-        },
-      },
-      unknown: {},
-    },
-  });
-});
-
-test("geminiReasoningMiddleware > should keep the minimal level on Gemini 3.6 Flash", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "minimal" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "gemini-3.6-flash" }),
-  });
-
-  expect(result.providerOptions).toEqual({
-    google: {
-      thinkingConfig: { thinkingLevel: "minimal", includeThoughts: true },
-    },
-    unknown: {},
-  });
-});
-
-// Flash dropped `minimal` after 3.6: an unlisted level is rejected, so it becomes `low`.
-test("geminiReasoningMiddleware > should collapse minimal to low on Gemini 3.8 Flash", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "minimal" },
-      },
-    },
-  };
-
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "gemini-3.8-flash" }),
-  });
-
-  expect(result.providerOptions).toEqual({
-    google: {
-      thinkingConfig: { thinkingLevel: "low", includeThoughts: true },
-    },
-    unknown: {},
-  });
-});
-
-const runGemini4Reasoning = async (
-  modelId: string,
-  reasoning: { enabled: boolean; effort: string },
-) => {
-  const result = await geminiReasoningMiddleware.transformParams!({
-    type: "generate",
-    params: { prompt: [], providerOptions: { unknown: { reasoning } } },
-    model: new MockLanguageModelV4({ modelId }),
-  });
-  return result.providerOptions?.["google"]?.["thinkingConfig"];
-};
-
-// Gemini 4 always thinks and rejects `thinkingBudget` and `minimal` with a 400.
-test("geminiReasoningMiddleware > maps none and minimal to low on Gemini 4", async () => {
-  const ids = ["gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen"];
-
-  const none = await Promise.all(
-    ids.map((id) => runGemini4Reasoning(id, { enabled: false, effort: "none" })),
-  );
-  const minimal = await Promise.all(
-    ids.map((id) => runGemini4Reasoning(id, { enabled: true, effort: "minimal" })),
-  );
-
-  for (const config of none) {
-    expect(config).toEqual({ thinkingLevel: "low", includeThoughts: false });
-  }
-  for (const config of minimal) {
-    expect(config).toEqual({ thinkingLevel: "low", includeThoughts: true });
-  }
-});
-
-test("geminiReasoningMiddleware > passes medium and high through on Gemini 4", async () => {
-  expect(await runGemini4Reasoning("gemini-4-argon", { enabled: true, effort: "medium" })).toEqual({
-    thinkingLevel: "medium",
-    includeThoughts: true,
-  });
-  expect(await runGemini4Reasoning("gemini-4-carbon", { enabled: true, effort: "high" })).toEqual({
-    thinkingLevel: "high",
-    includeThoughts: true,
-  });
-});
-
-// Only Hydrogen lists `xhigh`; Argon and Carbon top out at `high`.
-test("geminiReasoningMiddleware > maps xhigh and max per Gemini 4 model", async () => {
-  const cases = [
-    ["gemini-4-hydrogen", "xhigh"],
-    ["gemini-4-argon", "high"],
-    ["gemini-4-carbon", "high"],
-  ] as const;
-
-  const results = await Promise.all(
-    cases.flatMap(([id]) =>
-      ["xhigh", "max"].map((effort) => runGemini4Reasoning(id, { enabled: true, effort })),
-    ),
-  );
-
-  expect(results).toEqual(
-    cases.flatMap(([, level]) => [
-      { thinkingLevel: level, includeThoughts: true },
-      { thinkingLevel: level, includeThoughts: true },
-    ]),
-  );
 });
 
 test("geminiTranscribeMiddleware > matching patterns", () => {

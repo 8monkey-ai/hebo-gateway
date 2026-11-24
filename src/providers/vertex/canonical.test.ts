@@ -2,7 +2,15 @@ import { expect, test } from "bun:test";
 
 import { createVertex } from "@ai-sdk/google-vertex";
 
-import { withCanonicalIdsForVertex } from "./canonical.ts";
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
+import { withCanonicalIdsForVertex as withCanonicalIds } from "./canonical.ts";
+
+/** Wraps a Vertex provider and hands it the bundled catalog's native IDs, as a gateway does. */
+const withCanonicalIdsForVertex = (...args: Parameters<typeof withCanonicalIds>) => {
+  const provider = withCanonicalIds(...args);
+  loadBundledCatalog("vertex", provider);
+  return provider;
+};
 
 process.env["GOOGLE_VERTEX_PROJECT"] = "test-project";
 
@@ -12,9 +20,9 @@ const vertex = createVertex({
   location: "us-central1",
 });
 
-test("google/gemma-4-26b-a4b routes to the MaaS OpenAI-compatible provider", () => {
+test("models with a publisher in their native ID route to the MaaS provider", () => {
   const provider = withCanonicalIdsForVertex(vertex);
-  const model = provider.languageModel("google/gemma-4-26b-a4b");
+  const model = provider.languageModel("google/gemma-4-26b-a4b-it");
   expect(model.modelId).toBe("google/gemma-4-26b-a4b-it-maas");
   expect(model.provider).toBe("vertex.maas.chat");
 });
@@ -41,6 +49,13 @@ test("Gemini 4 models resolve without an explicit mapping", () => {
     expect(model.modelId).toBe(id);
     expect(model.provider).toBe("google.vertex.chat");
   }
+});
+
+test("Claude routes to the Vertex Anthropic provider under its bare ID", () => {
+  const provider = withCanonicalIdsForVertex(vertex);
+  const model = provider.languageModel("anthropic/claude-sonnet-5-5");
+  expect(model.modelId).toBe("claude-sonnet-5-5");
+  expect(model.provider).toBe("googleVertex.anthropic.messages");
 });
 
 // ---------------------------------------------------------------------------
@@ -76,7 +91,7 @@ async function captureMaasRequest(
   // The capturing fetch always throws, so only the request itself is asserted on.
   try {
     await provider
-      .languageModel("google/gemma-4-26b-a4b")
+      .languageModel("google/gemma-4-26b-a4b-it")
       .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
   } catch {
     // expected
@@ -90,7 +105,7 @@ test("MaaS override uses the provider's project instead of GOOGLE_VERTEX_PROJECT
 
   expect(url).toContain("/projects/my-project/");
   expect(url).not.toContain("test-project");
-  // Gemma is only served from the global MaaS endpoint.
+  // MaaS models are served from the global endpoint.
   expect(url).toContain("/locations/global/");
 });
 
@@ -118,6 +133,39 @@ test("MaaS override falls back to GOOGLE_VERTEX_PROJECT when no project is confi
   const { url } = await captureMaasRequest({ location: "us-central1" });
 
   expect(url).toContain("/projects/test-project/");
+});
+
+test("Claude is sent to rawPredict on the global endpoint with the provider's credentials", async () => {
+  let captured: { url: string; headers: Headers; body: Record<string, unknown> } | undefined;
+  const provider = withCanonicalIdsForVertex(
+    createVertex({
+      project: "my-project",
+      location: "us-central1",
+      googleAuthOptions: authClientFor("configured-token"),
+      fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+        captured = {
+          url: input instanceof Request ? input.url : input.toString(),
+          headers: new Headers(init?.headers),
+          body: JSON.parse(init?.body as string) as Record<string, unknown>,
+        };
+        throw new Error("captured");
+      }) as unknown as typeof fetch,
+    }),
+  );
+
+  try {
+    await provider
+      .languageModel("anthropic/claude-sonnet-5-5")
+      .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+  } catch {
+    // expected
+  }
+
+  expect(captured!.url).toBe(
+    "https://aiplatform.googleapis.com/v1/projects/my-project/locations/global/publishers/anthropic/models/claude-sonnet-5-5:rawPredict",
+  );
+  expect(captured!.headers.get("authorization")).toBe("Bearer configured-token");
+  expect(captured!.body["anthropic_version"]).toBe("vertex-2023-10-16");
 });
 
 // ---------------------------------------------------------------------------

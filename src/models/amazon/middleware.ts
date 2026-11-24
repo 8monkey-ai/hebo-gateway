@@ -4,12 +4,11 @@ import type {
 } from "@ai-sdk/amazon-bedrock";
 import type { EmbeddingModelMiddleware, LanguageModelMiddleware } from "ai";
 
-import type {
-  ChatCompletionsReasoningConfig,
-  ChatCompletionsReasoningEffort,
-} from "../../endpoints/chat-completions/schema.ts";
 import type { EmbeddingsDimensions } from "../../endpoints/embeddings/schema.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
+import { reasoningControls, resolveReasoning, takeReasoning } from "../../middleware/reasoning.ts";
+import { specOf } from "../../providers/registry.ts";
+import type { ReasoningControls } from "../types.ts";
 
 // Convert `dimensions` (OpenAI) to `embeddingDimension` (Nova)
 export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
@@ -33,52 +32,31 @@ export const novaDimensionsMiddleware: EmbeddingModelMiddleware = {
   },
 };
 
-function mapNovaEffort(
-  effort: ChatCompletionsReasoningEffort,
-): "low" | "medium" | "high" | undefined {
-  switch (effort) {
-    case "none":
-      return undefined;
-    case "minimal":
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-    case "xhigh":
-    case "max":
-      return "high";
-  }
+// Current generation, assumed for models without reasoning data (e.g. custom ones).
+const NOVA: ReasoningControls = { toggle: true, effort: ["low", "medium", "high"] };
 
-  return undefined;
-}
-
+// Nova takes a reasoning toggle and a maximum effort. What each model takes comes from its
+// spec (models.dev).
 export const novaReasoningMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   // oxlint-disable-next-line require-await
-  transformParams: async ({ params }) => {
-    const unknown = params.providerOptions?.["unknown"];
-    if (!unknown) return params;
+  transformParams: async ({ params, model }) => {
+    const spec = specOf(model);
+    const controls = reasoningControls(spec, NOVA);
+    const reasoning = takeReasoning(params);
+    if (!reasoning || !controls) return params;
 
-    const reasoning = unknown["reasoning"] as ChatCompletionsReasoningConfig;
-    if (!reasoning) return params;
+    const resolved = resolveReasoning(reasoning, controls);
+    if (!resolved) return params;
 
+    // FUTURE: warn if reasoning.max_tokens (unsupported) was ignored
     const target = (params.providerOptions!["amazon"] ??= {}) as AmazonBedrockLanguageModelOptions;
-
-    if (!reasoning.enabled) {
-      target.reasoningConfig = { type: "disabled" };
-    } else if (reasoning.effort) {
-      // FUTURE: warn if mapNovaEffort modified the effort
-      target.reasoningConfig = {
-        type: "enabled",
-        maxReasoningEffort: mapNovaEffort(reasoning.effort),
-      };
-    } else {
-      // FUTURE: warn if reasoning.max_tokens (unsupported) was ignored
-      target.reasoningConfig = { type: "enabled" };
-    }
-
-    delete unknown["reasoning"];
+    target.reasoningConfig = resolved.enabled
+      ? {
+          type: "enabled",
+          maxReasoningEffort: resolved.effort as "low" | "medium" | "high" | undefined,
+        }
+      : { type: "disabled" };
 
     return params;
   },
@@ -88,6 +66,6 @@ modelMiddlewareMatcher.useForModel("amazon/nova-*embeddings*", {
   embedding: [novaDimensionsMiddleware],
 });
 
-modelMiddlewareMatcher.useForModel("amazon/nova-2-*", {
+modelMiddlewareMatcher.useForModel("amazon/nova-*", {
   language: [novaReasoningMiddleware],
 });

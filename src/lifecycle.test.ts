@@ -11,6 +11,7 @@ import { MockProviderV4 } from "ai/test";
 
 import { models } from "./endpoints/models/handler.ts";
 import { winterCgHandler } from "./lifecycle.ts";
+import { defineModelCatalog } from "./models/catalog.ts";
 
 describe("winterCgHandler", () => {
   afterEach(() => {
@@ -29,13 +30,13 @@ describe("winterCgHandler", () => {
       providers: {
         openai: new MockProviderV4(),
       },
-      models: {
+      models: defineModelCatalog({
         "openai/gpt-oss-20b": {
           name: "GPT-OSS 20B",
           modalities: { input: ["text"], output: ["text"] },
           providers: ["openai"],
         },
-      },
+      }),
       telemetry: {
         enabled: true,
         tracer,
@@ -74,13 +75,13 @@ describe("winterCgHandler", () => {
       },
       {
         providers: { openai: new MockProviderV4() },
-        models: {
+        models: defineModelCatalog({
           "openai/gpt-oss-20b": {
             name: "GPT-OSS 20B",
             modalities: { input: ["text"], output: ["text"] },
             providers: ["openai"],
           },
-        },
+        }),
       },
     );
 
@@ -105,13 +106,13 @@ describe("winterCgHandler", () => {
       providers: {
         openai: new MockProviderV4(),
       },
-      models: {
+      models: defineModelCatalog({
         "openai/gpt-oss-20b": {
           name: "GPT-OSS 20B",
           modalities: { input: ["text"], output: ["text"] },
           providers: ["openai"],
         },
-      },
+      }),
       telemetry: {
         enabled: true,
         tracer,
@@ -156,13 +157,13 @@ describe("winterCgHandler", () => {
       },
       {
         providers: { openai: new MockProviderV4() },
-        models: {
+        models: defineModelCatalog({
           "openai/gpt-oss-20b": {
             name: "GPT-OSS 20B",
             modalities: { input: ["text"], output: ["text"] },
             providers: ["openai"],
           },
-        },
+        }),
         telemetry: { enabled: true, tracer: tracerProvider.getTracer("test") },
       },
     );

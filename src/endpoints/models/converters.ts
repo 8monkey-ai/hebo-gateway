@@ -3,7 +3,15 @@ import { toResponse } from "../../utils/response.ts";
 import type { ModelList, Model } from "./schema.ts";
 
 export function toModel(id: string, catalogModel: CatalogModel): Model {
-  const { created, providers, modalities, additionalProperties, ...rest } = catalogModel;
+  const {
+    created,
+    providers,
+    modalities,
+    additionalProperties,
+    family: _family,
+    status: _status,
+    ...rest
+  } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);
   if (created) {
     const parsed = Date.parse(created);
@@ -22,10 +30,9 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
       modality: modalities && `${modalities.input.join("+")}->${modalities.output.join("+")}`,
       output_modalities: modalities?.output ?? [],
     },
-    endpoints:
-      providers?.map((provider) => ({
-        tag: provider,
-      })) || [],
+    endpoints: providers.map((provider) => ({ tag: provider })),
+    // OpenRouter convention. models.dev has no retirement dates; set it via `additionalProperties`.
+    expiration_date: null,
     ...rest,
     ...additionalProperties,
   };

@@ -1,259 +1,72 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
-import { MockLanguageModelV4 } from "ai/test";
+import type { JSONObject } from "@ai-sdk/provider";
 
+import { transform, withReasoning } from "../../../test/helpers/middleware.ts";
 import { modelMiddlewareMatcher } from "../../middleware/matcher.ts";
-import { calculateReasoningBudgetFromEffort } from "../../middleware/utils.ts";
-import { CANONICAL_MODEL_IDS } from "../../models/types.ts";
+import type { ModelSpec } from "../types.ts";
 import { qwenReasoningMiddleware } from "./middleware.ts";
 
-test("qwenReasoningMiddleware > matching patterns", () => {
-  const matching = [
-    "alibaba/qwen3.5-397b",
-    "alibaba/qwen3.5-27b",
-    "alibaba/qwen3.5-plus",
-    "alibaba/qwen3.5-flash",
-    "alibaba/qwen3.5-27b",
-    "alibaba/qwen3.6-plus",
-    "alibaba/qwen3.6-flash",
-    "alibaba/qwen3.8-max",
-    "alibaba/qwen3.8-omni-flash",
-    "alibaba/qwen3.8-27b",
-  ] satisfies (typeof CANONICAL_MODEL_IDS)[number][];
-
-  const nonMatching = [
-    "openai/gpt-5",
-    "anthropic/claude-opus-4.7",
-    "google/gemini-3-flash-preview",
-  ];
-
-  for (const id of matching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).toContain(qwenReasoningMiddleware);
-  }
-
-  for (const id of nonMatching) {
-    const middleware = modelMiddlewareMatcher.resolve({ kind: "text", modelId: id });
-    expect(middleware).not.toContain(qwenReasoningMiddleware);
+test("qwenReasoningMiddleware > matches every Alibaba model", () => {
+  for (const id of ["alibaba/qwen3.6-plus", "alibaba/qwen4-max"]) {
+    expect(modelMiddlewareMatcher.resolve({ kind: "text", modelId: id })).toContain(
+      qwenReasoningMiddleware,
+    );
   }
 });
 
-test("qwenReasoningMiddleware > should enable thinking with medium effort", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "medium" },
-      },
-    },
-  };
+const optionsOf = async (spec: ModelSpec, reasoning: JSONObject, maxOutputTokens?: number) =>
+  (
+    await transform(qwenReasoningMiddleware, withReasoning(reasoning, { maxOutputTokens }), {
+      spec: spec,
+    })
+  ).providerOptions;
 
-  const result = await qwenReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
-  });
+const QWEN: ModelSpec = { output: 65_536, reasoning: { toggle: true, budget: {} } };
 
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      alibaba: {
-        enableThinking: true,
-        thinkingBudget: calculateReasoningBudgetFromEffort("medium", 8192),
-      },
-      unknown: {
-        reasoning: undefined,
-      },
-    },
-  });
-});
-
-test("qwenReasoningMiddleware > should disable thinking with none effort", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: false, effort: "none" },
-      },
-    },
-  };
-
-  const result = await qwenReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-plus" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      alibaba: {
-        enableThinking: false,
-        thinkingBudget: undefined,
-      },
-      unknown: {
-        reasoning: undefined,
-      },
-    },
-  });
-});
-
-test("qwenReasoningMiddleware > should use explicit max_tokens", async () => {
-  const params = {
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, max_tokens: 4096 },
-      },
-    },
-  };
-
-  const result = await qwenReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3-coder-next" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    maxOutputTokens: 8192,
-    providerOptions: {
-      alibaba: {
-        enableThinking: true,
-        thinkingBudget: 4096,
-      },
-      unknown: {
-        reasoning: undefined,
-      },
-    },
-  });
-});
-
-test("qwenReasoningMiddleware > should use default max tokens when not specified", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      unknown: {
-        reasoning: { enabled: true, effort: "high" },
-      },
-    },
-  };
-
-  const result = await qwenReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      alibaba: {
-        enableThinking: true,
-        thinkingBudget: calculateReasoningBudgetFromEffort("high", 16384),
-      },
-      unknown: {
-        reasoning: undefined,
-      },
-    },
-  });
-});
-
-test("qwenReasoningMiddleware > should map all effort levels to correct budgets", async () => {
-  const maxTokens = 8192;
-  const cases = [
-    { effort: "minimal" as const, enabled: true },
-    { effort: "low" as const, enabled: true },
-    { effort: "medium" as const, enabled: true },
-    { effort: "high" as const, enabled: true },
-    { effort: "xhigh" as const, enabled: true },
-    { effort: "max" as const, enabled: true },
-  ];
-
-  await Promise.all(
-    cases.map(async ({ effort, enabled }) => {
-      const params = {
-        prompt: [],
-        maxOutputTokens: maxTokens,
-        providerOptions: {
-          unknown: {
-            reasoning: { enabled, effort },
-          },
-        },
-      };
-
-      const result = await qwenReasoningMiddleware.transformParams!({
-        type: "generate",
-        params,
-        model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
-      });
-
-      expect(result).toEqual({
-        prompt: [],
-        maxOutputTokens: maxTokens,
-        providerOptions: {
-          alibaba: {
-            enableThinking: true,
-            thinkingBudget: calculateReasoningBudgetFromEffort(effort, maxTokens),
-          },
-          unknown: {
-            reasoning: undefined,
-          },
-        },
-      });
-    }),
-  );
-});
-
-test("qwenReasoningMiddleware > should clear pre-existing enableThinking when disabled", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
-      alibaba: {
-        enableThinking: true,
-      },
-      unknown: {
-        reasoning: { enabled: false },
-      },
-    },
-  };
-
-  const result = await qwenReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
-  });
-
-  expect(result).toEqual({
-    prompt: [],
-    providerOptions: {
-      alibaba: {
-        enableThinking: false,
-        thinkingBudget: undefined,
-      },
-      unknown: {
-        reasoning: undefined,
-      },
-    },
-  });
-});
-
-test("qwenReasoningMiddleware > should skip when no reasoning config", async () => {
-  const params = {
-    prompt: [],
-    providerOptions: {
+describe("qwenReasoningMiddleware", () => {
+  test.each([
+    ["minimal", 6553],
+    ["low", 13_107],
+    ["medium", 32_768],
+    ["high", 52_428],
+    ["max", 65_536],
+  ] as const)("computes the %s budget from the output limit", async (effort, budget) => {
+    expect(await optionsOf(QWEN, { enabled: true, effort })).toEqual({
+      alibaba: { enableThinking: true, thinkingBudget: budget },
       unknown: {},
-    },
-  };
-
-  const result = await qwenReasoningMiddleware.transformParams!({
-    type: "generate",
-    params,
-    model: new MockLanguageModelV4({ modelId: "alibaba/qwen3.5-397b" }),
+    });
   });
 
-  expect(result).toEqual(params);
+  test("prefers max_tokens, then the request's output limit", async () => {
+    expect(await optionsOf(QWEN, { enabled: true, max_tokens: 2048 })).toEqual({
+      alibaba: { enableThinking: true, thinkingBudget: 2048 },
+      unknown: {},
+    });
+    expect(await optionsOf(QWEN, { enabled: true, effort: "medium" }, 8192)).toEqual({
+      alibaba: { enableThinking: true, thinkingBudget: 4096 },
+      unknown: {},
+    });
+  });
+
+  test("enables thinking without a budget when none is asked for", async () => {
+    expect(await optionsOf(QWEN, {})).toEqual({ alibaba: { enableThinking: true }, unknown: {} });
+  });
+
+  test.each([{ enabled: false }, { enabled: false, effort: "none" }])(
+    "turns thinking off (%o)",
+    async (reasoning) => {
+      expect(await optionsOf(QWEN, reasoning)).toEqual({
+        alibaba: { enableThinking: false },
+        unknown: {},
+      });
+    },
+  );
+
+  test("leaves requests without reasoning untouched", async () => {
+    const params = { providerOptions: { unknown: {}, alibaba: { enableThinking: true } } };
+    expect(
+      (await transform(qwenReasoningMiddleware, params, { spec: QWEN })).providerOptions,
+    ).toEqual(params.providerOptions);
+  });
 });

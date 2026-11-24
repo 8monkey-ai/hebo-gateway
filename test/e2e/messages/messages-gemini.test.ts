@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
 
-import { gemini3FlashPreview } from "../../../src/models/google/index.ts";
 import {
   createVertexTestServer,
   GOOGLE_VERTEX_API_KEY,
@@ -31,7 +30,7 @@ let client: Anthropic;
 
 describe.skipIf(!hasVertexCredentials)("Messages E2E (Vertex - thought_signature)", () => {
   beforeAll(() => {
-    testServer = createVertexTestServer(gemini3FlashPreview());
+    testServer = createVertexTestServer("google/gemini-3-flash-preview");
     client = new Anthropic({
       apiKey: "not-needed",
       baseURL: testServer.baseUrl,

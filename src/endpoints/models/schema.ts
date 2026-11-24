@@ -27,6 +27,8 @@ export const ModelSchema = z.looseObject({
     .optional()
     .meta({ extension: true }),
   capabilities: z.array(z.string()).readonly().optional().meta({ extension: true }),
+  /** The date (`YYYY-MM-DD`) after which the model may be removed, as on OpenRouter. */
+  expiration_date: z.string().nullable().optional().meta({ extension: true }),
 });
 export type Model = z.infer<typeof ModelSchema>;
 

@@ -1,0 +1,474 @@
+{
+  "anthropic/claude-fable-5": {
+    "name": "Claude Fable 5",
+    "family": "claude-fable",
+    "created": "2026-06-07",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-fable-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-fable-5",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-fable-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "deepinfra": {
+        "id": "anthropic/claude-fable-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-fable-5-1": {
+    "name": "Claude Fable 5.1",
+    "family": "claude-fable",
+    "created": "2026-09-01",
+    "knowledge": "2026-06",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-fable-5-1",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-fable-5-1",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-fable-5-1",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-fable-5-2": {
+    "name": "Claude Fable 5.2",
+    "family": "claude-fable",
+    "created": "2026-11-09",
+    "knowledge": "2026-06",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-fable-5-2",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-fable-5-2",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-fable-5-2",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-haiku-5-5": {
+    "name": "Claude Haiku 5.5",
+    "family": "claude-haiku",
+    "created": "2026-10-07",
+    "knowledge": "2026-06",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-haiku-5-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-haiku-5-5",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-haiku-5-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-opus-4-6": {
+    "name": "Claude Opus 4.6",
+    "family": "claude-opus",
+    "created": "2026-02-04",
+    "knowledge": "2025-05-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-opus-4-6",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-opus-4-6-v1",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-4-6",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      }
+    }
+  },
+  "anthropic/claude-opus-4-7": {
+    "name": "Claude Opus 4.7",
+    "family": "claude-opus",
+    "created": "2026-04-14",
+    "knowledge": "2026-01-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-opus-4-7",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-opus-4-7",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-4-7",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-opus-4-8": {
+    "name": "Claude Opus 4.8",
+    "family": "claude-opus",
+    "created": "2026-05-28",
+    "knowledge": "2026-01",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-opus-4-8",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-opus-4-8",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-4-8",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-opus-5": {
+    "name": "Claude Opus 5",
+    "family": "claude-opus",
+    "created": "2026-07-24",
+    "knowledge": "2026-05",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-opus-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-opus-5",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-opus-5-5": {
+    "name": "Claude Opus 5.5",
+    "family": "claude-opus",
+    "created": "2026-09-22",
+    "knowledge": "2026-06",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-opus-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-opus-5-5",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-opus-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-sonnet-4-6": {
+    "name": "Claude Sonnet 4.6",
+    "family": "claude-sonnet",
+    "created": "2026-02-17",
+    "knowledge": "2025-08-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-sonnet-4-6",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-sonnet-4-6",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      },
+      "vertex": {
+        "id": "claude-sonnet-4-6",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "max"],
+          "budget": {
+            "min": 1024
+          }
+        }
+      }
+    }
+  },
+  "anthropic/claude-sonnet-5": {
+    "name": "Claude Sonnet 5",
+    "family": "claude-sonnet",
+    "created": "2026-06-29",
+    "knowledge": "2026-01-31",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-sonnet-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-sonnet-5",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-sonnet-5",
+        "output": 128000,
+        "reasoning": {
+          "toggle": true,
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  },
+  "anthropic/claude-sonnet-5-5": {
+    "name": "Claude Sonnet 5.5",
+    "family": "claude-sonnet",
+    "created": "2026-09-28",
+    "knowledge": "2026-06",
+    "modalities": {
+      "input": ["text", "image", "file"],
+      "output": ["text"]
+    },
+    "context": 1000000,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "providers": {
+      "anthropic": {
+        "id": "claude-sonnet-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "bedrock": {
+        "id": "anthropic.claude-sonnet-5-5",
+        "profile": "optional",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      },
+      "vertex": {
+        "id": "claude-sonnet-5-5",
+        "output": 128000,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh", "max"]
+        }
+      }
+    }
+  }
+}

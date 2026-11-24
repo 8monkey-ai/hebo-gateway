@@ -1,36 +1,32 @@
-import type { CanonicalProviderId } from "../../providers/types.ts";
-import { presetFor, type DeepPartial } from "../../utils/preset.ts";
-import type { CanonicalModelId, CatalogModel } from "../types.ts";
+import { registerModels } from "../catalog.ts";
+import { defineModelFamily } from "../family.ts";
+import type { ModelsDevCatalog, SnapshotIds } from "../types.ts";
+import snapshot from "./models-dev.json" with { type: "json" };
 
-// MAI-Transcribe models are served by Azure's Speech API (not Azure OpenAI deployments).
-const MAI_TRANSCRIBE_BASE = {
-  modalities: {
-    input: ["audio"] as const,
-    output: ["transcription"] as const,
-  },
-  providers: ["azure"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-export const maiTranscribe2 = presetFor<CanonicalModelId, CatalogModel>()(
-  "microsoft/mai-transcribe-2" as const,
-  {
-    ...MAI_TRANSCRIBE_BASE,
+// Not on models.dev yet. Served by Azure's Speech API (not Azure OpenAI deployments).
+const extras: ModelsDevCatalog = {
+  "microsoft/mai-transcribe-2": {
     name: "MAI-Transcribe 2",
     created: "2026-09-03",
-  } satisfies CatalogModel,
-);
+    modalities: { input: ["audio"], output: ["transcription"] },
+    providers: { azure: {} },
+  },
+};
 
-const maiTranscribeAtomic = {
-  v2: [maiTranscribe2],
-} as const;
+const lab = registerModels({
+  namespace: "microsoft",
+  provider: "azure",
+  snapshot: snapshot as ModelsDevCatalog,
+  extras,
+});
 
-const maiTranscribeGroups = {
-  "v2.x": [...maiTranscribeAtomic["v2"]],
-} as const;
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
+  > {}
+}
 
-export const maiTranscribe = {
-  ...maiTranscribeAtomic,
-  ...maiTranscribeGroups,
-  latest: [...maiTranscribeAtomic["v2"]],
-  all: Object.values(maiTranscribeAtomic).flat(),
-} as const;
+export const maiTranscribe = defineModelFamily(lab, {
+  version: /^mai-transcribe-(\d+(?:\.\d+)?)$/u,
+});

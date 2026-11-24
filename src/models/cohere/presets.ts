@@ -1,228 +1,65 @@
-import type { CanonicalProviderId } from "../../providers/types.ts";
-import { presetFor, type DeepPartial } from "../../utils/preset.ts";
-import type { CanonicalModelId, CatalogModel } from "../types.ts";
+import { registerModels } from "../catalog.ts";
+import { defineModelFamily } from "../family.ts";
+import type { ModelsDevCatalog, ModelsDevCatalogModel, SnapshotIds } from "../types.ts";
+import snapshot from "./models-dev.json" with { type: "json" };
 
-const COMMAND_BASE = {
-  modalities: {
-    input: ["text"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["tool_call", "structured_output", "reasoning", "temperature"] as const,
-  providers: ["cohere", "azure"] as const satisfies readonly CanonicalProviderId[],
-  knowledge: "2024-06",
-} satisfies DeepPartial<CatalogModel>;
+const embedV3 = (name: string, bedrock?: string): ModelsDevCatalogModel => ({
+  name,
+  family: "cohere-embed",
+  created: "2024-02-07",
+  modalities: { input: ["text", "image"], output: ["embeddings"] },
+  context: 512,
+  providers: { cohere: {}, ...(bedrock && { bedrock: { id: bedrock }, azure: {} }) },
+});
 
-const COMMAND_VISION_BASE = {
-  modalities: {
-    input: ["text", "image"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["structured_output", "reasoning", "temperature"] as const,
-  providers: ["cohere", "azure"] as const satisfies readonly CanonicalProviderId[],
-  knowledge: "2024-06",
-} satisfies DeepPartial<CatalogModel>;
-
-const NORTH_BASE = {
-  modalities: {
-    input: ["text"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["tool_call", "structured_output", "reasoning", "temperature"] as const,
-  providers: ["cohere"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-const EMBED_V3_BASE = {
-  modalities: {
-    input: ["text", "image"] as const,
-    output: ["embeddings"] as const,
-  },
-  providers: ["cohere", "azure"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-const EMBED_V4_BASE = {
-  modalities: {
-    input: ["text", "image", "file"] as const,
-    output: ["embeddings"] as const,
-  },
-  providers: ["cohere", "azure"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
-
-export const commandA = presetFor<CanonicalModelId, CatalogModel>()("cohere/command-a" as const, {
-  ...COMMAND_BASE,
-  name: "Cohere Command A",
-  created: "2025-03-13",
-  context: 256000,
-} satisfies CatalogModel);
-
-export const commandAPlus = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/command-a-plus" as const,
-  {
-    ...COMMAND_BASE,
-    name: "Cohere Command A Plus",
-    created: "2026-05-20",
-    knowledge: "2025-04",
-    context: 128000,
-    modalities: {
-      input: ["text", "image"] as const,
-      output: ["text"] as const,
+// Not on models.dev yet, or not on these providers.
+const extras: ModelsDevCatalog = {
+  "cohere/embed-v4.0": {
+    name: "Embed v4.0",
+    family: "cohere-embed",
+    created: "2025-04-15",
+    modalities: { input: ["text"], output: ["embeddings"] },
+    context: 128_000,
+    providers: {
+      cohere: {},
+      bedrock: { id: "cohere.embed-v4:0", profile: "required" },
+      azure: {},
     },
-    providers: ["cohere"],
-  } satisfies CatalogModel,
-);
+  },
+  "cohere/embed-v5.0-fast": { providers: { cohere: {} } },
+  "cohere/embed-v5.0-pro": { providers: { cohere: {} } },
+  "cohere/embed-english-v3.0": embedV3("Cohere Embed English v3", "cohere.embed-english-v3"),
+  "cohere/embed-english-light-v3.0": embedV3("Cohere Embed English Light v3"),
+  "cohere/embed-multilingual-v3.0": embedV3(
+    "Cohere Embed Multilingual v3",
+    "cohere.embed-multilingual-v3",
+  ),
+  "cohere/embed-multilingual-light-v3.0": embedV3("Cohere Embed Multilingual Light v3"),
+};
 
-export const commandAReasoning = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/command-a-reasoning" as const,
-  {
-    ...COMMAND_BASE,
-    name: "Cohere Command A Reasoning",
-    created: "2025-08-21",
-    context: 256000,
-  } satisfies CatalogModel,
-);
+const lab = registerModels({
+  namespace: "cohere",
+  provider: "cohere",
+  snapshot: snapshot as ModelsDevCatalog,
+  extras,
+});
 
-export const commandATranslate = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/command-a-translate" as const,
-  {
-    ...COMMAND_BASE,
-    name: "Cohere Command A Translate",
-    created: "2025-08-28",
-    context: 8000,
-  } satisfies CatalogModel,
-);
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
+  > {}
+}
 
-export const commandAVision = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/command-a-vision" as const,
-  {
-    ...COMMAND_VISION_BASE,
-    name: "Cohere Command A Vision",
-    created: "2025-07-31",
-    context: 128000,
-  } satisfies CatalogModel,
-);
+export const command = defineModelFamily(lab, {
+  version: /^command-[a-z]\d*b?(?:-[a-z]+)*-\d{2}-\d{4}$/u,
+  groups: { A: "command-a-*", R: "command-r*" },
+});
 
-export const commandR7b = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/command-r7b" as const,
-  {
-    ...COMMAND_BASE,
-    name: "Cohere Command R7B",
-    created: "2024-12-13",
-    context: 128000,
-  } satisfies CatalogModel,
-);
+export const north = defineModelFamily(lab, {
+  version: /^north-[a-z]+(?:-[a-z]+)*-(\d+-\d+)$/u,
+});
 
-export const northMiniCode = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/north-mini-code" as const,
-  {
-    ...NORTH_BASE,
-    name: "Cohere North Mini Code",
-    created: "2026-06-09",
-    knowledge: "2025-09",
-    context: 256000,
-  } satisfies CatalogModel,
-);
-
-export const northSmallTranslate = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/north-small-translate" as const,
-  {
-    ...NORTH_BASE,
-    name: "Cohere North Small Translate",
-    created: "2026-09-09",
-    context: 32768,
-    capabilities: ["temperature"],
-  } satisfies CatalogModel,
-);
-
-export const embed4 = presetFor<CanonicalModelId, CatalogModel>()("cohere/embed-v4.0" as const, {
-  ...EMBED_V4_BASE,
-  name: "Cohere 4 Embeddings",
-  created: "2025-04-15",
-  context: 128000,
-  providers: ["cohere", "bedrock", "azure"],
-} satisfies CatalogModel);
-
-export const embedEnglishV3 = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/embed-english-v3.0" as const,
-  {
-    ...EMBED_V3_BASE,
-    name: "Cohere Embed English v3",
-    created: "2024-02-07",
-    context: 512,
-    providers: ["cohere", "bedrock", "azure"],
-  } satisfies CatalogModel,
-);
-
-export const embedEnglishLightV3 = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/embed-english-light-v3.0" as const,
-  {
-    ...EMBED_V3_BASE,
-    name: "Cohere Embed English Light v3",
-    created: "2024-02-07",
-    context: 512,
-    providers: ["cohere"],
-  } satisfies CatalogModel,
-);
-
-export const embedMultilingualV3 = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/embed-multilingual-v3.0" as const,
-  {
-    ...EMBED_V3_BASE,
-    name: "Cohere Embed Multilingual v3",
-    created: "2024-02-07",
-    context: 512,
-    providers: ["cohere", "bedrock", "azure"],
-  } satisfies CatalogModel,
-);
-
-export const embedMultilingualLightV3 = presetFor<CanonicalModelId, CatalogModel>()(
-  "cohere/embed-multilingual-light-v3.0" as const,
-  {
-    ...EMBED_V3_BASE,
-    name: "Cohere Embed Multilingual Light v3",
-    created: "2024-02-07",
-    context: 512,
-    providers: ["cohere"],
-  } satisfies CatalogModel,
-);
-
-const commandAtomic = {
-  A: [commandA, commandAPlus, commandAReasoning, commandATranslate, commandAVision],
-  R: [commandR7b],
-} as const;
-
-const commandGroups = {} as const;
-
-export const command = {
-  ...commandAtomic,
-  ...commandGroups,
-  latest: [commandAPlus],
-  all: Object.values(commandAtomic).flat(),
-} as const;
-
-const northAtomic = {
-  v1: [northMiniCode, northSmallTranslate],
-} as const;
-
-const northGroups = {
-  "v1.x": [...northAtomic["v1"]],
-} as const;
-
-export const north = {
-  ...northAtomic,
-  ...northGroups,
-  latest: [...northAtomic["v1"]],
-  all: Object.values(northAtomic).flat(),
-} as const;
-
-const embedAtomic = {
-  v4: [embed4],
-  v3: [embedEnglishV3, embedEnglishLightV3, embedMultilingualV3, embedMultilingualLightV3],
-} as const;
-
-const embedGroups = {} as const;
-
-export const embed = {
-  ...embedAtomic,
-  ...embedGroups,
-  latest: [embed4],
-  all: Object.values(embedAtomic).flat(),
-} as const;
+export const embed = defineModelFamily(lab, {
+  version: /^embed-(?:[a-z]+-)*v(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+});

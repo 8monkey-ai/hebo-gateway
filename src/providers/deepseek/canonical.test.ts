@@ -2,20 +2,18 @@ import { expect, test } from "bun:test";
 
 import { deepseek } from "@ai-sdk/deepseek";
 
+import { loadBundledCatalog } from "../../../test/helpers/catalog.ts";
 import { withCanonicalIdsForDeepSeek } from "./canonical.ts";
 
-test("withCanonicalIdsForDeepSeek > strips namespace for deepseek-v4-pro", () => {
+test("withCanonicalIdsForDeepSeek > serves dated releases from their catalog alias", () => {
   const provider = withCanonicalIdsForDeepSeek(deepseek);
+  loadBundledCatalog("deepseek", provider);
 
-  const model = provider.languageModel("deepseek/deepseek-v4-pro");
+  const model = provider.languageModel("deepseek/deepseek-v4-pro-0813");
   expect(model.modelId).toBe("deepseek-v4-pro");
-});
-
-test("withCanonicalIdsForDeepSeek > maps deepseek-v4.1-flash to the flash alias", () => {
-  const provider = withCanonicalIdsForDeepSeek(deepseek);
-
-  const model = provider.languageModel("deepseek/deepseek-v4.1-flash");
-  expect(model.modelId).toBe("deepseek-flash");
+  expect(provider.languageModel("deepseek/deepseek-v4.1-flash-1017").modelId).toBe(
+    "deepseek-flash",
+  );
 });
 
 test("withCanonicalIdsForDeepSeek > supports extra mapping override", () => {

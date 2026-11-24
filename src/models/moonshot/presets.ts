@@ -1,87 +1,22 @@
-import type { CanonicalProviderId } from "../../providers/types.ts";
-import { presetFor, type DeepPartial } from "../../utils/preset.ts";
-import type { CanonicalModelId, CatalogModel } from "../types.ts";
+import { registerModels } from "../catalog.ts";
+import { defineModelFamily } from "../family.ts";
+import type { ModelsDevCatalog, SnapshotIds } from "../types.ts";
+import snapshot from "./models-dev.json" with { type: "json" };
 
-const KIMI_BASE = {
-  modalities: {
-    input: ["text", "image"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: ["reasoning", "tool_call", "structured_output", "temperature"] as const,
-  context: 262144,
-  providers: ["moonshot"] as const satisfies readonly CanonicalProviderId[],
-} satisfies DeepPartial<CatalogModel>;
+const lab = registerModels({
+  namespace: "moonshotai",
+  provider: "moonshot",
+  snapshot: snapshot as ModelsDevCatalog,
+});
 
-export const kimiK25 = presetFor<CanonicalModelId, CatalogModel>()("moonshot/kimi-k2.5" as const, {
-  ...KIMI_BASE,
-  name: "Kimi K2.5",
-  created: "2026-01-27",
-  knowledge: "2025-06",
-  providers: [
-    "moonshot",
-    "chutes",
-    "deepinfra",
-    "fireworks",
-    "togetherai",
-  ] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
+// Adds the snapshot's model IDs to `CanonicalModelId`.
+declare module "../types.ts" {
+  interface CanonicalModelIds extends SnapshotIds<
+    typeof import("./models-dev.json", { with: { type: "json" } })
+  > {}
+}
 
-export const kimiK26 = presetFor<CanonicalModelId, CatalogModel>()("moonshot/kimi-k2.6" as const, {
-  ...KIMI_BASE,
-  name: "Kimi K2.6",
-  created: "2026-04-20",
-  providers: ["moonshot", "fireworks"] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
-
-export const kimiK27Code = presetFor<CanonicalModelId, CatalogModel>()(
-  "moonshot/kimi-k2.7-code" as const,
-  {
-    ...KIMI_BASE,
-    name: "Kimi K2.7 Code",
-    created: "2026-06-12",
-    knowledge: "2025-01",
-    providers: [
-      "moonshot",
-      "deepinfra",
-      "togetherai",
-    ] as const satisfies readonly CanonicalProviderId[],
-  } satisfies CatalogModel,
-);
-
-export const kimiK3 = presetFor<CanonicalModelId, CatalogModel>()("moonshot/kimi-k3" as const, {
-  ...KIMI_BASE,
-  name: "Kimi K3",
-  created: "2026-07-16",
-  context: 1_048_576,
-  modalities: {
-    input: ["text", "image", "video"] as const,
-    output: ["text"] as const,
-  },
-  capabilities: [...KIMI_BASE.capabilities, "attachments"],
-  providers: [
-    "moonshot",
-    "deepinfra",
-    "fireworks",
-    "togetherai",
-    "chutes",
-  ] as const satisfies readonly CanonicalProviderId[],
-} satisfies CatalogModel);
-
-const kimiAtomic = {
-  "k2.5": [kimiK25],
-  "k2.6": [kimiK26],
-  "k2.7": [kimiK27Code],
-  k3: [kimiK3],
-} as const;
-
-const kimiGroups = {
-  "k2.x": [...kimiAtomic["k2.5"], ...kimiAtomic["k2.6"], ...kimiAtomic["k2.7"]],
-  "k3.x": [...kimiAtomic["k3"]],
-} as const;
-
-export const kimi = {
-  ...kimiAtomic,
-  ...kimiGroups,
-  latest: [...kimiAtomic["k3"]],
-  all: Object.values(kimiAtomic).flat(),
-} as const;
+export const kimi = defineModelFamily(lab, {
+  version: /^kimi-k(\d+(?:\.\d+)?)(?:-[a-z]+)*$/u,
+  prefix: "k",
+});

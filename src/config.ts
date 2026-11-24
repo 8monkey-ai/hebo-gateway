@@ -1,6 +1,7 @@
 import { InMemoryStorage } from "./endpoints/conversations/storage/memory.ts";
 import { createDefaultLogger } from "./logger/default.ts";
 import { isLogger, logger, setLoggerInstance } from "./logger/index.ts";
+import { createModelCatalog } from "./models/catalog.ts";
 import { installAiSdkWarningLogger } from "./telemetry/ai-sdk.ts";
 import {
   DEFAULT_CHAT_TIMEOUT_MS,
@@ -18,7 +19,6 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
 
   const providers = config.providers ?? {};
   const parsedProviders = {} as typeof providers;
-  const models = config.models ?? {};
   const storage = config.storage ?? new InMemoryStorage();
 
   // Set the global logger instance.
@@ -48,28 +48,8 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
     throw new Error("No providers configured (config.providers is empty)");
   }
 
-  // Strip providers that are not configured from models.
-  const parsedModels = {} as typeof models;
-  const warnings = new Set<string>();
-  for (const id in models) {
-    const model = models[id]!;
-
-    const kept: string[] = [];
-
-    for (const p of model.providers) {
-      if (p in parsedProviders) kept.push(p);
-      else warnings.add(p);
-    }
-
-    if (kept.length > 0) parsedModels[id] = { ...model, providers: kept };
-  }
-  for (const warning of warnings) {
-    logger.warn(`[config] ${warning} provider removed (not configured)`);
-  }
-
-  if (Object.keys(parsedModels).length === 0) {
-    throw new Error("No models configured (config.models is empty)");
-  }
+  // Loaded on the first request: models.dev, or the snapshot bundled with each lab.
+  const catalog = createModelCatalog(config.models, parsedProviders, config.advanced?.catalog);
 
   // Default for the telemetry settings.
   const telemetryEnabled = config.telemetry?.enabled ?? false;
@@ -153,7 +133,7 @@ export const parseConfig = (config: GatewayConfig): GatewayConfigParsed => {
       signals: telemetrySignals,
     },
     providers: parsedProviders,
-    models: parsedModels,
+    catalog,
     storage,
     [kParsed]: true,
   };
