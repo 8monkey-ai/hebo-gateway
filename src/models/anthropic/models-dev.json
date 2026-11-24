@@ -168,6 +168,7 @@
         "id": "claude-opus-4-6",
         "output": 128000,
         "reasoning": {
+          "toggle": true,
           "effort": ["low", "medium", "high", "max"],
           "budget": {
             "min": 1024
@@ -214,6 +215,7 @@
         "id": "claude-opus-4-7",
         "output": 128000,
         "reasoning": {
+          "toggle": true,
           "effort": ["low", "medium", "high", "xhigh", "max"]
         }
       },
@@ -251,6 +253,7 @@
         "id": "claude-opus-4-8",
         "output": 128000,
         "reasoning": {
+          "toggle": true,
           "effort": ["low", "medium", "high", "xhigh", "max"]
         }
       },
@@ -288,6 +291,7 @@
         "id": "claude-opus-5",
         "output": 128000,
         "reasoning": {
+          "toggle": true,
           "effort": ["low", "medium", "high", "xhigh", "max"]
         }
       },
@@ -361,6 +365,7 @@
         "id": "claude-sonnet-4-6",
         "output": 128000,
         "reasoning": {
+          "toggle": true,
           "effort": ["low", "medium", "high", "max"],
           "budget": {
             "min": 1024

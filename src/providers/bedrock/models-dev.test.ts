@@ -68,3 +68,44 @@ test("amazon-bedrock > skips ARNs and unknown inference profile prefixes", () =>
     groq: { id: "openai/gpt-x" },
   });
 });
+
+test("amazon-bedrock > takes limits from the plain listing, not a GovCloud or regional one", () => {
+  const listing = (name: string, output: number) =>
+    chat("openai/gpt-oss-20b", { name, limit: { context: 128000, output } });
+  const api: ModelsDevApi = {
+    "amazon-bedrock": {
+      models: {
+        // GovCloud and regional listings first, as in models.dev's data.
+        "us-gov.openai.gpt-oss-20b-1:0": listing("gpt-oss-20b (GovCloud)", 16384),
+        "eu.openai.gpt-oss-20b-1:0": listing("gpt-oss-20b (EU)", 32768),
+        "openai.gpt-oss-20b-1:0": listing("gpt-oss-20b", 128000),
+      },
+    },
+  };
+
+  const model = fromModelsDev(api, LABS)["openai/gpt-oss-20b"];
+  expect(model?.name).toBe("gpt-oss-20b");
+  expect(model?.providers.bedrock).toEqual({
+    id: "openai.gpt-oss-20b-1:0",
+    profile: "optional",
+    output: 128000,
+  });
+});
+
+test("amazon-bedrock > prefers a regional profile's limits over GovCloud's", () => {
+  const listing = (output: number) => chat("openai/gpt-e", { limit: { output } });
+  const api: ModelsDevApi = {
+    "amazon-bedrock": {
+      models: {
+        "us-gov.openai.gpt-e": listing(16384),
+        "us.openai.gpt-e": listing(128000),
+      },
+    },
+  };
+
+  expect(fromModelsDev(api, LABS)["openai/gpt-e"]?.providers.bedrock).toEqual({
+    id: "openai.gpt-e",
+    profile: "required",
+    output: 128000,
+  });
+});

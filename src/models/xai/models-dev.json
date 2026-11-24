@@ -204,27 +204,9 @@
       }
     }
   },
-  "xai/grok-build-0.1": {
-    "name": "Grok Build 0.1",
-    "family": "grok-build",
-    "created": "2026-04-16",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 256000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "xai": {
-        "id": "grok-build-0.1",
-        "output": 256000,
-        "reasoning": {}
-      }
-    }
-  },
   "xai/grok-voice-transcribe-2.0": {
     "name": "Grok Voice STT 1.0",
-    "family": "grok",
+    "family": "grok-transcribe",
     "created": "2026-09-17",
     "modalities": {
       "input": ["audio"],

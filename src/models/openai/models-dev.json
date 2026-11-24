@@ -1,121 +1,7 @@
 {
-  "openai/gpt-4.1": {
-    "name": "GPT-4.1",
-    "family": "gpt",
-    "created": "2025-04-14",
-    "knowledge": "2024-04",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 1047576,
-    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4.1",
-        "output": 32768,
-        "reasoning": false
-      }
-    }
-  },
-  "openai/gpt-4.1-mini": {
-    "name": "GPT-4.1 mini",
-    "family": "gpt-mini",
-    "created": "2025-04-14",
-    "knowledge": "2024-04",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 1047576,
-    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4.1-mini",
-        "output": 32768,
-        "reasoning": false
-      }
-    }
-  },
-  "openai/gpt-4o": {
-    "name": "GPT-4o",
-    "family": "gpt",
-    "created": "2024-05-13",
-    "knowledge": "2023-09",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 128000,
-    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4o",
-        "output": 16384,
-        "reasoning": false
-      }
-    }
-  },
-  "openai/gpt-4o-2024-08-06": {
-    "name": "GPT-4o (2024-08-06)",
-    "family": "gpt",
-    "created": "2024-08-06",
-    "knowledge": "2023-09",
-    "modalities": {
-      "input": ["text", "image"],
-      "output": ["text"]
-    },
-    "context": 128000,
-    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4o-2024-08-06",
-        "output": 16384,
-        "reasoning": false
-      }
-    }
-  },
-  "openai/gpt-4o-2024-11-20": {
-    "name": "GPT-4o (2024-11-20)",
-    "family": "gpt",
-    "created": "2024-11-20",
-    "knowledge": "2023-09",
-    "modalities": {
-      "input": ["text", "image"],
-      "output": ["text"]
-    },
-    "context": 128000,
-    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4o-2024-11-20",
-        "output": 16384,
-        "reasoning": false
-      }
-    }
-  },
-  "openai/gpt-4o-mini": {
-    "name": "GPT-4o mini",
-    "family": "gpt-mini",
-    "created": "2024-07-18",
-    "knowledge": "2023-09",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 128000,
-    "capabilities": ["attachments", "tool_call", "structured_output", "temperature"],
-    "providers": {
-      "openai": {
-        "id": "gpt-4o-mini",
-        "output": 16384,
-        "reasoning": false
-      }
-    }
-  },
   "openai/gpt-4o-mini-transcribe": {
     "name": "GPT-4o mini Transcribe",
-    "family": "gpt-mini",
+    "family": "gpt-transcribe-mini",
     "created": "2025-03-20",
     "knowledge": "2024-06-01",
     "modalities": {
@@ -128,7 +14,7 @@
   },
   "openai/gpt-4o-transcribe": {
     "name": "GPT-4o Transcribe",
-    "family": "gpt",
+    "family": "gpt-transcribe",
     "created": "2025-03-20",
     "knowledge": "2024-06-01",
     "modalities": {
@@ -145,19 +31,12 @@
     "created": "2025-08-07",
     "knowledge": "2024-09-30",
     "modalities": {
-      "input": ["text", "image"],
+      "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "capabilities": ["attachments", "reasoning", "tool_call"],
     "providers": {
-      "openai": {
-        "id": "gpt-5",
-        "output": 128000,
-        "reasoning": {
-          "effort": ["minimal", "low", "medium", "high"]
-        }
-      },
       "azure": {
         "id": "gpt-5",
         "output": 128000,
@@ -194,19 +73,12 @@
     "created": "2025-08-07",
     "knowledge": "2024-05-30",
     "modalities": {
-      "input": ["text", "image"],
+      "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "capabilities": ["attachments", "reasoning", "tool_call"],
     "providers": {
-      "openai": {
-        "id": "gpt-5-mini",
-        "output": 128000,
-        "reasoning": {
-          "effort": ["minimal", "low", "medium", "high"]
-        }
-      },
       "azure": {
         "id": "gpt-5-mini",
         "output": 128000,
@@ -222,19 +94,12 @@
     "created": "2025-08-07",
     "knowledge": "2024-05-30",
     "modalities": {
-      "input": ["text", "image"],
+      "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "capabilities": ["attachments", "reasoning", "tool_call"],
     "providers": {
-      "openai": {
-        "id": "gpt-5-nano",
-        "output": 128000,
-        "reasoning": {
-          "effort": ["minimal", "low", "medium", "high"]
-        }
-      },
       "azure": {
         "id": "gpt-5-nano",
         "output": 128000,
@@ -250,19 +115,12 @@
     "created": "2025-10-06",
     "knowledge": "2024-09-30",
     "modalities": {
-      "input": ["text", "image"],
+      "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "openai": {
-        "id": "gpt-5-pro",
-        "output": 272000,
-        "reasoning": {
-          "effort": ["high"]
-        }
-      },
       "azure": {
         "id": "gpt-5-pro",
         "output": 128000,
@@ -275,22 +133,15 @@
   "openai/gpt-5.1": {
     "name": "GPT-5.1",
     "family": "gpt",
-    "created": "2025-11-13",
+    "created": "2025-11-14",
     "knowledge": "2024-09-30",
     "modalities": {
-      "input": ["text", "image"],
+      "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "openai": {
-        "id": "gpt-5.1",
-        "output": 128000,
-        "reasoning": {
-          "effort": ["none", "low", "medium", "high"]
-        }
-      },
       "azure": {
         "id": "gpt-5.1",
         "output": 128000,
@@ -344,7 +195,7 @@
   },
   "openai/gpt-5.1-codex-mini": {
     "name": "GPT-5.1 Codex Mini",
-    "family": "gpt-codex",
+    "family": "gpt-codex-mini",
     "created": "2025-11-14",
     "knowledge": "2024-09-30",
     "modalities": {
@@ -436,46 +287,18 @@
   "openai/gpt-5.3-codex": {
     "name": "GPT-5.3 Codex",
     "family": "gpt-codex",
-    "created": "2026-02-05",
+    "created": "2026-02-24",
     "knowledge": "2025-08-31",
     "modalities": {
       "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
     "providers": {
-      "openai": {
-        "id": "gpt-5.3-codex",
-        "output": 128000,
-        "reasoning": {
-          "effort": ["none", "low", "medium", "high", "xhigh"]
-        }
-      },
       "azure": {
         "id": "gpt-5.3-codex",
         "output": 128000,
-        "reasoning": {
-          "effort": ["none", "low", "medium", "high", "xhigh"]
-        }
-      }
-    }
-  },
-  "openai/gpt-5.3-codex-spark": {
-    "name": "GPT-5.3 Codex Spark",
-    "family": "gpt-codex-spark",
-    "created": "2026-02-05",
-    "knowledge": "2025-08-31",
-    "modalities": {
-      "input": ["text", "image", "file"],
-      "output": ["text"]
-    },
-    "context": 128000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
-    "providers": {
-      "openai": {
-        "id": "gpt-5.3-codex-spark",
-        "output": 32000,
         "reasoning": {
           "effort": ["none", "low", "medium", "high", "xhigh"]
         }
@@ -547,24 +370,17 @@
     }
   },
   "openai/gpt-5.4-nano": {
-    "name": "GPT-5.4 nano",
+    "name": "GPT-5.4 Nano",
     "family": "gpt-nano",
     "created": "2026-03-17",
     "knowledge": "2025-08-31",
     "modalities": {
-      "input": ["text", "image"],
+      "input": ["text", "image", "file"],
       "output": ["text"]
     },
     "context": 400000,
     "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
     "providers": {
-      "openai": {
-        "id": "gpt-5.4-nano",
-        "output": 128000,
-        "reasoning": {
-          "effort": ["none", "low", "medium", "high", "xhigh"]
-        }
-      },
       "azure": {
         "id": "gpt-5.4-nano",
         "output": 128000,
@@ -1021,7 +837,7 @@
   },
   "openai/gpt-live-transcribe": {
     "name": "GPT-Live-Transcribe",
-    "family": "gpt",
+    "family": "gpt-transcribe",
     "created": "2026-07-28",
     "modalities": {
       "input": ["text", "audio"],
@@ -1116,7 +932,7 @@
   },
   "openai/gpt-oss-safeguard-120b": {
     "name": "GPT OSS Safeguard 120B",
-    "family": "gpt-oss",
+    "family": "gpt-oss-safeguard",
     "created": "2025-10-29",
     "modalities": {
       "input": ["text"],
@@ -1136,7 +952,7 @@
   },
   "openai/gpt-oss-safeguard-20b": {
     "name": "GPT OSS Safeguard 20B",
-    "family": "gpt-oss",
+    "family": "gpt-oss-safeguard",
     "created": "2025-10-29",
     "modalities": {
       "input": ["text"],
@@ -1175,7 +991,7 @@
   },
   "openai/gpt-transcribe": {
     "name": "GPT-Transcribe",
-    "family": "gpt",
+    "family": "gpt-transcribe",
     "created": "2026-07-28",
     "modalities": {
       "input": ["text", "audio"],
@@ -1194,38 +1010,10 @@
       "output": ["text"]
     },
     "context": 200000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
+    "capabilities": ["attachments", "reasoning", "tool_call"],
     "providers": {
-      "openai": {
-        "id": "o3",
-        "output": 100000,
-        "reasoning": {
-          "effort": ["low", "medium", "high"]
-        }
-      },
       "azure": {
         "id": "o3",
-        "output": 100000,
-        "reasoning": {
-          "effort": ["low", "medium", "high"]
-        }
-      }
-    }
-  },
-  "openai/o3-pro": {
-    "name": "o3-pro",
-    "family": "o-pro",
-    "created": "2025-06-10",
-    "knowledge": "2024-05",
-    "modalities": {
-      "input": ["text", "image"],
-      "output": ["text"]
-    },
-    "context": 200000,
-    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output"],
-    "providers": {
-      "openai": {
-        "id": "o3-pro",
         "output": 100000,
         "reasoning": {
           "effort": ["low", "medium", "high"]

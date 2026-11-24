@@ -1,6 +1,7 @@
 {
   "cohere/c4ai-aya-expanse-32b": {
     "name": "Aya Expanse 32B",
+    "family": "aya",
     "created": "2024-10-24",
     "modalities": {
       "input": ["text"],
@@ -18,6 +19,7 @@
   },
   "cohere/c4ai-aya-vision-32b": {
     "name": "Aya Vision 32B",
+    "family": "aya-vision",
     "created": "2025-03-04",
     "modalities": {
       "input": ["text", "image"],
@@ -54,7 +56,7 @@
   },
   "cohere/command-a-plus-05-2026": {
     "name": "Command A Plus",
-    "family": "command-a",
+    "family": "command-a-plus",
     "created": "2026-05-20",
     "knowledge": "2025-04-01",
     "modalities": {
@@ -159,7 +161,7 @@
   },
   "cohere/command-r-plus-08-2024": {
     "name": "Command R+",
-    "family": "command-r",
+    "family": "command-r-plus",
     "created": "2024-08-30",
     "knowledge": "2024-06-01",
     "modalities": {
@@ -227,7 +229,7 @@
   },
   "cohere/embed-v5.0-fast": {
     "name": "Embed 5 Fast",
-    "family": "cohere-embed",
+    "family": "cohere-embed-fast",
     "created": "2026-09-30",
     "modalities": {
       "input": ["text"],
@@ -238,7 +240,7 @@
   },
   "cohere/embed-v5.0-pro": {
     "name": "Embed 5 Pro",
-    "family": "cohere-embed",
+    "family": "cohere-embed-pro",
     "created": "2026-09-30",
     "modalities": {
       "input": ["text"],
@@ -249,7 +251,7 @@
   },
   "cohere/north-small-translate-1-0": {
     "name": "North Small Translate",
-    "family": "north",
+    "family": "north-small",
     "created": "2026-09-09",
     "modalities": {
       "input": ["text"],
@@ -267,6 +269,7 @@
   },
   "cohere/tiny-aya-earth": {
     "name": "Tiny Aya Earth",
+    "family": "aya-tiny",
     "created": "2026-02-17",
     "modalities": {
       "input": ["text"],
@@ -284,6 +287,7 @@
   },
   "cohere/tiny-aya-fire": {
     "name": "Tiny Aya Fire",
+    "family": "aya-tiny",
     "created": "2026-02-17",
     "modalities": {
       "input": ["text"],
@@ -301,6 +305,7 @@
   },
   "cohere/tiny-aya-global": {
     "name": "Tiny Aya Global",
+    "family": "aya-tiny",
     "created": "2026-02-17",
     "modalities": {
       "input": ["text"],
@@ -318,6 +323,7 @@
   },
   "cohere/tiny-aya-water": {
     "name": "Tiny Aya Water",
+    "family": "aya-tiny",
     "created": "2026-02-17",
     "modalities": {
       "input": ["text"],

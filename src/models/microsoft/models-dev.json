@@ -1,7 +1,7 @@
 {
   "microsoft/phi-4-mini": {
     "name": "Phi-4-mini",
-    "family": "phi",
+    "family": "phi-mini",
     "created": "2024-12-11",
     "knowledge": "2023-10",
     "modalities": {

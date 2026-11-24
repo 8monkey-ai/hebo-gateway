@@ -1,7 +1,7 @@
 {
   "deepseek/deepseek-r1-0528": {
     "name": "DeepSeek-R1-0528",
-    "family": "deepseek-thinking",
+    "family": "deepseek-r",
     "created": "2025-05-28",
     "knowledge": "2024-07",
     "modalities": {
@@ -177,7 +177,7 @@
   },
   "deepseek/deepseek-v4-pro": {
     "name": "DeepSeek-V4-Pro",
-    "family": "deepseek-thinking",
+    "family": "deepseek-pro",
     "created": "2026-04-24",
     "knowledge": "2025-05",
     "modalities": {
@@ -199,7 +199,7 @@
   },
   "deepseek/deepseek-v4-pro-0813": {
     "name": "DeepSeek V4 Pro",
-    "family": "deepseek-thinking",
+    "family": "deepseek-pro",
     "created": "2026-08-13",
     "modalities": {
       "input": ["text"],
@@ -289,6 +289,13 @@
         "reasoning": {
           "toggle": true,
           "effort": ["low", "high", "max"]
+        }
+      },
+      "togetherai": {
+        "id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+        "output": 384000,
+        "reasoning": {
+          "effort": ["none", "low", "high", "max"]
         }
       },
       "deepinfra": {

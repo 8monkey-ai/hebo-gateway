@@ -64,7 +64,7 @@
   },
   "zhipuai/glm-4.5v": {
     "name": "GLM-4.5V",
-    "family": "glm",
+    "family": "glmv",
     "created": "2025-08-11",
     "knowledge": "2025-04",
     "modalities": {
@@ -113,7 +113,7 @@
   },
   "zhipuai/glm-4.6v": {
     "name": "GLM-4.6V",
-    "family": "glm",
+    "family": "glmv",
     "created": "2025-12-08",
     "knowledge": "2025-04",
     "modalities": {
@@ -134,7 +134,7 @@
   },
   "zhipuai/glm-4.6v-flash": {
     "name": "GLM-4.6V-Flash",
-    "family": "glm-flash",
+    "family": "glmv-flash",
     "created": "2025-12-08",
     "modalities": {
       "input": ["text", "image", "video"],
@@ -251,7 +251,7 @@
   },
   "zhipuai/glm-5-turbo": {
     "name": "GLM-5-Turbo",
-    "family": "glm",
+    "family": "glm-turbo",
     "created": "2026-03-16",
     "modalities": {
       "input": ["text"],
@@ -405,9 +405,9 @@
     }
   },
   "zhipuai/glm-5.3-flash": {
-    "name": "GLM-5.3-FlashX",
+    "name": "GLM-5.3-Flash",
     "family": "glm-flash",
-    "created": "2026-09-18",
+    "created": "2026-08-26",
     "modalities": {
       "input": ["text", "image", "video", "file"],
       "output": ["text"]
@@ -447,7 +447,7 @@
   },
   "zhipuai/glm-5v-turbo": {
     "name": "GLM-5V-Turbo",
-    "family": "glm",
+    "family": "glmv-turbo",
     "created": "2026-04-01",
     "modalities": {
       "input": ["text", "image", "video", "file"],

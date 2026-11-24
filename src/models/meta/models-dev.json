@@ -49,7 +49,7 @@
   },
   "meta/llama-guard-4-12b": {
     "name": "Llama Guard 4 12B",
-    "family": "llama",
+    "family": "llama-guard",
     "created": "2025-04-29",
     "modalities": {
       "input": ["text", "image"],
@@ -67,7 +67,7 @@
   },
   "meta/llama-prompt-guard-2-22m": {
     "name": "Llama Prompt Guard 2 22M",
-    "family": "llama",
+    "family": "llama-prompt-guard",
     "status": "beta",
     "created": "2025-04-29",
     "modalities": {
@@ -85,7 +85,7 @@
   },
   "meta/llama-prompt-guard-2-86m": {
     "name": "Prompt Guard 2 86M",
-    "family": "llama",
+    "family": "llama-prompt-guard",
     "status": "beta",
     "created": "2025-04-29",
     "modalities": {
@@ -101,9 +101,30 @@
       }
     }
   },
+  "meta/muse-glimmer-30b": {
+    "name": "Muse Glimmer 30B",
+    "family": "muse-glimmer",
+    "created": "2026-08-10",
+    "knowledge": "2026-01-04",
+    "modalities": {
+      "input": ["text", "image"],
+      "output": ["text"]
+    },
+    "context": 131072,
+    "capabilities": ["attachments", "reasoning", "tool_call", "structured_output", "temperature"],
+    "providers": {
+      "togetherai": {
+        "id": "meta-models/Muse-Glimmer-30B",
+        "output": 131072,
+        "reasoning": {
+          "effort": ["low", "medium", "high", "xhigh"]
+        }
+      }
+    }
+  },
   "meta/muse-spark-open": {
     "name": "Muse Spark Open",
-    "family": "muse",
+    "family": "muse-spark",
     "created": "2026-10-15",
     "knowledge": "2026-01-04",
     "modalities": {

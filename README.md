@@ -334,7 +334,7 @@ const gw = gateway({
 > [!TIP]
 > On runtimes with tight per-request CPU limits (e.g. Cloudflare Workers free plan), parsing the full models.dev catalog on the first request can be too expensive. Use `source: false`, or point `source` at a smaller, self-hosted copy.
 
-The bundled snapshots live in `src/models/<lab>/models-dev.json`. They are refreshed with `bun run models:sync` and committed, so each release bundles reviewed data.
+The bundled snapshots live in `src/models/<lab>/models-dev.json`. They are refreshed with `bun run models:sync` and committed, so each release bundles reviewed data. `bun run models:check` lists how they differ from the live models.dev data without writing anything, and exits non-zero if they do.
 
 Data loaded from `source` is treated as untrusted:
 

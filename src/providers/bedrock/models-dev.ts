@@ -29,7 +29,15 @@ const isSafe = (id: string, nativeId: string) => {
   return false;
 };
 
-type Candidate = ModelsDevListing & { converse?: boolean; mantle?: boolean; geo?: boolean };
+type Candidate = ModelsDevListing & {
+  converse?: boolean;
+  mantle?: boolean;
+  geo?: boolean;
+  rank: number;
+};
+
+/** Metadata comes from the plain listing, then a profile, then GovCloud (own limits). */
+const rankOf = (geo: string | undefined) => (geo === undefined ? 0 : geo === "us-gov" ? 2 : 1);
 
 const picked = ({ nativeId, model }: Candidate, spec: ModelsDevPick["spec"]): ModelsDevPick => ({
   nativeId,
@@ -40,7 +48,8 @@ const picked = ({ nativeId, model }: Candidate, spec: ModelsDevPick["spec"]): Mo
 /**
  * Bedrock lists a model once per inference profile (`us.`, `global.`, …) and sometimes
  * once more on Mantle. Prefers Converse, collapsing the profiles into a `required` profile,
- * or an `optional` one when the bare ID is listed too, then Mantle.
+ * or an `optional` one when the bare ID is listed too, then Mantle. Regional and GovCloud
+ * listings can carry their own limits, so metadata comes from the plain listing first.
  */
 const pick = (id: string, listings: readonly ModelsDevListing[]): ModelsDevPick | undefined => {
   const bare = new Map<string, Candidate>();
@@ -48,8 +57,13 @@ const pick = (id: string, listings: readonly ModelsDevListing[]): ModelsDevPick 
     if (!isSafe(id, nativeId)) continue;
     const geo = GEO.exec(nativeId)?.[1];
     const bareId = geo ? nativeId.slice(geo.length + 1) : nativeId;
+    const rank = rankOf(geo);
     let flags = bare.get(bareId);
-    if (!flags) bare.set(bareId, (flags = { nativeId: bareId, model }));
+    if (!flags) bare.set(bareId, (flags = { nativeId: bareId, model, rank }));
+    else if (rank < flags.rank) {
+      flags.model = model;
+      flags.rank = rank;
+    }
     if (geo) flags.geo = flags.geo === true || geo !== "us-gov";
     else if (model.provider?.npm === MANTLE) flags.mantle = true;
     else flags.converse = true;

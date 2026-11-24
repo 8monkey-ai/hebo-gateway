@@ -1,7 +1,7 @@
 {
   "amazon/nova-2-lite": {
     "name": "Nova 2 Lite",
-    "family": "nova",
+    "family": "nova-lite",
     "created": "2025-12-02",
     "knowledge": "2025-10",
     "modalities": {
