@@ -64,6 +64,7 @@ describe("Models Handler", () => {
             output_modalities: ["text"],
           },
           endpoints: [{ tag: "anthropic" }],
+          expiration_date: null,
         },
         {
           id: "google/gemini-3-flash",
@@ -78,6 +79,7 @@ describe("Models Handler", () => {
             output_modalities: ["text"],
           },
           endpoints: [{ tag: "google" }],
+          expiration_date: null,
         },
       ],
     });
@@ -104,21 +106,32 @@ describe("Models Handler", () => {
         output_modalities: ["text"],
       },
       endpoints: [{ tag: "anthropic" }],
+      expiration_date: null,
     });
   });
 
-  test("lists deprecated models with their status", async () => {
+  test("lists expiration_date like OpenRouter, not the internal status", async () => {
     const res = await models({
       providers: { google: new MockProviderV4() },
-      models: defineModelCatalog({
-        "google/gemini-old": { name: "Gemini Old", status: "deprecated", providers: ["google"] },
-      }),
-    }).handler(new Request(`${baseUrl}/google/gemini-old`, { method: "GET" }));
+      models: defineModelCatalog(
+        {
+          "google/gemini-old": { name: "Gemini Old", status: "deprecated", providers: ["google"] },
+        },
+        {
+          "google/gemini-older": {
+            status: "deprecated",
+            providers: ["google"],
+            additionalProperties: { expiration_date: "2026-11-19" },
+          },
+        },
+      ),
+    }).handler(new Request(baseUrl, { method: "GET" }));
 
-    expect(await parseResponse(res)).toMatchObject({
-      id: "google/gemini-old",
-      status: "deprecated",
-    });
+    const { data } = (await parseResponse(res)) as { data: Record<string, unknown>[] };
+    expect(data.map((m) => [m["id"], m["expiration_date"], "status" in m])).toEqual([
+      ["google/gemini-old", null, false],
+      ["google/gemini-older", "2026-11-19", false],
+    ]);
   });
 
   describe("architecture.modality", () => {

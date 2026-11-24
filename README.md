@@ -250,7 +250,7 @@ const models = defineModelCatalog(
 );
 ```
 
-Models that models.dev marks deprecated stay in `all`, their version and named groups, and can still be requested. `/models` lists them with `status: "deprecated"`. Providers that only serve a deprecated version of a model are tried last.
+Models that models.dev marks deprecated stay in `all`, their version and named groups, and can still be requested. They are never part of `latest`, and providers that only serve a deprecated version of a model are tried last. Their catalog entry (e.g. `ctx.models[id]` in hooks) has `status: "deprecated"`.
 
 Groups are worked out when the catalog loads, so new releases join `all`, `latest` and their version groups automatically. This means `latest` can change after a restart; list exact model IDs if you want a fixed catalog. If you don't set `models`, every model of the imported labs is exposed.
 
@@ -764,7 +764,7 @@ Official documentation: [OpenAI API Reference](https://developers.openai.com/api
 It supports:
 
 - Comprehensive model metadata (capabilities, context limits, knowledge cutoffs).
-- `status`: `deprecated` for models their providers are retiring (`alpha` / `beta` for pre-release ones). models.dev has no retirement dates, so OpenRouter's `expiration_date` isn't set; add it through `additionalProperties` if you know the date.
+- `expiration_date`, as on OpenRouter: the date (`YYYY-MM-DD`) after which a model may be removed, otherwise `null`. models.dev has no retirement dates, so it's `null` unless you set it through `additionalProperties`, e.g. with a function override: `(_, model) => model.status === "deprecated" ? { additionalProperties: { expiration_date: "2026-12-31" } } : undefined`.
 - Canonical model ID resolution.
 - Provider-specific availability filtering.
 

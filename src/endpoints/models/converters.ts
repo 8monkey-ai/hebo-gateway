@@ -9,6 +9,7 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
     modalities,
     additionalProperties,
     family: _family,
+    status: _status,
     ...rest
   } = catalogModel;
   let createdTimestamp = Math.floor(Date.now() / 1000);
@@ -30,6 +31,8 @@ export function toModel(id: string, catalogModel: CatalogModel): Model {
       output_modalities: modalities?.output ?? [],
     },
     endpoints: providers.map((provider) => ({ tag: provider })),
+    // OpenRouter convention. models.dev has no retirement dates; set it via `additionalProperties`.
+    expiration_date: null,
     ...rest,
     ...additionalProperties,
   };
